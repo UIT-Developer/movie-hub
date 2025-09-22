@@ -1,5 +1,5 @@
 export default {
-  displayName: 'movie-hub-e2e',
+  displayName: 'api-gateway-e2e',
   preset: '../../jest.preset.js',
   globalSetup: '<rootDir>/src/support/global-setup.ts',
   globalTeardown: '<rootDir>/src/support/global-teardown.ts',
@@ -14,5 +14,5 @@ export default {
     ],
   },
   moduleFileExtensions: ['ts', 'js', 'html'],
-  coverageDirectory: '../../coverage/movie-hub-e2e',
+  coverageDirectory: '../../coverage/api-gateway-e2e',
 };

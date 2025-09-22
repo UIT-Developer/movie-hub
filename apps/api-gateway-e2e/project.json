@@ -1,17 +1,17 @@
 {
-  "name": "movie-hub-e2e",
+  "name": "api-gateway-e2e",
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "projectType": "application",
-  "implicitDependencies": ["movie-hub"],
+  "implicitDependencies": ["api-gateway"],
   "targets": {
     "e2e": {
       "executor": "@nx/jest:jest",
       "outputs": ["{workspaceRoot}/coverage/{e2eProjectRoot}"],
       "options": {
-        "jestConfig": "apps/movie-hub-e2e/jest.config.ts",
+        "jestConfig": "apps/api-gateway-e2e/jest.config.ts",
         "passWithNoTests": true
       },
-      "dependsOn": ["movie-hub:build", "movie-hub:serve"]
+      "dependsOn": ["api-gateway:build", "api-gateway:serve"]
     }
   }
 }

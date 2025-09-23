@@ -1,20 +1,20 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { UserModule } from './module/user/user.module';
 import Joi from 'joi';
+import { UserModule } from './user/user.module';
 
 @Module({
   imports: [
+    UserModule,
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: 'apps/api-gateway/.env',
+      envFilePath: 'apps/user-service/.env',
       validationSchema: Joi.object({
+        TCP_HOST: Joi.string().required(),
+        TCP_PORT: Joi.number().required(),
         CLERK_SECRET_KEY: Joi.string().required(),
-        USER_HOST: Joi.string().required(),
-        USER_PORT: Joi.number().required(),
       }),
     }),
-    UserModule,
   ],
   controllers: [],
   providers: [],

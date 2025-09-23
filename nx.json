@@ -39,7 +39,7 @@
       "options": {
         "targetName": "test"
       },
-      "exclude": ["apps/movie-hub-e2e/**/*", "apps/api-gateway-e2e/**/*"]
+      "exclude": ["apps/api-gateway-e2e/**/*"]
     },
     {
       "plugin": "@nx/next/plugin",
@@ -59,6 +59,13 @@
         "style": "tailwind",
         "linter": "eslint"
       }
+    }
+  },
+  "targetDefaults": {
+    "@nx/js:tsc": {
+      "cache": true,
+      "dependsOn": ["^build"],
+      "inputs": ["production", "^production"]
     }
   }
 }

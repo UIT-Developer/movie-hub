@@ -2,6 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
+
+
 html {
   -webkit-text-size-adjust: 100%;
   font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
@@ -10,7 +12,14 @@ html {
   line-height: 1.5;
   tab-size: 4;
   scroll-behavior: smooth;
+  
 }
+html,
+body,
+:root {
+  @apply h-full;
+}
+
 body {
   font-family: inherit;
   line-height: inherit;

@@ -3,7 +3,8 @@
   "version": "0.0.0",
   "license": "MIT",
   "scripts": {
-    "dev:all": "nx run-many -t=serve --all --outputStyle=stream"
+    "dev:all": "nx run-many -t=serve --all --outputStyle=stream",
+    "dev:web": "nx serve web"
   },
   "private": true,
   "dependencies": {
@@ -27,11 +28,13 @@
     "ioredis": "^5.8.0",
     "joi": "^18.0.1",
     "keyv": "^5.5.2",
+    "lucide-react": "^0.544.0",
     "next": "~15.2.4",
     "react": "19.0.0",
     "react-dom": "19.0.0",
     "reflect-metadata": "^0.1.13",
-    "rxjs": "^7.8.0"
+    "rxjs": "^7.8.0",
+    "sonner": "^2.0.7"
   },
   "devDependencies": {
     "@eslint/compat": "^1.1.1",

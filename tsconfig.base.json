@@ -16,6 +16,9 @@
     "baseUrl": ".",
     "paths": {
       "@movie-hub/libs": ["libs/src/index.ts"],
+      "@web/*": [
+        "apps/web/src/*"
+      ],
     }
   },
   "exclude": ["node_modules", "tmp"]

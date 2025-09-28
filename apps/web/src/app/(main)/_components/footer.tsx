@@ -14,7 +14,7 @@ export const Footer = () =>  {
             src="https://raw.githubusercontent.com/prebuiltui/prebuiltui/main/assets/dummyLogo/prebuiltuiLogoSquareShape.svg"
           />
           <p className="mt-6 text-sm">
-            Lorem Ipsum has been the industry's standard dummy text ever since
+            Lorem Ipsum has been the standard dummy text ever since
             the 1500s, when an unknown printer took a galley of type and
             scrambled it to make a type specimen book.
           </p>

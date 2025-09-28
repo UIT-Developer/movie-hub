@@ -1,0 +1,17 @@
+{
+  "$schema": "https://ui.shadcn.com/schema.json",
+  "style": "default",
+  "rsc": false,
+  "tailwind": {
+    "config": "libs\\shacdn-utils\\src\\tailwind.config.ts",
+    "css": "libs\\shacdn-utils\\src\\global.css",
+    "baseColor": "neutral",
+    "cssVariables": true
+  },
+  "aliases": {
+    "ui": "@movie-hub/shacdn-ui",
+    "components": "@movie-hub/shacdn-ui/components",
+    "utils": "@movie-hub/shacdn-utils",
+    "hooks": "@movie-hub/shacdn-ui/hooks"
+  }
+}

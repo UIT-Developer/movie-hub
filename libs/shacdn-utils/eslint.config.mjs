@@ -12,6 +12,8 @@ export default [
             "**/*.jsx"
         ],
         // Override or add rules here
-        rules: {}
+        rules: {
+            "@nx/enforce-module-boundaries": "off"
+        }
     }
 ];

@@ -3,7 +3,8 @@
   "version": "0.0.0",
   "license": "MIT",
   "scripts": {
-    "dev:all": "nx run-many -t=serve --all --outputStyle=stream"
+    "dev:all": "nx run-many -t=serve --all --outputStyle=stream",
+    "dev:web": "nx serve web"
   },
   "private": true,
   "dependencies": {

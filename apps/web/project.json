@@ -17,8 +17,7 @@
       "configurations": {
         "development": {
           "buildTarget": "web:build:development",
-          "dev": true,
-          "turbo": true
+          "dev": true
         }
       },
       "production": {

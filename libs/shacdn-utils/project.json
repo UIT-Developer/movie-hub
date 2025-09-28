@@ -1,0 +1,9 @@
+{
+  "name": "shacdn-utils",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/shacdn-utils/src",
+  "projectType": "library",
+  "tags": [],
+  "// targets": "to see all targets run: nx show project shacdn-utils --web",
+  "targets": {}
+}

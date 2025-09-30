@@ -15,7 +15,7 @@
     "skipDefaultLibCheck": true,
     "baseUrl": ".",
     "paths": {
-      "@movie-hub/libs": ["libs/src/index.ts"],
+      "@movie-hub/libs": ["libs/src/index.ts"]
     }
   },
   "exclude": ["node_modules", "tmp"]

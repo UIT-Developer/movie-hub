@@ -1,3 +1,4 @@
 export const SERVICE_NAME = {
-  USER: "user-service",
-}
+  USER: 'user-service',
+  CINEMA: 'cinema-service',
+};

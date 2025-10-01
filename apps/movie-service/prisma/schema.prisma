@@ -1,0 +1,64 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum LanguageOption {
+  ORIGINAL // Ngôn ngữ gốc
+  SUBTITLE // Phụ đề
+  DUBBED // Lồng tiếng / Thuyết minh
+}
+
+enum Genre {
+  ACTION
+  COMEDY
+  DRAMA
+  HORROR
+  SCIFI
+  ROMANCE
+  THRILLER
+  FANTASY
+  ANIMATION
+  DOCUMENTARY
+}
+
+enum AgeRating {
+  P // Phù hợp mọi lứa tuổi
+  T13 // Trên 13 tuổi
+  T16 // Trên 16 tuổi
+  T18 // Trên 18 tuổi
+}
+
+model Movie {
+  id          String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title       String         @map("title") // Tên phim
+  description String         @map("description") // Nội dung phim
+  posterUrl   String         @map("poster_url") // Ảnh poster
+  trailerUrl  String         @map("trailer_url") // Trailer video
+  duration    Int            @map("duration") // Thời lượng (phút)
+  releaseDate DateTime       @map("release_date") // Ngày khởi chiếu
+  endDate     DateTime?      @map("end_date") // Ngày kết thúc (có thể null)
+  ageRating   AgeRating      @map("age_rating") // T16, P, C18 ...
+  country     String         @map("country") // Quốc gia sản xuất
+  language    String         @map("language") // Ngôn ngữ gốc
+  type        LanguageOption @map("type") // ORIGINAL / SUBTITLE / DUBBED
+  genres      Genre[]        @map("genres") // Nhiều thể loại
+  director    String         @map("director") // Đạo diễn
+  cast        String         @map("cast") // Danh sách diễn viên
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("movies")
+}

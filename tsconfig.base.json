@@ -15,7 +15,12 @@
     "skipDefaultLibCheck": true,
     "baseUrl": ".",
     "paths": {
-      "@movie-hub/libs": ["libs/src/index.ts"]
+      "@movie-hub/libs": ["libs/src/index.ts"],
+      "@movie-hub/libs/*": ["libs/src/*"],
+      "@movie-hub/shacdn-ui": ["libs/shacdn-ui/src"],
+      "@movie-hub/shacdn-ui/*": ["libs/shacdn-ui/src/*"],
+      "@movie-hub/shacdn-utils": ["libs/shacdn-utils/src"],
+      "@movie-hub/shacdn-utils/*": ["libs/shacdn-utils/src/*"]
     }
   },
   "exclude": ["node_modules", "tmp"]

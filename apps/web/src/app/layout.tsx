@@ -5,7 +5,6 @@ import { Inter } from 'next/font/google';
 import { Metadata } from 'next';
 import { siteConfig } from '../config/site-config';
 
-
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
@@ -22,10 +21,18 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <ClerkProvider>
+    <ClerkProvider
+      appearance={{
+        theme: 'simple',
+        variables: {
+          colorPrimary: '#7E22CE',
+        },
+      }}
+      afterSignOutUrl="/"
+    >
       <html lang="en">
-        <body>
-          <Toaster theme='light' richColors closeButton />
+        <body className={inter.className}>
+          <Toaster theme="light" richColors closeButton />
           {children}
         </body>
       </html>

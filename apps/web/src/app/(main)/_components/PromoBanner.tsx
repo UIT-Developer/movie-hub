@@ -1,4 +1,7 @@
+import { BlurCircle } from "apps/web/src/components/blur-circle";
+import { ArrowRight } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 
 export default function PromoBanner() {
   const promos = [
@@ -8,11 +11,21 @@ export default function PromoBanner() {
   ];
 
   return (
-    <section className="container mx-auto px-4 py-20">
-      <h2 className="text-3xl font-sans font-bold mb-12 text-center uppercase">
-        Khuyến mãi
-      </h2>
-      <div className="flex justify-center space-x-32">
+    <section className="px-6 overflow-hidden">
+      <div className="relative flex items-center justify-between pt-20 pb-10">
+        <BlurCircle top="0" right="-80px" />
+        <p className="text-gray-300 font-bold text-lg">Khuyến mãi</p>
+
+        <Link
+          href="/discounts"
+          className="relative z-10 group flex items-center gap-2 text-sm text-gray-300 cursor-pointer"
+        >
+          Xem tất cả
+          <ArrowRight className="group-hover:translate-x-0.5 transition w-4 h-4" />
+        </Link>
+      </div>
+
+      <div className="flex justify-center gap-x-4">
         {promos.map((p, i) => (
           <div
             key={i}

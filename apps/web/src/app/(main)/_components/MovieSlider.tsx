@@ -1,17 +1,21 @@
 "use client";
 
-import { Swiper, SwiperSlide } from "swiper/react";
-import { Navigation } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/navigation";
+import { Navigation } from "swiper/modules";
+import { Swiper, SwiperSlide } from "swiper/react";
 
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { BlurCircle } from "apps/web/src/components/blur-circle";
+import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
+import Link from "next/link";
 import MovieCard from "./MovieCard";
 
 type Movie = {
   title: string;
   image: string;
   releaseDate?: string;
+  genre: string[],
+  runtime: number
 };
 
 type Props = {
@@ -19,21 +23,44 @@ type Props = {
   movies: Movie[];
 };
 
-export default function MovieSlider({ title, movies }: Props) {
+export default function MovieSlider({ title, movies}: Props) {
   return (
-    <div className="relative max-w-8xl mx-auto py-12 px-24  ">
-      <h2 className="text-2xl font-bold text-center mb-8">{title}</h2>
+    <div className="px-6 overflow-hidden">
+      <div className="relative flex items-center justify-between pt-20 pb-10">
+        <BlurCircle top="0" right="-80px" />
+        <p className="text-gray-300 font-bold text-lg">{title}</p>
+
+        <Link
+          href="/movies"
+          className="relative z-10 group flex items-center gap-2 text-sm text-gray-300 cursor-pointer"
+        >
+          Xem tất cả
+          <ArrowRight className="group-hover:translate-x-0.5 transition w-4 h-4" />
+        </Link>
+      </div>
 
       {/* Swiper */}
       <Swiper
         modules={[Navigation]}
-        spaceBetween={75}
-        slidesPerView={4}
-        slidesPerGroup={4}   // 👉 Bấm 1 lần chuyển 4 phim
+        spaceBetween={20}
+        slidesPerView={3}
+        slidesPerGroup={3} // 👉 Bấm 1 lần chuyển 4 phim
         loop={true}
         navigation={{
-          nextEl: ".swiper-button-next",
-          prevEl: ".swiper-button-prev",
+          nextEl: '.swiper-button-next',
+          prevEl: '.swiper-button-prev',
+        }}
+        breakpoints={{
+          0: {
+            // từ 0px trở lên (mobile)
+            slidesPerView: 1,
+            slidesPerGroup: 1,
+          },
+          768: {
+            // từ md: 768px trở lên (tablet/desktop)
+            slidesPerView: 3,
+            slidesPerGroup: 3,
+          },
         }}
       >
         {movies.map((movie, index) => (
@@ -42,6 +69,8 @@ export default function MovieSlider({ title, movies }: Props) {
               title={movie.title}
               image={movie.image}
               releaseDate={movie.releaseDate}
+              genre={movie.genre}
+              runtime={movie.runtime}
             />
           </SwiperSlide>
         ))}

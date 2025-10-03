@@ -1,7 +1,7 @@
 'use client';
 import { useCallback, useState } from 'react';
 import { toast } from 'sonner';
-import { BlurCircle } from '../_components/blur-circle';
+import { BlurCircle } from '../../../../../components/blur-circle';
 import { AvailableTiming } from './_components/available-timing';
 import { SeatGrid } from './_components/seat-grid';
 import { CinemaScreen } from './_components/cinema-screen';

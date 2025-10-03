@@ -1,49 +1,47 @@
+import { Button } from "@movie-hub/shacdn-ui/button";
+import { StarIcon } from "lucide-react";
 import Image from "next/image";
-
+import { useRouter } from "next/navigation";
 type Props = {
   title: string;
   image: string;
-  releaseDate?: string; // optional, chỉ dùng cho phim sắp chiếu
-};
+  releaseDate?: string;
+  genre: string[],
+  runtime: number
+}
 
-export default function MovieCard({ title, image, releaseDate }: Props) {
+export default function MovieCard({ title, image, releaseDate, genre, runtime }: Props) {
+  const router = useRouter()
   return (
-    <div className="w-72 bg-white shadow-lg rounded-lg overflow-hidden mx-auto flex flex-col ">
+    <div className="flex flex-col justify-between p-4 bg-gray-900 rounded-2xl hover:-translate-y-1 transition duration-300 w-66">
       {/* Poster */}
-      <div className="relative w-full h-[380px]">
+      <div
+        onClick={() => {
+          router.push(`/movies/`);
+          scrollTo(0,0)
+        }}
+        className="relative  w-full h-60 rounded-lg cursor-pointer"
+      >
         <Image
           src={image}
           alt={title}
           fill
-          className="object-cover" 
+          className="object-right-bottom object-cover rounded-lg"
         />
       </div>
 
-      {/* Info */}
-      <div className="p-3 text-center flex flex-col gap-2 bg-gradient-to-r from-indigo-900 to-indigo-800 rounded-b-lg">
-        <h3 className="font-extrabold text-base md:text-lg uppercase text-white mb-1 tracking-wide" style={{letterSpacing:1}}>
-          {title}
-        </h3>
-
-        {/* Ngày chiếu (nếu có) */}
-        {releaseDate && (
-          <p className="text-sm text-yellow-300 mb-2">📅 Ra mắt: {releaseDate}</p>
-        )}
-
-        <div className="flex items-center justify-center gap-2">
-          <button className="flex items-center gap-1 px-3 py-1 rounded-full border-2 border-red-500 bg-white text-red-600 font-semibold text-sm shadow hover:bg-red-50 transition">
-            <span className="inline-block">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="red" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="10"/>
-                <polygon points="10 8 16 12 10 16 10 8"/>
-              </svg>
-            </span>
-            <span className="underline">Trailer</span>
-          </button>
-          <button className="bg-yellow-400 hover:bg-yellow-500 px-5 py-1 rounded font-sans font-bold text-sm text-gray-900 shadow transition">
-            ĐẶT VÉ
-          </button>
-        </div>
+      <p className="font-semibold mt-2 truncate text-white ">{title}</p>
+      <p className="text-sm text-gray-400 mt-2 overflow-ellipsis whitespace-nowrap">
+        {releaseDate} | {(genre ?? []).join(' | ')} | {runtime}
+      </p>
+      <div className="flex items-center justify-between mt-4 pb-4">
+        <Button className="rounded-xl">
+          Đặt vé
+        </Button>
+        <p className="flex items-center gap-1 text-sm text-gray-400 mt-1 pr-1">
+          <StarIcon className="w-4 h-4 text-purple-600 fill-purple-600" />
+          5.0
+        </p>
       </div>
     </div>
   );

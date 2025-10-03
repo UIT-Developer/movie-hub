@@ -7,15 +7,15 @@ import { Building2, Film, CalendarDays, Clock } from "lucide-react";
 
 export default function QuickBooking() {
   return (
-    <Card className="bg-gradient-to-r from-indigo-100 to-indigo-50 shadow-md max-w-7xl mx-auto ">
-      <CardContent className="flex flex-col md:flex-row items-center gap-4 p-2 max-w-7xl mx-auto">
+    <Card className="bg-gradient-to-r from-indigo-200 to-indigo-50 shadow-md max-w-7xl mx-auto ">
+      <CardContent className="flex flex-col md:flex-row items-center gap-4 p-4 max-w-7xl mx-auto">
         {/* Tiêu đề */}
         <h2 className="text-lg font-bold text-gray-800 whitespace-nowrap">ĐẶT VÉ NHANH</h2>
 
         <div className="flex items-center gap-2">
           <Building2 className="text-purple-700" size={22} />
           <Select>
-            <SelectTrigger className="w-[180px] h-13 border border-black text-purple-700 font-bold focus:ring-2 focus:ring-purple-400 text-lg ">
+            <SelectTrigger className="w-[180px] h-13  text-purple-700 font-bold focus:ring-2 focus:ring-purple-400 text-lg ">
               <SelectValue placeholder={<span className="text-purple-700 font-bold">1. Chọn Rạp</span>} />
             </SelectTrigger>
             <SelectContent>
@@ -29,7 +29,7 @@ export default function QuickBooking() {
         <div className="flex items-center gap-2">
           <Film className="text-purple-700" size={22} />
           <Select>
-            <SelectTrigger className="w-[180px] h-13 border border-black text-purple-700 font-bold focus:ring-2 focus:ring-purple-400 text-lg">
+            <SelectTrigger className="w-[180px] h-13 text-purple-700 font-bold focus:ring-2 focus:ring-purple-400 text-lg">
               <SelectValue placeholder={<span className="text-purple-700 font-bold">2. Chọn Phim</span>} />
             </SelectTrigger>
             <SelectContent>
@@ -43,7 +43,7 @@ export default function QuickBooking() {
         <div className="flex items-center gap-2">
           <CalendarDays className="text-purple-700" size={22} />
           <Select>
-            <SelectTrigger className="w-[180px] h-13 border border-black text-purple-700 font-bold focus:ring-2 focus:ring-purple-400 text-lg">
+            <SelectTrigger className="w-[180px] h-13  text-purple-700 font-bold focus:ring-2 focus:ring-purple-400 text-lg">
               <SelectValue placeholder={<span className="text-purple-700 font-bold">3. Chọn Ngày</span>} />
             </SelectTrigger>
             <SelectContent>
@@ -57,7 +57,7 @@ export default function QuickBooking() {
         <div className="flex items-center gap-2">
           <Clock className="text-purple-700" size={22} />
           <Select>
-            <SelectTrigger className="w-[180px] h-13 border border-black text-purple-700 font-bold focus:ring-2 focus:ring-purple-400 text-lg">
+            <SelectTrigger className="w-[180px] h-13 text-purple-700 font-bold focus:ring-2 focus:ring-purple-400 text-lg">
               <SelectValue placeholder={<span className="text-purple-700 font-bold">4. Chọn Suất</span>} />
             </SelectTrigger>
             <SelectContent>

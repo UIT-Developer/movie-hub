@@ -9,6 +9,7 @@
   "private": true,
   "dependencies": {
     "@clerk/clerk-sdk-node": "^4.13.23",
+    "@clerk/nextjs": "^6.33.1",
     "@hookform/resolvers": "^5.2.2",
     "@nestjs/cache-manager": "^3.0.1",
     "@nestjs/common": "^11.0.0",

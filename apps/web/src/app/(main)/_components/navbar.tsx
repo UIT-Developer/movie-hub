@@ -1,11 +1,18 @@
+'use client';
 import Link from 'next/link';
 import { Clapperboard, MenuIcon, SearchIcon, XIcon } from 'lucide-react';
+import { useCallback, useState } from 'react';
+import { useClerk, UserButton, useUser } from '@clerk/nextjs';
+import { Button } from '@movie-hub/shacdn-ui/button';
 
 export const Navbar = () => {
+  const [isOpen, setIsOpen] = useState<boolean>(false);
+  const { user } = useUser();
+  const { openSignIn } = useClerk();
   return (
     <nav className="fixed top-0 left-0 z-50 w-full flex items-center justify-between px-6 md:px-16 lg:px-36 py-5 ">
       <Link href="/" className="max-md:flex-1">
-        <Clapperboard size={36} color='white' />
+        <Clapperboard size={36} color="white" />
       </Link>
 
       <div
@@ -24,12 +31,25 @@ export const Navbar = () => {
       </div>
 
       <div className="flex items-center gap-8">
-        <SearchIcon color='white' className="max-md:hidden w-6 h-6 cursor-pointer" />
-        <button className="px-4 py-1 sm:px-7 sm:py-2 bg-rose-400 hover:bg-rose-200 transition rounded-full font-medium cursor-pointer">
-          Login
-        </button>
+        <SearchIcon
+          color="white"
+          className="max-md:hidden w-6 h-6 cursor-pointer"
+        />
+        {!user ? (
+          <Button
+            onClick={() => openSignIn()}
+            className="px-4 py-1 sm:px-7 sm:py-2 text-gray-50 bg-rose-500 hover:bg-rose-500/90 transition rounded-full font-medium cursor-pointer"
+          >
+            Login
+          </Button>
+        ) : (
+          <UserButton />
+        )}
       </div>
-      <MenuIcon color='white' className="max-md:ml-4 md:hidden w-8 h-8 cursor-pointer" />
+      <MenuIcon
+        color="white"
+        className="max-md:ml-4 md:hidden w-8 h-8 cursor-pointer"
+      />
     </nav>
   );
 };

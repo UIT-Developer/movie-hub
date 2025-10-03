@@ -1,4 +1,4 @@
-export enum ScreenTypeEnum {
+export enum FormatEnum {
   TWO_D = 'TWO_D',
   THREE_D = 'THREE_D',
   IMAX = 'IMAX',

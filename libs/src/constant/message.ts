@@ -13,4 +13,7 @@ export const MovieMessage = {
 
 export const CinemaMessage = {
   GET_CINEMAS: 'cinema.getAll',
+  CINEMA: {
+    GET_SHOWTIME: 'cinema.showtime',
+  },
 };

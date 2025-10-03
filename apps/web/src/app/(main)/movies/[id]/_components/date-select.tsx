@@ -1,11 +1,11 @@
 'use client';
 import { ChevronLeftIcon, ChevronRightIcon } from 'lucide-react';
-import { BlurCircle } from './blur-circle';
 import { useRouter } from 'next/navigation';
 import { useCallback, useState } from 'react';
 import { toast } from 'sonner';
+import { BlurCircle } from '../../../../../components/blur-circle';
 interface DateSelectProps {
-  dateTime: { [dateKey: string]: any };
+  dateTime: { [dateKey: string]: unknown };
   id: string;
 }
 type SelectedDateKey = string | null;

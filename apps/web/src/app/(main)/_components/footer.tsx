@@ -1,3 +1,4 @@
+import { Logo } from "apps/web/src/components/logo";
 import Image from "next/image";
 
 export const Footer = () =>  {
@@ -5,14 +6,7 @@ export const Footer = () =>  {
     <footer className="px-6 md:px-16 lg:px-36 mt-40 w-full text-gray-300">
       <div className="flex flex-col md:flex-row justify-between w-full gap-10 border-b border-gray-500 pb-14">
         <div className="md:max-w-96">
-          <Image
-            priority
-            width={100}
-            height={44}
-            alt=""
-            className="h-11"
-            src="https://raw.githubusercontent.com/prebuiltui/prebuiltui/main/assets/dummyLogo/prebuiltuiLogoSquareShape.svg"
-          />
+          <Logo />
           <p className="mt-6 text-sm">
             Lorem Ipsum has been the standard dummy text ever since
             the 1500s, when an unknown printer took a galley of type and

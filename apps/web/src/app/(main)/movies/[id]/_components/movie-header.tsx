@@ -1,6 +1,6 @@
 'use client';
 import Image from 'next/image';
-import { BlurCircle } from '../_components/blur-circle';
+import { BlurCircle } from '../../../../../components/blur-circle';
 import { StarIcon } from 'lucide-react';
 
 interface MovieHeaderProps {

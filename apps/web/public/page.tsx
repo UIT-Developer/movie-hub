@@ -1,13 +1,13 @@
-import TopAdBanner from "./_components/TopAdBanner"; 
-import MovieSlider from"./_components/MovieSlider";
-import { Navbar } from "./_components/navbar";
-import QuickBooking from "./_components/QuickBooking";
-import PromoBanner from "./_components/PromoBanner";
-import OtherServices from "./_components/OtherServices";
-import { Footer } from "./_components/footer";
+import Navbar from "./components_main/Navbar";
+import TopAdBanner from "./components_main/TopAdBanner"; 
+import MovieSlider from "./components_main/MovieSlider";
+import Footer from "./components_main/Footer";
+import PromoBanner from "./components_main/PromoBanner";
+import OtherServices from "./components_main/OtherServices";
 
+import QuickBooking from "@/app/components_main/QuickBooking";
 
-const MainPage = () => {
+export default function Home() {
   const nowShowing = [
     { title: "Avengers", image: "/movies/avengers.jpg" },
     { title: "Inception", image: "/movies/inception.jpg" },
@@ -40,11 +40,9 @@ const MainPage = () => {
         <MovieSlider title="🎥 PHIM SẮP CHIẾU" movies={comingSoon} />
       </section>
 
-      <PromoBanner  />
+      <PromoBanner />
       <OtherServices />
       <Footer />
     </div>
   );
 }
-
-export default MainPage

@@ -1,30 +1,36 @@
 import {
   CreateMovieRequest,
-  MovieMessage,
+  MovieServiceMessage,
   UpdateMovieRequest,
 } from '@movie-hub/libs';
-import { Controller, Logger } from '@nestjs/common';
+import { Controller, Logger, UseFilters } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { MovieService } from './movie.service';
+import { AllExceptionsFilter } from '../../filter/all-exceptions.filter';
 
 @Controller('movies')
+@UseFilters(new AllExceptionsFilter())
 export class MovieController {
   logger = new Logger(MovieController.name);
 
   constructor(private readonly movieService: MovieService) {}
 
-  @MessagePattern(MovieMessage.MOVIE.CREATED)
+  @MessagePattern(MovieServiceMessage.MOVIE.GET_LIST)
+  async getMovies() {
+    return await this.movieService.getMovies();
+  }
+
+  @MessagePattern(MovieServiceMessage.MOVIE.GET_DETAIL)
+  async getDetail(@Payload() id: string) {
+    return await this.movieService.getMovieDetail(id);
+  }
+
+  @MessagePattern(MovieServiceMessage.MOVIE.CREATED)
   async createMovie(@Payload() request: CreateMovieRequest) {
-    this.logger.debug('request from api gate way', request);
     return this.movieService.createMovie(request);
   }
 
-  @MessagePattern(MovieMessage.MOVIE.GET_LIST)
-  async getMovies() {
-    return this.movieService.getMovies();
-  }
-
-  @MessagePattern(MovieMessage.MOVIE.UPDATED)
+  @MessagePattern(MovieServiceMessage.MOVIE.UPDATED)
   async updateMovie(
     @Payload()
     {
@@ -35,6 +41,12 @@ export class MovieController {
       updateMovieRequest: UpdateMovieRequest;
     }
   ) {
-    return this.movieService.updateMovie(id, updateMovieRequest);
+    return await this.movieService.updateMovie(id, updateMovieRequest);
+  }
+
+  @MessagePattern(MovieServiceMessage.MOVIE.DELETED)
+  async deleteMovie(@Payload() id: string) {
+    await this.movieService.deleteMovie(id);
+    return null;
   }
 }

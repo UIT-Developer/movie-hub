@@ -2,7 +2,7 @@ import {
   GenreRequest,
   MovieServiceMessage,
   SERVICE_NAME,
-} from '@movie-hub/libs';
+} from '@movie-hub/shared-types';
 import { Inject, Injectable } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';

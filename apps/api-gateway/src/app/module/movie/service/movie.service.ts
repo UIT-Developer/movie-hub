@@ -5,7 +5,7 @@ import {
   MovieSummary,
   SERVICE_NAME,
   UpdateMovieRequest,
-} from '@movie-hub/libs';
+} from '@movie-hub/shared-types';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ClientProxy, RpcException } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';

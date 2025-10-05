@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { ResourceNotFoundException } from '@movie-hub/libs';
+import { ResourceNotFoundException } from '@movie-hub/shared-types';
 import { Catch } from '@nestjs/common';
 import { BaseRpcExceptionFilter } from '@nestjs/microservices';
 import { throwError } from 'rxjs';

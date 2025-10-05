@@ -3,7 +3,7 @@ import { CanActivate, ExecutionContext, Inject, Logger } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { ClientProxy } from '@nestjs/microservices';
 import { PERMISSION_KEY } from '../decorator/permission.decorator';
-import { SERVICE_NAME, UserMessage } from '@movie-hub/libs';
+import { SERVICE_NAME, UserMessage } from '@movie-hub/shared-types';
 import { lastValueFrom } from 'rxjs';
 
 export class ClerkAuthGuard implements CanActivate {

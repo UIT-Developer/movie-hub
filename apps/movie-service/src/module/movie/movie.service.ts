@@ -6,7 +6,7 @@ import {
   MovieSummary,
   ResourceNotFoundException,
   UpdateMovieRequest,
-} from '@movie-hub/libs';
+} from '@movie-hub/shared-types';
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { MovieMapper } from './movie.mapper';

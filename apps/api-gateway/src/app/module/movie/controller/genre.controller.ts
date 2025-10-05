@@ -1,5 +1,5 @@
-import { GenreRequest } from '@movie-hub/libs';
-import { ApiSuccessResponse } from '@movie-hub/libs/common';
+import { GenreRequest } from '@movie-hub/shared-types';
+import { ApiSuccessResponse } from '@movie-hub/shared-types/common';
 import {
   Body,
   Controller,

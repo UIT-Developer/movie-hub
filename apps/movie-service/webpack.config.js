@@ -21,4 +21,15 @@ module.exports = {
       sourceMaps: true,
     }),
   ],
+  ignoreWarnings: [/Failed to parse source map.*prisma/],
+  module: {
+    rules: [
+      {
+        test: /\.js$/,
+        enforce: 'pre',
+        use: ['source-map-loader'],
+        exclude: [/node_modules/, /generated\/prisma/],
+      },
+    ],
+  },
 };

@@ -11,7 +11,7 @@ import {
 } from "react-hook-form"
 
 import { cn } from "@movie-hub/shacdn-utils"
-import { Label } from "@movie-hub/shacdn-ui/label"
+import { Label } from './label';
 
 const Form = FormProvider
 

@@ -2,7 +2,7 @@ import {
   CreateMovieRequest,
   MovieServiceMessage,
   UpdateMovieRequest,
-} from '@movie-hub/libs';
+} from '@movie-hub/shared-types';
 import { Controller, Logger, UseFilters } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { MovieService } from './movie.service';

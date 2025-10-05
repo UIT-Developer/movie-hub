@@ -1,11 +1,6 @@
-import {
-  GenreRequest,
-  MovieServiceMessage,
-  ResourceNotFoundException,
-} from '@movie-hub/libs';
+import { GenreRequest, MovieServiceMessage } from '@movie-hub/shared-types';
 import { Controller } from '@nestjs/common';
-import { MessagePattern, Payload, RpcException } from '@nestjs/microservices';
-import { catchError, from, map } from 'rxjs';
+import { MessagePattern, Payload } from '@nestjs/microservices';
 import { GenreService } from './genre.service';
 
 @Controller('genres')

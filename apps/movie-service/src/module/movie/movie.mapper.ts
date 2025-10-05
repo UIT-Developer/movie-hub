@@ -2,7 +2,7 @@ import {
   AgeRatingEnum,
   LanguageOptionEnum,
   MovieDetailResponse,
-} from '@movie-hub/libs';
+} from '@movie-hub/shared-types';
 
 import { Injectable } from '@nestjs/common';
 import { Genre, Movie, MovieGenre } from '../../../generated/prisma';

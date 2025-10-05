@@ -1,4 +1,7 @@
-import { CreateMovieRequest, UpdateMovieRequest } from '@movie-hub/libs';
+import {
+  CreateMovieRequest,
+  UpdateMovieRequest,
+} from '@movie-hub/shared-types';
 import {
   Body,
   Controller,

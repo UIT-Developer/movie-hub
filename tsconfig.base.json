@@ -15,8 +15,8 @@
     "skipDefaultLibCheck": true,
     "baseUrl": ".",
     "paths": {
-      "@movie-hub/libs": ["libs/src/index.ts"],
-      "@movie-hub/libs/*": ["libs/src/*"],
+      "@movie-hub/shared-types": ["libs/shared-types/src/index.ts"],
+      "@movie-hub/shared-types/*": ["libs/shared-types/src/*"],
       "@movie-hub/shacdn-ui": ["libs/shacdn-ui/src"],
       "@movie-hub/shacdn-ui/*": ["libs/shacdn-ui/src/*"],
       "@movie-hub/shacdn-utils": ["libs/shacdn-utils/src"],

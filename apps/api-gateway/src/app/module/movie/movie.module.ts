@@ -1,4 +1,4 @@
-import { SERVICE_NAME } from "@movie-hub/libs";
+import { SERVICE_NAME } from '@movie-hub/shared-types';
 import { Module } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { ClientsModule, Transport } from "@nestjs/microservices";

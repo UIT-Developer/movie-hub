@@ -1,4 +1,4 @@
-import { GenreRequest, GenreResponse } from '@movie-hub/libs';
+import { GenreRequest, GenreResponse } from '@movie-hub/shared-types';
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 

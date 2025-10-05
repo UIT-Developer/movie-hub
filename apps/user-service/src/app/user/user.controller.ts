@@ -1,4 +1,4 @@
-import { UserMessage } from '@movie-hub/libs';
+import { UserMessage } from '@movie-hub/shared-types';
 import { Controller } from '@nestjs/common';
 import { MessagePattern } from '@nestjs/microservices';
 import { UserService } from './user.service';

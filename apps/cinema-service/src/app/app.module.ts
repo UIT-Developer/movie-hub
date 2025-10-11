@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { CinemaModule } from './cinema/cinema.module';
+import { CinemaLocationModule } from './cinema-location/cinema-location.module';
 import Joi from 'joi';
 
 @Module({

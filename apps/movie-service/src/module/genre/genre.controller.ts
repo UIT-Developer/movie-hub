@@ -31,7 +31,6 @@ export class GenreController {
 
   @MessagePattern(MovieServiceMessage.GENRE.DELETED)
   async deleteGenre(@Payload() id: string) {
-    await this.genreService.deleteGenre(id);
-    return null;
+    return this.genreService.deleteGenre(id);
   }
 }

@@ -71,6 +71,24 @@
       }
     },
 
+    "prisma:push": {
+      "cache": false,
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "prisma db push",
+        "cwd": "apps/movie-service"
+      }
+    },
+
+    "prisma:seed": {
+      "cache": false,
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "ts-node seed.ts",
+        "cwd": "apps/movie-service/prisma"
+      }
+    },
+
     "test": {
       "options": {
         "passWithNoTests": true

@@ -1,0 +1,86 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum LanguageOption {
+  ORIGINAL // Ngôn ngữ gốc
+  SUBTITLE // Phụ đề
+  DUBBED // Lồng tiếng / Thuyết minh
+}
+
+enum Format {
+  TWO_D
+  THREE_D
+  IMAX
+  FOUR_DX
+}
+
+enum AgeRating {
+  P
+  K
+  T13
+  T16
+  T18
+  C
+}
+
+model Movie {
+  id                String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title             String         @map("title")
+  originalTitle     String         @map("original_title")
+  overview          String         @map("overview")
+  posterUrl         String         @map("poster_url")
+  trailerUrl        String         @map("trailer_url")
+  backdropUrl       String         @map("backdrop_url")
+  runtime           Int            @map("runtime")
+  releaseDate       DateTime       @map("release_date")
+  ageRating         AgeRating      @map("age_rating")
+  originalLanguage  String         @map("original_language")
+  spokenLanguages   String[]       @map("spoken_languages")
+  productionCountry String         @map("production_country")
+  languageType      LanguageOption @map("language_type")
+  director          String         @map("director")
+  cast              Json           @map("cast")
+  createdAt         DateTime       @default(now()) @map("created_at")
+  updatedAt         DateTime       @updatedAt @map("updated_at")
+
+  movieGenres MovieGenre[] @relation("MovieGenre")
+
+  @@map("movies")
+}
+
+model Genre {
+  id          String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid @unique
+  name        String
+  movieGenres MovieGenre[] @relation("Genre")
+
+  @@map("genres")
+}
+
+model MovieGenre {
+  movieId String @map("movie_id") @db.Uuid
+  genreId String @map("genre_id") @db.Uuid
+
+  movie Movie @relation("MovieGenre", fields: [movieId], references: [id], onDelete: Cascade)
+  genre Genre @relation("Genre", fields: [genreId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@id([movieId, genreId])
+  @@index([movieId])
+  @@index([genreId])
+  @@map("movie_genres")
+}

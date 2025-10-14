@@ -2,8 +2,8 @@ import { Module } from '@nestjs/common';
 import { CinemaController } from './controller/cinema.controller';
 import { CinemaService } from './service/cinema.service';
 import { ClientsModule, Transport } from '@nestjs/microservices';
-import { SERVICE_NAME } from '@movie-hub/libs';
 import { ConfigService } from '@nestjs/config';
+import { SERVICE_NAME } from '@movie-hub/shared-types';
 
 @Module({
   imports: [

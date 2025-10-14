@@ -1,10 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { ShowtimeMapper } from './showtime.mapper';
+import { PrismaService } from '../prisma.service';
 import {
   GetShowtimesQuery,
   ShowtimeSummaryResponse,
-} from '@movie-hub/libs/cinema';
-import { PrismaService } from '../prisma.service';
+} from '@movie-hub/shared-types';
 
 @Injectable()
 export class ShowtimeService {

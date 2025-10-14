@@ -1,11 +1,9 @@
 import {
-  FormatEnum,
   ShowtimeStatusEnum,
   ShowtimeSummaryResponse,
-} from '@movie-hub/libs/cinema';
+} from '@movie-hub/shared-types';
 import { Injectable } from '@nestjs/common';
 import { $Enums, Showtimes } from '@prisma/client';
-import { Decimal } from '@prisma/client/runtime/library';
 
 @Injectable()
 export class ShowtimeMapper {

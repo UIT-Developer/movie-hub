@@ -1,11 +1,11 @@
 import { Controller } from '@nestjs/common';
 import { ShowtimeService } from './showtime.service';
 import { MessagePattern, Payload } from '@nestjs/microservices';
-import { CinemaMessage } from '@movie-hub/libs';
 import {
+  CinemaMessage,
   GetShowtimesQuery,
   ShowtimeSummaryResponse,
-} from '@movie-hub/libs/cinema';
+} from '@movie-hub/shared-types';
 
 @Controller('showtimes')
 export class ShowtimeController {

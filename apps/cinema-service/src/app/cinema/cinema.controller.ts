@@ -1,7 +1,7 @@
 import { Controller } from '@nestjs/common';
 import { CinemaService } from './cinema.service';
 import { MessagePattern } from '@nestjs/microservices';
-import { CinemaMessage } from '@movie-hub/libs';
+import { CinemaMessage } from '@movie-hub/shared-types';
 
 @Controller('cinema')
 export class CinemaController {

@@ -8,6 +8,7 @@ import { NestFactory } from '@nestjs/core';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { AppModule } from './app/app.module';
 import { ConfigService } from '@nestjs/config';
+import { AllExceptionsFilter } from './filter/all-exception.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -21,6 +22,8 @@ async function bootstrap() {
       port: config.get<number>('TCP_PORT'),
     },
   });
+
+  app.useGlobalFilters(new AllExceptionsFilter());
 
   await app.startAllMicroservices();
 

@@ -10,12 +10,12 @@ import {
   Req,
 } from '@nestjs/common';
 import { CinemaService } from '../service/cinema.service';
-import { ApiSuccessResponse } from '@movie-hub/libs/common';
 import { Request } from 'express';
 import {
   GetShowtimesQuery,
   ShowtimeSummaryResponse,
-} from '@movie-hub/libs/cinema';
+} from '@movie-hub/shared-types';
+import { ApiSuccessResponse } from '@movie-hub/shared-types/common';
 
 @Controller({
   version: '1',

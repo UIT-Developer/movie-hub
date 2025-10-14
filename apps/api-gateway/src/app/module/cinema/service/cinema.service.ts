@@ -1,8 +1,9 @@
-import { CinemaMessage, SERVICE_NAME } from '@movie-hub/libs';
 import {
+  CinemaMessage,
   GetShowtimesQuery,
+  SERVICE_NAME,
   ShowtimeSummaryResponse,
-} from '@movie-hub/libs/cinema';
+} from '@movie-hub/shared-types';
 import { Inject, Injectable } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom, lastValueFrom } from 'rxjs';

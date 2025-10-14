@@ -17,7 +17,10 @@ import {
   ShowtimeSummaryResponse,
 } from '@movie-hub/libs/cinema';
 
-@Controller('cinemas')
+@Controller({
+  version: '1',
+  path: 'cinemas',
+})
 export class CinemaController {
   constructor(private readonly cinemaService: CinemaService) {}
 
@@ -149,14 +152,14 @@ export class CinemaController {
   async getMovieShowtimesAtCinema(
     @Param('cinemaId') cinemaId: string,
     @Param('movieId') movieId: string,
-    @Query() query: GetShowtimesQuery,
+    @Query() date: GetShowtimesQuery,
     @Req() req: Request
   ): Promise<ApiSuccessResponse<ShowtimeSummaryResponse[]>> {
-    console.log(cinemaId, movieId, query);
+    console.log(cinemaId, movieId, date);
     const showtimes = await this.cinemaService.getMovieShowtimesAtCinema(
       cinemaId,
       movieId,
-      query
+      date
     );
     return {
       success: true,

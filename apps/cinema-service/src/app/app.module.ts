@@ -15,6 +15,7 @@ import Joi from 'joi';
       }),
     }),
     CinemaModule,
+    CinemaLocationModule,
   ],
   controllers: [],
   providers: [],

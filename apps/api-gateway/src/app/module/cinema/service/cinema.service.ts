@@ -12,4 +12,92 @@ export class CinemaService {
   async getCinemas() {
     return lastValueFrom(this.cinemaClient.send(CinemaMessage.GET_CINEMAS, {}));
   }
+
+  /**
+   * Get cinemas nearby user location
+   */
+  async getCinemasNearby(data: {
+    latitude: number;
+    longitude: number;
+    radiusKm?: number;
+    limit?: number;
+  }) {
+    return lastValueFrom(
+      this.cinemaClient.send(CinemaMessage.GET_CINEMAS_NEARBY, data)
+    );
+  }
+
+  /**
+   * Get cinemas with advanced filters
+   */
+  async getCinemasWithFilters(filter: {
+    latitude?: number;
+    longitude?: number;
+    radiusKm?: number;
+    city?: string;
+    district?: string;
+    amenities?: string[];
+    hallTypes?: string[];
+    minRating?: number;
+    page?: number;
+    limit?: number;
+    sortBy?: 'distance' | 'rating' | 'name';
+    sortOrder?: 'asc' | 'desc';
+  }) {
+    return lastValueFrom(
+      this.cinemaClient.send(CinemaMessage.GET_CINEMAS_WITH_FILTERS, filter)
+    );
+  }
+
+  /**
+   * Get cinema detail by ID with optional user location
+   */
+  async getCinemaDetail(
+    cinemaId: string,
+    userLatitude?: number,
+    userLongitude?: number
+  ) {
+    return lastValueFrom(
+      this.cinemaClient.send(CinemaMessage.GET_CINEMA_DETAIL, {
+        cinemaId,
+        userLatitude,
+        userLongitude,
+      })
+    );
+  }
+
+  /**
+   * Search cinemas by name or address
+   */
+  async searchCinemas(
+    query: string,
+    userLatitude?: number,
+    userLongitude?: number
+  ) {
+    return lastValueFrom(
+      this.cinemaClient.send(CinemaMessage.SEARCH_CINEMAS, {
+        query,
+        userLatitude,
+        userLongitude,
+      })
+    );
+  }
+
+  /**
+   * Get available cities
+   */
+  async getAvailableCities() {
+    return lastValueFrom(
+      this.cinemaClient.send(CinemaMessage.GET_AVAILABLE_CITIES, {})
+    );
+  }
+
+  /**
+   * Get available districts by city
+   */
+  async getAvailableDistricts(city: string) {
+    return lastValueFrom(
+      this.cinemaClient.send(CinemaMessage.GET_AVAILABLE_DISTRICTS, { city })
+    );
+  }
 }

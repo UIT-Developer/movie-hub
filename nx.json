@@ -15,7 +15,7 @@
     ],
     "sharedGlobals": ["{workspaceRoot}/.github/workflows/ci.yml"]
   },
-  "nxCloudId": "68d148494113eb6be752068a",
+  "nxCloudId": "68ec78234a56d8e769adf429",
   "plugins": [
     {
       "plugin": "@nx/webpack/plugin",
@@ -28,18 +28,11 @@
         "serveStaticTargetName": "serve-static"
       }
     },
-    {
-      "plugin": "@nx/eslint/plugin",
-      "options": {
-        "targetName": "lint"
-      }
-    },
+    { "plugin": "@nx/eslint/plugin", "options": { "targetName": "lint" } },
     {
       "plugin": "@nx/jest/plugin",
-      "options": {
-        "targetName": "test"
-      },
-      "exclude": ["apps/api-gateway-e2e/**/*", "apps/cinema-service-e2e/**/*"]
+      "options": { "targetName": "test" },
+      "exclude": ["apps/api-gateway-e2e/**/*"]
     },
     {
       "plugin": "@nx/next/plugin",
@@ -54,15 +47,8 @@
     }
   ],
   "generators": {
-    "@nx/next": {
-      "application": {
-        "style": "tailwind",
-        "linter": "eslint"
-      }
-    },
-    "@nx/react": {
-      "library": {}
-    }
+    "@nx/next": { "application": { "style": "tailwind", "linter": "eslint" } },
+    "@nx/react": { "library": {} }
   },
   "targetDefaults": {
     "@nx/js:tsc": {

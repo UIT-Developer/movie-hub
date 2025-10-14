@@ -3,7 +3,7 @@ import { UserController } from './user.controller';
 import { UserService } from './user.service';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { ConfigService } from '@nestjs/config';
-import { SERVICE_NAME } from '@movie-hub/libs';
+import { SERVICE_NAME } from '@movie-hub/shared-types';
 
 @Module({
   imports: [

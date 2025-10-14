@@ -1,10 +1,11 @@
 import {
   CreateMovieRequest,
-  MovieMessage,
-  MovieResponse,
+  MovieDetailResponse,
+  MovieServiceMessage,
+  MovieSummary,
   SERVICE_NAME,
   UpdateMovieRequest,
-} from '@movie-hub/libs';
+} from '@movie-hub/shared-types';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ClientProxy, RpcException } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
@@ -17,21 +18,55 @@ export class MovieService {
     @Inject(SERVICE_NAME.Movie) private readonly client: ClientProxy
   ) {}
 
-  async getMovies(): Promise<MovieResponse> {
-    return firstValueFrom(this.client.send(MovieMessage.MOVIE.GET_LIST, {}));
+  async getMovies(): Promise<MovieSummary> {
+    try {
+      return await firstValueFrom(
+        this.client.send(MovieServiceMessage.MOVIE.GET_LIST, {})
+      );
+    } catch (error) {
+      throw new RpcException(error);
+    }
+  }
+
+  async getMovieDetail(id: string): Promise<MovieDetailResponse> {
+    try {
+      return await firstValueFrom(
+        this.client.send(MovieServiceMessage.MOVIE.GET_DETAIL, id)
+      );
+    } catch (error) {
+      throw new RpcException(error);
+    }
   }
 
   async createMovie(request: CreateMovieRequest) {
-    return firstValueFrom(
-      this.client.send(MovieMessage.MOVIE.CREATED, request)
-    );
-  }
-
-  async updateMovie(id: string, updateMovieRequest: UpdateMovieRequest): Promise<MovieResponse> {
     try {
       return await firstValueFrom(
-        this.client.send(MovieMessage.MOVIE.UPDATED, { id, updateMovieRequest })
+        this.client.send(MovieServiceMessage.MOVIE.CREATED, request)
       );
+    } catch (error) {
+      throw new RpcException(error);
+    }
+  }
+
+  async updateMovie(
+    id: string,
+    updateMovieRequest: UpdateMovieRequest
+  ): Promise<MovieDetailResponse> {
+    try {
+      return await firstValueFrom(
+        this.client.send(MovieServiceMessage.MOVIE.UPDATED, {
+          id,
+          updateMovieRequest,
+        })
+      );
+    } catch (error) {
+      throw new RpcException(error);
+    }
+  }
+
+  async deleteMovie(id: string) {
+    try {
+      firstValueFrom(this.client.send(MovieServiceMessage.MOVIE.DELETED, id));
     } catch (error) {
       throw new RpcException(error);
     }

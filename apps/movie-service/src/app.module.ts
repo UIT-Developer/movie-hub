@@ -1,10 +1,13 @@
+import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import Joi from 'joi';
-import { Module } from '@nestjs/common';import { ConfigModule } from '@nestjs/config';
+import { GenreModule } from './module/genre/genre.module';
 import { MovieModule } from './module/movie/movie.module';
 
 @Module({
   imports: [
     MovieModule,
+    GenreModule,
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: 'apps/movie-service/.env',

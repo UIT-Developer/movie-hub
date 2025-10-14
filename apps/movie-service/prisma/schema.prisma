@@ -20,45 +20,67 @@ enum LanguageOption {
   DUBBED // Lồng tiếng / Thuyết minh
 }
 
-enum Genre {
-  ACTION
-  COMEDY
-  DRAMA
-  HORROR
-  SCIFI
-  ROMANCE
-  THRILLER
-  FANTASY
-  ANIMATION
-  DOCUMENTARY
+enum Format {
+  TWO_D
+  THREE_D
+  IMAX
+  FOUR_DX
 }
 
 enum AgeRating {
-  P // Phù hợp mọi lứa tuổi
-  T13 // Trên 13 tuổi
-  T16 // Trên 16 tuổi
-  T18 // Trên 18 tuổi
+  P
+  K
+  T13
+  T16
+  T18
+  C
 }
 
 model Movie {
-  id          String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  title       String         @map("title") // Tên phim
-  description String         @map("description") // Nội dung phim
-  posterUrl   String         @map("poster_url") // Ảnh poster
-  trailerUrl  String         @map("trailer_url") // Trailer video
-  duration    Int            @map("duration") // Thời lượng (phút)
-  releaseDate DateTime       @map("release_date") // Ngày khởi chiếu
-  endDate     DateTime?      @map("end_date") // Ngày kết thúc (có thể null)
-  ageRating   AgeRating      @map("age_rating") // T16, P, C18 ...
-  country     String         @map("country") // Quốc gia sản xuất
-  language    String         @map("language") // Ngôn ngữ gốc
-  type        LanguageOption @map("type") // ORIGINAL / SUBTITLE / DUBBED
-  genres      Genre[]        @map("genres") // Nhiều thể loại
-  director    String         @map("director") // Đạo diễn
-  cast        String         @map("cast") // Danh sách diễn viên
+  id                String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title             String         @map("title")
+  originalTitle     String         @map("original_title")
+  overview          String         @map("overview")
+  posterUrl         String         @map("poster_url")
+  trailerUrl        String         @map("trailer_url")
+  backdropUrl       String         @map("backdrop_url")
+  runtime           Int            @map("runtime")
+  releaseDate       DateTime       @map("release_date")
+  ageRating         AgeRating      @map("age_rating")
+  originalLanguage  String         @map("original_language")
+  spokenLanguages   String[]       @map("spoken_languages")
+  productionCountry String         @map("production_country")
+  languageType      LanguageOption @map("language_type")
+  director          String         @map("director")
+  cast              Json           @map("cast")
+  createdAt         DateTime       @default(now()) @map("created_at")
+  updatedAt         DateTime       @updatedAt @map("updated_at")
+
+  movieGenres MovieGenre[] @relation("MovieGenre")
+
+  @@map("movies")
+}
+
+model Genre {
+  id          String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid @unique
+  name        String
+  movieGenres MovieGenre[] @relation("Genre")
+
+  @@map("genres")
+}
+
+model MovieGenre {
+  movieId String @map("movie_id") @db.Uuid
+  genreId String @map("genre_id") @db.Uuid
+
+  movie Movie @relation("MovieGenre", fields: [movieId], references: [id], onDelete: Cascade)
+  genre Genre @relation("Genre", fields: [genreId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  @@map("movies")
+  @@id([movieId, genreId])
+  @@index([movieId])
+  @@index([genreId])
+  @@map("movie_genres")
 }

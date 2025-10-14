@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import { CinemaLocationMapper } from './cinema-location.mapper';
 import {
@@ -9,7 +13,7 @@ import {
   CinemaLocationResponse,
 } from './dto/cinema-location.dto';
 import { DistanceCalculator } from './utils/distance-calculator';
-import { Prisma } from '@prisma/client';
+import { Prisma } from '../../../generated/prisma/client';
 import Decimal from 'decimal.js';
 
 @Injectable()
@@ -38,7 +42,9 @@ export class CinemaLocationService {
   /**
    * Get cinemas nearby user location
    */
-  async getCinemasNearby(dto: GetCinemasNearbyDto): Promise<CinemaListResponse> {
+  async getCinemasNearby(
+    dto: GetCinemasNearbyDto
+  ): Promise<CinemaListResponse> {
     const { latitude, longitude, radiusKm = 10, limit = 20 } = dto;
 
     if (!latitude || !longitude) {
@@ -66,7 +72,7 @@ export class CinemaLocationService {
 
     // Filter by exact distance and sort
     const nearbyCinemas = cinemas
-      .filter(cinema => {
+      .filter((cinema) => {
         if (!cinema.latitude || !cinema.longitude) return false;
         return DistanceCalculator.isWithinRadius(
           latitude,
@@ -76,7 +82,7 @@ export class CinemaLocationService {
           radiusKm
         );
       })
-      .map(cinema => ({
+      .map((cinema) => ({
         ...cinema,
         calculatedDistance: DistanceCalculator.calculateDistance(
           latitude,
@@ -149,10 +155,10 @@ export class CinemaLocationService {
     }
 
     if (hallTypes && hallTypes.length > 0) {
-      where.halls = { 
-        some: { 
-          type: { in: hallTypes as any } 
-        } 
+      where.halls = {
+        some: {
+          type: { in: hallTypes as any },
+        },
       };
     }
 
@@ -165,7 +171,7 @@ export class CinemaLocationService {
     // Filter by distance if location provided
     let filteredCinemas = cinemas;
     if (latitude && longitude && radiusKm) {
-      filteredCinemas = cinemas.filter(cinema => {
+      filteredCinemas = cinemas.filter((cinema) => {
         if (!cinema.latitude || !cinema.longitude) return false;
         return DistanceCalculator.isWithinRadius(
           latitude,
@@ -221,7 +227,9 @@ export class CinemaLocationService {
   /**
    * Get cinema detail by ID
    */
-  async getCinemaDetail(dto: GetCinemaDetailDto): Promise<CinemaLocationResponse> {
+  async getCinemaDetail(
+    dto: GetCinemaDetailDto
+  ): Promise<CinemaLocationResponse> {
     const { cinemaId, userLatitude, userLongitude } = dto;
 
     const cinema = await this.prisma.cinemas.findUnique({
@@ -261,7 +269,11 @@ export class CinemaLocationService {
       take: 20,
     });
 
-    return this.mapper.toCinemaLocationList(cinemas, userLatitude, userLongitude);
+    return this.mapper.toCinemaLocationList(
+      cinemas,
+      userLatitude,
+      userLongitude
+    );
   }
 
   /**
@@ -275,7 +287,7 @@ export class CinemaLocationService {
       orderBy: { city: 'asc' },
     });
 
-    return cinemas.map(c => c.city);
+    return cinemas.map((c) => c.city);
   }
 
   /**
@@ -294,7 +306,7 @@ export class CinemaLocationService {
     });
 
     return cinemas
-      .map(c => c.district)
+      .map((c) => c.district)
       .filter((d): d is string => d !== null);
   }
 }

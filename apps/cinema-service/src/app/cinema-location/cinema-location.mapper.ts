@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Cinemas, Halls } from '@prisma/client';
+import { Cinemas, Halls } from '../../../generated/prisma/client';
 import { Decimal } from '@prisma/client/runtime/library';
 import { CinemaLocationResponse } from './dto/cinema-location.dto';
 import { DistanceCalculator } from './utils/distance-calculator';
@@ -45,26 +45,27 @@ export class CinemaLocationMapper {
       );
     }
 
-    // Handle amenities 
+    // Handle amenities
     const amenities = Array.isArray(cinema.amenities) ? cinema.amenities : [];
-    
-    // Handle images 
+
+    // Handle images
     const images = Array.isArray(cinema.images) ? cinema.images : [];
-    
+
     // Get unique hall types
-    const availableHallTypes: string[] = cinema.halls 
-      ? Array.from(new Set(cinema.halls.map(h => String(h.type))))
+    const availableHallTypes: string[] = cinema.halls
+      ? Array.from(new Set(cinema.halls.map((h) => String(h.type))))
       : [];
 
     // Check if open
-    const isOpen = cinema.operating_hours 
+    const isOpen = cinema.operating_hours
       ? OperatingHoursUtil.isOpen(cinema.operating_hours as any)
       : undefined;
 
     // Generate map URL
-    const mapUrl = cinemaLat && cinemaLon
-      ? `https://www.google.com/maps/search/?api=1&query=${cinemaLat},${cinemaLon}`
-      : undefined;
+    const mapUrl =
+      cinemaLat && cinemaLon
+        ? `https://www.google.com/maps/search/?api=1&query=${cinemaLat},${cinemaLon}`
+        : undefined;
 
     return {
       id: cinema.id,
@@ -103,7 +104,7 @@ export class CinemaLocationMapper {
     userLatitude?: number,
     userLongitude?: number
   ): CinemaLocationResponse[] {
-    return cinemas.map(cinema =>
+    return cinemas.map((cinema) =>
       this.toCinemaLocationResponse(cinema, userLatitude, userLongitude)
     );
   }

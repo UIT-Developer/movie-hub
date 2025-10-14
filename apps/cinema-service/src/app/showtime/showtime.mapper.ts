@@ -3,7 +3,7 @@ import {
   ShowtimeSummaryResponse,
 } from '@movie-hub/shared-types';
 import { Injectable } from '@nestjs/common';
-import { $Enums, Showtimes } from '@prisma/client';
+import { $Enums, Showtimes } from '../../../generated/prisma/client';
 
 @Injectable()
 export class ShowtimeMapper {

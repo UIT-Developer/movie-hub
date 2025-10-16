@@ -7,13 +7,6 @@ import { $Enums, Showtimes } from '../../../generated/prisma/client';
 
 @Injectable()
 export class ShowtimeMapper {
-  // private readonly PrismaToFormat: Record<$Enums.Format, FormatEnum> = {
-  //   TWO_D: FormatEnum.TWO_D,
-  //   THREE_D: FormatEnum.THREE_D,
-  //   IMAX: FormatEnum.IMAX,
-  //   FOUR_DX: FormatEnum.FOUR_DX,
-  // };
-
   private readonly PrismaToStatus: Record<
     $Enums.ShowtimeStatus,
     ShowtimeStatusEnum

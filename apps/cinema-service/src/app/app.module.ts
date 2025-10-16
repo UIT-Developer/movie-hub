@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { CinemaModule } from './cinema/cinema.module';
 import { ShowtimeModule } from './showtime/showtime.module';
 import { CinemaLocationModule } from './cinema-location/cinema-location.module';
+import { RealtimeModule } from './realtime/realtime.module';
 import Joi from 'joi';
 
 @Module({
@@ -18,6 +19,7 @@ import Joi from 'joi';
     CinemaModule,
     ShowtimeModule,
     CinemaLocationModule,
+    RealtimeModule,
   ],
   controllers: [],
   providers: [],

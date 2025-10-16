@@ -6,6 +6,7 @@ import Joi from 'joi';
 import { MovieModule } from './module/movie/movie.module';
 import { APP_PIPE } from '@nestjs/core';
 import { ZodValidationPipe } from 'nestjs-zod';
+import { RealtimeModule } from './module/realtime/realtime.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { ZodValidationPipe } from 'nestjs-zod';
     UserModule,
     MovieModule,
     CinemaModule,
+    RealtimeModule,
   ],
   controllers: [],
   providers: [

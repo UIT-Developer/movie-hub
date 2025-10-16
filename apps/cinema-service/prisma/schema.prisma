@@ -71,6 +71,13 @@ enum Format {
   FOUR_DX
 }
 
+enum TicketType {
+  ADULT
+  CHILD
+  STUDENT
+  COUPLE
+}
+
 enum ShowtimeStatus {
   SCHEDULED
   SELLING
@@ -80,9 +87,7 @@ enum ShowtimeStatus {
 }
 
 enum ReservationStatus {
-  HELD
   CONFIRMED
-  EXPIRED
   CANCELLED
 }
 
@@ -97,53 +102,53 @@ enum ReviewStatus {
 // ======================
 
 model Cinemas {
-  id               String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name             String      @db.VarChar(255)
-  address          String      @db.Text
-  city             String      @db.VarChar(100)
-  district         String?     @db.VarChar(100)
-  phone            String?     @db.VarChar(20)
-  email            String?     @db.VarChar(255)
-  website          String?     @db.VarChar(255)
-  latitude         Decimal?    @db.Decimal(10, 8)
-  longitude        Decimal?    @db.Decimal(11, 8)
-  description      String?     @db.Text
-  amenities        String[]    @db.Text
-  facilities       Json?
-  images           String[]    @db.Text
-  virtual_tour_360_url String? @db.VarChar(500)
-  rating           Decimal?    @db.Decimal(2, 1)
-  total_reviews    Int         @default(0)
-  operating_hours  Json?
-  social_media     Json?
-  status           CinemaStatus @default(ACTIVE)
-  timezone         String      @default("Asia/Ho_Chi_Minh") @db.VarChar(50)
-  created_at       DateTime    @default(now()) @db.Timestamp(6)
-  updated_at       DateTime    @default(now()) @db.Timestamp(6)
+  id                   String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                 String       @db.VarChar(255)
+  address              String       @db.Text
+  city                 String       @db.VarChar(100)
+  district             String?      @db.VarChar(100)
+  phone                String?      @db.VarChar(20)
+  email                String?      @db.VarChar(255)
+  website              String?      @db.VarChar(255)
+  latitude             Decimal?     @db.Decimal(10, 8)
+  longitude            Decimal?     @db.Decimal(11, 8)
+  description          String?      @db.Text
+  amenities            String[]     @db.Text
+  facilities           Json?
+  images               String[]     @db.Text
+  virtual_tour_360_url String?      @db.VarChar(500)
+  rating               Decimal?     @db.Decimal(2, 1)
+  total_reviews        Int          @default(0)
+  operating_hours      Json?
+  social_media         Json?
+  status               CinemaStatus @default(ACTIVE)
+  timezone             String       @default("Asia/Ho_Chi_Minh") @db.VarChar(50)
+  created_at           DateTime     @default(now()) @db.Timestamp(6)
+  updated_at           DateTime     @default(now()) @db.Timestamp(6)
 
-  halls   Halls[]
-  reviews CinemaReviews[]
+  halls     Halls[]
+  reviews   CinemaReviews[]
   showtimes Showtimes[]
 }
 
 model Halls {
-  id           String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  cinema_id    String      @db.Uuid
-  name         String      @db.VarChar(100)
+  id           String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cinema_id    String     @db.Uuid
+  name         String     @db.VarChar(100)
   type         HallType
   capacity     Int
   rows         Int
-  screen_type  String?     @db.VarChar(50)
-  sound_system String?     @db.VarChar(50)
-  features     String[]    @db.Text
+  screen_type  String?    @db.VarChar(50)
+  sound_system String?    @db.VarChar(50)
+  features     String[]   @db.Text
   layout_data  Json?
-  status       HallStatus  @default(ACTIVE)
-  created_at   DateTime    @default(now()) @db.Timestamp(6)
-  updated_at   DateTime    @default(now()) @db.Timestamp(6)
+  status       HallStatus @default(ACTIVE)
+  created_at   DateTime   @default(now()) @db.Timestamp(6)
+  updated_at   DateTime   @default(now()) @db.Timestamp(6)
 
-  cinema    Cinemas   @relation(fields: [cinema_id], references: [id], onDelete: Cascade)
+  cinema    Cinemas         @relation(fields: [cinema_id], references: [id], onDelete: Cascade)
   seats     Seats[]
-  pricing   SeatPricing[]
+  pricing   TicketPricing[]
   showtimes Showtimes[]
 }
 
@@ -158,43 +163,48 @@ model Seats {
   status      SeatStatus @default(ACTIVE)
   created_at  DateTime   @default(now()) @db.Timestamp(6)
 
-  hall         Halls             @relation(fields: [hall_id], references: [id], onDelete: Cascade)
+  hall         Halls              @relation(fields: [hall_id], references: [id], onDelete: Cascade)
   reservations SeatReservations[]
 
   @@unique([hall_id, row_letter, seat_number])
 }
 
-model SeatPricing {
-  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  hall_id    String   @db.Uuid
-  seat_type  SeatType
-  day_type   DayType
-  time_slot  TimeSlot
-  base_price Decimal  @db.Decimal(8, 2)
-  created_at DateTime @default(now()) @db.Timestamp(6)
+model TicketPricing {
+  id          String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  hall_id     String     @db.Uuid
+  seat_type   SeatType
+  ticket_type TicketType
+  day_type    DayType
+  time_slot   TimeSlot
+  price       Decimal    @db.Decimal(8, 2)
+  created_at  DateTime   @default(now()) @db.Timestamp(6)
 
   hall Halls @relation(fields: [hall_id], references: [id], onDelete: Cascade)
+
+  @@unique([hall_id, seat_type, ticket_type, day_type, time_slot])
 }
 
 model Showtimes {
-  id             String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  movie_id       String           @db.Uuid
-  cinema_id      String           @db.Uuid
-  hall_id        String           @db.Uuid
-  start_time     DateTime         @db.Timestamp(6)
-  end_time       DateTime         @db.Timestamp(6)
-  format         Format
-  language       String           @db.VarChar(10)
-  subtitles      String[]         @db.Text
-  base_price     Decimal          @db.Decimal(8, 2)
+  id              String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  movie_id        String         @db.Uuid
+  cinema_id       String         @db.Uuid
+  hall_id         String         @db.Uuid
+  start_time      DateTime       @db.Timestamp(6)
+  end_time        DateTime       @db.Timestamp(6)
+  day_type        DayType        @default(WEEKDAY)
+  time_slot       TimeSlot       @default(MORNING)
+  format          Format
+  language        String         @db.VarChar(10)
+  subtitles       String[]       @db.Text
+  base_price      Decimal        @db.Decimal(8, 2)
   available_seats Int
-  total_seats    Int
-  status         ShowtimeStatus   @default(SCHEDULED)
-  created_at     DateTime         @default(now()) @db.Timestamp(6)
-  updated_at     DateTime         @default(now()) @db.Timestamp(6)
+  total_seats     Int
+  status          ShowtimeStatus @default(SCHEDULED)
+  created_at      DateTime       @default(now()) @db.Timestamp(6)
+  updated_at      DateTime       @default(now()) @db.Timestamp(6)
 
-  cinema       Cinemas           @relation(fields: [cinema_id], references: [id], onDelete: Cascade)
-  hall         Halls             @relation(fields: [hall_id], references: [id], onDelete: Cascade)
+  cinema       Cinemas            @relation(fields: [cinema_id], references: [id], onDelete: Cascade)
+  hall         Halls              @relation(fields: [hall_id], references: [id], onDelete: Cascade)
   reservations SeatReservations[]
 }
 
@@ -204,8 +214,7 @@ model SeatReservations {
   seat_id     String            @db.Uuid
   user_id     String?           @db.Uuid
   session_id  String?           @db.VarChar(255)
-  status      ReservationStatus @default(HELD)
-  expires_at  DateTime          @db.Timestamp(6)
+  status      ReservationStatus @default(CONFIRMED)
   booking_id  String?           @db.Uuid
   created_at  DateTime          @default(now()) @db.Timestamp(6)
 

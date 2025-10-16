@@ -10,6 +10,7 @@ const compat = new FlatCompat({
   recommendedConfig: js.configs.recommended,
 });
 
+// eslint-disable-next-line import/no-anonymous-default-export
 export default [
   ...fixupConfigRules(compat.extends('next')),
   ...fixupConfigRules(compat.extends('next/core-web-vitals')),

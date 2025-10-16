@@ -4,6 +4,7 @@ import { ClerkProvider } from '@clerk/nextjs';
 import { Inter } from 'next/font/google';
 import { Metadata } from 'next';
 import { siteConfig } from '../config/site-config';
+import QueryClientProviders from '../components/providers/query-client-provider';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -21,21 +22,23 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <ClerkProvider
-      appearance={{
-        theme: 'simple',
-        variables: {
-          colorPrimary: '#7E22CE',
-        },
-      }}
-      afterSignOutUrl="/"
-    >
-      <html lang="en">
-        <body className={inter.className}>
-          <Toaster theme="light" richColors closeButton />
-          {children}
-        </body>
-      </html>
-    </ClerkProvider>
+    <QueryClientProviders>
+      <ClerkProvider
+        appearance={{
+          theme: 'simple',
+          variables: {
+            colorPrimary: '#7E22CE',
+          },
+        }}
+        afterSignOutUrl="/"
+      >
+        <html lang="en">
+          <body className={inter.className}>
+            <Toaster theme="light" richColors closeButton />
+            {children}
+          </body>
+        </html>
+      </ClerkProvider>
+    </QueryClientProviders>
   );
 }

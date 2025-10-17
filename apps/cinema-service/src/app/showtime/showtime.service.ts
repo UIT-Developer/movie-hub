@@ -19,62 +19,99 @@ export class ShowtimeService {
     private readonly redisService: RedisService
   ) {}
 
+  /**
+   * 📅 Lấy danh sách suất chiếu của 1 phim tại 1 rạp (có cache)
+   */
   async getMovieShowtimesAtCinema(
     cinemaId: string,
     movieId: string,
     query: GetShowtimesQuery
   ): Promise<ShowtimeSummaryResponse[]> {
-    const showtimes = await this.prisma.showtimes.findMany({
-      where: {
-        cinema_id: cinemaId,
-        movie_id: movieId,
-        start_time: {
-          gte: new Date(query.date + 'T00:00:00.000Z'),
-          lt: new Date(query.date + 'T23:59:59.999Z'),
-        },
-      },
-      orderBy: { start_time: 'asc' },
-    });
+    const cacheKey = `showtime:list:${cinemaId}:${movieId}:${query.date}`;
 
-    return this.mapper.toShowtimeSummaryList(showtimes);
+    return this.redisService.getOrSetCache(cacheKey, 3600, async () => {
+      const showtimes = await this.prisma.showtimes.findMany({
+        where: {
+          cinema_id: cinemaId,
+          movie_id: movieId,
+          start_time: {
+            gte: new Date(`${query.date}T00:00:00.000Z`),
+            lt: new Date(`${query.date}T23:59:59.999Z`),
+          },
+        },
+        orderBy: { start_time: 'asc' },
+      });
+
+      return this.mapper.toShowtimeSummaryList(showtimes);
+    });
   }
 
+  /**
+   * 🎟️ Lấy toàn bộ ghế, giá vé và trạng thái giữ/đặt (có cache phần tĩnh)
+   */
   async getShowtimeSeats(
     showtimeId: string,
     userId?: string
   ): Promise<ShowtimeSeatResponse> {
     const clientKey = userId;
 
-    const showtime = await this.prisma.showtimes.findUnique({
-      where: { id: showtimeId },
-      include: { hall: true },
-    });
-    if (!showtime) throw new NotFoundException('Showtime not found');
+    // ✅ Cache thông tin suất chiếu + hall
+    const showtimeCacheKey = `showtime:detail:${showtimeId}`;
+    const showtime = await this.redisService.getOrSetCache(
+      showtimeCacheKey,
+      3600 * 6,
+      async () => {
+        const data = await this.prisma.showtimes.findUnique({
+          where: { id: showtimeId },
+          include: { hall: true },
+        });
+        if (!data) throw new NotFoundException('Showtime not found');
+        return data;
+      }
+    );
 
-    const [seats, confirmedSeats, ticketPricings, heldSeats, userHeldSeatIds] =
-      await Promise.all([
-        this.prisma.seats.findMany({
+    // ✅ Cache danh sách ghế vật lý trong rạp
+    const seatsCacheKey = `hall:${showtime.hall_id}:seats`;
+    const seats = await this.redisService.getOrSetCache(
+      seatsCacheKey,
+      3600 * 12,
+      async () => {
+        return this.prisma.seats.findMany({
           where: { hall_id: showtime.hall_id },
           orderBy: [{ row_letter: 'asc' }, { seat_number: 'asc' }],
-        }),
-        this.prisma.seatReservations.findMany({
-          where: { showtime_id: showtimeId, status: 'CONFIRMED' },
-          select: { seat_id: true },
-        }),
-        this.prisma.ticketPricing.findMany({
+        });
+      }
+    );
+
+    // ✅ Cache ticket pricing
+    const ticketPricingCacheKey = `ticketPricing:${showtime.hall_id}:${showtime.day_type}:${showtime.time_slot}`;
+    const ticketPricings = await this.redisService.getOrSetCache(
+      ticketPricingCacheKey,
+      3600 * 6,
+      async () => {
+        return this.prisma.ticketPricing.findMany({
           where: {
             hall_id: showtime.hall_id,
             day_type: showtime.day_type,
             time_slot: showtime.time_slot,
           },
-        }),
-        this.redisService.getAllHeldSeats(showtimeId),
-        clientKey
-          ? this.redisService.getUserHeldSeats(showtimeId, clientKey)
-          : [],
-      ]);
+        });
+      }
+    );
 
-    // Tạo map trạng thái ghế
+    // ⚡ Dữ liệu realtime (không cache)
+    const [confirmedSeats, heldSeats, userHeldSeatIds] = await Promise.all([
+      this.prisma.seatReservations.findMany({
+        where: { showtime_id: showtimeId, status: 'CONFIRMED' },
+        select: { seat_id: true },
+      }),
+      this.redisService.getAllHeldSeats(showtimeId),
+      clientKey
+        ? this.redisService.getUserHeldSeats(showtimeId, clientKey)
+        : [],
+    ]);
+
+    // 🧩 Tạo map trạng thái ghế
     const reservedMap = new Map<string, ReservationStatusEnum>();
 
     confirmedSeats.forEach(({ seat_id }) =>
@@ -87,6 +124,7 @@ export class ShowtimeService {
       }
     });
 
+    // 🧠 Mapping response cuối cùng
     return this.showtimeSeatMapper.toShowtimeSeatResponse({
       showtime,
       seats,
@@ -94,5 +132,16 @@ export class ShowtimeService {
       ticketPricings,
       userHeldSeatIds,
     });
+  }
+
+  /**
+   * 🧹 Xóa cache khi có thay đổi dữ liệu tĩnh (admin update)
+   */
+  async clearShowtimeCache(cinemaId?: string, hallId?: string) {
+    if (cinemaId)
+      await this.redisService.deleteCacheByPrefix(`showtime:list:${cinemaId}`);
+    if (hallId)
+      await this.redisService.deleteCacheByPrefix(`hall:${hallId}:seats`);
+    await this.redisService.deleteCacheByPrefix('ticketPricing');
   }
 }

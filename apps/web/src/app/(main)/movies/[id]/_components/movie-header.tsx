@@ -22,7 +22,7 @@ export const MovieHeader = ({
   description,
   posterUrl,
 }: MovieHeaderProps) => (
-  <div className="flex flex-col w-full flex-wrap md:flex-row items-center gap-8 px-6 mx-auto aspect-video rounded-2xl -z-10">
+  <div className="flex flex-col w-full flex-wrap md:flex-row items-center gap-8 mx-auto aspect-video rounded-2xl">
     <Image
       src="https://scontent.fsgn19-1.fna.fbcdn.net/v/t39.30808-6/496448427_23999126249671308_7117960729654160791_n.jpg?_nc_cat=103&ccb=1-7&_nc_sid=86c6b0&_nc_eui2=AeGKfeXJNzZH7uE0RPpzn1snZu7kbpjy0Rdm7uRumPLRF4uLevUYMKrNox8Rvm5uZeWTFaNB6Pg62RQILnkFEymz&_nc_ohc=lznGzgpT8qkQ7kNvwGreQFz&_nc_oc=AdkI7zxMY6tjobg3-o_7RxqSmt8hIAJHCTVUhXatY5J9NQBfc1ybycuhjrk7e67nMDg&_nc_zt=23&_nc_ht=scontent.fsgn19-1.fna&_nc_gid=oyyaOA9hoPprTepwOglojg&oh=00_AffkcllvuTfGW4ilzwQZBocxG2LgN4z3kwQ1pbnnq55Ltg&oe=68F6F890"
       alt={title}

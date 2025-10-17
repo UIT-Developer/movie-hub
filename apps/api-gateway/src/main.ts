@@ -12,6 +12,7 @@ import { GlobalExceptionFilter } from './app/exception/global-exception.filter';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const globalPrefix = 'api';
+  app.enableCors()
   app.setGlobalPrefix(globalPrefix);
   app.use(cookieParser());
   app.enableVersioning({

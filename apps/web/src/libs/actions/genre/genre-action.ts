@@ -1,12 +1,13 @@
 /* eslint-disable no-useless-catch */
 import { CreateGenreSchema, GenreResponse } from '@movie-hub/shared-types';
-import axios from 'axios';
+
 import z from 'zod';
+import api from '../../api-client';
 
 export type CreateGenreRequest = z.infer<typeof CreateGenreSchema>;
 export const getGenres = async (token: string): Promise<GenreResponse[]> => {
   try {
-    const response = axios.get('/genres', {
+    const response = api.get('/genres', {
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -22,7 +23,7 @@ export const getGenreDetail = async (
   token: string
 ): Promise<GenreResponse> => {
   try {
-    const response = axios.get(`/genres/${id}`, {
+    const response = api.get(`/genres/${id}`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -38,7 +39,7 @@ export const createGenre = async (
   token: string
 ): Promise<GenreResponse> => {
   try {
-    const response = axios.post('/genres', data, {
+    const response = api.post('/genres', data, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -55,7 +56,7 @@ export const updateGenre = async (
   token: string
 ): Promise<GenreResponse> => {
   try {
-    const response = axios.put(`/genres/${id}`, genreData, {
+    const response = api.put(`/genres/${id}`, genreData, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -67,7 +68,7 @@ export const updateGenre = async (
 };
 export const deleteGenre = async (id: string, token: string): Promise<void> => {
   try {
-    await axios.delete(`/genres/${id}`, {
+    await api.delete(`/genres/${id}`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },

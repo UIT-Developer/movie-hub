@@ -7,12 +7,7 @@ import { MovieHeader } from './_components/movie-header';
 const MovieDetailsPage = () => {
   const { id } = useParams();
 
-  const bookingData = {
-    '2025-09-27': ['10:00', '11:00', '14:30'],
-    '2025-09-28': ['09:00', '16:00'],
-    '2025-09-29': ['13:00'],
-    '2025-09-30': [],
-  };
+
 
   const actors = [
     { name: 'abc', image: '/images/placeholder.png' },
@@ -32,7 +27,7 @@ const MovieDetailsPage = () => {
         posterUrl="https://cinestar.com.vn/_next/image/?url=https%3A%2F%2Fapi-website.cinestar.com.vn%2Fmedia%2Fwysiwyg%2FPosters%2F09-2025%2Ftu-chien-tren-khong-poster.jpg&w=1080&q=75"
       />
       <MovieCast actors={actors} />
-      <DateSelect dateTime={bookingData} id={id as string} />
+      <DateSelect id={id as string} />
     </div>
   );
 };

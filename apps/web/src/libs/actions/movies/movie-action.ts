@@ -4,8 +4,9 @@ import {
   MovieSummary,
   UpdateMovieSchema,
 } from '@movie-hub/shared-types';
-import axios from 'axios';
+
 import z from 'zod';
+import api from '../../api-client';
 
 export type CreateMovieRequest = z.infer<typeof CreateMovieSchema>;
 export type UpdateMovieRequest = z.infer<typeof UpdateMovieSchema>;
@@ -14,7 +15,7 @@ export type UpdateMovieRequest = z.infer<typeof UpdateMovieSchema>;
 export const getMovies = async (token: string): Promise<MovieSummary[]> => {
   // eslint-disable-next-line no-useless-catch
   try {
-    const response = await axios.get('/movies', {
+    const response = await api.get('/movies', {
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -33,7 +34,7 @@ export const getMovieDetail = async (
 ): Promise<MovieDetailResponse> => {
   // eslint-disable-next-line no-useless-catch
   try {
-    const response = await axios.get(`/movies/${movieId}`, {
+    const response = await api.get(`/movies/${movieId}`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -51,7 +52,7 @@ export const createMovie = async (
 ): Promise<MovieSummary> => {
   // eslint-disable-next-line no-useless-catch
   try {
-    const response = await axios.post('/movies', movieData, {
+    const response = await api.post('/movies', movieData, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -70,7 +71,7 @@ export const updateMovie = async (
 ): Promise<MovieSummary> => {
   // eslint-disable-next-line no-useless-catch
   try {
-    const response = await axios.put(`/movies/${movieId}`, movieData, {
+    const response = await api.put(`/movies/${movieId}`, movieData, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -88,7 +89,7 @@ export const deleteMovie = async (
 ): Promise<void> => {
   // eslint-disable-next-line no-useless-catch
   try {
-    await axios.delete(`/movies/${movieId}`, {
+    await api.delete(`/movies/${movieId}`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },

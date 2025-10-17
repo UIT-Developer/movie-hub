@@ -1,8 +1,10 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { CacheModule } from '@nestjs/cache-manager';
 import { CinemaModule } from './cinema/cinema.module';
 import { ShowtimeModule } from './showtime/showtime.module';
 import { CinemaLocationModule } from './cinema-location/cinema-location.module';
+import { RealtimeModule } from './realtime/realtime.module';
 import Joi from 'joi';
 
 @Module({
@@ -15,9 +17,13 @@ import Joi from 'joi';
         TCP_PORT: Joi.number().required(),
       }),
     }),
+    CacheModule.register({
+      isGlobal: true,
+    }),
     CinemaModule,
     ShowtimeModule,
     CinemaLocationModule,
+    RealtimeModule,
   ],
   controllers: [],
   providers: [],

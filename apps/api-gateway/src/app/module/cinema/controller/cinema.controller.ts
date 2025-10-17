@@ -7,20 +7,17 @@ import {
   ParseIntPipe,
   BadRequestException,
   DefaultValuePipe,
-  Req,
+  UseInterceptors,
 } from '@nestjs/common';
 import { CinemaService } from '../service/cinema.service';
-import { Request } from 'express';
-import {
-  GetShowtimesQuery,
-  ShowtimeSummaryResponse,
-} from '@movie-hub/shared-types';
-import { ApiSuccessResponse } from '@movie-hub/shared-types/common';
+import { GetShowtimesQuery } from '@movie-hub/shared-types';
+import { ResponseInterceptor } from '../../../common/interceptor/response.interceptor';
 
 @Controller({
   version: '1',
   path: 'cinemas',
 })
+@UseInterceptors(new ResponseInterceptor())
 export class CinemaController {
   constructor(private readonly cinemaService: CinemaService) {}
 
@@ -152,20 +149,12 @@ export class CinemaController {
   async getMovieShowtimesAtCinema(
     @Param('cinemaId') cinemaId: string,
     @Param('movieId') movieId: string,
-    @Query() date: GetShowtimesQuery,
-    @Req() req: Request
-  ): Promise<ApiSuccessResponse<ShowtimeSummaryResponse[]>> {
-    console.log(cinemaId, movieId, date);
-    const showtimes = await this.cinemaService.getMovieShowtimesAtCinema(
+    @Query() date: GetShowtimesQuery
+  ) {
+    return await this.cinemaService.getMovieShowtimesAtCinema(
       cinemaId,
       movieId,
       date
     );
-    return {
-      success: true,
-      data: showtimes,
-      timestamp: new Date().toISOString(),
-      path: req.path,
-    };
   }
 }

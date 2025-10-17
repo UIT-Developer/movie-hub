@@ -1,0 +1,6 @@
+export enum TimeSlotEnum {
+  MORNING = 'MORNING',
+  AFTERNOON = 'AFTERNOON',
+  EVENING = 'EVENING',
+  LATE_NIGHT = 'LATE_NIGHT',
+}

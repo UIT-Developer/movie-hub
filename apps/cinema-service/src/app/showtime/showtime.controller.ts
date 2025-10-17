@@ -26,4 +26,14 @@ export class ShowtimeController {
       payload.query
     );
   }
+
+  @MessagePattern(CinemaMessage.SHOWTIME.GET_SHOWTIME_SEATS)
+  getShowtimeSeats(
+    @Payload() payload: { showtimeId: string; userId?: string }
+  ) {
+    return this.showtimeService.getShowtimeSeats(
+      payload.showtimeId,
+      payload.userId
+    );
+  }
 }

@@ -25,6 +25,9 @@ export const CinemaMessage = {
   CINEMA: {
     GET_SHOWTIME: 'cinema.showtime',
   },
+  SHOWTIME: {
+    GET_SHOWTIME_SEATS: 'showtime.get_showtime_seats',
+  },
   GET_CINEMAS_NEARBY: 'CINEMA.GET_CINEMAS_NEARBY',
   GET_CINEMAS_WITH_FILTERS: 'CINEMA.GET_CINEMAS_WITH_FILTERS',
   GET_CINEMA_DETAIL: 'CINEMA.GET_CINEMA_DETAIL',

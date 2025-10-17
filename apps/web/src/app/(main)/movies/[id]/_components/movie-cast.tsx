@@ -11,7 +11,7 @@ interface MovieCastProps {
 }
 
 export const MovieCast = ({ actors }: MovieCastProps) => (
-  <div>
+  <div className='relative'>
     <p className="text-white text-lg font-bold mt-20">Diễn viên</p>
     <div className="overflow-x-auto no-scrollbar mt-8 pb-4">
       <div className="flex items-center gap-4 w-max px-4">

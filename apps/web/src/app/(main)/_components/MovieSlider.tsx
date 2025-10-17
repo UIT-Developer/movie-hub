@@ -19,11 +19,12 @@ type Movie = {
 };
 
 type Props = {
+  href: string;
   title: string;
   movies: Movie[];
 };
 
-export default function MovieSlider({ title, movies}: Props) {
+export default function MovieSlider({href, title, movies}: Props) {
   return (
     <div className="px-6 overflow-hidden">
       <div className="relative flex items-center justify-between pt-20 pb-10">
@@ -31,8 +32,9 @@ export default function MovieSlider({ title, movies}: Props) {
         <p className="text-gray-300 font-bold text-lg">{title}</p>
 
         <Link
-          href="/movies"
+          href={`movies/${href}`}
           className="relative z-10 group flex items-center gap-2 text-sm text-gray-300 cursor-pointer"
+          prefetch
         >
           Xem tất cả
           <ArrowRight className="group-hover:translate-x-0.5 transition w-4 h-4" />
@@ -76,13 +78,13 @@ export default function MovieSlider({ title, movies}: Props) {
         ))}
       </Swiper>
 
-      {/* Nút điều hướng */}
+      {/* Nút điều hướng
       <button className="swiper-button-prev absolute top-1/2 left-0 z-10 -translate-y-1/2 bg-black/50 p-2 rounded-full hover:bg-black/80 transition ">
         <ChevronLeft className="text-white w-6 h-6" />
       </button>
       <button className="swiper-button-next absolute top-1/2 right-0 z-10 -translate-y-1/2 bg-black/50 p-2 rounded-full hover:bg-black/80 transition">
         <ChevronRight className="text-white w-6 h-6" />
-      </button>
+      </button> */}
     </div>
   );
 }

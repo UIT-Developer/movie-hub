@@ -17,7 +17,11 @@ const nextConfig = {
         // port: '', // Optional: specify if not using default port
         // pathname: '/path/to/images/**', // Optional: restrict to a specific path
       },
-      // Add more objects for other remote hosts if needed
+  
+      {
+        protocol: 'https',
+        hostname: 'scontent.fsgn19-1.fna.fbcdn.net'
+      }
     ],
   },
 };

@@ -39,7 +39,7 @@ export default function MovieCard({ title, image, releaseDate, genre, runtime }:
           Đặt vé
         </Button>
         <p className="flex items-center gap-1 text-sm text-gray-400 mt-1 pr-1">
-          <StarIcon className="w-4 h-4 text-purple-600 fill-purple-600" />
+          <StarIcon className="w-4 h-4 text-rose-500 fill-rose-500" />
           5.0
         </p>
       </div>

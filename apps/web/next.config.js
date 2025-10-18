@@ -13,15 +13,22 @@ const nextConfig = {
     remotePatterns: [
       {
         protocol: 'https', // Or 'http' if applicable, but 'https' is recommended
+        hostname: 'image.tmdb.org', // Replace with the actual hostname of your image server
+        // port: '', // Optional: specify if not using default port
+        // pathname: '/path/to/images/**', // Optional: restrict to a specific path
+      },
+      {
+        protocol: 'https', // Or 'http' if applicable, but 'https' is recommended
         hostname: 'cinestar.com.vn', // Replace with the actual hostname of your image server
         // port: '', // Optional: specify if not using default port
         // pathname: '/path/to/images/**', // Optional: restrict to a specific path
       },
-  
+
       {
         protocol: 'https',
         hostname: 'scontent.fsgn19-1.fna.fbcdn.net'
       }
+  
     ],
   },
 };

@@ -12,14 +12,10 @@ export type CreateMovieRequest = z.infer<typeof CreateMovieSchema>;
 export type UpdateMovieRequest = z.infer<typeof UpdateMovieSchema>;
 
 
-export const getMovies = async (token: string): Promise<MovieSummary[]> => {
+export const getMovies = async (): Promise<MovieSummary[]> => {
   // eslint-disable-next-line no-useless-catch
   try {
-    const response = await api.get('/movies', {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+    const response = await api.get('/movies', );
     return response.data as MovieSummary[];
   } catch (error) {
     // Re-throw the error so callers can handle it (or handle/log here as needed)

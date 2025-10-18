@@ -13,7 +13,7 @@ interface CinemaShowtimeProps {
   name: string;
   location: string;
   showtimes: Showtime[];
-  onSelectShowtime: (cinemaId: string, showtimeId: string) => void;
+  onSelectShowtime: (showtimeId: string) => void;
 }
 
 export const CinemaShowtime = ({
@@ -28,7 +28,7 @@ export const CinemaShowtime = ({
 
   const handleClick = (showtimeId: string) => {
     setSelectedShowtime(showtimeId);
-    onSelectShowtime(cinemaId, showtimeId);
+    onSelectShowtime(showtimeId);
   };
 
   // 🔹 Group showtimes by format

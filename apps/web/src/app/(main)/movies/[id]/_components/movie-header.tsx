@@ -1,31 +1,26 @@
 'use client';
 import Image from 'next/image';
 import { BlurCircle } from '../../../../../components/blur-circle';
-import { Heart, PlayCircleIcon, StarIcon } from 'lucide-react';
+import {
+  Clock,
+  FileText,
+  FileTextIcon,
+  Heart,
+  PlayCircleIcon,
+  StarIcon,
+} from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@movie-hub/shacdn-ui/button';
-
+import { MovieDetailResponse } from '@movie-hub/shared-types';
 interface MovieHeaderProps {
-  title: string;
-  rating: number;
-  language: string;
-  duration: string;
-  description: string;
-  posterUrl: string;
+  data: MovieDetailResponse;
 }
 
-export const MovieHeader = ({
-  title,
-  rating,
-  language,
-  duration,
-  description,
-  posterUrl,
-}: MovieHeaderProps) => (
+export const MovieHeader = ({ data }: MovieHeaderProps) => (
   <div className="flex flex-col w-full flex-wrap md:flex-row items-center gap-8 mx-auto aspect-video rounded-2xl">
     <Image
-      src="https://scontent.fsgn19-1.fna.fbcdn.net/v/t39.30808-6/496448427_23999126249671308_7117960729654160791_n.jpg?_nc_cat=103&ccb=1-7&_nc_sid=86c6b0&_nc_eui2=AeGKfeXJNzZH7uE0RPpzn1snZu7kbpjy0Rdm7uRumPLRF4uLevUYMKrNox8Rvm5uZeWTFaNB6Pg62RQILnkFEymz&_nc_ohc=lznGzgpT8qkQ7kNvwGreQFz&_nc_oc=AdkI7zxMY6tjobg3-o_7RxqSmt8hIAJHCTVUhXatY5J9NQBfc1ybycuhjrk7e67nMDg&_nc_zt=23&_nc_ht=scontent.fsgn19-1.fna&_nc_gid=oyyaOA9hoPprTepwOglojg&oh=00_AffkcllvuTfGW4ilzwQZBocxG2LgN4z3kwQ1pbnnq55Ltg&oe=68F6F890"
-      alt={title}
+      src={data.backdropUrl}
+      alt={data.title}
       fill
       priority
       className="object-cover brightness-20 rounded-2xl"
@@ -38,22 +33,29 @@ export const MovieHeader = ({
       <Image
         width={288}
         height={104}
-        src={posterUrl}
-        alt={title}
+        src={data.posterUrl}
+        alt={data.title}
         className="rounded-xl h-[416px] w-[288px] object-cover shadow-lg"
       />
-      <div className="flex flex-col gap-3 text-white max-w-xl">
+      <div className="flex flex-1 flex-col gap-3 text-white max-w-xl">
         <BlurCircle top="-100px" left="-100px" />
-        <p className="text-rose-400 font-bold">{language}</p>
-        <h1 className="text-4xl font-semibold">{title}</h1>
+        <p className="text-rose-400 font-bold">{data.languageType}</p>
+        <h1 className="text-4xl font-semibold">{data.title}</h1>
         <div className="flex items-center gap-2 text-gray-200">
-          <StarIcon className="w-5 h-5 text-rose-400 fill-rose-400" />
-          {rating} / 10
+          <StarIcon className="w-5 h-5 text-rose-400 fill-rose-400" />8 / 10
         </div>
-        <p className="text-gray-300 mt-2 text-sm leading-tight">
-          {description}
+        <div className="flex items-center gap-2 mt-2 text-gray-300">
+          <FileTextIcon className="w-10 h-10 text-rose-500" />
+          <p className="text-sm leading-tight">{data.overview}</p>
+        </div>
+
+        <div className="flex items-center gap-2 mt-2 text-gray-400">
+          <Clock className="w-4 h-4 text-rose-500" />
+          <p className="text-sm">{data.runtime}&apos;</p>
+        </div>
+        <p className="text-sm">
+          {data.genre.map((g)=>g.name).join(" | ")} - {data.productionCountry}
         </p>
-        <p className="text-gray-400">{duration}</p>
 
         <div className="flex items-center gap-4 mt-4">
           <button className="flex items-center gap-2 px-7 py-3 bg-gray-800 hover:bg-gray-900 rounded-md text-sm font-medium active:scale-95 transition">

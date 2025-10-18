@@ -1,9 +1,9 @@
 'use client';
 import Image from 'next/image';
 
-interface Actor {
+export interface Actor {
   name: string;
-  image: string;
+  profileUrl: string;
 }
 
 interface MovieCastProps {
@@ -11,14 +11,14 @@ interface MovieCastProps {
 }
 
 export const MovieCast = ({ actors }: MovieCastProps) => (
-  <div className='relative'>
+  <div className="relative">
     <p className="text-white text-lg font-bold mt-20">Diễn viên</p>
-    <div className="overflow-x-auto no-scrollbar mt-8 pb-4">
+    <div className="overflow-x-auto hide-scrollbar mt-8 pb-4">
       <div className="flex items-center gap-4 w-max px-4">
         {actors.map((actor, idx) => (
-          <div key={idx} className="flex flex-col items-center text-center">
+          <div key={idx} className="flex flex-col items-center text-center mx-4">
             <Image
-              src={actor.image}
+              src={actor?.profileUrl || '/images/placeholder.png'}
               alt={actor.name}
               className="rounded-full aspect-square object-cover"
               height={100}

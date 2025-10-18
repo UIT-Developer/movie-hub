@@ -9,6 +9,7 @@ import { BlurCircle } from "apps/web/src/components/blur-circle";
 import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import MovieCard from "./MovieCard";
+import { useGetMovies } from "apps/web/src/hooks/movie-hooks";
 
 type Movie = {
   title: string;
@@ -25,6 +26,7 @@ type Props = {
 };
 
 export default function MovieSlider({href, title, movies}: Props) {
+  const {data} = useGetMovies()
   return (
     <div className="px-6 overflow-hidden">
       <div className="relative flex items-center justify-between pt-20 pb-10">
@@ -65,14 +67,17 @@ export default function MovieSlider({href, title, movies}: Props) {
           },
         }}
       >
-        {movies.map((movie, index) => (
+        {data.map((movie, index) => (
           <SwiperSlide key={index}>
             <MovieCard
-              title={movie.title}
-              image={movie.image}
-              releaseDate={movie.releaseDate}
-              genre={movie.genre}
               runtime={movie.runtime}
+              title={movie.title}
+              posterUrl={movie.posterUrl}
+              backdropUrl={movie.backdropUrl}
+              id={movie.id}
+              ageRating={movie.ageRating}
+              languageType={movie.languageType}
+              productionCountry={movie.productionCountry}
             />
           </SwiperSlide>
         ))}

@@ -19,10 +19,8 @@ export const useGetMovies = () => {
   const { getToken } = useAuth();
   return useSuspenseQuery<MovieSummary[]>({
     queryKey: ['movies'],
-    queryFn: async () => {
-      const token = await getToken();
-      if (!token) throw new Error('Token is required');
-      return await getMovies(token);
+    queryFn: async () => {;
+      return await getMovies();
     },
   });
 };

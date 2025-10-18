@@ -1,10 +1,4 @@
 'use client';
-import { ChevronLeftIcon, ChevronRightIcon } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import { useCallback, useMemo, useState } from 'react';
-import { toast } from 'sonner';
-import { BlurCircle } from '../../../../../components/blur-circle';
-import { getVietnameseDay } from 'apps/web/src/app/utils/get-vietnamese-day';
 import { Button } from '@movie-hub/shacdn-ui/button';
 import {
   Select,
@@ -13,6 +7,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@movie-hub/shacdn-ui/select';
+import { getVietnameseDay } from 'apps/web/src/app/utils/get-vietnamese-day';
+import { useRouter } from 'next/navigation';
+import { useCallback, useMemo, useState } from 'react';
+import { toast } from 'sonner';
+import { BlurCircle } from '../../../../../components/blur-circle';
 import { CinemaShowtime } from './cinema-showtime';
 
 // 🎦 Mock data rạp và suất chiếu
@@ -59,7 +58,6 @@ export const DateSelect = ({ id }: { id: string }) => {
     new Date().toISOString().split('T')[0]
   );
   const [selectedLocation, setSelectedLocation] = useState<string>('Hà Nội');
-  const [selectedCinema, setSelectedCinema] = useState<string | null>();
   const [selectedShowtime, setSelectedShowtime] = useState<string | null>();
 
   const next7Days = useMemo(() => {
@@ -72,8 +70,7 @@ export const DateSelect = ({ id }: { id: string }) => {
   }, []);
 
   const handleSelectShowtime = useCallback(
-    (cinemaId: string, showtimeId: string) => {
-      setSelectedCinema(cinemaId);
+    (showtimeId: string) => {
       setSelectedShowtime(showtimeId);
     },
     []
@@ -83,17 +80,12 @@ export const DateSelect = ({ id }: { id: string }) => {
     if (!selected) {
       return toast.error('Please select a date');
     }
-    if (!selectedCinema || !selectedShowtime) {
-      return toast.error('Please select a cinema and showtime');
+    if (!selectedShowtime) {
+      return toast.error('Please select a showtime');
     }
-    const query = new URLSearchParams({
-      date: selected,
-      cinema: selectedCinema,
-      showtime: selectedShowtime,
-    }).toString();
-    router.push(`?${query}`);
+    router.push(`/showtimes/${selectedShowtime}`);
     scrollTo(0, 0);
-  }, [router, selected, selectedCinema, selectedShowtime]);
+  }, [router, selected, selectedShowtime]);
 
   const cinemas = CINEMAS_BY_LOCATION[selectedLocation] || [];
   return (

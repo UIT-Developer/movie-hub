@@ -1,0 +1,7 @@
+export enum ShowtimeStatusEnum {
+  SCHEDULED = 'SCHEDULED',
+  SELLING = 'SELLING',
+  SOLD_OUT = 'SOLD_OUT',
+  CANCELLED = 'CANCELLED',
+  COMPLETED = 'COMPLETED',
+}

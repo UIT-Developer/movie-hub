@@ -1,11 +1,11 @@
 import { SERVICE_NAME } from '@movie-hub/shared-types';
-import { Module } from "@nestjs/common";
-import { ConfigService } from "@nestjs/config";
-import { ClientsModule, Transport } from "@nestjs/microservices";
-import { MovieService } from "./service/movie.service";
-import { MovieController } from "./controller/movie.controller";
-import { GenreController } from "./controller/genre.controller";
-import { GenreService } from "./service/genre.service";
+import { Module } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { ClientsModule, Transport } from '@nestjs/microservices';
+import { MovieService } from './service/movie.service';
+import { MovieController } from './controller/movie.controller';
+import { GenreController } from './controller/genre.controller';
+import { GenreService } from './service/genre.service';
 
 @Module({
   imports: [

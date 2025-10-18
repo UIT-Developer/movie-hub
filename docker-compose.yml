@@ -1,3 +1,4 @@
+
 version: '3.8'
 
 # ===========================================
@@ -20,7 +21,25 @@ services:
   # DATABASE SERVICES
   # Each microservice has its own database
   # ===========================================
-  
+  redis:
+    image: redis:7
+    command: ['redis-server', '--notify-keyspace-events', 'Ex']
+    ports:
+      - '6379:6379'
+    container_name: moviehub-redis
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    networks:
+      - moviehub-network
+
+
+
+      # ===========================================
+  # DATABASE SERVICES
+  # Each microservice has its own database
+  # ===========================================
+
   postgres-user:
     image: postgres:15-alpine
     container_name: moviehub-postgres-user
@@ -213,3 +232,11 @@ volumes:
     name: moviehub_postgres_user_data
   postgres_movie_data:
     name: moviehub_postgres_movie_data
+
+
+
+
+
+
+
+

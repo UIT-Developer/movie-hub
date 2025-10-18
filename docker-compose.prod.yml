@@ -1,0 +1,63 @@
+version: '3.8'
+
+# ===========================================
+# PRODUCTION-LIKE LOCAL ENVIRONMENT
+# ===========================================
+# Usage: docker compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.prod up
+# Or: make prod-up
+# ===========================================
+
+services:
+  postgres-user:
+    environment:
+      POSTGRES_DB: movie_hub_user_prod
+    restart: always
+    ports:
+      - "5444:5432"
+    volumes:
+      - postgres_user_data_prod:/var/lib/postgresql/data
+
+  postgres-movie:
+    environment:
+      POSTGRES_DB: movie_hub_movie_prod
+    restart: always
+    ports:
+      - "5445:5432"
+    volumes:
+      - postgres_movie_data_prod:/var/lib/postgresql/data
+
+  user-service:
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${USER_DB_USER:-postgres}:${USER_DB_PASSWORD}@postgres-user:5432/movie_hub_user_prod?schema=public
+    restart: always
+    ports:
+      - "3031:3001"
+
+  movie-service:
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${MOVIE_DB_USER:-postgres}:${MOVIE_DB_PASSWORD}@postgres-movie:5432/movie_hub_movie_prod?schema=public
+    restart: always
+    ports:
+      - "3032:3002"
+
+  api-gateway:
+    environment:
+      NODE_ENV: production
+    restart: always
+    ports:
+      - "3030:3000"
+
+  web:
+    environment:
+      NODE_ENV: production
+    restart: always
+    ports:
+      - "4202:4200"
+
+volumes:
+  postgres_user_data_prod:
+    name: moviehub_postgres_user_prod
+  postgres_movie_data_prod:
+    name: moviehub_postgres_movie_prod

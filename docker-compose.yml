@@ -1,0 +1,215 @@
+version: '3.8'
+
+# ===========================================
+# MOVIEHUB MICROSERVICES DOCKER COMPOSE
+# Local Development & Collaboration Setup
+# ===========================================
+#
+# ENVIRONMENT CONFIGURATION:
+# - Default: Uses .env (local development)
+# - Override: Create .env.local for personal settings (git-ignored)
+# - Production: Use docker secrets or external secret management
+#
+# USAGE:
+#   docker compose up              # Uses .env
+#   docker compose --env-file .env.local up  # Override with local settings
+# ===========================================#
+
+services:
+  # ===========================================
+  # DATABASE SERVICES
+  # Each microservice has its own database
+  # ===========================================
+  
+  postgres-user:
+    image: postgres:15-alpine
+    container_name: moviehub-postgres-user
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${USER_DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${USER_DB_PASSWORD:-postgres}  # ⚠️ FILL THIS IN .env
+      POSTGRES_DB: ${USER_DB_NAME:-movie_hub_user}
+    ports:
+      - "${USER_DB_EXTERNAL_PORT:-5434}:5432"  # External:Internal (Internal is always 5432)
+    volumes:
+      - postgres_user_data:/var/lib/postgresql/data
+    networks:
+      - moviehub-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${USER_DB_USER:-postgres} -d ${USER_DB_NAME:-movie_hub_user}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  postgres-movie:
+    image: postgres:15-alpine
+    container_name: moviehub-postgres-movie
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${MOVIE_DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${MOVIE_DB_PASSWORD:-postgres}  # ⚠️ FILL THIS IN .env
+      POSTGRES_DB: ${MOVIE_DB_NAME:-movie_hub_movie}
+    ports:
+      - "${MOVIE_DB_EXTERNAL_PORT:-5435}:5432"  # External:Internal (Internal is always 5432)
+    volumes:
+      - postgres_movie_data:/var/lib/postgresql/data
+    networks:
+      - moviehub-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${MOVIE_DB_USER:-postgres} -d ${MOVIE_DB_NAME:-movie_hub_movie}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ===========================================
+  # MICROSERVICES
+  # ===========================================
+
+  user-service:
+    build:
+      context: .
+      dockerfile: apps/user-service/Dockerfile
+    container_name: moviehub-user-service
+    restart: unless-stopped
+    environment:
+      # Service Configuration
+      TCP_HOST: ${USER_SERVICE_HOST:-user-service}
+      TCP_PORT: ${USER_SERVICE_PORT:-3001}
+      NODE_ENV: ${NODE_ENV:-development}
+      
+      # Database Configuration (mapped to DATABASE_URL for Prisma)
+      DATABASE_URL: postgresql://${USER_DB_USER:-postgres}:${USER_DB_PASSWORD:-postgres}@postgres-user:5432/${USER_DB_NAME:-movie_hub_user}?schema=public
+      
+      # Authentication (Clerk)
+      CLERK_SECRET_KEY: ${CLERK_SECRET_KEY}  # ⚠️ FILL THIS IN .env
+    ports:
+      - "${USER_SERVICE_EXTERNAL_PORT:-3011}:${USER_SERVICE_PORT:-3001}"
+    depends_on:
+      postgres-user:
+        condition: service_healthy
+    networks:
+      - moviehub-network
+    volumes:
+      # Mount for hot-reload in development (optional)
+      - ./apps/user-service/src:/app/apps/user-service/src:ro
+    healthcheck:
+      test: ["CMD", "node", "--version"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    command: sh -c "npx prisma migrate deploy && node main.js"
+
+  movie-service:
+    build:
+      context: .
+      dockerfile: apps/movie-service/Dockerfile
+    container_name: moviehub-movie-service
+    restart: unless-stopped
+    environment:
+      # Service Configuration
+      TCP_HOST: ${MOVIE_SERVICE_HOST:-movie-service}
+      TCP_PORT: ${MOVIE_SERVICE_PORT:-3002}
+      NODE_ENV: ${NODE_ENV:-development}
+      
+      # Database Configuration (mapped to DATABASE_URL for Prisma)
+      DATABASE_URL: postgresql://${MOVIE_DB_USER:-postgres}:${MOVIE_DB_PASSWORD:-postgres}@postgres-movie:5432/${MOVIE_DB_NAME:-movie_hub_movie}?schema=public
+    ports:
+      - "${MOVIE_SERVICE_EXTERNAL_PORT:-3002}:${MOVIE_SERVICE_PORT:-3002}"
+    depends_on:
+      postgres-movie:
+        condition: service_healthy
+    networks:
+      - moviehub-network
+    volumes:
+      # Mount for hot-reload in development (optional)
+      - ./apps/movie-service/src:/app/apps/movie-service/src:ro
+    healthcheck:
+      test: ["CMD", "node", "--version"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    command: sh -c "npx prisma migrate deploy && node main.js"
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: apps/api-gateway/Dockerfile
+    container_name: moviehub-api-gateway
+    restart: unless-stopped
+    environment:
+      # Service Configuration
+      PORT: ${API_GATEWAY_PORT:-3000}
+      NODE_ENV: ${NODE_ENV:-development}
+      
+      # Microservices Discovery (Service names from docker-compose)
+      USER_HOST: ${USER_SERVICE_HOST:-user-service}
+      USER_PORT: ${USER_SERVICE_PORT:-3001}
+      MOVIE_HOST: ${MOVIE_SERVICE_HOST:-movie-service}
+      MOVIE_PORT: ${MOVIE_SERVICE_PORT:-3002}
+      
+      # Authentication (Clerk)
+      CLERK_SECRET_KEY: ${CLERK_SECRET_KEY}  # ⚠️ FILL THIS IN .env
+    ports:
+      - "${API_GATEWAY_EXTERNAL_PORT:-3010}:${API_GATEWAY_PORT:-3000}"
+    depends_on:
+      - user-service
+      - movie-service
+    networks:
+      - moviehub-network
+    volumes:
+      # Mount for hot-reload in development (optional)
+      - ./apps/api-gateway/src:/app/apps/api-gateway/src:ro
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    container_name: moviehub-web
+    restart: unless-stopped
+    environment:
+      # Next.js Configuration
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: ${WEB_PORT:-4200}
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3010/api}
+      
+      # Clerk Public Key (for frontend)
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}  # ⚠️ FILL THIS IN .env
+    ports:
+      - "${WEB_EXTERNAL_PORT:-4200}:${WEB_PORT:-4200}"
+    depends_on:
+      - api-gateway
+    networks:
+      - moviehub-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+      
+
+# ===========================================
+# NETWORKS
+# ===========================================
+networks:
+  moviehub-network:
+    driver: bridge
+    name: moviehub-network
+
+# ===========================================
+# VOLUMES
+# Persistent data storage for databases
+# ===========================================
+volumes:
+  postgres_user_data:
+    name: moviehub_postgres_user_data
+  postgres_movie_data:
+    name: moviehub_postgres_movie_data

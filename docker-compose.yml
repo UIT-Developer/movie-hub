@@ -28,8 +28,7 @@ services:
       - '6379:6379'
     container_name: moviehub-redis
     restart: unless-stopped
-    volumes:
-      - redis_data:/data
+   
     networks:
       - moviehub-network
 

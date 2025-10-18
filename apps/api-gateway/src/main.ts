@@ -1,3 +1,4 @@
+import { LoggingInterceptor } from '@movie-hub/shared-types/common';
 /**
  * This is not a production server yet!
  * This is only a minimal backend to get started.
@@ -5,8 +6,12 @@
 
 import { Logger, VersioningType } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import { OpenAPIObject, SwaggerModule } from '@nestjs/swagger';
 import cookieParser from 'cookie-parser';
+import { readFileSync } from 'fs';
+import * as yaml from 'js-yaml';
 import { AppModule } from './app/app.module';
+import { TransformInterceptor } from './app/common/interceptor/transform.interceptor';
 import { GlobalExceptionFilter } from './app/exception/global-exception.filter';
 
 async function bootstrap() {
@@ -18,9 +23,21 @@ async function bootstrap() {
     type: VersioningType.URI,
     prefix: 'v',
   });
-  // app.useGlobalFilters(new ZodValidationExceptionFilter());
-  // app.useGlobalFilters(new RpcExceptionFilter());
+  app.enableCors({ origin: true, credentials: true });
+
+  const openapi = yaml.load(
+    readFileSync('apps/api-gateway/doc/openapi.yml', 'utf8')
+  ) as OpenAPIObject;
+
+  SwaggerModule.setup('docs', app, openapi, {
+    useGlobalPrefix: true,
+  });
+
   app.useGlobalFilters(new GlobalExceptionFilter());
+  app.useGlobalInterceptors(
+    new TransformInterceptor(),
+    new LoggingInterceptor('Api-Gateway')
+  );
   const port = process.env.PORT || 3000;
   await app.listen(port);
   Logger.log(

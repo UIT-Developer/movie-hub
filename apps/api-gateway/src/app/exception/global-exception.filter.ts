@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { ApiErrorResponse } from '@movie-hub/shared-types/common';
 import {
   ArgumentsHost,
@@ -12,7 +13,7 @@ import { ZodError } from 'zod/v4/classic/errors.cjs';
 
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
-  catch(exception: unknown, host: ArgumentsHost) {
+  catch(exception: any, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const response: Response = ctx.getResponse<Response>();
     const request: Request = ctx.getResponse<Request>();
@@ -55,7 +56,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     } else {
       errorResponse = {
         success: false,
-        message: 'Unexpected error',
+        message: exception.message || 'Unexpected error',
         errors: [
           {
             code: 'INTERNAL_ERROR',

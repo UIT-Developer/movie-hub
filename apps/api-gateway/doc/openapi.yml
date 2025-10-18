@@ -1,0 +1,252 @@
+# MOVIE SERVICE
+
+## API Contract
+
+openapi: 3.0.3
+info:
+  title: Movie Service API
+  version: 1.0.0
+  description: Quản lý thông tin website đặt vé xem phim
+
+servers:
+  - url: /api/{version}
+    variables:
+      version:
+        default: v1
+        enum:
+          - v1
+          - v2
+
+tags:
+  - name: Movies
+
+paths:
+  /movies:
+    get:
+      tags: [Movies]
+      summary: Lấy danh sách phim
+      parameters:
+        - $ref: '#/components/parameters/PageParameter'
+        - $ref: '#/components/parameters/LimitParameter'
+        - $ref: '#/components/parameters/SortByParameter'
+        - $ref: '#/components/parameters/SortOrderParameter'
+        - name: status
+          in: query
+          schema:
+            enum: [now_showing, upcoming]
+
+      responses:
+        '200':
+          description: Danh sách phim
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiSuccessResponse'
+                  - type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/MovieSummary'
+                  meta:
+                    $ref: '#/components/schemas/ListMeta'
+        '400':
+          description: Lỗi request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+
+  /movies/{movieId}:
+    get:
+      tags: [Movies]
+      summary: Lấy chi tiết phim
+      parameters:
+        - name: movieId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Chi tiết phim
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiSuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/MovieDetail'
+        '400':
+          description: Lỗi request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+
+components:
+  schemas:
+    ListMeta:
+      type: object
+      properties:
+        page: { type: integer, default: 1 }
+        limit: { type: integer, default: 20 }
+        totalRecords: { type: integer }
+        totalPages: { type: integer }
+        hasPrev: { type: boolean }
+        hasNext: { type: boolean }
+
+    ErrorItem:
+      type: object
+      properties:
+        code: { type: string }
+        message: { type: string }
+
+    ApiErrorResponse:
+      type: object
+      required: [success, message, errors, timestamp, path, statusCode]
+      properties:
+        success: { type: boolean, enum: [false] }
+        message: { type: string }
+        errors:
+          type: array
+          nullable: true
+          items: { $ref: '#/components/schemas/ErrorItem' }
+        timestamp: { type: string, format: date-time }
+        path: { type: string }
+        statusCode: { type: integer }
+
+    ApiSuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          nullable: true
+        data:
+          nullable: true
+        meta:
+          type: object
+          nullable: true
+        timestamp:
+          type: string
+          format: date-time
+        path: { type: string }
+      required: [success, message, timestamp]
+
+    MovieSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        posterUrl:
+          type: string
+          format: uri
+        backdropUrl:
+          type: string
+        runtime:
+          type: integer
+          description: Duration in minutes
+        ageRating:
+          type: string
+          enum: ['P', 'K', 'T13', 'T16', 'T18', 'C']
+        productionCountry:
+          type: string
+        languageType:
+          type: string
+          enum: ['ORIGINAL', 'SUBTITLE', 'DUBBED']
+
+    MovieDetail:
+      allOf:
+        - $ref: '#/components/schemas/MovieSummary'
+        - type: object
+          properties:
+            originalTitle:
+              type: string
+            overview:
+              type: string
+            cast:
+              type: array
+              items:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  profileUrl:
+                    type: string
+            trailerUrl:
+              type: string
+            originalLanguage:
+              type: string
+            spokenLanguages:
+              type: array
+              items:
+                type: number
+            genre:
+              type: object
+              $ref: '#/components/schemas/GenreResponse'
+
+    GenreResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+
+  parameters:
+    PageParameter:
+      name: page
+      in: query
+      description: Page number (starts from 1)
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+      example: 1
+
+    LimitParameter:
+      name: limit
+      in: query
+      description: Number of items per page
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+      example: 20
+
+    SortByParameter:
+      name: sortBy
+      in: query
+      description: Field to sort by
+      schema:
+        type: string
+        default: createdAt
+      example: id
+
+    SortOrderParameter:
+      name: sortOrder
+      in: query
+      description: Sort order
+      schema:
+        type: string
+        enum: [asc, desc]
+        default: desc
+      example: asc
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

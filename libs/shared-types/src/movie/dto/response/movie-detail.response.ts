@@ -8,7 +8,6 @@ export interface MovieDetailResponse extends MovieSummary {
   releaseDate: Date;
   originalLanguage: string;
   spokenLanguages: string[];
-  productionCountry: string;
   director: string;
   cast: unknown;
   genre: GenreResponse[];

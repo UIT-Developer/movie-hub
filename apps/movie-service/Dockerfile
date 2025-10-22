@@ -27,6 +27,7 @@ COPY package*.json ./
 COPY nx.json ./
 COPY tsconfig.base.json ./
 COPY libs ./libs
+COPY eslint.config.mjs ./
 COPY apps/movie-service ./apps/movie-service
 
 # Generate Prisma Client for movie-service
@@ -61,9 +62,7 @@ RUN npm ci --omit=dev --legacy-peer-deps && \
 # Copy ONLY the built application and Prisma files
 COPY --chown=nestjs:nodejs --from=builder /app/dist/apps/movie-service ./
 COPY --chown=nestjs:nodejs --from=builder /app/apps/movie-service/generated ./generated
-COPY --chown=nestjs:nodejs --from=builder /app/apps/movie-service/prisma/schema.prisma ./prisma/schema.prisma
-COPY --chown=nestjs:nodejs --from=builder /app/apps/movie-service/prisma/migrations ./prisma/migrations
-
+COPY --chown=nestjs:nodejs --from=builder /app/apps/movie-service/prisma ./prisma
 USER nestjs
 
 # Health check

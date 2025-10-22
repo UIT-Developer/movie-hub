@@ -3,6 +3,12 @@ import baseConfig from '../../eslint.config.mjs';
 export default [
   ...baseConfig,
   {
+    files: ['**/*.{ts,tsx,js,jsx}'],
+    rules: {
+      '@nx/enforce-module-boundaries': 'off',
+    },
+  },
+  {
     files: ['**/*.json'],
     rules: {
       '@nx/dependency-checks': [
@@ -11,7 +17,6 @@ export default [
           ignoredFiles: ['{projectRoot}/eslint.config.{js,cjs,mjs,ts,cts,mts}'],
         },
       ],
-      "@nx/enforce-module-boundaries": off
     },
     languageOptions: {
       parser: await import('jsonc-eslint-parser'),

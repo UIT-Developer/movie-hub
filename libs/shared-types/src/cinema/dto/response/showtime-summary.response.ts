@@ -1,4 +1,4 @@
-import { FormatEnum, ShowtimeStatusEnum } from '../../enum';
+import { ShowtimeStatusEnum } from '../../enum';
 
 export interface ShowtimeSummaryResponse {
   id?: string;

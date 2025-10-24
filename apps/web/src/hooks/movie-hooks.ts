@@ -49,7 +49,6 @@ export const useGetMovies = (initialQuery?: Omit<MovieQuery, 'page'>) => {
 };
 
 export const useGetMovieDetail = (movieId: string) => {
-  const { getToken } = useAuth();
   return useQuery<ServiceResult<MovieDetailResponse>>({
     queryKey: ['movies', movieId],
     queryFn: async () => {

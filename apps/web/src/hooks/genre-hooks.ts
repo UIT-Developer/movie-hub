@@ -1,28 +1,28 @@
 import { useAuth } from '@clerk/nextjs';
-import { createGenre, CreateGenreRequest, getGenreDetail, getGenres, updateGenre } from '../libs/actions/genre/genre-action';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import {
+  createGenre,
+  CreateGenreRequest,
+  getGenreDetail,
+  getGenres,
+  updateGenre,
+} from '../libs/actions/genre/genre-action';
 
 export const useGetGenres = (token: string) => {
-  const { getToken } = useAuth();
   return useQuery({
     queryKey: ['genres'],
     queryFn: async () => {
-      const token = await getToken();
-      if (!token) throw new Error('Token is required');
-      return await getGenres(token);
+      return await getGenres();
     },
   });
 };
 
 export const useGetDetailGenre = (id: string) => {
-  const { getToken } = useAuth();
   return useQuery({
     queryKey: ['genres', id],
     queryFn: async () => {
-      const token = await getToken();
-      if (!token) throw new Error('Token is required');
-      return await getGenreDetail(id, token);
+      return await getGenreDetail(id);
     },
   });
 };
@@ -47,8 +47,8 @@ export const useCreateGenre = (data: CreateGenreRequest) => {
     onError: (error) => {
       toast.error(error?.message || 'Something went wrong. Please try again.');
     },
-  })
-}
+  });
+};
 
 export const useUpdateGenre = (id: string, genreData: CreateGenreRequest) => {
   const queryClient = useQueryClient();
@@ -72,7 +72,7 @@ export const useUpdateGenre = (id: string, genreData: CreateGenreRequest) => {
       toast.error(error?.message || 'Something went wrong. Please try again.');
     },
   });
-}
+};
 
 export const useDeleteGenre = (id: string) => {
   const queryClient = useQueryClient();
@@ -95,5 +95,5 @@ export const useDeleteGenre = (id: string) => {
     onError: (error) => {
       toast.error(error?.message || 'Something went wrong. Please try again.');
     },
-  }); 
-}
+  });
+};

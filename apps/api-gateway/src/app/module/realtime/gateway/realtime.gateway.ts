@@ -26,9 +26,9 @@ export class RealtimeGateway {
   }
 
   handleConnection(client: Socket) {
-    const { showtimeId, userId } = client.handshake.query;
+    const { showtimeId } = client.handshake.query;
 
-    (client as any).userId = userId;
+
 
     if (showtimeId) client.join(showtimeId.toString());
   }

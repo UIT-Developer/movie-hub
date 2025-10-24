@@ -4,7 +4,8 @@
   "license": "MIT",
   "scripts": {
     "dev:core": "nx run-many -t=serve --projects=api-gateway,cinema-service --output-style=stream",
-    "dev:all": "nx run-many -t=serve --all --outputStyle=stream",
+    "dev:all": "nx run-many -t=serve --all --outputStyle=stream ",
+    "dev:web": "nx serve web",
     "prisma:generate": "nx run-many -t=prisma:generate --all"
   },
   "private": true,

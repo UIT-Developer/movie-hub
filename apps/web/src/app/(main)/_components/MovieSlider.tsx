@@ -1,34 +1,70 @@
-"use client";
+'use client';
 
-import "swiper/css";
-import "swiper/css/navigation";
-import { Navigation } from "swiper/modules";
-import { Swiper, SwiperSlide } from "swiper/react";
+import 'swiper/css';
+import 'swiper/css/navigation';
 
-import { BlurCircle } from "apps/web/src/components/blur-circle";
-import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
-import Link from "next/link";
-import MovieCard from "./MovieCard";
-import { useGetMovies } from "apps/web/src/hooks/movie-hooks";
-
-type Movie = {
-  title: string;
-  image: string;
-  releaseDate?: string;
-  genre: string[],
-  runtime: number
-};
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from '@movie-hub/shacdn-ui/carousel';
+import { BlurCircle } from 'apps/web/src/components/blur-circle';
+import { useGetMovies } from 'apps/web/src/hooks/movie-hooks';
+import { ArrowRight } from 'lucide-react';
+import Link from 'next/link';
+import { useEffect, useRef } from 'react';
+import MovieCard from './MovieCard';
 
 type Props = {
   href: string;
   title: string;
-  movies: Movie[];
+  status: 'now_showing' | 'upcoming';
 };
 
-export default function MovieSlider({href, title, movies}: Props) {
-  const {data} = useGetMovies()
+export default function MovieSlider({ href, title, status }: Props) {
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading,
+    isError,
+  } = useGetMovies({ limit: 9, status });
+
+  const movies = data?.pages ?? [];
+
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const lastItemRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const ent = entries[0];
+        if (ent.isIntersecting && hasNextPage && !isFetchingNextPage) {
+          fetchNextPage();
+        }
+      },
+      {
+        root: null, 
+        rootMargin: '0px 200px 0px 0px',
+        threshold: 0,
+      } // threshold tuỳ chỉnh
+    );
+
+    const el = lastItemRef.current;
+    if (el) observer.observe(el);
+
+    return () => {
+      if (el) observer.unobserve(el);
+      observer.disconnect();
+    };
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
   return (
-    <div className="px-6 overflow-hidden">
+    <div className="px-6">
       <div className="relative flex items-center justify-between pt-20 pb-10">
         <BlurCircle top="0" right="-80px" />
         <p className="text-gray-300 font-bold text-lg">{title}</p>
@@ -43,53 +79,42 @@ export default function MovieSlider({href, title, movies}: Props) {
         </Link>
       </div>
 
-      {/* Swiper */}
-      <Swiper
-        modules={[Navigation]}
-        spaceBetween={20}
-        slidesPerView={3}
-        slidesPerGroup={3} // 👉 Bấm 1 lần chuyển 4 phim
-        loop={true}
-        navigation={{
-          nextEl: '.swiper-button-next',
-          prevEl: '.swiper-button-prev',
-        }}
-        breakpoints={{
-          0: {
-            // từ 0px trở lên (mobile)
-            slidesPerView: 1,
-            slidesPerGroup: 1,
-          },
-          768: {
-            // từ md: 768px trở lên (tablet/desktop)
-            slidesPerView: 3,
-            slidesPerGroup: 3,
-          },
-        }}
-      >
-        {data.map((movie, index) => (
-          <SwiperSlide key={index}>
-            <MovieCard
-              runtime={movie.runtime}
-              title={movie.title}
-              posterUrl={movie.posterUrl}
-              backdropUrl={movie.backdropUrl}
-              id={movie.id}
-              ageRating={movie.ageRating}
-              languageType={movie.languageType}
-              productionCountry={movie.productionCountry}
-            />
-          </SwiperSlide>
-        ))}
-      </Swiper>
+      <Carousel className="w-full">
+        <CarouselContent ref={containerRef}>
+          {isLoading ? (
+            Array.from({ length: 3 }).map((_, i) => (
+              <CarouselItem key={i} className="md:basis-1/2 lg:basis-1/3">
+                <MovieCard.Skeleton />
+              </CarouselItem>
+            ))
+          ) : movies.length === 0 ? (
+            <div className="text-center py-10 text-gray-500 flex items-center justify-center w-full">
+              🎬 Không có phim nào để hiển thị.
+            </div>
+          ) : (
+            movies.map((movie, idx) => {
+                const isLast = idx === movies.length - 1;
+              return (
+                <CarouselItem
+                  key={movie.id}
+                  ref={isLast ? lastItemRef : undefined}
+                  className="md:basis-1/2 lg:basis-1/3"
+                >
+                  <MovieCard {...movie} />
+                </CarouselItem>
+              );
+            })
+          )}
 
-      {/* Nút điều hướng
-      <button className="swiper-button-prev absolute top-1/2 left-0 z-10 -translate-y-1/2 bg-black/50 p-2 rounded-full hover:bg-black/80 transition ">
-        <ChevronLeft className="text-white w-6 h-6" />
-      </button>
-      <button className="swiper-button-next absolute top-1/2 right-0 z-10 -translate-y-1/2 bg-black/50 p-2 rounded-full hover:bg-black/80 transition">
-        <ChevronRight className="text-white w-6 h-6" />
-      </button> */}
+          {isFetchingNextPage && (
+            <CarouselItem className="md:basis-1/2 lg:basis-1/3">
+              <MovieCard.Skeleton />
+            </CarouselItem>
+          )}
+        </CarouselContent>
+        <CarouselPrevious />
+        <CarouselNext disabled={isFetchingNextPage} />
+      </Carousel>
     </div>
   );
 }

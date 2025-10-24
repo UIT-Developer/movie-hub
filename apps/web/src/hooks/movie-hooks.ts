@@ -1,5 +1,8 @@
 import {
+  InfiniteData,
+  useInfiniteQuery,
   useMutation,
+  useQuery,
   useQueryClient,
   useSuspenseQuery,
 } from '@tanstack/react-query';
@@ -13,26 +16,44 @@ import {
   UpdateMovieRequest,
 } from '../libs/actions/movies/movie-action';
 import { useAuth } from '@clerk/nextjs';
-import { MovieDetailResponse, MovieSummary } from '@movie-hub/shared-types';
+import {
+  MovieDetailResponse,
+  MovieQuery,
+  MovieSummary,
+} from '@movie-hub/shared-types';
 import { toast } from 'sonner';
-export const useGetMovies = () => {
-  const { getToken } = useAuth();
-  return useSuspenseQuery<MovieSummary[]>({
-    queryKey: ['movies'],
-    queryFn: async () => {;
-      return await getMovies();
+import { ServiceResult } from '@movie-hub/shared-types/common';
+export const useGetMovies = (initialQuery?: Omit<MovieQuery, 'page'>) => {
+  return useInfiniteQuery({
+    queryKey: ['movies', initialQuery],
+    queryFn: async ({ pageParam = 1 }) => {
+      // gọi getMovies và merge query params
+      return await getMovies({
+        ...initialQuery,
+        page: pageParam,
+      } as MovieQuery);
     },
+    getNextPageParam: (lastPage: ServiceResult<MovieSummary[]>) => {
+      const meta = lastPage.meta;
+      if (!meta) return undefined;
+      return meta.page < meta.totalPages ? meta.page + 1 : undefined;
+    },
+    select: (data) => {
+      return {
+        pages: data.pages.flatMap((page) => page.data),
+        pageParams: data.pageParams,
+      };
+    },
+    initialPageParam: 1,
   });
 };
 
 export const useGetMovieDetail = (movieId: string) => {
   const { getToken } = useAuth();
-  return useSuspenseQuery<MovieDetailResponse>({
+  return useQuery<ServiceResult<MovieDetailResponse>>({
     queryKey: ['movies', movieId],
     queryFn: async () => {
-      const token = await getToken();
-      if (!token) throw new Error('Token is required');
-      return await getMovieDetail(movieId, token);
+      return await getMovieDetail(movieId);
     },
   });
 };
@@ -69,8 +90,7 @@ export const useUpdateMovie = (movieId: string, data: UpdateMovieRequest) => {
       const token = await getToken();
       if (!token) throw new Error('Token is required');
       return await updateMovie(movieId, data, token);
-    }
-    ,
+    },
     onMutate() {
       toast.loading('Updating movie...');
     },
@@ -83,7 +103,7 @@ export const useUpdateMovie = (movieId: string, data: UpdateMovieRequest) => {
       toast.error(error?.message || 'Something went wrong. Please try again.');
     },
   });
-}
+};
 
 export const useDeleteMovie = (movieId: string) => {
   const queryClient = useQueryClient();
@@ -91,7 +111,7 @@ export const useDeleteMovie = (movieId: string) => {
   return useMutation({
     mutationKey: ['delete-movie', movieId],
     mutationFn: async () => {
-      const token = await getToken();   
+      const token = await getToken();
       if (!token) throw new Error('Token is required');
       return await deleteMovie(movieId, token);
     },
@@ -99,7 +119,7 @@ export const useDeleteMovie = (movieId: string) => {
       toast.loading('Deleting movie...');
     },
     onSuccess: () => {
-      toast.success('Movie deleted successfully');  
+      toast.success('Movie deleted successfully');
       queryClient.invalidateQueries({ queryKey: ['movies'] });
       queryClient.invalidateQueries({ queryKey: ['movies', movieId] });
     },
@@ -107,4 +127,4 @@ export const useDeleteMovie = (movieId: string) => {
       toast.error(error?.message || 'Something went wrong. Please try again.');
     },
   });
-}
+};

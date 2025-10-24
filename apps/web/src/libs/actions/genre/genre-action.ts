@@ -3,32 +3,22 @@ import { CreateGenreSchema, GenreResponse } from '@movie-hub/shared-types';
 
 import z from 'zod';
 import api from '../../api-client';
+import { ServiceResult } from '@movie-hub/shared-types/common';
 
 export type CreateGenreRequest = z.infer<typeof CreateGenreSchema>;
-export const getGenres = async (token: string): Promise<GenreResponse[]> => {
+export const getGenres = async (): Promise<ServiceResult<GenreResponse[]>> => {
   try {
-    const response = api.get('/genres', {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-    return (await response).data as GenreResponse[];
+    const response = await api.get('/genres');
+    return response.data;
   } catch (error) {
     throw error;
   }
 };
 
-export const getGenreDetail = async (
-  id: string,
-  token: string
-): Promise<GenreResponse> => {
+export const getGenreDetail = async (id: string): Promise<GenreResponse> => {
   try {
-    const response = api.get(`/genres/${id}`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-    return (await response).data as GenreResponse;
+    const response = await api.get(`/genres/${id}`, {});
+    return response.data;
   } catch (error) {
     throw error;
   }

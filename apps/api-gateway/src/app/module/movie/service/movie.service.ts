@@ -1,8 +1,7 @@
 import {
   CreateMovieRequest,
-  MovieDetailResponse,
+  MovieQuery,
   MovieServiceMessage,
-  MovieSummary,
   SERVICE_NAME,
   UpdateMovieRequest,
 } from '@movie-hub/shared-types';
@@ -18,17 +17,17 @@ export class MovieService {
     @Inject(SERVICE_NAME.Movie) private readonly client: ClientProxy
   ) {}
 
-  async getMovies(): Promise<MovieSummary> {
+  async getMovies(query: MovieQuery) {
     try {
       return await firstValueFrom(
-        this.client.send(MovieServiceMessage.MOVIE.GET_LIST, {})
+        this.client.send(MovieServiceMessage.MOVIE.GET_LIST, query)
       );
     } catch (error) {
       throw new RpcException(error);
     }
   }
 
-  async getMovieDetail(id: string): Promise<MovieDetailResponse> {
+  async getMovieDetail(id: string) {
     try {
       return await firstValueFrom(
         this.client.send(MovieServiceMessage.MOVIE.GET_DETAIL, id)
@@ -48,10 +47,7 @@ export class MovieService {
     }
   }
 
-  async updateMovie(
-    id: string,
-    updateMovieRequest: UpdateMovieRequest
-  ): Promise<MovieDetailResponse> {
+  async updateMovie(id: string, updateMovieRequest: UpdateMovieRequest) {
     try {
       return await firstValueFrom(
         this.client.send(MovieServiceMessage.MOVIE.UPDATED, {
@@ -66,7 +62,9 @@ export class MovieService {
 
   async deleteMovie(id: string) {
     try {
-      firstValueFrom(this.client.send(MovieServiceMessage.MOVIE.DELETED, id));
+      return await firstValueFrom(
+        this.client.send(MovieServiceMessage.MOVIE.DELETED, id)
+      );
     } catch (error) {
       throw new RpcException(error);
     }

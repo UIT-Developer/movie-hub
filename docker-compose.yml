@@ -1,6 +1,263 @@
+
+
+
+# ===========================================
+# MOVIEHUB MICROSERVICES DOCKER COMPOSE
+# Local Development and Collaboration setup
+# ===========================================
+#
+# ENVIRONMENT CONFIGURATION:
+# - Each service uses its own .env file in apps/<service-name>/.env
+# - Database services use .env.db files in their respective service folders
+# - Production: Cloud only production
+#
+# USAGE (~~~~!!!!!IMPORTANT!!!!!~~~~)
+#   docker compose up -d            Use base + docker-compose.override.yml (development)
+#   docker compose -f docker-compose.yml up -d   Use base only (production)
+#   docker compose exec <service-name> sh <command>  Access a running container's shell
+#   docker compose build <service-name>       Rebuild a specific service
+# logs: use dockerdesktop :> or docker compose logs <service-name>
 services:
+  # ===========================================
+  # DATABASE SERVICES
+  # Each microservice has its own database
+  # ===========================================
   redis:
     image: redis:7
     command: ['redis-server', '--notify-keyspace-events', 'Ex']
     ports:
       - '6379:6379'
+    container_name: moviehub-redis
+    restart: unless-stopped
+    networks:
+      - moviehub-network
+
+  postgres-user:
+    image: postgres:15-alpine
+    container_name: moviehub-postgres-user
+    restart: unless-stopped
+    env_file:
+      - ./apps/user-service/.env.db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}  # ⚠️ FILL THIS IN .env
+      POSTGRES_DB: ${POSTGRES_DB:-movie_hub_user}
+    ports:
+      - "5435:5432"  # External:Internal (Internal is always 5432)
+    volumes:
+      - postgres_user_data:/var/lib/postgresql/data
+    networks:
+      - moviehub-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d movie_hub_user"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  postgres-movie:
+    image: postgres:15-alpine
+    container_name: moviehub-postgres-movie
+    restart: unless-stopped
+    env_file:
+      - ./apps/movie-service/.env.db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}  # ⚠️ FILL THIS IN .env
+      POSTGRES_DB: ${POSTGRES_DB:-movie_hub_movie}
+    ports:
+      - "5436:5432"  # External:Internal (Internal is always 5432)
+    volumes:
+      - postgres_movie_data:/var/lib/postgresql/data
+    networks:
+      - moviehub-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d movie_hub_movie"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+
+  postgres-cinema:
+    image: postgres:15-alpine
+    container_name: moviehub-postgres-cinema
+    restart: unless-stopped
+    env_file:
+      - ./apps/cinema-service/.env.db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}  # ⚠️ FILL THIS IN .env
+      POSTGRES_DB: ${POSTGRES_DB:-movie_hub_cinema}
+    ports:
+      - "5437:5432"  # External:Internal (Internal is always 5432)
+    volumes:
+      - postgres_cinema_data:/var/lib/postgresql/data
+    networks:
+      - moviehub-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d movie_hub_cinema"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  # ===========================================
+  # MICROSERVICES
+  # ===========================================
+
+  user-service:
+    build:
+      context: .
+      dockerfile: apps/user-service/Dockerfile
+      target: production
+    container_name: moviehub-user-service
+    restart: unless-stopped
+    env_file:
+      - ./apps/user-service/.env
+    ports:
+      - "4001:3001"
+    depends_on:
+      postgres-user:
+        condition: service_healthy
+    networks:
+      - moviehub-network
+    volumes:
+      # Mount for hot-reload in development (optional)
+      - ./apps/user-service/src:/app/apps/user-service/src:ro
+    healthcheck:
+      test: ["CMD", "node", "--version"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    command: sh -c "npx prisma migrate deploy && node main.js"
+
+  movie-service:
+    build:
+      context: .
+      dockerfile: apps/movie-service/Dockerfile
+      target: production
+    container_name: moviehub-movie-service
+    restart: unless-stopped
+    env_file:
+      - ./apps/movie-service/.env
+    ports:
+      - "4002:3002"
+    depends_on:
+      postgres-movie:
+        condition: service_healthy
+    networks:
+      - moviehub-network
+    volumes:
+      # Mount for hot-reload in development (optional)
+      - ./apps/movie-service/src:/app/apps/movie-service/src:ro
+    healthcheck:
+      test: ["CMD", "node", "--version"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    command: sh -c "npx prisma migrate deploy && node main.js"
+  cinema-service:
+    build:
+      context: .
+      dockerfile: apps/cinema-service/Dockerfile
+      target: production
+    container_name: moviehub-cinema-service
+    restart: unless-stopped
+    env_file:
+      - ./apps/cinema-service/.env
+    ports:
+      - "4003:3003"
+    depends_on:
+      postgres-cinema:
+        condition: service_healthy
+    networks:
+      - moviehub-network
+    volumes:
+      # Mount for hot-reload in development (optional)
+      - ./apps/cinema-service/src:/app/apps/cinema-service/src:ro
+    healthcheck:
+      test: ["CMD", "node", "--version"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    command: sh -c "npx prisma migrate deploy && node main.js"
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: apps/api-gateway/Dockerfile
+      target: production
+    container_name: moviehub-api-gateway
+    restart: unless-stopped
+    env_file:
+      - ./apps/api-gateway/.env
+    ports:
+      - "4000:3000"
+    depends_on:
+      - user-service
+      - movie-service
+      - cinema-service
+    networks:
+      - moviehub-network
+    volumes:
+      # Mount for hot-reload in development (optional)
+      - ./apps/api-gateway/src:/app/apps/api-gateway/src:ro
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    command: sh -c "node main.js"
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      target: production
+    container_name: moviehub-web
+    restart: unless-stopped
+    env_file:
+      - ./apps/web/.env
+    ports:
+      - "5200:4200"
+    depends_on:
+      - api-gateway
+    networks:
+      - moviehub-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:4200/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    command: sh -c "node apps/web/server.js"
+      
+
+# ===========================================
+# NETWORKS
+# ===========================================
+networks:
+  moviehub-network:
+    driver: bridge
+    name: moviehub-network
+
+# ===========================================
+# VOLUMES
+# Persistent data storage for databases
+# ===========================================
+volumes:
+  postgres_user_data:
+    name: moviehub_postgres_user_data
+  postgres_movie_data:
+    name: moviehub_postgres_movie_data
+  postgres_cinema_data:
+    name: moviehub_postgres_cinema_data
+
+
+
+
+
+
+
+

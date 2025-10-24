@@ -9,6 +9,9 @@ const nextConfig = {
   // Use this to set Nx-specific options
   // See: https://nx.dev/recipes/next/next-config-setup
   nx: {},
+  
+  // Enable standalone output for optimized Docker builds (reduces image size by 80%)
+  output: 'standalone',
   images: {
     remotePatterns: [
       {

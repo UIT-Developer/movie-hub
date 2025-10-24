@@ -11,13 +11,13 @@ import {
 } from '@nestjs/common';
 import { CinemaService } from '../service/cinema.service';
 import { GetShowtimesQuery } from '@movie-hub/shared-types';
-import { ResponseInterceptor } from '../../../common/interceptor/response.interceptor';
+import { TransformInterceptor } from '../../../common/interceptor/transform.interceptor';
 
 @Controller({
   version: '1',
   path: 'cinemas',
 })
-@UseInterceptors(new ResponseInterceptor())
+@UseInterceptors(new TransformInterceptor())
 export class CinemaController {
   constructor(private readonly cinemaService: CinemaService) {}
 

@@ -5,16 +5,14 @@ import {
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
-import { ResponseInterceptor } from '../../../common/interceptor/response.interceptor';
 import { ShowtimeService } from '../service/showtime.service';
-import { ClerkAuthGuard } from '../../../common/guard/clerk-auth.guard';
-import { CurrentUserId } from '../../../common/decorator/current-user-id.decorator';
+import { TransformInterceptor } from '../../../common/interceptor/transform.interceptor';
 
 @Controller({
   version: '1',
   path: 'showtimes',
 })
-@UseInterceptors(new ResponseInterceptor())
+@UseInterceptors(new TransformInterceptor())
 export class ShowtimeController {
   constructor(private readonly showtimeService: ShowtimeService) {}
 

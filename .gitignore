@@ -47,6 +47,25 @@ Thumbs.db
 .next
 out
 
+# Environment files (keep examples)
+# Repository-level env files
 .env
+.env.dev
+.env.test
+.env.prod
+.env.local
+.env.*.local
 .env/*
 !.env.example
+
+# Service-level env files
+apps/**/.env
+apps/**/.env.db
+apps/**/.env.local
+apps/**/.env.*.local
+!apps/**/.env.example
+
+# Docker Compose override files (per-developer customization)
+docker-compose.override.yml
+!docker-compose.override.yml.example
+

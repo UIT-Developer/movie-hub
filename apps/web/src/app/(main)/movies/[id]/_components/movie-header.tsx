@@ -48,7 +48,7 @@ export const MovieHeader = ({ movie }: MovieHeaderProps) => {
     : 'Chưa rõ ngày phát hành';
 
   return (
-    <div className="flex flex-col w-full flex-wrap md:flex-row items-center gap-8 mx-auto aspect-video rounded-2xl relative overflow-hidden">
+    <div className="flex flex-col flex-wrap md:flex-row items-center gap-8 aspect-video rounded-2xl">
       {/* Backdrop */}
       {backdropUrl && backdropUrl.trim() !== '' ? (
         <Image
@@ -64,7 +64,7 @@ export const MovieHeader = ({ movie }: MovieHeaderProps) => {
       <div className="absolute inset-0 bg-black/60" />
 
       {/* Content */}
-      <div className="relative z-10 flex flex-col md:flex-row items-center gap-8 px-6 md:px-12 py-8">
+      <div className=" z-10 flex flex-col md:flex-row items-center gap-8 px-6 md:px-12 py-8">
         <Image
           width={288}
           height={416}
@@ -78,7 +78,6 @@ export const MovieHeader = ({ movie }: MovieHeaderProps) => {
         />
 
         <div className="flex flex-1 flex-col gap-3 text-white max-w-2xl">
-          <BlurCircle top="-100px" left="-100px" />
 
           <div className="flex items-center gap-2 text-sm text-rose-500 font-bold">
             <span>{languageType}</span>
@@ -134,7 +133,7 @@ export const MovieHeader = ({ movie }: MovieHeaderProps) => {
               : 'Chưa có thể loại'}
           </p>
 
-          <div className="flex items-center gap-4 mt-4">
+          <div className="flex items-center gap-2 mt-4">
             <a
               href={trailerUrl || '#'}
               target="_blank"

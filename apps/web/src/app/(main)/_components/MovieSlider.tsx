@@ -16,6 +16,7 @@ import { ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useRef } from 'react';
 import MovieCard from './MovieCard';
+import { ErrorFallback } from 'apps/web/src/components/error-fallback';
 
 type Props = {
   href: string;
@@ -31,6 +32,7 @@ export default function MovieSlider({ href, title, status }: Props) {
     isFetchingNextPage,
     isLoading,
     isError,
+    error
   } = useGetMovies({ limit: 9, status });
 
   const movies = data?.pages ?? [];
@@ -48,7 +50,7 @@ export default function MovieSlider({ href, title, status }: Props) {
         }
       },
       {
-        root: null, 
+        root: null,
         rootMargin: '0px 200px 0px 0px',
         threshold: 0,
       } // threshold tuỳ chỉnh
@@ -80,20 +82,22 @@ export default function MovieSlider({ href, title, status }: Props) {
       </div>
 
       <Carousel className="w-full">
-        <CarouselContent ref={containerRef}>
-          {isLoading ? (
+        <CarouselContent ref={containerRef} className='m-0'>
+          {isError ? (
+            <ErrorFallback message={error.message}/>
+          ) : isLoading ? (
             Array.from({ length: 3 }).map((_, i) => (
               <CarouselItem key={i} className="md:basis-1/2 lg:basis-1/3">
                 <MovieCard.Skeleton />
               </CarouselItem>
             ))
           ) : movies.length === 0 ? (
-            <div className="text-center py-10 text-gray-500 flex items-center justify-center w-full">
+            <div className="text-center py-10 text-gray-500 flex items-center justify-between w-full">
               🎬 Không có phim nào để hiển thị.
             </div>
           ) : (
             movies.map((movie, idx) => {
-                const isLast = idx === movies.length - 1;
+              const isLast = idx === movies.length - 1;
               return (
                 <CarouselItem
                   key={movie.id}

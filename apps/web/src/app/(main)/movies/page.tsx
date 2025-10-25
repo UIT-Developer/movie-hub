@@ -1,20 +1,13 @@
-import MovieSlider from '../_components/MovieSlider';
-import QuickBooking from '../_components/QuickBooking';
+import { MovieList } from './_components/movie-list';
 
-const MoviesPage = () => {
+const UpcomingPage = () => {
   return (
-    <div className="flex flex-col gap-8">
-      <QuickBooking />
-      {/* Slider phim đang chiếu */}
-      <section>
-        <MovieSlider title="🎬 PHIM ĐANG CHIẾU" href='showing' movies={[]} />
-      </section>
-
-      {/* Slider phim sắp chiếu */}
-      <section>
-        <MovieSlider title="🎥 PHIM SẮP CHIẾU" href='upcoming' movies={[]} />
-      </section>
+    <div>
+      <h1 className="text-3xl font-bold text-gray-300 mb-6 text-center mt-10">
+        🎬 PHIM SẮP CHIẾU
+      </h1>
+      <MovieList isShowing={false} />
     </div>
   );
 };
-export default MoviesPage;
+export default UpcomingPage;

@@ -8,7 +8,7 @@ import { useState } from 'react';
 
 export const Navbar = () => {
   const [isOpen, setIsOpen] = useState<boolean>(false);
-  const { user, isLoaded } = useUser();
+  const { isSignedIn } = useUser();
   const { openSignIn } = useClerk();
   return (
     <nav className="fixed top-0 left-0 w-screen z-50 bg-black/50 backdrop-blur-lg shadow-lg">
@@ -60,9 +60,7 @@ export const Navbar = () => {
             color="white"
             className="max-md:hidden w-6 h-6 cursor-pointer"
           />
-          {!isLoaded ? (
-            <div className="w-8 h-8 bg-gray-700 rounded-full animate-pulse" />
-          ) : !user ? (
+          { !isSignedIn ? (
             <Button
               onClick={() => openSignIn()}
               className="px-4 py-1 sm:px-7 sm:py-2 transition rounded-full font-medium cursor-pointer"

@@ -9,17 +9,16 @@ const MovieDetailsPage = () => {
   const { id } = useParams();
 
   const { data, isLoading } = useGetMovieDetail(id as string);
-  
 
   return (
     <div className="min-h-screen flex flex-col gap-10 pb-20">
       {isLoading ? (
         <MovieHeader.Skeleton />
       ) : (
-        <> 
-        <MovieHeader movie={data?.data ?? {}} />
-      <MovieCast actors={data?.data.cast as Actor[]} />
-      <DateSelect id={id as string} />
+        <>
+          <MovieHeader movie={data?.data ?? {}} />
+          <MovieCast actors={data?.data.cast as Actor[]} />
+          <DateSelect id={id as string} />
         </>
       )}
     </div>

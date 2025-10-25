@@ -7,6 +7,9 @@ import { TicketTypeList } from './_components/ticket-list';
 import { mockShowtimeData } from 'apps/web/src/mock-data/mock-showtime-data';
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { toast } from 'sonner';
+import { useClerk, useUser } from '@clerk/nextjs';
+import { Button } from '@movie-hub/shacdn-ui/button';
+import { Film, LogIn } from 'lucide-react';
 
 const MAX_TICKETS = 8;
 const ticketTypes = [
@@ -15,6 +18,22 @@ const ticketTypes = [
   { key: 'child', label: 'Trẻ em', price: 60000 },
 ];
 const SeatBookingPage = () => {
+  const { isSignedIn } = useUser();
+  const { openSignIn } = useClerk();
+
+ 
+  useEffect(() => {
+    if (!isSignedIn) {
+      openSignIn({
+        afterSignInUrl: window.location.href,
+         appearance: {
+          elements: {
+            modalCloseButton: { display: 'none' }, // ẩn nút close
+          },
+        },
+      });
+    }
+  }, [isSignedIn, openSignIn]);
   const groupRows = [
     ['A', 'B'],
     ['C', 'D'],
@@ -69,23 +88,61 @@ const SeatBookingPage = () => {
   );
 
   return (
-    <div className="flex flex-col md:flex-row px-6 md:px-16 lg:px-40  ">
-      <div className="relative flex-1 flex flex-col items-center max-md:mt-16">
-        <BlurCircle top="-100px" left="-100px" />
-        <BlurCircle bottom="0" right="0" />
-        <h1 className="text-2xl font-bold text-white">Chọn chỗ</h1>
-        <CinemaScreen />
-        <SeatGrid
-          groupRows={groupRows}
-          selectedSeats={selectedSeats}
-          onSeatClick={handleSeatClick}
-        />
-        <TicketTypeList
-          tickets={ticketTypes}
-          ticketCounts={ticketCounts}
-          onTicketChange={handleTicketChange}
-        />
-      </div>
+    <div >
+      {isSignedIn ? (
+        <div className="flex flex-col md:flex-row px-6 md:px-16 lg:px-40  w-full ">
+          <div className="relative flex-1 flex flex-col items-center max-md:mt-16">
+            <BlurCircle top="-100px" left="-100px" />
+            <BlurCircle bottom="0" right="0" />
+            <h1 className="text-2xl font-bold text-white">Chọn chỗ</h1>
+            <CinemaScreen />
+            <SeatGrid
+              groupRows={groupRows}
+              selectedSeats={selectedSeats}
+              onSeatClick={handleSeatClick}
+            />
+            <TicketTypeList
+              tickets={ticketTypes}
+              ticketCounts={ticketCounts}
+              onTicketChange={handleTicketChange}
+            />
+          </div>
+        </div>
+      ) : (
+        <div className="flex flex-col items-center justify-center">
+          <BlurCircle top="-100px" left="-100px" />
+          <BlurCircle bottom="0" right="0" />
+          {/* Icon + Text */}
+          <div className="flex flex-col items-center text-center z-10">
+            <Film className="w-16 h-16 text-rose-600 mb-4" />
+            <h1 className="text-3xl font-bold text-white mb-2">
+              Bạn cần đăng nhập để tiếp tục
+            </h1>
+            <p className="text-gray-400 max-w-md mb-6">
+              Hãy đăng nhập để đặt chỗ, xem lịch chiếu và lưu vé yêu thích của
+              bạn.
+            </p>
+
+            {/* Login button */}
+            <Button
+              onClick={() =>
+                openSignIn({
+                  afterSignInUrl: window.location.href,
+                  appearance: {
+                    elements: {
+                      modalCloseButton: { display: 'none' },
+                    },
+                  },
+                })
+              }
+              className="flex items-center gap-2 bg-rose-600 hover:bg-rose-700 text-white font-medium px-6 py-3 rounded-lg shadow-lg transition active:scale-95"
+            >
+              <LogIn className="w-5 h-5" />
+              Đăng nhập ngay
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -1,94 +1,56 @@
 'use client';
+import { useAuth, useClerk, useUser } from '@clerk/nextjs';
+import { Button } from '@movie-hub/shacdn-ui/button';
 import { BlurCircle } from 'apps/web/src/components/blur-circle';
+import { useGetShowtimeSeats } from 'apps/web/src/hooks/showtime-hooks';
 import { useBookingStore } from 'apps/web/src/stores/booking-store';
+import { Film, LogIn } from 'lucide-react';
+import { useEffect } from 'react';
 import { CinemaScreen } from './_components/cinema-screen';
 import { SeatGrid } from './_components/seat-grid';
+import { SeatLegend } from './_components/seat-legend';
 import { TicketTypeList } from './_components/ticket-list';
-import { mockShowtimeData } from 'apps/web/src/mock-data/mock-showtime-data';
-import { useState, useEffect, useMemo, useCallback } from 'react';
-import { toast } from 'sonner';
-import { useClerk, useUser } from '@clerk/nextjs';
-import { Button } from '@movie-hub/shacdn-ui/button';
-import { Film, LogIn } from 'lucide-react';
 
-const MAX_TICKETS = 8;
-const ticketTypes = [
-  { key: 'adult', label: 'Người lớn', price: 100000 },
-  { key: 'student', label: 'Học sinh/Sinh viên', price: 80000 },
-  { key: 'child', label: 'Trẻ em', price: 60000 },
-];
 const SeatBookingPage = () => {
-  const { isSignedIn } = useUser();
+  const { isSignedIn, user } = useUser();
   const { openSignIn } = useClerk();
+  const { getToken } = useAuth();
 
- 
+  const { data } = useGetShowtimeSeats(
+    isSignedIn ? '1743dad9-5b78-49a1-be56-5c7205d248b2' : undefined
+  );
+  const {
+    seatMap,
+    seatReservationStatus,
+    seatHeldByUser,
+    selectedSeats,
+    ticketCounts,
+    tickets,
+    totalTickets,
+    totalPrice,
+    initBookingData,
+    toggleSeat,
+    updateTicketCount,
+    connectSocket,
+    disconnectSocket,
+  } = useBookingStore();
+
   useEffect(() => {
-    if (!isSignedIn) {
-      openSignIn({
-        afterSignInUrl: window.location.href,
-         appearance: {
-          elements: {
-            modalCloseButton: { display: 'none' }, // ẩn nút close
-          },
-        },
-      });
-    }
-  }, [isSignedIn, openSignIn]);
-  const groupRows = [
-    ['A', 'B'],
-    ['C', 'D'],
-    ['E', 'F'],
-    ['G', 'H'],
-    ['I', 'J'],
-  ];
-  const [ticketCounts, setTicketCounts] = useState(() =>
-    Object.fromEntries(ticketTypes.map((t) => [t.key, 0]))
-  );
-  const totalTickets = useMemo(
-    () => Object.values(ticketCounts).reduce((sum, count) => sum + count, 0),
-    [ticketCounts]
-  );
-  const handleTicketChange = (type: string, delta: number) => {
-    setTicketCounts((prev) => {
-      const newCount = Math.max(0, prev[type] + delta);
-      const updated = { ...prev, [type]: newCount };
-      const totalTickets = Object.values(updated).reduce(
-        (sum, count) => sum + count,
-        0
-      );
-      if (totalTickets > MAX_TICKETS) {
-        toast.error('Bạn chỉ có thể chọn tối đa ${MAX_TICKETS} vé!');
-        return prev;
-      }
-      if (totalTickets < selectedSeats.length) {
-        setSelectedSeats([]);
-      }
-      return updated;
-    });
-  };
-  const [selectedSeats, setSelectedSeats] = useState<string[]>([]);
-  const handleSeatClick = useCallback(
-    (seatId: string) => {
-      if (totalTickets === 0) {
-        return toast.error('Vui lòng chọn vé trước!');
-      }
-      if (
-        !selectedSeats.includes(seatId) &&
-        selectedSeats.length >= totalTickets
-      ) {
-        return toast.error('Số ghế đã chọn vượt quá số vé!');
-      }
-      setSelectedSeats((prev) =>
-        prev.includes(seatId)
-          ? prev.filter((s) => s !== seatId)
-          : [...prev, seatId]
-      );
-    },
-    [selectedSeats, totalTickets]
-  );
+    if (data) initBookingData(data);
+  }, [data, initBookingData]);
+
+  useEffect(() => {
+    const token = getToken();
+    if (!isSignedIn || !token) return;
+
+    connectSocket('1743dad9-5b78-49a1-be56-5c7205d248b2', user.id);
+    return () => {
+      disconnectSocket();
+    };
+  }, [isSignedIn, data, connectSocket, disconnectSocket, getToken, user]);
 
   return (
-    <div >
+    <div>
       {isSignedIn ? (
         <div className="flex flex-col md:flex-row px-6 md:px-16 lg:px-40  w-full ">
           <div className="relative flex-1 flex flex-col items-center max-md:mt-16">
@@ -97,14 +59,17 @@ const SeatBookingPage = () => {
             <h1 className="text-2xl font-bold text-white">Chọn chỗ</h1>
             <CinemaScreen />
             <SeatGrid
-              groupRows={groupRows}
+              seatMap={seatMap}
               selectedSeats={selectedSeats}
-              onSeatClick={handleSeatClick}
+              seatHeldByUser={seatHeldByUser}
+              seatReservationStatus={seatReservationStatus}
+              onSeatClick={toggleSeat}
             />
+            <SeatLegend />
             <TicketTypeList
-              tickets={ticketTypes}
+              tickets={tickets}
               ticketCounts={ticketCounts}
-              onTicketChange={handleTicketChange}
+              onTicketChange={updateTicketCount}
             />
           </div>
         </div>

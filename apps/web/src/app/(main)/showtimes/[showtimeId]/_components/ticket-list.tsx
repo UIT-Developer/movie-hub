@@ -3,15 +3,15 @@ import { TicketTypeEnum } from '@movie-hub/shared-types';
 import React from 'react';
 
 export type TicketType = {
-  key: string;
+  key: TicketTypeEnum;
   label: string;
   price: number;
 };
 
 type TicketTypeListProps = {
   tickets: TicketType[];
-  ticketCounts: Record<string, number>;
-  onTicketChange: (type: string, delta: number) => void;
+  ticketCounts: Record<TicketTypeEnum, number>;
+  onTicketChange: (type: TicketTypeEnum, delta: number) => void;
 };
 
 export const TicketTypeList: React.FC<TicketTypeListProps> = ({

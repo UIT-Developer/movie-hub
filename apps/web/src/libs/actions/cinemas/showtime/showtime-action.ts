@@ -1,5 +1,17 @@
-import { GetShowtimesQuerySchema } from "@movie-hub/shared-types";
-import z from "zod";
+/* eslint-disable no-useless-catch */
+import { ShowtimeSeatResponse } from "@movie-hub/shared-types";
+import api from "../../../api-client";
 
-export type GetShowtimesQuery = z.infer<typeof GetShowtimesQuerySchema>;
+
+
+export const getShowtimeSeats = async (
+  showtimeId: string,
+): Promise<ShowtimeSeatResponse> => {
+  try {
+    const response = await api.get(`/showtimes/${showtimeId}/seats`);
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+}
 

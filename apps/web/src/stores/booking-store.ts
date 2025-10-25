@@ -1,17 +1,20 @@
 import { create } from 'zustand';
 
+import { toast } from 'sonner';
 import {
   ReservationStatusEnum,
   SeatRowDto,
   SeatTypeEnum,
   ShowtimeSeatResponse,
-  TicketTypeEnum
-} from '@movie-hub/shared-types';
-import { toast } from 'sonner';
+  TicketTypeEnum,
+} from '../libs/types/showtime.type';
+import { io, Socket } from 'socket.io-client';
+import { SeatEvent } from '@movie-hub/shared-types';
 
 type BookingState = {
   selectedSeats: string[];
   seatReservationStatus: Record<string, ReservationStatusEnum>;
+  seatHeldByUser: Record<string, boolean>;
   seatMap: SeatRowDto[];
 
   tickets: { key: TicketTypeEnum; label: string; price: number }[];
@@ -20,21 +23,22 @@ type BookingState = {
   maxTickets: number;
   holdTimeSeconds: number;
   socketConnected: boolean;
-  // connectSocket: (showtimeId: string) => void;
-  // disconnectSocket: () => void;
+  connectSocket: (showtimeId: string, token: string) => void;
+  disconnectSocket: () => void;
 
   initBookingData: (data: ShowtimeSeatResponse) => void;
   toggleSeat: (seatId: string) => void;
   updateTicketCount: (type: TicketTypeEnum, delta: number) => void;
-  // resetBooking: () => void;
+  resetBooking: () => void;
 
   totalTickets: number;
   totalPrice: number;
 };
-
+let socket: Socket | null = null;
 export const useBookingStore = create<BookingState>((set, get) => ({
   selectedSeats: [],
   seatReservationStatus: {},
+  seatHeldByUser: {},
   seatMap: [],
   tickets: [],
   ticketCounts: {} as Record<TicketTypeEnum, number>,
@@ -80,7 +84,8 @@ export const useBookingStore = create<BookingState>((set, get) => ({
   },
 
   toggleSeat: (seatId) => {
-    const { selectedSeats, totalTickets, seatReservationStatus } = get();
+    const { selectedSeats, ticketCounts, seatReservationStatus } = get();
+    const totalTickets = Object.values(ticketCounts).reduce((a, b) => a + b, 0);
     if (totalTickets === 0) {
       toast.error('Vui lòng chọn vé trước!');
       return;
@@ -89,11 +94,15 @@ export const useBookingStore = create<BookingState>((set, get) => ({
       toast.error('Ghế này đã được đặt!');
       return;
     }
-    if (seatReservationStatus[seatId] === ReservationStatusEnum.HELD) {
+    const isHeldByOther =
+      seatReservationStatus[seatId] === ReservationStatusEnum.HELD &&
+      !get().seatHeldByUser[seatId];
+
+    if (isHeldByOther) {
       toast.error('Ghế này đang được giữ bởi người dùng khác!');
       return;
     }
-    if (
+    if (  
       !selectedSeats.includes(seatId) &&
       selectedSeats.length >= totalTickets
     ) {
@@ -105,7 +114,21 @@ export const useBookingStore = create<BookingState>((set, get) => ({
       ? selectedSeats.filter((s) => s !== seatId)
       : [...selectedSeats, seatId];
 
-    set({ selectedSeats: newSeats,  });
+    set({ selectedSeats: newSeats });
+
+    if (socket) {
+      if (selectedSeats.includes(seatId)) {
+        socket.emit('release_seat', {
+          showtimeId: getShowtimeId(),
+          seatId,
+        });
+      } else {
+        socket.emit('hold_seat', {
+          showtimeId: getShowtimeId(),
+          seatId,
+        });
+      }
+    }
   },
 
   updateTicketCount: (type, delta) => {
@@ -140,49 +163,66 @@ export const useBookingStore = create<BookingState>((set, get) => ({
     );
   },
 
-  // connectSocket: (showtimeId) => {
-  //   const socket = getSocket();
-  //   if (!socket.connected) socket.connect();
-  //   socket.emit('join_showtime', { showtimeId });
+  connectSocket: (showtimeId: string, userId: string) => {
+    if (socket && socket.connected) return;
+    socket = io('http://localhost:3000', {
+      transports: ['websocket'],
+      withCredentials: true,
+      query: { showtimeId },
+    });
 
-  //   socket.on('connect', () => set({ socketConnected: true }));
-  //   socket.on('seat_locked', (seatId: string) =>
-  //     set((state) => ({
-  //       seatReservationStatus: {
-  //         ...state.seatReservationStatus,
-  //         [seatId]: ReservationStatusEnum.HELD,
-  //       },
-  //     }))
-  //   );
-  //   socket.on('seat_unlocked', (seatId: string) =>
-  //     set((state) => ({
-  //       seatReservationStatus: {
-  //         ...state.seatReservationStatus,
-  //         [seatId]: ReservationStatusEnum.AVAILABLE,
-  //       },
-  //     }))
+    socket.on('connect', () => set({ socketConnected: true }));
+    socket.on('disconnect', () => set({ socketConnected: false }));
 
-  //   );
-  //   socket.on('seat_confirmed', (seatId: string) =>
-  //     set((state) => ({
-  //       seatReservationStatus: {
-  //         ...state.seatReservationStatus,
-  //         [seatId]: ReservationStatusEnum.CONFIRMED,
-  //       },
-  //       selectedSeats: state.selectedSeats.filter((s) => s !== seatId),
-  //     }))
-  //   );
-  // },
+    // EVENTS
+    socket.on('seat_held', (data: SeatEvent) => {
+      set((state) => ({
+        seatReservationStatus: {
+          ...state.seatReservationStatus,
+          [data.seatId]: ReservationStatusEnum.HELD,
+        },
+        seatHeldByUser: {
+          ...state.seatHeldByUser,
+          [data.seatId]: data.userId === userId
+        },
+      }));
+    });
+    socket.on('seat_released', (data: SeatEvent) => {
+      set((state) => ({
+        seatReservationStatus: {
+          ...state.seatReservationStatus,
+          [data.seatId]: ReservationStatusEnum.AVAILABLE,
+        },
+      }));
+    });
+    socket.on('seat_booked', (data: SeatEvent) => {
+      set((state) => ({
+        seatReservationStatus: {
+          ...state.seatReservationStatus,
+          [data.seatId]: ReservationStatusEnum.CONFIRMED,
+        },
+        selectedSeats: state.selectedSeats.filter((s) => s !== data.seatId),
+      }));
+    });
+    socket.on('limit_reached', () =>
+      toast.error('Bạn đã chọn quá số ghế cho phép!')
+    );
+  },
 
-  // disconnectSocket: () => {
-  //   const socket = getSocket();
-  //   socket.disconnect();
-  //   set({ socketConnected: false });
-  // },
+  disconnectSocket: () => {
+    if (socket) socket.disconnect();
+    socket = null;
+    set({ socketConnected: false });
+  },
 
-  // resetBooking: () =>
-  //   set({
-  //     selectedSeats: [],
-  //     ticketCounts: {} as Record<TicketTypeEnum, number>,
-  //   }),
+  resetBooking: () =>
+    set({
+      selectedSeats: [],
+      ticketCounts: {} as Record<TicketTypeEnum, number>,
+    }),
 }));
+
+function getShowtimeId() {
+  // Nếu bạn có cách lấy showtimeId global trong store thì dùng ở đây
+  return '1743dad9-5b78-49a1-be56-5c7205d248b2';
+}

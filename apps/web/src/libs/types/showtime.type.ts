@@ -1,12 +1,53 @@
-import {
-  DayTypeEnum,
-  FormatEnum,
-  ReservationStatusEnum,
-  SeatStatusEnum,
-  SeatTypeEnum,
-  TicketTypeEnum,
-  TimeSlotEnum,
-} from '../../enum';
+export enum ReservationStatusEnum {
+  AVAILABLE = 'AVAILABLE',
+  HELD = 'HELD',
+  CONFIRMED = 'CONFIRMED',
+  CANCELLED = 'CANCELLED',
+}
+export enum SeatStatusEnum {
+  ACTIVE = 'ACTIVE',
+  BROKEN = 'BROKEN',
+  MAINTENANCE = 'MAINTENANCE',
+}
+export enum SeatTypeEnum {
+  STANDARD = 'STANDARD',
+  VIP = 'VIP',
+  COUPLE = 'COUPLE',
+  PREMIUM = 'PREMIUM',
+  WHEELCHAIR = 'WHEELCHAIR',
+}
+
+export enum DayTypeEnum {
+  WEEKDAY = 'WEEKDAY',
+  WEEKEND = 'WEEKEND',
+  HOLIDAY = 'HOLIDAY',
+}
+export enum FormatEnum {
+  TWO_D = 'TWO_D',
+  THREE_D = 'THREE_D',
+  IMAX = 'IMAX',
+  FOUR_DX = 'FOUR_DX',
+}
+export enum ShowtimeStatusEnum {
+  SCHEDULED = 'SCHEDULED',
+  SELLING = 'SELLING',
+  SOLD_OUT = 'SOLD_OUT',
+  CANCELLED = 'CANCELLED',
+  COMPLETED = 'COMPLETED',
+}
+export enum TimeSlotEnum {
+  MORNING = 'MORNING',
+  AFTERNOON = 'AFTERNOON',
+  EVENING = 'EVENING',
+  LATE_NIGHT = 'LATE_NIGHT',
+}
+export enum TicketTypeEnum {
+  ADULT = 'ADULT',
+  CHILD = 'CHILD',
+  STUDENT = 'STUDENT',
+  COUPLE = 'COUPLE',
+}
+
 
 export interface SeatItemDto {
   id: string;

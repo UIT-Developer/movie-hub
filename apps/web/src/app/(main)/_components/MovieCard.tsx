@@ -3,8 +3,9 @@ import { Skeleton } from '@movie-hub/shacdn-ui/skeleton';
 import { AgeRatingEnum, LanguageOptionEnum } from '@movie-hub/shared-types';
 import { StarIcon, Clock, Globe } from 'lucide-react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 
 type Props = {
   id: string;
@@ -27,6 +28,9 @@ export default function MovieCard({
   languageType,
 }: Props) {
   const router = useRouter();
+  useEffect(() => {
+    router.prefetch(`/movies/${id}`);
+  }, [router, id]);
   const onClickDetail = useCallback(() => {
     router.push(`/movies/${id}`);
     scrollTo(0, 0);
@@ -75,9 +79,10 @@ export default function MovieCard({
 
       {/* Footer */}
       <div className="flex items-center justify-between mt-4 pb-2">
-        <Button onClick={onClickDetail} className="rounded-xl">
-          Mua vé
-        </Button>
+        <Link href={`/movies/${id}`}>
+          <Button className="rounded-xl">Mua vé</Button>
+        </Link>
+
         <p className="flex items-center gap-1 text-sm text-gray-400">
           <StarIcon className="w-4 h-4 text-rose-500 fill-rose-500" />
           5.0

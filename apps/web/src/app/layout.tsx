@@ -23,25 +23,25 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <QueryClientProviders>
-      <ClerkProvider
-        appearance={{
-          theme: 'simple',
-          variables: {
-            colorPrimary: '#f43f5e',
-          },
-        }}
-        afterSignOutUrl="/"
-      >
-        <PageWrapper>
-          <html lang="en">
-            <body className={inter.className}>
+    <html>
+      <body className={inter.className}>
+        <QueryClientProviders>
+          <ClerkProvider
+            appearance={{
+              theme: 'simple',
+              variables: {
+                colorPrimary: '#f43f5e',
+              },
+            }}
+            afterSignOutUrl="/"
+          >
+            <PageWrapper>
               <Toaster theme="light" richColors closeButton />
               {children}
-            </body>
-          </html>
-        </PageWrapper>
-      </ClerkProvider>
-    </QueryClientProviders>
+            </PageWrapper>
+          </ClerkProvider>
+        </QueryClientProviders>
+      </body>
+    </html>
   );
 }

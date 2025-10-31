@@ -1,28 +1,33 @@
-'use client';
-import { useGetMovieDetail } from 'apps/web/src/hooks/movie-hooks';
-import { useParams } from 'next/navigation';
+import { dehydrate, HydrationBoundary } from '@tanstack/react-query';
+import { getMovieDetail } from 'apps/web/src/libs/actions/movies/movie-action';
 import { DateSelect } from './_components/date-select';
-import { Actor, MovieCast } from './_components/movie-cast';
+import { MovieCast } from './_components/movie-cast';
 import { MovieHeader } from './_components/movie-header';
+import { getQueryClient } from 'apps/web/src/libs/get-query-client';
 
-const MovieDetailsPage = () => {
-  const { id } = useParams();
+export default async function MovieDetailsPage({
+  params,
+}: {
+  params: { id: string };
+}) {
 
-  const { data, isLoading } = useGetMovieDetail(id as string);
-
+  const queryClient = getQueryClient();
+  await queryClient.prefetchQuery({
+    queryKey: ['movie-detail', params.id],
+    queryFn: () => getMovieDetail(params.id),
+  });
   return (
-    <div className="min-h-screen flex flex-col gap-10 pb-20">
-      {isLoading ? (
-        <MovieHeader.Skeleton />
-      ) : (
-        <>
-          <MovieHeader movie={data?.data ?? {}} />
-          <MovieCast actors={data?.data.cast as Actor[]} />
-          <DateSelect id={id as string} />
-        </>
-      )}
-    </div>
-  );
-};
+    <HydrationBoundary state={dehydrate(queryClient)}>
+      <div className="min-h-screen flex flex-col gap-10 pb-20">
+        <MovieHeader movieId={params.id} />
 
-export default MovieDetailsPage;
+        <section className="relative flex flex-col gap-4">
+          <p className="text-white text-lg font-bold mt-20">Diễn viên</p>
+          <MovieCast movieId={params.id} />
+        </section>
+
+        <DateSelect id={params.id} />
+      </div>
+    </HydrationBoundary>
+  );
+}

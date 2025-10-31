@@ -49,14 +49,6 @@ export enum TicketTypeEnum {
 }
 
 
-export interface SeatItemDto {
-  id: string;
-  number: number;
-  seatType: SeatTypeEnum;
-  seatStatus: SeatStatusEnum;
-  reservationStatus: ReservationStatusEnum;
-  isHeldByCurrentUser?: boolean;
-}
 
 export interface SeatRowDto {
   row: string;

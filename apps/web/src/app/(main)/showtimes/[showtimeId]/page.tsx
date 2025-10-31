@@ -53,7 +53,7 @@ const SeatBookingPage = () => {
     <div>
       {isSignedIn ? (
         <div className="flex flex-col md:flex-row px-6 md:px-16 lg:px-40  w-full ">
-          <div className="relative flex-1 flex flex-col items-center max-md:mt-16">
+          <div className="relative flex-1 flex flex-col items-center max-md:mt-16 gap-4">
             <BlurCircle top="-100px" left="-100px" />
             <BlurCircle bottom="0" right="0" />
             <h1 className="text-2xl font-bold text-white">Chọn chỗ</h1>

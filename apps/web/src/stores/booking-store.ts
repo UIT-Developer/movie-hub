@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-
 import { toast } from 'sonner';
 import {
   ReservationStatusEnum,
@@ -35,7 +34,8 @@ type BookingState = {
   totalPrice: number;
 };
 let socket: Socket | null = null;
-export const useBookingStore = create<BookingState>((set, get) => ({
+export const useBookingStore = create<BookingState>(
+  (set, get) => ({
   selectedSeats: [],
   seatReservationStatus: {},
   seatHeldByUser: {},
@@ -48,9 +48,13 @@ export const useBookingStore = create<BookingState>((set, get) => ({
 
   initBookingData: (data: ShowtimeSeatResponse) => {
     const seatReservationStatus: Record<string, ReservationStatusEnum> = {};
+    const seatHeldByUser: Record<string, boolean> = {};
+    const selectedSeats = [] as string[];
     data.seat_map.forEach((row) =>
       row.seats.forEach((seat) => {
         seatReservationStatus[seat.id] = seat.reservationStatus;
+        seatHeldByUser[seat.id] = seat.isHeldByCurrentUser || false;
+        selectedSeats.push(...(seat.isHeldByCurrentUser ? [seat.id] : []));
       })
     );
 
@@ -79,7 +83,9 @@ export const useBookingStore = create<BookingState>((set, get) => ({
       ticketCounts,
       maxTickets: data.rules.max_selectable,
       holdTimeSeconds: data.rules.hold_time_seconds,
-      selectedSeats: [],
+      seatReservationStatus,
+      seatHeldByUser,
+      selectedSeats,
     });
   },
 
@@ -102,11 +108,13 @@ export const useBookingStore = create<BookingState>((set, get) => ({
       toast.error('Ghế này đang được giữ bởi người dùng khác!');
       return;
     }
-    if (  
+    if (
       !selectedSeats.includes(seatId) &&
       selectedSeats.length >= totalTickets
     ) {
-      toast.error(`Chỉ có thể chọn tối đa ${get().maxTickets} ghế!`);
+      toast.error(
+        `Chỉ được chọn tối đa ${totalTickets} ghế theo số vé đã chọn!`
+      );
       return;
     }
 
@@ -176,34 +184,59 @@ export const useBookingStore = create<BookingState>((set, get) => ({
 
     // EVENTS
     socket.on('seat_held', (data: SeatEvent) => {
-      set((state) => ({
-        seatReservationStatus: {
-          ...state.seatReservationStatus,
-          [data.seatId]: ReservationStatusEnum.HELD,
-        },
-        seatHeldByUser: {
-          ...state.seatHeldByUser,
-          [data.seatId]: data.userId === userId
-        },
-      }));
+      set((state) => {
+        
+
+        return {
+          seatReservationStatus: {
+            ...state.seatReservationStatus,
+            [data.seatId]: ReservationStatusEnum.HELD,
+          },
+          seatHeldByUser: {
+            ...state.seatHeldByUser,
+            [data.seatId]: data.userId === userId,
+          },
+        };
+      });
     });
+
     socket.on('seat_released', (data: SeatEvent) => {
-      set((state) => ({
-        seatReservationStatus: {
-          ...state.seatReservationStatus,
-          [data.seatId]: ReservationStatusEnum.AVAILABLE,
-        },
-      }));
+      set((state) => {
+        return {
+          seatReservationStatus: {
+            ...state.seatReservationStatus,
+            [data.seatId]: ReservationStatusEnum.AVAILABLE,
+          },
+          seatHeldByUser: {
+            ...state.seatHeldByUser,
+            [data.seatId]: false,
+          },
+        };
+      });
     });
+
     socket.on('seat_booked', (data: SeatEvent) => {
-      set((state) => ({
-        seatReservationStatus: {
-          ...state.seatReservationStatus,
-          [data.seatId]: ReservationStatusEnum.CONFIRMED,
-        },
-        selectedSeats: state.selectedSeats.filter((s) => s !== data.seatId),
-      }));
+      set((state) => {
+        const newSeatMap = state.seatMap.map((row) => ({
+          ...row,
+          seats: row.seats.map((seat) =>
+            seat.id === data.seatId
+              ? { ...seat, reservationStatus: ReservationStatusEnum.CONFIRMED }
+              : seat
+          ),
+        }));
+
+        return {
+          seatMap: newSeatMap,
+          seatReservationStatus: {
+            ...state.seatReservationStatus,
+            [data.seatId]: ReservationStatusEnum.CONFIRMED,
+          },
+          selectedSeats: state.selectedSeats.filter((s) => s !== data.seatId),
+        };
+      });
     });
+
     socket.on('limit_reached', () =>
       toast.error('Bạn đã chọn quá số ghế cho phép!')
     );
@@ -220,7 +253,9 @@ export const useBookingStore = create<BookingState>((set, get) => ({
       selectedSeats: [],
       ticketCounts: {} as Record<TicketTypeEnum, number>,
     }),
-}));
+})
+)
+;
 
 function getShowtimeId() {
   // Nếu bạn có cách lấy showtimeId global trong store thì dùng ở đây

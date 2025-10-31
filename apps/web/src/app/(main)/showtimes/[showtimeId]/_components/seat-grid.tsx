@@ -84,6 +84,7 @@ export const SeatGrid = ({
   const renderSeats = (rowData: SeatRowDto) => (
     <div key={rowData.row} className="flex gap-2">
       {rowData.seats.map((seat: SeatItemDto) => {
+        console.log('Seat render: ', seat);
         const isSelected = selectedSeats.includes(seat.id);
         const reservationStatus = seatReservationStatus[seat.id];
         const isDisabled = seat.seatStatus !== SeatStatusEnum.ACTIVE;

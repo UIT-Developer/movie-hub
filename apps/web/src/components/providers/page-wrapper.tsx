@@ -12,7 +12,7 @@ export default function PageWrapper({
 
   useEffect(() => {
     // Khi mount xong => tắt loading
-    const timeout = setTimeout(() => setLoading(false), 800); // 0.8s demo
+    const timeout = setTimeout(() => setLoading(false), 1000);
     return () => clearTimeout(timeout);
   }, []);
 

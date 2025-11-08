@@ -54,11 +54,4 @@ export class BookingController {
       data.reason
     );
   }
-
-  @MessagePattern('booking.hold')
-  async holdSeats(
-    @Payload() data: { bookingId: string }
-  ): Promise<{ expiresAt: Date; holdTimeSeconds: number }> {
-    return this.bookingService.holdSeats(data.bookingId);
-  }
 }

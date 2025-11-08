@@ -88,7 +88,7 @@ enum LoyaltyTier {
 model Bookings {
   id                  String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   booking_code        String        @unique @db.VarChar(20)
-  user_id             String        @db.Uuid
+  user_id             String        @db.VarChar(255)
   showtime_id         String        @db.Uuid
   customer_name       String        @db.VarChar(255)
   customer_email      String        @db.VarChar(255)
@@ -234,7 +234,7 @@ model Promotions {
 
 model LoyaltyAccounts {
   id             String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  user_id        String      @unique @db.Uuid
+  user_id        String      @unique @db.VarChar(255)
   current_points Int         @default(0)
   tier           LoyaltyTier @default(BRONZE)
   total_spent    Decimal     @default(0) @db.Decimal(12, 2)

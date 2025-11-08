@@ -13002,7 +13002,7 @@ export namespace Prisma {
     NOT?: BookingsWhereInput | BookingsWhereInput[]
     id?: UuidFilter<"Bookings"> | string
     booking_code?: StringFilter<"Bookings"> | string
-    user_id?: UuidFilter<"Bookings"> | string
+    user_id?: StringFilter<"Bookings"> | string
     showtime_id?: UuidFilter<"Bookings"> | string
     customer_name?: StringFilter<"Bookings"> | string
     customer_email?: StringFilter<"Bookings"> | string
@@ -13057,7 +13057,7 @@ export namespace Prisma {
     AND?: BookingsWhereInput | BookingsWhereInput[]
     OR?: BookingsWhereInput[]
     NOT?: BookingsWhereInput | BookingsWhereInput[]
-    user_id?: UuidFilter<"Bookings"> | string
+    user_id?: StringFilter<"Bookings"> | string
     showtime_id?: UuidFilter<"Bookings"> | string
     customer_name?: StringFilter<"Bookings"> | string
     customer_email?: StringFilter<"Bookings"> | string
@@ -13114,7 +13114,7 @@ export namespace Prisma {
     NOT?: BookingsScalarWhereWithAggregatesInput | BookingsScalarWhereWithAggregatesInput[]
     id?: UuidWithAggregatesFilter<"Bookings"> | string
     booking_code?: StringWithAggregatesFilter<"Bookings"> | string
-    user_id?: UuidWithAggregatesFilter<"Bookings"> | string
+    user_id?: StringWithAggregatesFilter<"Bookings"> | string
     showtime_id?: UuidWithAggregatesFilter<"Bookings"> | string
     customer_name?: StringWithAggregatesFilter<"Bookings"> | string
     customer_email?: StringWithAggregatesFilter<"Bookings"> | string
@@ -13679,7 +13679,7 @@ export namespace Prisma {
     OR?: LoyaltyAccountsWhereInput[]
     NOT?: LoyaltyAccountsWhereInput | LoyaltyAccountsWhereInput[]
     id?: UuidFilter<"LoyaltyAccounts"> | string
-    user_id?: UuidFilter<"LoyaltyAccounts"> | string
+    user_id?: StringFilter<"LoyaltyAccounts"> | string
     current_points?: IntFilter<"LoyaltyAccounts"> | number
     tier?: EnumLoyaltyTierFilter<"LoyaltyAccounts"> | $Enums.LoyaltyTier
     total_spent?: DecimalFilter<"LoyaltyAccounts"> | Decimal | DecimalJsLike | number | string
@@ -13733,7 +13733,7 @@ export namespace Prisma {
     OR?: LoyaltyAccountsScalarWhereWithAggregatesInput[]
     NOT?: LoyaltyAccountsScalarWhereWithAggregatesInput | LoyaltyAccountsScalarWhereWithAggregatesInput[]
     id?: UuidWithAggregatesFilter<"LoyaltyAccounts"> | string
-    user_id?: UuidWithAggregatesFilter<"LoyaltyAccounts"> | string
+    user_id?: StringWithAggregatesFilter<"LoyaltyAccounts"> | string
     current_points?: IntWithAggregatesFilter<"LoyaltyAccounts"> | number
     tier?: EnumLoyaltyTierWithAggregatesFilter<"LoyaltyAccounts"> | $Enums.LoyaltyTier
     total_spent?: DecimalWithAggregatesFilter<"LoyaltyAccounts"> | Decimal | DecimalJsLike | number | string

@@ -45,15 +45,20 @@ export class PaymentService {
     if (!booking) {
       throw new Error('Booking not found');
     }
-
+    
     if (booking.payment_status !== PaymentStatus.PENDING) {
       throw new Error('Booking is not pending payment');
     }
 
+        // Use booking's final_amount if no amount provided in DTO
+    const paymentAmount = Number(booking.final_amount);
+
+
+
     const payment = await this.prisma.payments.create({
       data: {
         booking_id: bookingId,
-        amount: dto.amount,
+        amount: paymentAmount,
         payment_method: dto.paymentMethod,
         status: PaymentStatus.PENDING,
         metadata: {
@@ -63,8 +68,8 @@ export class PaymentService {
       },
     });
 
-    if ([PaymentMethod.VNPAY, PaymentMethod.MOMO, PaymentMethod.ZALOPAY].includes(dto.paymentMethod)) {
-      const paymentUrl = await this.createVNPayUrl(payment.id, booking.id, Number(dto.amount), ipAddr);
+      // Use the validated paymentAmount instead of dto.amount
+      const paymentUrl = await this.createVNPayUrl(payment.id, booking.id, paymentAmount, ipAddr);
       
       await this.prisma.payments.update({
         where: { id: payment.id },
@@ -72,7 +77,7 @@ export class PaymentService {
       });
 
       return this.mapToDto({ ...payment, payment_url: paymentUrl });
-    }
+    
 
     return this.mapToDto(payment);
   }
@@ -83,48 +88,61 @@ export class PaymentService {
     amount: number,
     ipAddr: string
   ): Promise<string> {
+    // Validate amount
+    if (isNaN(amount) || amount <= 0) {
+      throw new Error('Invalid payment amount for VNPay URL generation');
+    }
+
     process.env.TZ = 'Asia/Ho_Chi_Minh';
     
     const date = new Date();
     const createDate = moment(date).format('YYYYMMDDHHmmss');
+    // Expire after 15 minutes - not used in VNPay request
+    const expireDate = moment(date).add(15, 'minutes').format('YYYYMMDDHHmmss');
     
     const orderId = paymentId;
-    const bankCode = '';
     const locale = 'vn';
     const currCode = 'VND';
 
-    let vnp_Params: any = {
+    const vnp_Params = {
       vnp_Version: '2.1.0',
       vnp_Command: 'pay',
       vnp_TmnCode: this.vnp_TmnCode,
       vnp_Locale: locale,
       vnp_CurrCode: currCode,
       vnp_TxnRef: orderId,
-      vnp_OrderInfo: `Thanh toan cho ma GD: ${orderId}`,
+      vnp_OrderInfo: `Thanh toan cho ma GD:${orderId}`, // No space after colon
       vnp_OrderType: 'other',
-      vnp_Amount: amount * 100,
+      vnp_Amount: amount * 100, // Must multiply by 100 (remove decimal part)
       vnp_ReturnUrl: this.vnp_ReturnUrl,
       vnp_IpAddr: ipAddr,
       vnp_CreateDate: createDate,
+      vnp_ExpireDate: expireDate,
     };
 
-    if (bankCode) {
-      vnp_Params.vnp_BankCode = bankCode;
+
+
+    // Convert all parameters to strings first, then sort
+    const stringParams: Record<string, string> = {};
+    for (const [key, value] of Object.entries(vnp_Params)) {
+      stringParams[key] = String(value);
     }
 
-    vnp_Params = this.sortObject(vnp_Params);
+    // Sort string parameters before creating signature
+    const sortedParams = this.sortObject(stringParams);
 
-    const signData = querystring.stringify(vnp_Params, { encode: false });
+    // Create signature using HMAC SHA512
+    const signData = querystring.stringify(sortedParams, { encode: false });
     const hmac = crypto.createHmac('sha512', this.vnp_HashSecret);
     const signed = hmac.update(Buffer.from(signData, 'utf-8')).digest('hex');
-    vnp_Params.vnp_SecureHash = signed;
+    sortedParams.vnp_SecureHash = signed;
 
-    const paymentUrl = this.vnp_Url + '?' + querystring.stringify(vnp_Params, { encode: false });
+    const paymentUrl = this.vnp_Url + '?' + querystring.stringify(sortedParams, { encode: false });
     
     return paymentUrl;
   }
 
-  async handleVNPayIPN(vnpParams: any): Promise<{ RspCode: string; Message: string }> {
+  async handleVNPayIPN(vnpParams: Record<string, string>): Promise<{ RspCode: string; Message: string }> {
     const secureHash = vnpParams.vnp_SecureHash;
     const orderId = vnpParams.vnp_TxnRef;
     const transactionId = vnpParams.vnp_TransactionNo;
@@ -137,7 +155,9 @@ export class PaymentService {
     const signData = querystring.stringify(sortedParams, { encode: false });
     const hmac = crypto.createHmac('sha512', this.vnp_HashSecret);
     const signed = hmac.update(Buffer.from(signData, 'utf-8')).digest('hex');
-
+    console.log('[VNPay IPN] signData:', signData);
+    console.log('[VNPay IPN] computed:', signed);
+    console.log('[VNPay IPN] provided:', secureHash);
     if (secureHash !== signed) {
       return { RspCode: '97', Message: 'Checksum failed' };
     }
@@ -211,12 +231,12 @@ export class PaymentService {
 
         return { RspCode: '00', Message: 'Success' };
       }
-    } catch (error) {
+    } catch {
       return { RspCode: '99', Message: 'Update failed, please retry' };
     }
   }
 
-  async handleVNPayReturn(vnpParams: any): Promise<{ status: string; code: string }> {
+  async handleVNPayReturn(vnpParams: Record<string, string>): Promise<{ status: string; code: string }> {
     const secureHash = vnpParams.vnp_SecureHash;
     
     delete vnpParams.vnp_SecureHash;
@@ -246,22 +266,31 @@ export class PaymentService {
     return this.mapToDto(payment);
   }
 
-  private sortObject(obj: any): any {
-    const sorted: any = {};
-    const str: string[] = [];
-    
+  private sortObject(obj: Record<string, string>): Record<string, string> {
+    const sorted: Record<string, string> = {};
+    const keys: string[] = [];
+
+    // Get all keys and encode them for sorting
     for (const key in obj) {
       if (Object.prototype.hasOwnProperty.call(obj, key)) {
-        str.push(encodeURIComponent(key));
+        keys.push(encodeURIComponent(key));
       }
     }
-    
-    str.sort();
-    
-    for (let i = 0; i < str.length; i++) {
-      sorted[str[i]] = encodeURIComponent(obj[str[i]]).replace(/%20/g, '+');
+
+    // Sort encoded keys alphabetically
+    keys.sort();
+
+    // Build sorted object with encoded keys and encoded values
+    for (const encodedKey of keys) {
+      // Find original key by decoding
+      const originalKey = Object.keys(obj).find(
+        (k) => encodeURIComponent(k) === encodedKey
+      );
+      if (originalKey) {
+        sorted[encodedKey] = encodeURIComponent(obj[originalKey]).replace(/%20/g, '+');
+      }
     }
-    
+
     return sorted;
   }
 

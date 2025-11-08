@@ -98,6 +98,30 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+
+
+  postgres-booking:
+    image: postgres:15-alpine
+    container_name: moviehub-postgres-booking
+    restart: unless-stopped
+    env_file:
+      - ./apps/booking-service/.env.db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}  # ⚠️ FILL THIS IN .env
+      POSTGRES_DB: ${POSTGRES_DB:-movie_hub_booking}
+    ports:
+      - "5438:5432"  # External:Internal (Internal is always 5432)
+    volumes:
+      - postgres_booking_data:/var/lib/postgresql/data
+    networks:
+      - moviehub-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d movie_hub_booking"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
   # ===========================================
   # MICROSERVICES
   # ===========================================
@@ -127,7 +151,7 @@ services:
       timeout: 5s
       retries: 3
       start_period: 10s
-    command: sh -c "npx prisma migrate deploy && node main.js"
+    command: sh -c "npx prisma migrate deploy  && node main.js"
 
   movie-service:
     build:
@@ -180,7 +204,35 @@ services:
       timeout: 5s
       retries: 3
       start_period: 10s
-    command: sh -c "npx prisma migrate deploy && node main.js"
+    command: sh -c "npx prisma migrate deploy  && node main.js"
+
+
+  booking-service:
+    build:
+      context: .
+      dockerfile: apps/booking-service/Dockerfile
+      target: production
+    container_name: moviehub-booking-service
+    restart: unless-stopped
+    env_file:
+      - ./apps/booking-service/.env
+    ports:
+      - "4004:3004"
+    depends_on:
+      postgres-booking:
+        condition: service_healthy
+    networks:
+      - moviehub-network
+    volumes:
+      # Mount for hot-reload in development (optional)
+      - ./apps/booking-service/src:/app/apps/booking-service/src:ro
+    healthcheck:
+      test: ["CMD", "node", "--version"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    command: sh -c "npx prisma migrate deploy  && node main.js"
 
   api-gateway:
     build:
@@ -197,6 +249,7 @@ services:
       - user-service
       - movie-service
       - cinema-service
+      - booking-service
     networks:
       - moviehub-network
     volumes:
@@ -253,6 +306,8 @@ volumes:
     name: moviehub_postgres_movie_data
   postgres_cinema_data:
     name: moviehub_postgres_cinema_data
+  postgres_booking_data:
+    name: moviehub_postgres_booking_data
 
 
 

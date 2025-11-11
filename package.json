@@ -8,11 +8,14 @@
     "prisma:generate": "nx run-many -t=prisma:generate --all",
     "test:unit": "nx run-many --target=test --all --parallel --coverage --ci --watchAll=false --testPathIgnorePatterns='.*\\.e2e-spec\\.ts$'",
     "test:integration": "nx run-many --target=e2e --all --parallel --coverage --ci --watchAll=false",
+    "test:booking-flow": "nx e2e api-gateway-e2e --testNamePattern=\"movie-booking-flow|cinema-integration|user-journey\"",
+    "test:user-journey": "nx e2e api-gateway-e2e --testNamePattern=\"Complete User Booking Journey\"",
     "test:unit:report": "npm run test:unit -- --coverageReporters=text --coverageReporters=lcov --coverageReporters=cobertura --coverageReporters=html",
     "test:integration:report": "npm run test:integration -- --coverageReporters=text --coverageReporters=lcov --coverageReporters=cobertura --coverageReporters=html",
     "test:clean": "rimraf test-results coverage dist",
-    "prisma:generate": "nx run-many -t=prisma:generate --all",
-    "seed:movie": "ts-node apps/movie-service/prisma/seed.ts"
+    "seed:movie": "ts-node apps/movie-service/prisma/seed.ts",
+    "seed:cinema": "node apps/cinema-service/prisma/seed.js",
+    "seed:all": "npm run seed:movie && npm run seed:cinema"
   },
   "prisma": {
     "seed": "node prisma/seed.js"
@@ -29,7 +32,6 @@
     "@nestjs/platform-express": "^11.0.0",
     "@nestjs/platform-socket.io": "^11.1.6",
     "@nestjs/schedule": "^6.0.1",
-    "@nestjs/swagger": "^11.2.0",
     "@nestjs/swagger": "^11.2.0",
     "@nestjs/websockets": "^11.1.6",
     "@radix-ui/react-accordion": "^1.2.12",

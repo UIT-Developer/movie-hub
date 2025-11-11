@@ -150,7 +150,7 @@ services:
       timeout: 5s
       retries: 3
       start_period: 10s
-    command: sh -c "npx prisma migrate deploy && node main.js"
+    command: sh -c "if [ -d prisma/migrations ] && [ \"$(ls -A prisma/migrations 2>/dev/null)\" ]; then npx prisma migrate deploy; else npx prisma db push --skip-generate; fi && node main.js"
   cinema-service:
     build:
       context: .

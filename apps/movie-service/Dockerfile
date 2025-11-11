@@ -58,14 +58,14 @@ WORKDIR /app
     COPY --chown=nestjs:nodejs --from=builder /app/package-lock.json ./
 
 
-# Install ONLY the minimal dependencies from Nx-generated package.json
-RUN npm ci --omit=dev --legacy-peer-deps && \
+# Install dependencies including Prisma for runtime
+RUN npm ci --legacy-peer-deps && \
     npm cache clean --force
 
-    # Copy ONLY the built application and Prisma files
-    COPY --chown=nestjs:nodejs --from=builder /app/dist/apps/movie-service ./
-    COPY --chown=nestjs:nodejs --from=builder /app/apps/movie-service/generated ./generated
-    COPY --chown=nestjs:nodejs --from=builder /app/apps/movie-service/prisma ./prisma
+# Copy ONLY the built application and Prisma files
+COPY --chown=nestjs:nodejs --from=builder /app/dist/apps/movie-service ./
+COPY --chown=nestjs:nodejs --from=builder /app/apps/movie-service/generated ./generated
+COPY --chown=nestjs:nodejs --from=builder /app/apps/movie-service/prisma ./prisma
 USER nestjs
 
 # Health check

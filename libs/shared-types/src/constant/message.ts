@@ -23,6 +23,9 @@ export const MovieServiceMessage = {
 export const CinemaMessage = {
   GET_CINEMAS: 'cinema.getAll',
   CINEMA: {
+    CREATE: 'cinema.create',
+    UPDATE: 'cinema.update',
+    DELETE: 'cinema.delete',
     GET_SHOWTIME: 'cinema.showtime',
   },
   SHOWTIME: {

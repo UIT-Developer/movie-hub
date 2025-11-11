@@ -8,9 +8,17 @@ import {
   BadRequestException,
   DefaultValuePipe,
   UseInterceptors,
+  Post,
+  Body,
+  Patch,
+  Delete,
 } from '@nestjs/common';
 import { CinemaService } from '../service/cinema.service';
-import { GetShowtimesQuery } from '@movie-hub/shared-types';
+import {
+  CreateCinemaRequest,
+  GetShowtimesQuery,
+  UpdateCinemaRequest,
+} from '@movie-hub/shared-types';
 import { TransformInterceptor } from '../../../common/interceptor/transform.interceptor';
 
 @Controller({
@@ -21,9 +29,40 @@ import { TransformInterceptor } from '../../../common/interceptor/transform.inte
 export class CinemaController {
   constructor(private readonly cinemaService: CinemaService) {}
 
+  // CRUD Operations
+
+  /**
+   * Get all cinemas
+   */
   @Get()
   getCinemas() {
     return this.cinemaService.getCinemas();
+  }
+
+  /**
+   * Create a new cinema
+   */
+  @Post()
+  createCinema(@Body() createCinemaDto: CreateCinemaRequest) {
+    return this.cinemaService.createCinema(createCinemaDto);
+  }
+
+  /**
+   * Get cinema detail by ID
+   */
+  @Patch(':id')
+  updateCinema(
+    @Param('id') id: string,
+    @Body() updateCinemaDto: UpdateCinemaRequest
+  ) {
+    return this.cinemaService.updateCinema(id, updateCinemaDto);
+  }
+
+  /**   * Delete a cinema by ID
+   */
+  @Delete(':id')
+  deleteCinema(@Param('id') id: string) {
+    return this.cinemaService.deleteCinema(id);
   }
 
   /**

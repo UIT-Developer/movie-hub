@@ -1,4 +1,4 @@
-export enum CinemaStatusEnum {
+export enum HallStatusEnum {
   ACTIVE = 'ACTIVE',
   MAINTENANCE = 'MAINTENANCE',
   CLOSED = 'CLOSED',

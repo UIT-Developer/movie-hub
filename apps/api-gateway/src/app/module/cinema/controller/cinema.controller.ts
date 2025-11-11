@@ -12,6 +12,7 @@ import {
   Body,
   Patch,
   Delete,
+  UseGuards,
 } from '@nestjs/common';
 import { CinemaService } from '../service/cinema.service';
 import {
@@ -20,6 +21,8 @@ import {
   UpdateCinemaRequest,
 } from '@movie-hub/shared-types';
 import { TransformInterceptor } from '../../../common/interceptor/transform.interceptor';
+import { ClerkAuthGuard } from '../../../common/guard/clerk-auth.guard';
+import { Permission } from '../../../common/decorator/permission.decorator';
 
 @Controller({
   version: '1',
@@ -32,17 +35,11 @@ export class CinemaController {
   // CRUD Operations
 
   /**
-   * Get all cinemas
-   */
-  @Get()
-  getCinemas() {
-    return this.cinemaService.getCinemas();
-  }
-
-  /**
    * Create a new cinema
    */
-  @Post()
+  @Post('cinema')
+  @UseGuards(ClerkAuthGuard)
+  //@Permission('cinema:create')
   createCinema(@Body() createCinemaDto: CreateCinemaRequest) {
     return this.cinemaService.createCinema(createCinemaDto);
   }
@@ -50,19 +47,23 @@ export class CinemaController {
   /**
    * Get cinema detail by ID
    */
-  @Patch(':id')
+  @Patch('cinema/:cinemaId')
+  @UseGuards(ClerkAuthGuard)
+  //@Permission('cinema:create')
   updateCinema(
-    @Param('id') id: string,
-    @Body() updateCinemaDto: UpdateCinemaRequest
+    @Param('cinemaId') cinemaId: string,
+    @Body() updateCinemaRequest: UpdateCinemaRequest
   ) {
-    return this.cinemaService.updateCinema(id, updateCinemaDto);
+    return this.cinemaService.updateCinema(cinemaId, updateCinemaRequest);
   }
 
   /**   * Delete a cinema by ID
    */
-  @Delete(':id')
-  deleteCinema(@Param('id') id: string) {
-    return this.cinemaService.deleteCinema(id);
+  @Delete('cinema/:cinemaId')
+  @UseGuards(ClerkAuthGuard)
+  //@Permission('cinema:create')
+  deleteCinema(@Param('cinemaId') cinemaId: string) {
+    return this.cinemaService.deleteCinema(cinemaId);
   }
 
   /**

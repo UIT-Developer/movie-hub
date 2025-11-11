@@ -13,11 +13,15 @@ import * as yaml from 'js-yaml';
 import { AppModule } from './app/app.module';
 import { TransformInterceptor } from './app/common/interceptor/transform.interceptor';
 import { GlobalExceptionFilter } from './app/exception/global-exception.filter';
+import { RedisIoAdapter } from './app/module/realtime/adapter/redis-io.adapter';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const globalPrefix = 'api';
-  app.setGlobalPrefix(globalPrefix);
+  app.setGlobalPrefix(globalPrefix, {
+    exclude: ['/socket.io/(.*)'],
+  });
+
   app.use(cookieParser());
   app.enableVersioning({
     type: VersioningType.URI,
@@ -38,6 +42,13 @@ async function bootstrap() {
     new TransformInterceptor(),
     new LoggingInterceptor('Api-Gateway')
   );
+
+  // Create Redis Adapter
+  const redisIoAdapter = new RedisIoAdapter(app);
+  await redisIoAdapter.connectToRedis();
+
+  app.useWebSocketAdapter(redisIoAdapter);
+
   const port = process.env.PORT || 3000;
   await app.listen(port);
   Logger.log(

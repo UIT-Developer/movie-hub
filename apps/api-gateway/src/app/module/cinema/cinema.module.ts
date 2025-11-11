@@ -6,6 +6,8 @@ import { ConfigService } from '@nestjs/config';
 import { SERVICE_NAME } from '@movie-hub/shared-types';
 import { ShowtimeController } from './controller/showtime.controller';
 import { ShowtimeService } from './service/showtime.service';
+import { HallController } from './controller/hall.controller';
+import { HallService } from './service/hall.service';
 
 @Module({
   imports: [
@@ -34,7 +36,7 @@ import { ShowtimeService } from './service/showtime.service';
       },
     ]),
   ],
-  controllers: [CinemaController, ShowtimeController],
-  providers: [CinemaService, ShowtimeService],
+  controllers: [CinemaController, ShowtimeController, HallController],
+  providers: [CinemaService, ShowtimeService, HallService],
 })
 export class CinemaModule {}

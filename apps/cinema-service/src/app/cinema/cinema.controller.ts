@@ -14,11 +14,6 @@ export class CinemaController {
   constructor(private readonly cinemaService: CinemaService) {}
   logger = new Logger(CinemaController.name);
 
-  @MessagePattern(CinemaMessage.GET_CINEMAS)
-  async getCinemas() {
-    return this.cinemaService.getCinemas();
-  }
-
   @MessagePattern(CinemaMessage.CINEMA.CREATE)
   async createMovie(@Payload() request: CreateCinemaRequest) {
     return this.cinemaService.createCinema(request);
@@ -28,18 +23,18 @@ export class CinemaController {
   async updateMovie(
     @Payload()
     {
-      id,
+      cinemaId,
       updateCinemaRequest,
     }: {
-      id: string;
+      cinemaId: string;
       updateCinemaRequest: UpdateCinemaRequest;
     }
   ) {
-    return this.cinemaService.updateCinema(id, updateCinemaRequest);
+    return this.cinemaService.updateCinema(cinemaId, updateCinemaRequest);
   }
 
   @MessagePattern(CinemaMessage.CINEMA.DELETE)
-  async deleteMovie(@Payload() id: string) {
-    return this.cinemaService.deleteCinema(id);
+  async deleteMovie(@Payload() cinemaId: string) {
+    return this.cinemaService.deleteCinema(cinemaId);
   }
 }

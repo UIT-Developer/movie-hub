@@ -13,10 +13,6 @@ import { ServiceResult } from '@movie-hub/shared-types/common';
 export class CinemaService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getCinemas() {
-    return this.prisma.cinemas.findMany();
-  }
-
   async createCinema(createCinemaDto: CreateCinemaRequest) {
     const cinema = await this.prisma.$transaction(async (db) => {
       return await db.cinemas.create({

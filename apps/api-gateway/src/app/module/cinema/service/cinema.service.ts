@@ -26,18 +26,21 @@ export class CinemaService {
     );
   }
 
-  async updateCinema(id: string, updateCinemaDto: UpdateCinemaRequest) {
+  async updateCinema(
+    cinemaId: string,
+    updateCinemaRequest: UpdateCinemaRequest
+  ) {
     return lastValueFrom(
       this.cinemaClient.send(CinemaMessage.CINEMA.UPDATE, {
-        id,
-        updateCinemaRequest: updateCinemaDto,
+        cinemaId,
+        updateCinemaRequest,
       })
     );
   }
 
-  async deleteCinema(id: string) {
+  async deleteCinema(cinemaId: string) {
     return lastValueFrom(
-      this.cinemaClient.send(CinemaMessage.CINEMA.DELETE, id)
+      this.cinemaClient.send(CinemaMessage.CINEMA.DELETE, cinemaId)
     );
   }
 

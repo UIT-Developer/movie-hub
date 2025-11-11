@@ -1,3 +1,5 @@
+import { CinemaStatusEnum } from '@movie-hub/shared-types/cinema/enum';
+
 export interface CinemaSummaryResponse {
   id: string;
   name: string;
@@ -9,5 +11,5 @@ export interface CinemaSummaryResponse {
   rating?: number;
   total_reviews: number;
   images?: string[];
-  status: string;
+  status: CinemaStatusEnum;
 }

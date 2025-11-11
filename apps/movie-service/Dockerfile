@@ -30,6 +30,7 @@ COPY libs ./libs
 COPY eslint.config.mjs ./
 COPY apps/movie-service ./apps/movie-service
 
+
 # Generate Prisma Client for movie-service
 WORKDIR /app/apps/movie-service
 RUN npx prisma generate
@@ -52,17 +53,19 @@ RUN addgroup -g 1001 -S nodejs && \
 
 WORKDIR /app
 
-# Copy the Nx-generated package.json (minimal dependencies only!)
-COPY --chown=nestjs:nodejs --from=builder /app/dist/apps/movie-service/package*.json ./
+    # Copy the full root package.json for development tasks
+    COPY --chown=nestjs:nodejs --from=builder /app/package.json ./
+    COPY --chown=nestjs:nodejs --from=builder /app/package-lock.json ./
+
 
 # Install ONLY the minimal dependencies from Nx-generated package.json
 RUN npm ci --omit=dev --legacy-peer-deps && \
     npm cache clean --force
 
-# Copy ONLY the built application and Prisma files
-COPY --chown=nestjs:nodejs --from=builder /app/dist/apps/movie-service ./
-COPY --chown=nestjs:nodejs --from=builder /app/apps/movie-service/generated ./generated
-COPY --chown=nestjs:nodejs --from=builder /app/apps/movie-service/prisma ./prisma
+    # Copy ONLY the built application and Prisma files
+    COPY --chown=nestjs:nodejs --from=builder /app/dist/apps/movie-service ./
+    COPY --chown=nestjs:nodejs --from=builder /app/apps/movie-service/generated ./generated
+    COPY --chown=nestjs:nodejs --from=builder /app/apps/movie-service/prisma ./prisma
 USER nestjs
 
 # Health check

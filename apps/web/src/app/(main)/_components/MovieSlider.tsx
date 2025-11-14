@@ -32,7 +32,7 @@ export default function MovieSlider({ href, title, status }: Props) {
     isFetchingNextPage,
     isLoading,
     isError,
-    error
+    error,
   } = useGetMovies({ limit: 9, status });
 
   const movies = data?.pages ?? [];
@@ -82,9 +82,9 @@ export default function MovieSlider({ href, title, status }: Props) {
       </div>
 
       <Carousel className="w-full">
-        <CarouselContent ref={containerRef} className='m-0'>
+        <CarouselContent ref={containerRef} className="m-0">
           {isError ? (
-            <ErrorFallback message={error.message}/>
+            <ErrorFallback message={error.message} />
           ) : isLoading ? (
             Array.from({ length: 3 }).map((_, i) => (
               <CarouselItem key={i} className="md:basis-1/2 lg:basis-1/3">

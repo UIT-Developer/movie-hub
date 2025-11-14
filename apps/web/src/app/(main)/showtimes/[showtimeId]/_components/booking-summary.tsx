@@ -1,75 +1,101 @@
 'use client';
-import React, { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
+import { useCallback, useEffect, useState } from 'react';
+
+import { motion, AnimatePresence } from 'framer-motion';
+import { useBookingStore } from 'apps/web/src/stores/booking-store';
 import { Button } from '@movie-hub/shacdn-ui/button';
+import { useRouter } from 'next/navigation';
 
-type BookingSummaryModalProps = {
-  totalTickets: number;
-  selectedSeats: string[];
-  ticketCounts: Record<string, number>;
-  tickets: { key: string; label: string; price: number }[];
-  onCheckout: () => void;
-};
+export default function BookingBar() {
+  const router = useRouter();
+  const {
+    selectedSeats,
+    totalPrice,
+    totalTickets,
+    holdTimeSeconds,
+    resetBooking,
+    currentShowtimeId,
+  } = useBookingStore();
+  const [timeLeft, setTimeLeft] = useState(holdTimeSeconds);
 
-export const BookingSummaryModal: React.FC<BookingSummaryModalProps> = ({
-  totalTickets,
-  selectedSeats,
-  ticketCounts,
-  tickets,
-  onCheckout,
-}) => {
-  const [timeLeft, setTimeLeft] = useState(5 * 60); // 5 phút = 300 giây
-
-  // ⏳ Đếm ngược giữ chỗ
   useEffect(() => {
-    if (totalTickets === 0 || selectedSeats.length === 0) return;
+    if (selectedSeats.length === 0) {
+      setTimeLeft(holdTimeSeconds);
+      return;
+    }
 
     const interval = setInterval(() => {
-      setTimeLeft((prev) => (prev > 0 ? prev - 1 : 0));
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          resetBooking();
+          return 0;
+        }
+        return prev - 1;
+      });
     }, 1000);
+
     return () => clearInterval(interval);
-  }, [totalTickets, selectedSeats]);
+  }, [selectedSeats, holdTimeSeconds, resetBooking]);
 
   const minutes = Math.floor(timeLeft / 60);
   const seconds = timeLeft % 60;
 
-  // 💰 Tính tổng tiền
-  const totalPrice = tickets.reduce((sum, t) => {
-    return sum + t.price * (ticketCounts[t.key] || 0);
-  }, 0);
-
-  // 🎬 Ẩn modal khi chưa chọn ghế hoặc vé
-  if (totalTickets === 0 || selectedSeats.length === 0) return null;
+  const onClickContinue = useCallback(() => {
+    if (currentShowtimeId) {
+      router.push(`${currentShowtimeId}/select-food`);
+    }
+  }, [router, currentShowtimeId]);
 
   return (
-    <motion.div
-      initial={{ y: 100 }}
-      animate={{ y: 0 }}
-      transition={{ type: 'spring', stiffness: 80 }}
-      className="fixed w-full bottom-0 left-0 right-0 bg-zinc-900/95 border-t border-zinc-700 px-6 py-4 text-white backdrop-blur-md z-50"
-    >
-      <div className="flex flex-col md:flex-row justify-between items-center gap-3">
-        <div className="flex flex-col">
-          <p className="text-sm opacity-80">
-            Vé: {totalTickets} | Ghế: {selectedSeats.join(', ')}
-          </p>
-          <p className="font-semibold text-lg">
-            Tổng tiền: {totalPrice.toLocaleString()} đ
-          </p>
-        </div>
+    <AnimatePresence>
+      {selectedSeats.length > 0 && (
+        <motion.div
+          initial={{ y: 80, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          exit={{ y: 80, opacity: 0 }}
+          transition={{ type: 'spring', stiffness: 120, damping: 15 }}
+          className="fixed bottom-0 left-0 right-0 z-50 bg-black text-white border-t border-gray-700 shadow-lg"
+        >
+          <div className="max-w-4xl mx-auto flex justify-between items-center p-4 text-sm">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+              <div>
+                <span className="font-medium">Ghế đã chọn: </span>
+                <span>
+                  {selectedSeats.map((seatLabel) => seatLabel).join(', ')}
+                </span>
+              </div>
 
-        <div className="flex items-center gap-4">
-          <div className="text-red-400 font-medium">
-            Giữ chỗ: {minutes}:{seconds.toString().padStart(2, '0')}
+              <div className="hidden sm:block h-4 w-px bg-gray-700 mx-2" />
+
+              <div>
+                <span className="font-medium">Số lượng: </span>
+                <span>{totalTickets}</span>
+              </div>
+
+              <div className="hidden sm:block h-4 w-px bg-gray-700 mx-2" />
+
+              <div>
+                <span className="font-medium">Tổng tiền: </span>
+                <span className="font-semibold text-white">
+                  {totalPrice.toLocaleString()}₫
+                </span>
+              </div>
+
+              <div className="hidden sm:block h-4 w-px bg-gray-700 mx-2" />
+
+              <div>
+                <span className="font-medium">Giữ ghế còn lại: </span>
+                <span className="font-mono text-white">
+                  {minutes}:{seconds.toString().padStart(2, '0')}
+                </span>
+              </div>
+            </div>
+
+            <Button onClick={onClickContinue}>Tiếp tục</Button>
           </div>
-          <Button
-            onClick={onCheckout}
-            className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg font-semibold"
-          >
-            Thanh toán
-          </Button>
-        </div>
-      </div>
-    </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
-};
+}

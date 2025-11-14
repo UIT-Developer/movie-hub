@@ -11,7 +11,7 @@ export const Navbar = () => {
   const { isSignedIn } = useUser();
   const { openSignIn } = useClerk();
   return (
-    <nav className="fixed top-0 left-0 w-screen z-50 bg-black/50 backdrop-blur-lg shadow-lg">
+    <nav className="fixed top-0 left-0 w-screen z-50 bg-black/10 backdrop-blur-lg shadow-lg">
       <div className="px-6 lg:px-36 flex items-center h-20">
         <div className="max-md:flex-1">
           <Logo />
@@ -21,7 +21,7 @@ export const Navbar = () => {
             className={`max-md:absolute max-md:top-0 max-md:left-0 max-md:font-medium
   max-md:text-lg z-50 flex flex-col md:flex-row items-center
   max-md:justify-center gap-8 md:px-8 py-3 max-md:h-screen
-  md:rounded-full backdrop-blur bg-black/50 md:bg-white/10 md:border
+  md:rounded-full backdrop-blur bg-black/30 md:bg-white/10 md:border
   border-gray-300/20 overflow-hidden transition-[width] duration-300 p-4 text-white ${
     isOpen ? 'max-md:w-full' : 'max-md:hidden'
   }`}

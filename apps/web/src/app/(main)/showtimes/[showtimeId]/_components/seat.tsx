@@ -1,7 +1,6 @@
 'use client';
 
 import { Button } from '@movie-hub/shacdn-ui/button';
-import { is } from 'zod/v4/locales';
 
 interface SeatProps {
   number: number;

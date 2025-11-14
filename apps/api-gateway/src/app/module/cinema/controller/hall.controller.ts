@@ -11,7 +11,11 @@ import {
 } from '@nestjs/common';
 import { TransformInterceptor } from '../../../common/interceptor/transform.interceptor';
 import { ClerkAuthGuard } from '../../../common/guard/clerk-auth.guard';
-import { CreateHallRequest, UpdateHallRequest } from '@movie-hub/shared-types';
+import {
+  CreateHallRequest,
+  UpdateHallRequest,
+  UpdateSeatStatusRequest,
+} from '@movie-hub/shared-types';
 import { HallService } from '../service/hall.service';
 
 @Controller({
@@ -67,5 +71,18 @@ export class HallController {
   //@Permission('hall:create')
   deleteHall(@Param('hallId') hallId: string) {
     return this.hallService.deleteHall(hallId);
+  }
+
+  /**
+   *  Update seat status
+   */
+  @Patch('seat/:seatId/status')
+  @UseGuards(ClerkAuthGuard)
+  //@Permission('hall:create')
+  updateSeatStatus(
+    @Param('seatId') seatId: string,
+    @Body() updateSeatStatusRequest: UpdateSeatStatusRequest
+  ) {
+    return this.hallService.updateSeatStatus(seatId, updateSeatStatusRequest);
   }
 }

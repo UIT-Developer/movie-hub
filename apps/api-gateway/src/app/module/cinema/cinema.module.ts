@@ -8,6 +8,8 @@ import { ShowtimeController } from './controller/showtime.controller';
 import { ShowtimeService } from './service/showtime.service';
 import { HallController } from './controller/hall.controller';
 import { HallService } from './service/hall.service';
+import { TicketPricingController } from './controller/ticket-pricing.controller';
+import { TicketPricingService } from './service/ticket-pricing.service';
 
 @Module({
   imports: [
@@ -36,7 +38,17 @@ import { HallService } from './service/hall.service';
       },
     ]),
   ],
-  controllers: [CinemaController, ShowtimeController, HallController],
-  providers: [CinemaService, ShowtimeService, HallService],
+  controllers: [
+    CinemaController,
+    ShowtimeController,
+    HallController,
+    TicketPricingController,
+  ],
+  providers: [
+    CinemaService,
+    ShowtimeService,
+    HallService,
+    TicketPricingService,
+  ],
 })
 export class CinemaModule {}

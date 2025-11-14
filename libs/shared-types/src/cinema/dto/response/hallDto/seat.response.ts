@@ -5,8 +5,8 @@ import {
 
 export interface SeatResponse {
   id: string;
-  row_letter: string;
-  seat_number: number;
+  rowLetter: string;
+  seatNumber: number;
   type: SeatTypeEnum;
   status: SeatStatusEnum;
 }

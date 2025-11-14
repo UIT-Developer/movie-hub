@@ -3,6 +3,7 @@ import {
   CreateHallRequest,
   SERVICE_NAME,
   UpdateHallRequest,
+  UpdateSeatStatusRequest,
 } from '@movie-hub/shared-types';
 import { Inject, Injectable } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
@@ -34,5 +35,15 @@ export class HallService {
 
   async deleteHall(hallId: string) {
     return this.cinemaClient.send(CinemaMessage.HALL.DELETE, { hallId });
+  }
+
+  async updateSeatStatus(
+    seatId: string,
+    updateSeatStatusRequest: UpdateSeatStatusRequest
+  ) {
+    return this.cinemaClient.send(CinemaMessage.HALL.UPDATE_SEAT_STATUS, {
+      seatId,
+      updateSeatStatusRequest,
+    });
   }
 }

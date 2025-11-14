@@ -1,4 +1,3 @@
-import { CinemaStatusEnum } from '@movie-hub/shared-types/cinema/enum';
 import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
 
@@ -22,14 +21,9 @@ export const CreateCinemaSchema = z.object({
   amenities: z.array(z.string()).default([]),
   facilities: z.any().optional(), // JSON
   images: z.array(z.string()).default([]),
-  virtual_tour_360_url: z.string().optional(),
-  rating: z.coerce.number().min(0).max(5).optional(),
-  total_reviews: z.number().int().min(0).default(0),
-  operating_hours: z.any().optional(),
-  social_media: z.any().optional(),
-  status: z
-    .enum(Object.values(CinemaStatusEnum) as [string, ...string[]])
-    .default(CinemaStatusEnum.ACTIVE),
+  virtualTour360Url: z.string().optional(),
+  operatingHours: z.any().optional(),
+  socialMedia: z.any().optional(),
   timezone: z.string().default('Asia/Ho_Chi_Minh'),
 });
 

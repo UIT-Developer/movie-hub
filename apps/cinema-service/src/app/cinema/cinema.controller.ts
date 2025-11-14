@@ -15,12 +15,12 @@ export class CinemaController {
   logger = new Logger(CinemaController.name);
 
   @MessagePattern(CinemaMessage.CINEMA.CREATE)
-  async createMovie(@Payload() request: CreateCinemaRequest) {
+  async createCinema(@Payload() request: CreateCinemaRequest) {
     return this.cinemaService.createCinema(request);
   }
 
   @MessagePattern(CinemaMessage.CINEMA.UPDATE)
-  async updateMovie(
+  async updateCinema(
     @Payload()
     {
       cinemaId,

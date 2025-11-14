@@ -17,6 +17,7 @@ export class HallService {
   async getHallById(id: string): Promise<ServiceResult<HallDetailResponse>> {
     const hall = await this.prisma.halls.findUnique({
       where: { id },
+      include: { seats: true },
     });
     if (!hall) {
       throw new ResourceNotFoundException('Hall', 'id', id);
@@ -32,6 +33,7 @@ export class HallService {
   ): Promise<ServiceResult<HallSummaryResponse[]>> {
     const halls = await this.prisma.halls.findMany({
       where: { cinema_id: cinemaId },
+      include: { seats: true },
     });
     return {
       data: halls.map(HallMapper.toSummaryResponse),
@@ -42,7 +44,8 @@ export class HallService {
   async createHall(createHallDto: CreateHallRequest) {
     const hall = await this.prisma.$transaction(async (db) => {
       return await db.halls.create({
-        data: HallMapper.toHall(createHallDto),
+        data: HallMapper.toHallCreate(createHallDto),
+        include: { seats: true },
       });
     });
 
@@ -66,7 +69,7 @@ export class HallService {
 
     const updatedHall = await this.prisma.$transaction(async (db) => {
       return await db.halls.update({
-        data: HallMapper.toHall(updateHallRequest),
+        data: HallMapper.toHallUpdate(updateHallRequest),
         where: {
           id: id,
         },

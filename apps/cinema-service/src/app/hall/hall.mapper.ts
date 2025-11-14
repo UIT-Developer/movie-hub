@@ -9,7 +9,7 @@ import {
   SeatTypeEnum,
 } from '@movie-hub/shared-types';
 import { Halls, Seats } from 'apps/cinema-service/generated/prisma';
-import { HallSeatsTemplates, StandardLayoutTemplate } from './seat-template';
+import { HallSeatsTemplates } from './seat-template';
 
 export class HallMapper {
   /** Map request -> dữ liệu lưu DB */
@@ -61,8 +61,8 @@ export class HallMapper {
   static toSeatResponse(seat: Seats): SeatResponse {
     return {
       id: seat.id,
-      row_letter: seat.row_letter,
-      seat_number: seat.seat_number,
+      rowLetter: seat.row_letter,
+      seatNumber: seat.seat_number,
       type: seat.type as SeatTypeEnum,
       status: seat.status as SeatStatusEnum,
     };
@@ -95,7 +95,7 @@ export class HallMapper {
 
     // Group theo row_letter
     const grouped = seats.reduce((acc, seat) => {
-      const row = seat.row_letter;
+      const row = seat.rowLetter;
 
       if (!acc[row]) {
         acc[row] = [];
@@ -109,7 +109,7 @@ export class HallMapper {
       .sort(([rowA], [rowB]) => rowA.localeCompare(rowB)) // sort A, B, C...
       .map(([row, seats]) => ({
         row,
-        seats: seats.sort((a, b) => a.seat_number - b.seat_number),
+        seats: seats.sort((a, b) => a.seatNumber - b.seatNumber),
       }));
   }
 }

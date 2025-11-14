@@ -1,6 +1,7 @@
 import {
   DayTypeEnum,
   FormatEnum,
+  LayoutTypeEnum,
   ReservationStatusEnum,
   SeatStatusEnum,
   SeatTypeEnum,
@@ -41,6 +42,8 @@ export interface TicketPricingDto {
 
 export interface ShowtimeSeatResponse {
   showtime: ShowtimeInfoDto;
+  cinemaName: string;
+  layoutType: LayoutTypeEnum;
   seat_map: SeatRowDto[];
   ticketTypes: TicketTypeEnum[];
   ticketPrices: TicketPricingDto[];

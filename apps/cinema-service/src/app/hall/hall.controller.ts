@@ -5,6 +5,7 @@ import {
   CinemaMessage,
   CreateHallRequest,
   UpdateCinemaRequest,
+  UpdateSeatStatusRequest,
 } from '@movie-hub/shared-types';
 
 @Controller('hall')
@@ -38,5 +39,20 @@ export class HallController {
   @MessagePattern(CinemaMessage.HALL.DELETE)
   async deleteHall(@Payload() hallId: string) {
     return await this.hallService.deleteHall(hallId);
+  }
+
+  @MessagePattern(CinemaMessage.HALL.UPDATE_SEAT_STATUS)
+  async updateSeatStatus(
+    @Payload()
+    data: {
+      seatId: string;
+      updateSeatStatusRequest: UpdateSeatStatusRequest;
+    }
+  ) {
+    const { seatId, updateSeatStatusRequest } = data;
+    return await this.hallService.updateSeatStatus(
+      seatId,
+      updateSeatStatusRequest
+    );
   }
 }

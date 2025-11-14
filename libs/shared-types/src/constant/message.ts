@@ -34,10 +34,15 @@ export const CinemaMessage = {
     CREATE: 'hall.create',
     UPDATE: 'hall.update',
     DELETE: 'hall.delete',
+    UPDATE_SEAT_STATUS: 'cinema.update_seat_status',
   },
   SHOWTIME: {
     GET_SHOWTIME_SEATS: 'showtime.get_showtime_seats',
     GET_SEATS_HELD_BY_USER: 'showtime.get_seats_held_by_user',
+  },
+  TICKET_PRICING: {
+    GET_PRICING_FOR_HALL: 'ticket_pricing.get_pricing_for_hall',
+    UPDATE_PRICING_OF_TICKET: 'ticket_pricing.update_ticket_pricing',
   },
   GET_CINEMAS_NEARBY: 'CINEMA.GET_CINEMAS_NEARBY',
   GET_CINEMAS_WITH_FILTERS: 'CINEMA.GET_CINEMAS_WITH_FILTERS',

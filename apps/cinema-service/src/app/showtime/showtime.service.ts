@@ -134,6 +134,11 @@ export class ShowtimeService {
     });
   }
 
+  // 🔒 Lấy danh sách ghế đang giữ của user
+  async getSeatsHeldByUser(showtimeId: string, userId: string): Promise<string[]> {
+    return this.realtimeService.getUserHeldSeats(showtimeId, userId);
+  }
+
   /**
    * 🧹 Xóa cache khi có thay đổi dữ liệu tĩnh (admin update)
    */

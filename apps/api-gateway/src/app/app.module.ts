@@ -7,6 +7,8 @@ import { MovieModule } from './module/movie/movie.module';
 import { APP_PIPE } from '@nestjs/core';
 import { ZodValidationPipe } from 'nestjs-zod';
 import { RealtimeModule } from './module/realtime/realtime.module';
+import { BookingModule } from './module/booking/booking.module';
+import { PaymentModule } from './module/payment/payment.module';
 
 @Module({
   imports: [
@@ -21,11 +23,15 @@ import { RealtimeModule } from './module/realtime/realtime.module';
         MOVIE_PORT: Joi.number().required(),
         CINEMA_HOST: Joi.string().required(),
         CINEMA_PORT: Joi.number().required(),
+        BOOKING_HOST: Joi.string().required(),
+        BOOKING_PORT: Joi.number().required(),
       }),
     }),
     UserModule,
     MovieModule,
     CinemaModule,
+    BookingModule,
+    PaymentModule,
     RealtimeModule,
   ],
   controllers: [],

@@ -16,6 +16,7 @@ export class ClerkAuthGuard implements CanActivate {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
 
+
     // ====== 1️⃣ Auth via Clerk ======
     const token = request.cookies?.__session;
     if (!token) {

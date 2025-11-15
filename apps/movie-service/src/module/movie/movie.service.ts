@@ -1,10 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import {
+  CreateMovieReleaseRequest,
   CreateMovieRequest,
   MovieDetailResponse,
   MovieQuery,
+  MovieReleaseResponse,
   MovieSummary,
   ResourceNotFoundException,
+  UpdateMovieReleaseRequest,
   UpdateMovieRequest,
 } from '@movie-hub/shared-types';
 import { ServiceResult } from '@movie-hub/shared-types/common';
@@ -17,6 +20,7 @@ export class MovieService {
   logger = new Logger(MovieService.name);
 
   constructor(private readonly prismaService: PrismaService) {}
+  // CRUD Movie
 
   async getMovies(query: MovieQuery): Promise<ServiceResult<MovieSummary[]>> {
     const page = query && query.page ? Number(query.page) : 1;
@@ -168,6 +172,91 @@ export class MovieService {
     });
     return {
       message: 'Delete movie successfully!',
+    };
+  }
+
+  // CRUD Movie Release Date
+  async getMovieRelease(movieId: string) {
+    const movieRelease = await this.prismaService.movieRelease.findMany({
+      where: { movieId },
+      select: {
+        id: true,
+        startDate: true,
+        endDate: true,
+        note: true,
+      },
+    });
+
+    return {
+      data: movieRelease,
+    };
+  }
+
+  async createMovieRelease(
+    movieRelese: CreateMovieReleaseRequest
+  ): Promise<ServiceResult<MovieReleaseResponse>> {
+    const createdMovieRelease = await this.prismaService.$transaction(
+      async (db) => {
+        return await db.movieRelease.create({
+          data: {
+            movieId: movieRelese.movieId,
+            startDate: movieRelese.startDate,
+            endDate: movieRelese.endDate,
+            note: movieRelese.note,
+          },
+          select: {
+            id: true,
+            startDate: true,
+            endDate: true,
+            note: true,
+          },
+        });
+      }
+    );
+
+    return {
+      data: {
+        ...createdMovieRelease,
+      },
+      message: 'Create movie release successfully!',
+    };
+  }
+
+  async updateMovieRelease(
+    id: string,
+    movieRelese: UpdateMovieReleaseRequest
+  ): Promise<ServiceResult<MovieReleaseResponse>> {
+    const updateMovieRelease = await this.prismaService.$transaction(
+      async (db) => {
+        return await db.movieRelease.update({
+          where: { id },
+          data: {
+            ...movieRelese,
+          },
+          select: {
+            id: true,
+            startDate: true,
+            endDate: true,
+            note: true,
+          },
+        });
+      }
+    );
+
+    return {
+      data: {
+        ...updateMovieRelease,
+      },
+      message: 'Update movie release successfully!',
+    };
+  }
+
+  async deleteMovieRelease(id: string) {
+    await this.prismaService.movieRelease.delete({
+      where: { id },
+    });
+    return {
+      message: 'Delete movie release successfully!',
     };
   }
 }

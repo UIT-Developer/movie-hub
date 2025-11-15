@@ -19,8 +19,11 @@ servers:
 
 tags:
   - name: Movies
+  - name: Movie Releases
+  - name: Genres
 
 paths:
+  ## Movie Service Endpoints
   /movies:
     get:
       tags: [Movies]
@@ -57,6 +60,33 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiErrorResponse'
+    post:
+      tags: [Movies]
+      summary: Tạo phim mới
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateMovieDto'
+      responses:
+        '201':
+          description: Phim được tạo thành công
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiSuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/MovieDetail'
+        '400':
+          description: Lỗi request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
 
   /movies/{movieId}:
     get:
@@ -81,6 +111,289 @@ paths:
                     properties:
                       data:
                         $ref: '#/components/schemas/MovieDetail'
+        '400':
+          description: Lỗi request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+    put:
+      tags: [Movies]
+      summary: Cập nhật thông tin phim
+      parameters:
+        - name: movieId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateMovieDto'
+      responses:
+        '200':
+          description: Phim được cập nhật thành công
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiSuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/MovieDetail'
+        '400':
+          description: Lỗi request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+    delete:
+      tags: [Movies]
+      summary: Xóa phim
+      parameters:
+        - name: movieId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Phim được xóa thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccessResponse'
+        '400':
+          description: Lỗi request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+
+  /movies/{movieId}/releases:
+    get:
+      tags: [Movies]
+      summary: Lấy chi tiết lịch phát hành phim
+      parameters:
+        - name: movieId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Chi tiết lịch phát hành phim
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiSuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/MovieRelease'
+        '400':
+          description: Lỗi request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+
+  /movie-releases:
+    post:
+      tags: [Movie Releases]
+      summary: Tạo lịch phát hành phim mới
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateMovieReleaseDto'
+      responses:
+        '201':
+          description: Lịch phát hành phim được tạo thành công
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiSuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/MovieRelease'
+        '400':
+          description: Lỗi request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+
+  /movie-releases/{movieReleaseId}:
+    put:
+      tags: [Movie Releases]
+      summary: Cập nhật lịch phát hành phim
+      parameters:
+        - name: movieReleaseId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateMovieReleaseDto'
+      responses:
+        '200':
+          description: Lịch phát hành phim được cập nhật thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccessResponse'
+        '400':
+          description: Lỗi request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+    delete:
+      tags: [Movie Releases]
+      summary: Xóa lịch phát hành phim
+      parameters:
+        - name: movieReleaseId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Lịch phát hành phim được xóa thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccessResponse'
+        '400':
+          description: Lỗi request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+
+  /genres:
+    get:
+      tags: [Genres]
+      summary: Lấy danh sách thể loại phim
+      responses:
+        '200':
+          description: Danh sách thể loại phim
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiSuccessResponse'
+                  - type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/GenreResponse'
+        '400':
+          description: Lỗi request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+    post:
+      tags: [Genres]
+      summary: Cập nhật thể loại phim
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenreResponse'
+      responses:
+        '200':
+          description: Thể loại phim được cập nhật thành công
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiSuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/GenreResponse'
+        '400':
+          description: Lỗi request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+
+  /genres/{genreId}:
+    put:
+      tags: [Genres]
+      summary: Cập nhật thể loại phim
+      parameters:
+        - name: genreId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenreResponse'
+      responses:
+        '200':
+          description: Thể loại phim được cập nhật thành công
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiSuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/GenreResponse'
+        '400':
+          description: Lỗi request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+    delete:
+      tags: [Genres]
+      summary: Xóa thể loại phim
+      parameters:
+        - name: genreId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Thể loại phim được xóa thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccessResponse'
         '400':
           description: Lỗi request
           content:
@@ -202,6 +515,223 @@ components:
           type: string
           format: uuid
         name:
+          type: string
+
+    MovieCast:
+      type: object
+      properties:
+        name:
+          type: string
+          example: Patrick Wilson
+        profileUrl:
+          type: string
+          nullable: true
+          example: https://example.com/actor1.jpg
+      required:
+        - name
+
+    CreateMovieDto:
+      type: object
+      properties:
+        title:
+          type: string
+          example: Test 1
+        overview:
+          type: string
+          example: Hai nhà điều tra hiện tượng siêu nhiên...
+        originalTitle:
+          type: string
+          example: 'The Conjuring: Last Rites'
+        posterUrl:
+          type: string
+          format: uri
+          example: https://image.tmdb.org/t/p/w500/sjvW985erG7NSKJScFNhLbjhyma.jpg
+        trailerUrl:
+          type: string
+          format: uri
+          nullable: true
+          example: https://www.youtube.com/watch?v=3iBhELud1-I
+        backdropUrl:
+          type: string
+          format: uri
+          nullable: true
+          example: https://image.tmdb.org/t/p/w500/kHZaX0vuhZdbuq0WKU3BpA9WIQ0.jpg
+        runtime:
+          type: number
+          example: 135
+        releaseDate:
+          type: string
+          format: date
+          example: 2025-09-03
+        ageRating:
+          type: string
+          enum: [G, PG, PG-13, R, NC-17, P]
+          example: P
+        originalLanguage:
+          type: string
+          example: en
+        spokenLanguages:
+          type: array
+          items:
+            type: string
+            example: en
+        languageType:
+          type: string
+          enum: [ORIGINAL, DUBBED]
+          example: ORIGINAL
+        productionCountry:
+          type: string
+          example: US
+        director:
+          type: string
+          nullable: true
+          example: Michael Chaves
+        cast:
+          type: array
+          items:
+            $ref: '#/components/schemas/MovieCast'
+        genreIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+            example: 4a507691-86fb-4daf-a1e4-ece6f91c4571
+      required:
+        - title
+        - overview
+        - posterUrl
+        - runtime
+        - releaseDate
+        - ageRating
+        - originalLanguage
+        - spokenLanguages
+        - languageType
+        - productionCountry
+        - genreIds
+
+    UpdateMovieDto:
+      type: object
+      properties:
+        title:
+          type: string
+          example: Test 1
+        overview:
+          type: string
+          example: Hai nhà điều tra hiện tượng siêu nhiên...
+        originalTitle:
+          type: string
+          example: 'The Conjuring: Last Rites'
+        posterUrl:
+          type: string
+          format: uri
+          example: https://image.tmdb.org/t/p/w500/sjvW985erG7NSKJScFNhLbjhyma.jpg
+        trailerUrl:
+          type: string
+          format: uri
+          nullable: true
+          example: https://www.youtube.com/watch?v=3iBhELud1-I
+        backdropUrl:
+          type: string
+          format: uri
+          nullable: true
+          example: https://image.tmdb.org/t/p/w500/kHZaX0vuhZdbuq0WKU3BpA9WIQ0.jpg
+        runtime:
+          type: number
+          example: 135
+        releaseDate:
+          type: string
+          format: date
+          example: 2025-09-03
+        ageRating:
+          type: string
+          enum: [G, PG, PG-13, R, NC-17, P]
+          example: P
+        originalLanguage:
+          type: string
+          example: en
+        spokenLanguages:
+          type: array
+          items:
+            type: string
+            example: en
+        languageType:
+          type: string
+          enum: [ORIGINAL, DUBBED]
+          example: ORIGINAL
+        productionCountry:
+          type: string
+          example: US
+        director:
+          type: string
+          nullable: true
+          example: Michael Chaves
+        cast:
+          type: array
+          items:
+            $ref: '#/components/schemas/MovieCast'
+        genreIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+            example: 4a507691-86fb-4daf-a1e4-ece6f91c4571
+
+    CreateMovieReleaseDto:
+      type: object
+      properties:
+        movieId:
+          type: string
+          format: uuid
+          example: d290f1ee-6c54-4b01-90e6-d701748f0851
+        startDate:
+          type: string
+          format: date
+          example: 2025-09-10
+        endDate:
+          type: string
+          format: date
+          example: 2025-09-10
+        note:
+          type: string
+          example: Phát hành dịp lễ quốc khánh
+      required:
+        - movieId
+        - startDate
+        - endDate
+        - note
+
+    UpdateMovieReleaseDto:
+      type: object
+      properties:
+        movieId:
+          type: string
+          format: uuid
+          example: d290f1ee-6c54-4b01-90e6-d701748f0851
+        startDate:
+          type: string
+          format: date
+          example: 2025-09-10
+        endDate:
+          type: string
+          format: date
+          example: 2025-09-10
+        note:
+          type: string
+          example: Phát hành dịp lễ quốc khánh
+
+    MovieRelease:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+        note:
           type: string
 
   parameters:

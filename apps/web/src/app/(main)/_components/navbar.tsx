@@ -21,7 +21,7 @@ export const Navbar = () => {
             className={`max-md:absolute max-md:top-0 max-md:left-0 max-md:font-medium
   max-md:text-lg z-50 flex flex-col md:flex-row items-center
   max-md:justify-center gap-8 md:px-8 py-3 max-md:h-screen
-  md:rounded-full backdrop-blur bg-black/30 md:bg-white/10 md:border
+  md:rounded-full backdrop-blur bg-black md:bg-white/10 md:border
   border-gray-300/20 overflow-hidden transition-[width] duration-300 p-4 text-white ${
     isOpen ? 'max-md:w-full' : 'max-md:hidden'
   }`}

@@ -337,7 +337,7 @@ const config = {
       "value": "prisma-client-js"
     },
     "output": {
-      "value": "/home/xuanhien/Documents/repo/movie-hub/apps/booking-service/generated/prisma",
+      "value": "/home/vinhco/movie-hub/apps/booking-service/generated/prisma",
       "fromEnvVar": null
     },
     "config": {
@@ -346,12 +346,12 @@ const config = {
     "binaryTargets": [
       {
         "fromEnvVar": null,
-        "value": "debian-openssl-1.1.x",
+        "value": "debian-openssl-3.0.x",
         "native": true
       }
     ],
     "previewFeatures": [],
-    "sourceFilePath": "/home/xuanhien/Documents/repo/movie-hub/apps/booking-service/prisma/schema.prisma",
+    "sourceFilePath": "/home/vinhco/movie-hub/apps/booking-service/prisma/schema.prisma",
     "isCustomOutput": true
   },
   "relativeEnvPaths": {
@@ -365,6 +365,7 @@ const config = {
     "db"
   ],
   "activeProvider": "postgresql",
+  "postinstall": false,
   "inlineDatasources": {
     "db": {
       "url": {

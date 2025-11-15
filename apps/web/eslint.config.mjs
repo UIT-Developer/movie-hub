@@ -22,6 +22,7 @@ export default [
   {
     rules: {
       '@nx/enforce-module-boundaries': 'off',
+      "no-useless-catch": "off"
     }
   }
 

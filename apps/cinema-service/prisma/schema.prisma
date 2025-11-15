@@ -141,7 +141,6 @@ model Halls {
   screen_type  String?    @db.VarChar(50)
   sound_system String?    @db.VarChar(50)
   features     String[]   @db.Text
-  layout_data  Json?
   status       HallStatus @default(ACTIVE)
   created_at   DateTime   @default(now()) @db.Timestamp(6)
   updated_at   DateTime   @default(now()) @db.Timestamp(6)

@@ -83,7 +83,7 @@ export const DateSelect = ({ id }: { id: string }) => {
     if (!selectedShowtime) {
       return toast.error('Please select a showtime');
     }
-    router.push(`/showtimes/${selectedShowtime}`);
+    router.push('/showtimes/1743dad9-5b78-49a1-be56-5c7205d248b2');
     scrollTo(0, 0);
   }, [router, selected, selectedShowtime]);
 

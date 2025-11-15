@@ -78,8 +78,6 @@ export class PaymentService {
 
       return this.mapToDto({ ...payment, payment_url: paymentUrl });
     
-
-    return this.mapToDto(payment);
   }
 
   async createVNPayUrl(
@@ -237,7 +235,7 @@ export class PaymentService {
   }
 
   async handleVNPayReturn(vnpParams: Record<string, string>): Promise<{ status: string; code: string }> {
-    const secureHash = vnpParams.vnp_SecureHash;
+    const secureHash = vnpParams.vnp_SecureHash;  
     
     delete vnpParams.vnp_SecureHash;
     delete vnpParams.vnp_SecureHashType;

@@ -8,7 +8,7 @@ import {
   SeatStatusEnum,
   SeatTypeEnum,
 } from '@movie-hub/shared-types';
-import { Halls, Seats } from 'apps/cinema-service/generated/prisma';
+import { Halls, Seats } from '../../../generated/prisma';
 import { HallSeatsTemplates } from './seat-template';
 
 export class HallMapper {

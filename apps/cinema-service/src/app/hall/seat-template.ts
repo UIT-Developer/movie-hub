@@ -1,5 +1,5 @@
 import { LayoutTypeEnum } from '@movie-hub/shared-types';
-import { SeatType } from 'apps/cinema-service/generated/prisma';
+import { SeatType } from '../../../generated/prisma';
 
 export const StandardLayoutTemplate = {
   capacity: 100,

@@ -165,4 +165,9 @@ export class ShowtimeService {
       await this.realtimeService.deleteCacheByPrefix(`hall:${hallId}:seats`);
     await this.realtimeService.deleteCacheByPrefix('ticketPricing');
   }
+
+  async getSessionTTL(userId: string): Promise<{ ttl: number }> {
+    const ttl = await this.realtimeService.getSessionTTL(userId);
+    return { ttl };
+  }
 }

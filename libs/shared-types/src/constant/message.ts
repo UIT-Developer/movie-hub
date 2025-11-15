@@ -38,6 +38,7 @@ export const CinemaMessage = {
   },
   SHOWTIME: {
     GET_SHOWTIME_SEATS: 'showtime.get_showtime_seats',
+    GET_SESSION_TTL: 'showtime.get_session_ttl',
   },
   TICKET_PRICING: {
     GET_PRICING_FOR_HALL: 'ticket_pricing.get_pricing_for_hall',

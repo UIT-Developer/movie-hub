@@ -21,4 +21,12 @@ export class ShowtimeService {
       })
     );
   }
+
+  async getSessionTTL(userId: string) {
+    return lastValueFrom(
+      this.cinemaClient.send(CinemaMessage.SHOWTIME.GET_SESSION_TTL, {
+        userId,
+      })
+    );
+  }
 }

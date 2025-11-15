@@ -4,6 +4,7 @@ import { PaymentService } from './payment.service';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { ConfigService } from '@nestjs/config';
 import { SERVICE_NAME } from '@movie-hub/shared-types';
+import { AuthModule } from '../../common/auth/auth.module';
 
 @Module({
   imports: [
@@ -19,18 +20,9 @@ import { SERVICE_NAME } from '@movie-hub/shared-types';
           },
         }),
       },
-      {
-        name: SERVICE_NAME.USER,
-        inject: [ConfigService],
-        useFactory: (configService: ConfigService) => ({
-          transport: Transport.TCP,
-          options: {
-            host: configService.get<string>('USER_HOST'),
-            port: configService.get<number>('USER_PORT'),
-          },
-        }),
-      },
+    // USER client is provided by AuthModule
     ]),
+    AuthModule,
   ],
   controllers: [PaymentController],
   providers: [PaymentService],

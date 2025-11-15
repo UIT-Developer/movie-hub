@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { PromotionController } from './promotion.controller';
 import { PromotionService } from './promotion.service';
 import { SERVICE_NAME } from '@movie-hub/shared-types';
+import { AuthModule } from '../../common/auth/auth.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { SERVICE_NAME } from '@movie-hub/shared-types';
         inject: [ConfigService],
       },
     ]),
+    AuthModule
   ],
   controllers: [PromotionController],
   providers: [PromotionService],

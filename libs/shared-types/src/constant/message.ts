@@ -23,10 +23,26 @@ export const MovieServiceMessage = {
 export const CinemaMessage = {
   GET_CINEMAS: 'cinema.getAll',
   CINEMA: {
+    CREATE: 'cinema.create',
+    UPDATE: 'cinema.update',
+    DELETE: 'cinema.delete',
     GET_SHOWTIME: 'cinema.showtime',
+  },
+  HALL: {
+    GET_DETAIL: 'hall.get_detail',
+    GET_BY_CINEMA: 'hall.get_by_cinema',
+    CREATE: 'hall.create',
+    UPDATE: 'hall.update',
+    DELETE: 'hall.delete',
+    UPDATE_SEAT_STATUS: 'cinema.update_seat_status',
   },
   SHOWTIME: {
     GET_SHOWTIME_SEATS: 'showtime.get_showtime_seats',
+    GET_SESSION_TTL: 'showtime.get_session_ttl',
+  },
+  TICKET_PRICING: {
+    GET_PRICING_FOR_HALL: 'ticket_pricing.get_pricing_for_hall',
+    UPDATE_PRICING_OF_TICKET: 'ticket_pricing.update_ticket_pricing',
   },
   GET_CINEMAS_NEARBY: 'CINEMA.GET_CINEMAS_NEARBY',
   GET_CINEMAS_WITH_FILTERS: 'CINEMA.GET_CINEMAS_WITH_FILTERS',

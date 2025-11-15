@@ -37,6 +37,12 @@ enum HallStatus {
   CLOSED
 }
 
+enum LayoutType {
+  STANDARD
+  DUAL_AISLE
+  STADIUM
+}
+
 enum SeatType {
   STANDARD
   VIP
@@ -141,7 +147,7 @@ model Halls {
   screen_type  String?    @db.VarChar(50)
   sound_system String?    @db.VarChar(50)
   features     String[]   @db.Text
-  layout_data  Json?
+  layout_type  LayoutType @default(STANDARD)
   status       HallStatus @default(ACTIVE)
   created_at   DateTime   @default(now()) @db.Timestamp(6)
   updated_at   DateTime   @default(now()) @db.Timestamp(6)
@@ -158,8 +164,6 @@ model Seats {
   row_letter  String     @db.VarChar(2)
   seat_number Int
   type        SeatType   @default(STANDARD)
-  position_x  Int?
-  position_y  Int?
   status      SeatStatus @default(ACTIVE)
   created_at  DateTime   @default(now()) @db.Timestamp(6)
 
@@ -196,7 +200,6 @@ model Showtimes {
   format          Format
   language        String         @db.VarChar(10)
   subtitles       String[]       @db.Text
-  base_price      Decimal        @db.Decimal(8, 2)
   available_seats Int
   total_seats     Int
   status          ShowtimeStatus @default(SCHEDULED)

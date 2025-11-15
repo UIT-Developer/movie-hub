@@ -1,8 +1,10 @@
 import {
   CinemaMessage,
+  CreateCinemaRequest,
   GetShowtimesQuery,
   SERVICE_NAME,
   ShowtimeSummaryResponse,
+  UpdateCinemaRequest,
 } from '@movie-hub/shared-types';
 import { Inject, Injectable } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
@@ -16,6 +18,30 @@ export class CinemaService {
 
   async getCinemas() {
     return lastValueFrom(this.cinemaClient.send(CinemaMessage.GET_CINEMAS, {}));
+  }
+
+  async createCinema(createCinemaDto: CreateCinemaRequest) {
+    return lastValueFrom(
+      this.cinemaClient.send(CinemaMessage.CINEMA.CREATE, createCinemaDto)
+    );
+  }
+
+  async updateCinema(
+    cinemaId: string,
+    updateCinemaRequest: UpdateCinemaRequest
+  ) {
+    return lastValueFrom(
+      this.cinemaClient.send(CinemaMessage.CINEMA.UPDATE, {
+        cinemaId,
+        updateCinemaRequest,
+      })
+    );
+  }
+
+  async deleteCinema(cinemaId: string) {
+    return lastValueFrom(
+      this.cinemaClient.send(CinemaMessage.CINEMA.DELETE, cinemaId)
+    );
   }
 
   /**

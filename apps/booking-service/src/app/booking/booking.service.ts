@@ -6,6 +6,7 @@ import {
   CreateBookingDto,
   BookingDetailDto,
   BookingSummaryDto,
+  BookingCalculationDto,
   BookingStatus,
   PaymentStatus,
   CinemaMessage,
@@ -547,5 +548,228 @@ export class BookingService {
         'Failed to get held seats from cinema service. Please try again.'
       );
     }
+  }
+
+  /**
+   * ✅ Get detailed booking summary with grouped information
+   * Transforms existing booking data into BookingCalculationDto format
+   * This shows complete breakdown of tickets, concessions, pricing, taxes, and discounts
+   */
+  async getBookingSummary(
+    bookingId: string,
+    userId: string
+  ): Promise<BookingCalculationDto> {
+    // Get complete booking details
+    const booking = await this.prisma.bookings.findFirst({
+      where: { id: bookingId, user_id: userId },
+      include: {
+        tickets: true,
+        booking_concessions: {
+          include: {
+            concession: true,
+          },
+        },
+      },
+    });
+
+    if (!booking) {
+      throw new BadRequestException('Booking not found');
+    }
+
+    // Fetch showtime data for movie/cinema information
+    let showtimeData;
+    try {
+      showtimeData = await this.getShowtimeDetails(booking.showtime_id, userId);
+    } catch {
+      showtimeData = null;
+    }
+
+    // Get seat details from showtime data
+    const seatsArray = showtimeData?.seats
+      ? showtimeData.seats
+      : showtimeData?.seat_map
+      ? showtimeData.seat_map.flatMap((row: { seats?: unknown[] }) =>
+          (row.seats || []).map((s: Record<string, unknown>) => ({
+            ...s,
+            type: s.seatType || s.type,
+          }))
+        )
+      : [];
+
+    const seatMap = new Map(
+      (seatsArray || []).map((s: { id: string }) => [s.id, s])
+    ) as Map<string, Record<string, unknown>>;
+
+    // Group tickets by ticket type
+    const ticketGroups = this.groupTicketsByType(booking.tickets, seatMap);
+
+    // Calculate ticket subtotal
+    const ticketsSubtotal = ticketGroups.reduce((sum, g) => sum + g.subtotal, 0);
+
+    // Format concessions
+    const concessions = (booking.booking_concessions || []).map((bc) => ({
+      concessionId: bc.concession_id,
+      name: bc.concession?.name || 'Concession',
+      quantity: bc.quantity,
+      unitPrice: Number(bc.unit_price),
+      totalPrice: Number(bc.total_price),
+    }));
+
+    const concessionsSubtotal = concessions.reduce(
+      (sum, c) => sum + c.totalPrice,
+      0
+    );
+
+    // Calculate pricing breakdown
+    const subtotal = Number(booking.subtotal);
+    const totalDiscount = Number(booking.discount) + Number(booking.points_discount);
+    
+    // Calculate tax (reverse calculation from final amount)
+    const totalBeforeTax = subtotal - totalDiscount;
+    const VAT_RATE = 10;
+    const vatAmount = Math.round((totalBeforeTax * VAT_RATE) / 100);
+
+    // Build promotion discount info
+    const promotionDiscount = booking.promotion_code
+      ? {
+          code: booking.promotion_code,
+          description: `Promotion code: ${booking.promotion_code}`,
+          discountAmount: Number(booking.discount),
+        }
+      : undefined;
+
+    // Build loyalty points discount info
+    const loyaltyPointsDiscount =
+      booking.points_used > 0
+        ? {
+            pointsUsed: booking.points_used,
+            discountAmount: Number(booking.points_discount),
+          }
+        : undefined;
+
+    // Get loyalty points information
+    let loyaltyPoints;
+    if (booking.points_used > 0) {
+      try {
+        const loyaltyAccount = await this.prisma.loyaltyAccounts.findUnique({
+          where: { user_id: userId },
+        });
+
+        if (loyaltyAccount) {
+          // Calculate points earned from this booking (1 point per 1000 VND)
+          const pointsEarned = Math.floor(Number(booking.final_amount) / 1000);
+
+          loyaltyPoints = {
+            used: booking.points_used,
+            willEarn: pointsEarned,
+            currentBalance: loyaltyAccount.current_points,
+            newBalance:
+              loyaltyAccount.current_points - booking.points_used + pointsEarned,
+          };
+        }
+      } catch {
+        // If loyalty account not available, skip
+      }
+    }
+
+    // Build the summary
+    const summary: BookingCalculationDto = {
+      movie: {
+        id: showtimeData?.showtime?.movie?.id || '',
+        title: showtimeData?.showtime?.movie?.title || 'Movie',
+        posterUrl: showtimeData?.showtime?.movie?.posterUrl,
+        duration: showtimeData?.showtime?.movie?.duration || 0,
+        rating: showtimeData?.showtime?.movie?.rating || 'N/A',
+      },
+      cinema: {
+        id: showtimeData?.showtime?.cinema?.id || '',
+        name: showtimeData?.showtime?.cinema?.name || 'Cinema',
+        address: showtimeData?.showtime?.cinema?.address || '',
+        hallName: showtimeData?.showtime?.hall?.name || 'Hall',
+      },
+      showtime: {
+        id: booking.showtime_id,
+        startTime: showtimeData?.showtime?.startTime || new Date(),
+        endTime: showtimeData?.showtime?.endTime || new Date(),
+        format: showtimeData?.showtime?.format || '2D',
+        language: showtimeData?.showtime?.language || 'Vietnamese',
+      },
+      ticketGroups,
+      concessions,
+      pricing: {
+        ticketsSubtotal,
+        concessionsSubtotal,
+        subtotal,
+        tax: {
+          vatRate: VAT_RATE,
+          vatAmount,
+        },
+        promotionDiscount,
+        loyaltyPointsDiscount,
+        totalDiscount,
+        totalBeforeTax,
+        finalAmount: Number(booking.final_amount),
+      },
+      loyaltyPoints,
+      bookingCode: booking.booking_code,
+      expiresAt: booking.expires_at,
+    };
+
+    return summary;
+  }
+
+  /**
+   * Helper: Group tickets by ticket type
+   */
+  private groupTicketsByType(
+    tickets: Array<{
+      seat_id: string;
+      ticket_type: string;
+      price: unknown;
+    }>,
+    seatMap: Map<string, Record<string, unknown>>
+  ) {
+    const groups: Record<
+      string,
+      {
+        ticketType: string;
+        quantity: number;
+        pricePerTicket: number;
+        subtotal: number;
+        seats: Array<{
+          seatId: string;
+          row: string;
+          number: number;
+          seatType: string;
+        }>;
+      }
+    > = {};
+
+    for (const ticket of tickets) {
+      const ticketType = ticket.ticket_type;
+      const price = Number(ticket.price);
+      const seat = seatMap.get(ticket.seat_id);
+
+      if (!groups[ticketType]) {
+        groups[ticketType] = {
+          ticketType,
+          quantity: 0,
+          pricePerTicket: price,
+          subtotal: 0,
+          seats: [],
+        };
+      }
+
+      groups[ticketType].quantity++;
+      groups[ticketType].subtotal += price;
+      groups[ticketType].seats.push({
+        seatId: ticket.seat_id,
+        row: (seat?.row as string) || 'A',
+        number: (seat?.number as number) || 1,
+        seatType: (seat?.type as string) || 'STANDARD',
+      });
+    }
+
+    return Object.values(groups);
   }
 }

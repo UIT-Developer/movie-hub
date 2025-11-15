@@ -36,3 +36,11 @@ export const CinemaMessage = {
   GET_AVAILABLE_CITIES: 'CINEMA.GET_AVAILABLE_CITIES',
   GET_AVAILABLE_DISTRICTS: 'CINEMA.GET_AVAILABLE_DISTRICTS',
 };
+
+export const BookingMessage = {
+  CREATE: 'booking.create',
+  FIND_ALL: 'booking.findAll',
+  FIND_ONE: 'booking.findOne',
+  CANCEL: 'booking.cancel',
+  GET_SUMMARY: 'booking.getSummary',
+};

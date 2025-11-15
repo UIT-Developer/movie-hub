@@ -3,7 +3,9 @@ import {
   CreateBookingDto,
   BookingDetailDto,
   BookingSummaryDto,
+  BookingCalculationDto,
   BookingStatus,
+  BookingMessage,
 } from '@movie-hub/shared-types';
 import { Inject, Injectable } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
@@ -53,6 +55,15 @@ export class BookingService {
   ): Promise<BookingDetailDto> {
     return lastValueFrom(
       this.bookingClient.send('booking.cancel', { id, userId, reason })
+    );
+  }
+
+  async getBookingSummary(
+    id: string,
+    userId: string
+  ): Promise<BookingCalculationDto> {
+    return lastValueFrom(
+      this.bookingClient.send(BookingMessage.GET_SUMMARY, { id, userId })
     );
   }
 }

@@ -11,7 +11,7 @@ import {
 import { ServiceResult } from '@movie-hub/shared-types/common';
 import { HallMapper } from './hall.mapper';
 import { AutoPricingGenerator } from './pricing-ticket-template';
-import { SeatStatus } from 'apps/cinema-service/generated/prisma';
+import { SeatStatus } from '../../../generated/prisma';
 
 @Injectable()
 export class HallService {

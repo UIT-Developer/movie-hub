@@ -9,7 +9,7 @@ import {
 import { PrismaService } from '../prisma.service';
 import { RealtimeService } from '../realtime/realtime.service';
 import { ShowtimeSeatMapper } from './showtime-seat.mapper';
-import { LayoutType } from 'apps/cinema-service/generated/prisma';
+import { LayoutType } from '../../../generated/prisma';
 
 @Injectable()
 export class ShowtimeService {

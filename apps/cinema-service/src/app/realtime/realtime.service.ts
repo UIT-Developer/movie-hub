@@ -20,9 +20,7 @@ export class RealtimeService implements OnModuleInit, OnModuleDestroy {
 
   async onModuleInit() {
     this.logger.log('✅ RealtimeService initialized');
-    await this.redis.enableKeyspaceEvents();
     await this.subscribeToGatewayChannels();
-    await this.subscribeToKeyExpiration();
   }
 
   private async subscribeToGatewayChannels() {
@@ -34,12 +32,6 @@ export class RealtimeService implements OnModuleInit, OnModuleDestroy {
     );
   }
 
-  private async subscribeToKeyExpiration() {
-    await this.redis.psubscribe('__keyevent@0__:expired', async (_, __, key) =>
-      this.handleKeyExpiration(key)
-    );
-  }
-
   private async handleGatewayMessage(channel: string, message: string) {
     const data = JSON.parse(message) as SeatEvent;
     if (channel === 'gateway.hold_seat') await this.handleHoldSeat(data);
@@ -47,59 +39,20 @@ export class RealtimeService implements OnModuleInit, OnModuleDestroy {
       await this.handleReleaseSeat(data);
   }
 
-  // 🔑 Khi session hết hạn -> clear toàn bộ ghế user đó giữ
-  private async handleKeyExpiration(key: string) {
-    if (!key.startsWith('hold:session:')) return;
-
-    const userId = key.split(':')[2];
-    this.logger.log(`Session expired for ${userId}`);
-
-    const userShowtimeKeys = await this.redis.keys(
-      `hold:user:${userId}:showtime:*`
-    );
-
-    for (const userShowtimeKey of userShowtimeKeys) {
-      const showtimeId = userShowtimeKey.split(':')[4];
-      const seatIds = await this.redis.smembers(userShowtimeKey);
-
-      if (seatIds.length === 0) continue;
-
-      const seatKeys = seatIds.map(
-        (seatId) => `hold:showtime:${showtimeId}:${seatId}`
-      );
-      await this.redis.del(...seatKeys);
-      await this.redis.del(userShowtimeKey);
-
-      await this.redis.publish(
-        'cinema.seat_expired',
-        JSON.stringify({ showtimeId, seatIds, userId })
-      );
-
-      this.logger.log(
-        `Released ${seatIds.length} seat(s) for showtime ${showtimeId}`
-      );
-    }
-
-    this.logger.log(`Cleared all held seats for ${userId}`);
-  }
-
-  // ✅ Giữ 1 ghế
+  // ---------------------------------------
+  // 🚀 GIỮ GHẾ – không còn session key
+  // ---------------------------------------
   private async handleHoldSeat(event: SeatEvent) {
     const { showtimeId, seatId, userId } = event;
-    console.log('Hold seat: ', event);
     const userKey = `hold:user:${userId}:showtime:${showtimeId}`;
-    const sessionKey = `hold:session:${userId}`;
     const seatKey = `hold:showtime:${showtimeId}:${seatId}`;
 
-    // Clear old session nếu đổi showtime
+    // Nếu user đổi showtime → xoá ghế cũ
     await this.clearOldShowtimeSession(userId, showtimeId);
 
     // Check limit
     const currentSeats = await this.redis.smembers(userKey);
     if (currentSeats.length >= this.HOLD_LIMIT) {
-      this.logger.warn(
-        `User ${userId} reached seat hold limit (${this.HOLD_LIMIT})`
-      );
       await this.redis.publish(
         'cinema.seat_limit_reached',
         JSON.stringify({ userId, showtimeId, limit: this.HOLD_LIMIT })
@@ -107,15 +60,9 @@ export class RealtimeService implements OnModuleInit, OnModuleDestroy {
       return;
     }
 
-    // Tạo session nếu chưa có
-    const sessionExists = await this.redis.exists(sessionKey);
-    if (!sessionExists) {
-      await this.redis.set(sessionKey, 'active', this.HOLD_TTL);
-      this.logger.log(`New session created for ${userId}`);
-    }
-
+    // Check ghế đã bị giữ chưa
     const exists = await this.redis.exists(seatKey);
-    if (exists) return; // ghế đã bị giữ rồi
+    if (exists) return;
 
     // Giữ ghế
     await Promise.all([
@@ -134,7 +81,9 @@ export class RealtimeService implements OnModuleInit, OnModuleDestroy {
     );
   }
 
-  // ✅ Bỏ giữ 1 ghế
+  // ---------------------------------------
+  // ❌ BỎ GIỮ GHẾ (không ảnh hưởng session)
+  // ---------------------------------------
   private async handleReleaseSeat({ showtimeId, seatId, userId }: SeatEvent) {
     const userKey = `hold:user:${userId}:showtime:${showtimeId}`;
     const seatKey = `hold:showtime:${showtimeId}:${seatId}`;
@@ -154,16 +103,56 @@ export class RealtimeService implements OnModuleInit, OnModuleDestroy {
       this.logger.log(
         `No held seats left for ${userId} in showtime ${showtimeId}`
       );
-    }
 
-    const userAllKeys = await this.redis.keys(`hold:user:${userId}:showtime:*`);
-    if (userAllKeys.length === 0) {
-      await this.redis.del(`hold:session:${userId}`);
-      this.logger.log(`Session cleared for ${userId}`);
+      // Xoá key luôn nếu rỗng
+      await this.redis.del(userKey);
     }
   }
 
-  // ✅ Các hàm cache phụ trợ (giữ nguyên)
+  // ---------------------------------------
+  // 🧹 Xử lý đổi showtime → clear ghế cũ
+  // ---------------------------------------
+  private async clearOldShowtimeSession(userId: string, newShowtimeId: string) {
+    const userKeys = await this.redis.keys(`hold:user:${userId}:showtime:*`);
+
+    // Không có ghế cũ
+    if (userKeys.length === 0) return;
+
+    const oldUserKey = userKeys[0];
+    const oldShowtimeId = oldUserKey.split(':')[4];
+
+    // Cùng showtime → không xoá
+    if (oldShowtimeId === newShowtimeId) return;
+
+    // Ghế cũ
+    const oldSeatIds = await this.redis.smembers(oldUserKey);
+
+    if (oldSeatIds.length > 0) {
+      const seatKeys = oldSeatIds.map(
+        (seatId) => `hold:showtime:${oldShowtimeId}:${seatId}`
+      );
+      await this.redis.del(...seatKeys);
+
+      await this.redis.publish(
+        'cinema.seat_released',
+        JSON.stringify({
+          showtimeId: oldShowtimeId,
+          seatIds: oldSeatIds,
+          userId,
+        })
+      );
+    }
+
+    await this.redis.del(oldUserKey);
+
+    this.logger.warn(
+      `User ${userId} switched showtime from ${oldShowtimeId} → ${newShowtimeId}. Old seats cleared.`
+    );
+  }
+
+  // ---------------------------------------
+  // 🔎 Utility
+  // ---------------------------------------
   async getAllHeldSeats(showtimeId: string): Promise<Record<string, string>> {
     const keys = await this.redis.keys(`hold:showtime:${showtimeId}:*`);
     if (keys.length === 0) return {};
@@ -183,17 +172,15 @@ export class RealtimeService implements OnModuleInit, OnModuleDestroy {
     return heldSeats;
   }
 
-  async getSessionTTL(userId: string): Promise<number> {
-    const sessionKey = `hold:session:${userId}`;
-    const ttl = await this.redis.ttl(sessionKey);
-    return ttl;
-  }
-
   async getUserHeldSeats(
     showtimeId: string,
     userId: string
   ): Promise<string[]> {
     return this.redis.smembers(`hold:user:${userId}:showtime:${showtimeId}`);
+  }
+
+  async getUserTTL(showtimeId: string, userId: string): Promise<number> {
+    return this.redis.ttl(`hold:user:${userId}:showtime:${showtimeId}`);
   }
 
   async getOrSetCache<T>(
@@ -214,50 +201,5 @@ export class RealtimeService implements OnModuleInit, OnModuleDestroy {
 
   async onModuleDestroy() {
     await this.redis.quitAll();
-  }
-
-  // HELPER
-  private async clearOldShowtimeSession(userId: string, newShowtimeId: string) {
-    const sessionKey = `hold:session:${userId}`;
-
-    // Parse session safely
-    const sessionRaw = await this.redis.get(sessionKey);
-    const currentSession = sessionRaw
-      ? (JSON.parse(sessionRaw) as { showtimeId: string })
-      : null;
-
-    // Không có session hoặc session trùng showtime -> không cần clear
-    if (!currentSession || currentSession.showtimeId === newShowtimeId) return;
-
-    const oldShowtimeId = currentSession.showtimeId;
-    const oldUserKey = `hold:user:${userId}:showtime:${oldShowtimeId}`;
-
-    // Lấy danh sách ghế đang giữ
-    const oldSeatIds = await this.redis.smembers(oldUserKey);
-
-    if (oldSeatIds.length > 0) {
-      // Xoá tất cả hold keys của ghế
-      const seatKeys = oldSeatIds.map(
-        (seatId) => `hold:showtime:${oldShowtimeId}:${seatId}`
-      );
-      await this.redis.del(...seatKeys);
-
-      // Emit event release cho phòng cũ
-      await this.redis.publish(
-        'cinema.seat_released',
-        JSON.stringify({
-          showtimeId: oldShowtimeId,
-          seatIds: oldSeatIds,
-          userId,
-        })
-      );
-    }
-
-    // Xoá user seat set + session cũ
-    await Promise.all([this.redis.del(oldUserKey), this.redis.del(sessionKey)]);
-
-    this.logger.warn(
-      `User ${userId} switched showtime from ${oldShowtimeId} to ${newShowtimeId}. Old session cleared.`
-    );
   }
 }

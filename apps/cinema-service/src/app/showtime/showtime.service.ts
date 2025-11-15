@@ -85,7 +85,7 @@ export class ShowtimeService {
     );
 
     // ✅ Cache ticket pricing
-    const ticketPricingCacheKey = `ticketPricing:${showtime.hall_id}:${showtime.day_type}:${showtime.time_slot}`;
+    const ticketPricingCacheKey = `ticketPricing:${showtime.hall_id}:${showtime.day_type}`;
     const ticketPricings = await this.realtimeService.getOrSetCache(
       ticketPricingCacheKey,
       3600 * 6,
@@ -94,7 +94,6 @@ export class ShowtimeService {
           where: {
             hall_id: showtime.hall_id,
             day_type: showtime.day_type,
-            time_slot: showtime.time_slot,
           },
         });
       }
@@ -125,18 +124,25 @@ export class ShowtimeService {
       }
     });
 
+    // Lấy cinema name
     const cinemaName = await this.prisma.cinemas
       .findUnique({ where: { id: showtime.cinema_id } })
-      .then((c) => c?.name || '');
+      .then((c) => c?.name ?? '');
 
-    const layoutType = await this.prisma.halls
-      .findUnique({ where: { id: showtime.hall_id } })
-      .then((h) => h?.layout_type || LayoutType.STANDARD);
+    // Lấy hall (trả về object an toàn)
+    const hall = await this.prisma.halls.findUnique({
+      where: { id: showtime.hall_id },
+    });
+
+    // Chuẩn bị giá trị mặc định nếu hall null
+    const hallName = hall?.name ?? '';
+    const layoutType = hall?.layout_type ?? LayoutType.STANDARD;
 
     // 🧠 Mapping response cuối cùng
     return this.showtimeSeatMapper.toShowtimeSeatResponse({
       showtime,
       cinemaName,
+      hallName,
       layoutType,
       seats,
       reservedMap,
@@ -166,8 +172,11 @@ export class ShowtimeService {
     await this.realtimeService.deleteCacheByPrefix('ticketPricing');
   }
 
-  async getSessionTTL(userId: string): Promise<{ ttl: number }> {
-    const ttl = await this.realtimeService.getSessionTTL(userId);
+  async getSessionTTL(
+    showtimeId: string,
+    userId: string
+  ): Promise<{ ttl: number }> {
+    const ttl = await this.realtimeService.getUserTTL(showtimeId, userId);
     return { ttl };
   }
 }

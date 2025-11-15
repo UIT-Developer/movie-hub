@@ -44,3 +44,23 @@ export const BookingMessage = {
   CANCEL: 'booking.cancel',
   GET_SUMMARY: 'booking.getSummary',
 };
+
+export const ConcessionMessage = {
+  FIND_ALL: 'concession.findAll',
+  FIND_ONE: 'concession.findOne',
+  CREATE: 'concession.create',
+  UPDATE: 'concession.update',
+  DELETE: 'concession.delete',
+  UPDATE_INVENTORY: 'concession.updateInventory',
+};
+
+export const PromotionMessage = {
+  FIND_ALL: 'promotion.findAll',
+  FIND_ONE: 'promotion.findOne',
+  FIND_BY_CODE: 'promotion.findByCode',
+  VALIDATE: 'promotion.validate',
+  CREATE: 'promotion.create',
+  UPDATE: 'promotion.update',
+  DELETE: 'promotion.delete',
+  TOGGLE_ACTIVE: 'promotion.toggleActive',
+};

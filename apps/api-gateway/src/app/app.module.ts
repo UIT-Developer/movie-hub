@@ -9,6 +9,8 @@ import { ZodValidationPipe } from 'nestjs-zod';
 import { RealtimeModule } from './module/realtime/realtime.module';
 import { BookingModule } from './module/booking/booking.module';
 import { PaymentModule } from './module/payment/payment.module';
+import { ConcessionModule } from './module/concession/concession.module';
+import { PromotionModule } from './module/promotion/promotion.module';
 
 @Module({
   imports: [
@@ -32,6 +34,8 @@ import { PaymentModule } from './module/payment/payment.module';
     CinemaModule,
     BookingModule,
     PaymentModule,
+    ConcessionModule,
+    PromotionModule,
     RealtimeModule,
   ],
   controllers: [],

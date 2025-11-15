@@ -63,25 +63,11 @@ enum DayType {
   HOLIDAY
 }
 
-enum TimeSlot {
-  MORNING
-  AFTERNOON
-  EVENING
-  LATE_NIGHT
-}
-
 enum Format {
   TWO_D
   THREE_D
   IMAX
   FOUR_DX
-}
-
-enum TicketType {
-  ADULT
-  CHILD
-  STUDENT
-  COUPLE
 }
 
 enum ShowtimeStatus {
@@ -177,15 +163,13 @@ model TicketPricing {
   id          String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   hall_id     String     @db.Uuid
   seat_type   SeatType
-  ticket_type TicketType
   day_type    DayType
-  time_slot   TimeSlot
   price       Decimal    @db.Decimal(8, 2)
   created_at  DateTime   @default(now()) @db.Timestamp(6)
 
   hall Halls @relation(fields: [hall_id], references: [id], onDelete: Cascade)
 
-  @@unique([hall_id, seat_type, ticket_type, day_type, time_slot])
+  @@unique([hall_id, seat_type, day_type])
 }
 
 model Showtimes {
@@ -196,7 +180,6 @@ model Showtimes {
   start_time      DateTime       @db.Timestamp(6)
   end_time        DateTime       @db.Timestamp(6)
   day_type        DayType        @default(WEEKDAY)
-  time_slot       TimeSlot       @default(MORNING)
   format          Format
   language        String         @db.VarChar(10)
   subtitles       String[]       @db.Text

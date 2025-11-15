@@ -91,6 +91,9 @@ export class RealtimeService implements OnModuleInit, OnModuleDestroy {
     const sessionKey = `hold:session:${userId}`;
     const seatKey = `hold:showtime:${showtimeId}:${seatId}`;
 
+    // Clear old session nếu đổi showtime
+    await this.clearOldShowtimeSession(userId, showtimeId);
+
     // Check limit
     const currentSeats = await this.redis.smembers(userKey);
     if (currentSeats.length >= this.HOLD_LIMIT) {
@@ -180,6 +183,12 @@ export class RealtimeService implements OnModuleInit, OnModuleDestroy {
     return heldSeats;
   }
 
+  async getSessionTTL(userId: string): Promise<number> {
+    const sessionKey = `hold:session:${userId}`;
+    const ttl = await this.redis.ttl(sessionKey);
+    return ttl;
+  }
+
   async getUserHeldSeats(
     showtimeId: string,
     userId: string
@@ -205,5 +214,50 @@ export class RealtimeService implements OnModuleInit, OnModuleDestroy {
 
   async onModuleDestroy() {
     await this.redis.quitAll();
+  }
+
+  // HELPER
+  private async clearOldShowtimeSession(userId: string, newShowtimeId: string) {
+    const sessionKey = `hold:session:${userId}`;
+
+    // Parse session safely
+    const sessionRaw = await this.redis.get(sessionKey);
+    const currentSession = sessionRaw
+      ? (JSON.parse(sessionRaw) as { showtimeId: string })
+      : null;
+
+    // Không có session hoặc session trùng showtime -> không cần clear
+    if (!currentSession || currentSession.showtimeId === newShowtimeId) return;
+
+    const oldShowtimeId = currentSession.showtimeId;
+    const oldUserKey = `hold:user:${userId}:showtime:${oldShowtimeId}`;
+
+    // Lấy danh sách ghế đang giữ
+    const oldSeatIds = await this.redis.smembers(oldUserKey);
+
+    if (oldSeatIds.length > 0) {
+      // Xoá tất cả hold keys của ghế
+      const seatKeys = oldSeatIds.map(
+        (seatId) => `hold:showtime:${oldShowtimeId}:${seatId}`
+      );
+      await this.redis.del(...seatKeys);
+
+      // Emit event release cho phòng cũ
+      await this.redis.publish(
+        'cinema.seat_released',
+        JSON.stringify({
+          showtimeId: oldShowtimeId,
+          seatIds: oldSeatIds,
+          userId,
+        })
+      );
+    }
+
+    // Xoá user seat set + session cũ
+    await Promise.all([this.redis.del(oldUserKey), this.redis.del(sessionKey)]);
+
+    this.logger.warn(
+      `User ${userId} switched showtime from ${oldShowtimeId} to ${newShowtimeId}. Old session cleared.`
+    );
   }
 }

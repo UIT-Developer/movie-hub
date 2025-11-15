@@ -200,7 +200,6 @@ model Showtimes {
   format          Format
   language        String         @db.VarChar(10)
   subtitles       String[]       @db.Text
-  base_price      Decimal        @db.Decimal(8, 2)
   available_seats Int
   total_seats     Int
   status          ShowtimeStatus @default(SCHEDULED)

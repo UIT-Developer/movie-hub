@@ -46,4 +46,8 @@ export class ShowtimeController {
       payload.userId
     );
   }
+  @MessagePattern(CinemaMessage.SHOWTIME.GET_SESSION_TTL)
+  getSessionTTL(@Payload() payload: { userId: string }) {
+    return this.showtimeService.getSessionTTL(payload.userId);
+  }
 }

@@ -2,21 +2,40 @@
 import { useClerk, UserButton, useUser } from '@clerk/nextjs';
 import { Button } from '@movie-hub/shacdn-ui/button';
 import { Logo } from 'apps/web/src/components/logo';
-import { MenuIcon, SearchIcon, XIcon } from 'lucide-react';
+import { MenuIcon, XIcon } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
+import { Search } from './search';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@movie-hub/shacdn-ui/select';
 
 export const Navbar = () => {
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const { isSignedIn } = useUser();
   const { openSignIn } = useClerk();
+
+    const [rapChon, setRapChon] = useState<string>('');
+
+    const dsRap = ['Rạp A', 'Rạp B', 'Rạp C', 'Rạp D'];
+
   return (
     <nav className="fixed top-0 left-0 w-screen z-50 bg-black/10 backdrop-blur-lg shadow-lg">
       <div className="px-6 lg:px-36 flex items-center h-20">
-        <div className="max-md:flex-1">
+        <div className="flex items-center gap-4">
           <Logo />
+          <Select value={rapChon} onValueChange={(value) => setRapChon(value)}>
+            <SelectTrigger className="w-40 text-white bg-black/20 border border-gray-300/20 rounded-full px-4 py-2">
+              <SelectValue placeholder="Chọn rạp" />
+            </SelectTrigger>
+            <SelectContent className="bg-black text-white rounded-lg">
+              {dsRap.map((rap) => (
+                <SelectItem key={rap} value={rap}>
+                  {rap}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
-        <div className='flex flex-1 justify-center'>
+        <div className="flex flex-1 justify-center">
           <div
             className={`max-md:absolute max-md:top-0 max-md:left-0 max-md:font-medium
   max-md:text-lg z-50 flex flex-col md:flex-row items-center
@@ -32,10 +51,10 @@ export const Navbar = () => {
             />
 
             {[
-              { href: '/rap', label: 'Chọn rạp' },
-              { href: '/lich-chieu', label: 'Lịch chiếu' },
-              { href: '/uu-dai', label: 'Ưu đãi' },
-              { href: '/dich-vu', label: 'Dịch vụ' },
+              { href: '/movies', label: 'Phim' },
+              { href: '/showtimes', label: 'Lịch chiếu' },
+              { href: '/promotion', label: 'Ưu đãi' },
+              { href: '/service', label: 'Dịch vụ' },
             ].map((item) => (
               <Link
                 key={item.href}
@@ -56,11 +75,8 @@ export const Navbar = () => {
         </div>
 
         <div className="flex items-center gap-8 ml-2">
-          <SearchIcon
-            color="white"
-            className="max-md:hidden w-6 h-6 cursor-pointer"
-          />
-          { !isSignedIn ? (
+          <Search />
+          {!isSignedIn ? (
             <Button
               onClick={() => openSignIn()}
               className="px-4 py-1 sm:px-7 sm:py-2 transition rounded-full font-medium cursor-pointer"

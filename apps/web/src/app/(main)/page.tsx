@@ -43,7 +43,7 @@ const MainPage = () => {
   }, []);
   return (
     <div className="flex flex-col gap-8">
-      <QuickBooking />
+      {/* <QuickBooking /> */}
 
       {/* Slider phim đang chiếu */}
       <section>

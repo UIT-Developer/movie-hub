@@ -12,13 +12,15 @@ import { SeatLegend } from './_components/seat-legend';
 import { TicketTypeList } from './_components/ticket-list';
 import { RequireSignIn } from 'apps/web/src/components/require-sign-in';
 import BookingBar from './_components/booking-summary';
+import { LayoutTypeEnum } from 'apps/web/src/libs/types/showtime.type';
+
 
 const SeatBookingPage = () => {
   const { isSignedIn, user } = useUser();
   const { getToken } = useAuth();
 
   const { data } = useGetShowtimeSeats(
-    isSignedIn ? '1743dad9-5b78-49a1-be56-5c7205d248b2' : undefined
+    isSignedIn ? 'cbeb33e0-7166-47fa-b497-a0a509343599' : undefined
   );
   const {
     seatMap,
@@ -42,7 +44,7 @@ const SeatBookingPage = () => {
     const token = getToken();
     if (!isSignedIn || !token) return;
 
-    connectSocket('1743dad9-5b78-49a1-be56-5c7205d248b2', user.id);
+    connectSocket('cbeb33e0-7166-47fa-b497-a0a509343599', user.id);
     return () => {
       disconnectSocket();
     };
@@ -57,6 +59,7 @@ const SeatBookingPage = () => {
           <h1 className="text-2xl font-bold text-white">Chọn chỗ</h1>
           <CinemaScreen />
           <SeatGrid
+            layoutType={LayoutTypeEnum.STANDARD}
             seatMap={seatMap}
             selectedSeats={selectedSeats}
             seatHeldByUser={seatHeldByUser}

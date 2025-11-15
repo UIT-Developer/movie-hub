@@ -48,6 +48,11 @@ export enum TicketTypeEnum {
   COUPLE = 'COUPLE',
 }
 
+export enum LayoutTypeEnum {
+  STANDARD = 'STANDARD',
+  DUAL_AISLE = 'DUAL_AISLE',
+  STADIUM = 'STADIUM',
+}
 
 
 export interface SeatRowDto {

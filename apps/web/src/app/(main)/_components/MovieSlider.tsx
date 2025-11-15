@@ -92,7 +92,7 @@ export default function MovieSlider({ href, title, status }: Props) {
               </CarouselItem>
             ))
           ) : movies.length === 0 ? (
-            <div className="text-center py-10 text-gray-500 flex items-center justify-between w-full">
+            <div className="text-center py-10 text-gray-500 flex items-center justify-center w-full">
               🎬 Không có phim nào để hiển thị.
             </div>
           ) : (

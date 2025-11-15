@@ -43,7 +43,7 @@ export const FoodSelector = ({ foodList }: FoodSelectorProps) => {
 
   const navigateToCheckout = useCallback(() => {
     if (currentShowtimeId) {
-      router.push(`/${currentShowtimeId}/checkout`);
+      router.push(`/showtimes/${currentShowtimeId}/checkout`);
     }
   }, [router, currentShowtimeId]);
 

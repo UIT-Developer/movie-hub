@@ -10,10 +10,10 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
-import { PaymentService } from './payment.service';
-import { ClerkAuthGuard } from '../../common/guard/clerk-auth.guard';
-import { Permission } from '../../common/decorator/permission.decorator';
-import { CurrentUserId } from '../../common/decorator/current-user-id.decorator';
+import { PaymentService } from '../service/payment.service';
+import { ClerkAuthGuard } from '../../../common/guard/clerk-auth.guard';
+import { Permission } from '../../../common/decorator/permission.decorator';
+import { CurrentUserId } from '../../../common/decorator/current-user-id.decorator';
 import { CreatePaymentDto } from '@movie-hub/shared-types';
 import { Request } from 'express';
 

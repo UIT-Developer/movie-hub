@@ -10,8 +10,8 @@ import {
   UseGuards,
   Patch,
 } from '@nestjs/common';
-import { PromotionService } from './promotion.service';
-import { ClerkAuthGuard } from '../../common/guard/clerk-auth.guard';
+import { PromotionService } from '../service/promotion.service';
+import { ClerkAuthGuard } from '../../../common/guard/clerk-auth.guard';
 import {
   PromotionDto,
   PromotionType,

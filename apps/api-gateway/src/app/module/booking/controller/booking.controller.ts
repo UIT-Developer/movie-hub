@@ -7,10 +7,10 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { BookingService } from './booking.service';
-import { ClerkAuthGuard } from '../../common/guard/clerk-auth.guard';
-import { Permission } from '../../common/decorator/permission.decorator';
-import { CurrentUserId } from '../../common/decorator/current-user-id.decorator';
+import { BookingService } from '../service/booking.service';
+import { ClerkAuthGuard } from '../../../common/guard/clerk-auth.guard';
+import { Permission } from '../../../common/decorator/permission.decorator';
+import { CurrentUserId } from '../../../common/decorator/current-user-id.decorator';
 import {
   CreateBookingDto,
   BookingStatus,

@@ -10,8 +10,8 @@ import {
   UseGuards,
   Patch,
 } from '@nestjs/common';
-import { ConcessionService } from './concession.service';
-import { ClerkAuthGuard } from '../../common/guard/clerk-auth.guard';
+import { ConcessionService } from '../service/concession.service';
+import { ClerkAuthGuard } from '../../../common/guard/clerk-auth.guard';
 import {
   ConcessionDto,
   ConcessionCategory,

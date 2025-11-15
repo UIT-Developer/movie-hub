@@ -41,15 +41,17 @@ export class BookingService {
 
     // ✅ STEP 3: Validate that all held seats match the booking request (if seats provided)
     // Note: We prioritize Redis held seats over dto.seats
-    // Showtime data may provide seats in different shapes (e.g. `seats` or `seat_map` rows).
-    const seatsArray: any[] = showtimeData.seats
-      ? showtimeData.seats
-      : (showtimeData.seat_map
-          ? // flatten seat_map -> seats
-            showtimeData.seat_map.flatMap((row: any) =>
-              (row.seats || []).map((s: any) => ({ ...s, type: s.seatType || s.type }))
-            )
-          : []);
+    // Cinema service returns seat_map (array of rows), we need to flatten it
+    const seatsArray: any[] = showtimeData.seat_map
+      ? // flatten seat_map -> seats, preserve row information
+        showtimeData.seat_map.flatMap((row: any) =>
+          (row.seats || []).map((s: any) => ({ 
+            ...s, 
+            row: row.row,  // Add row letter from parent
+            type: s.seatType || s.type 
+          }))
+        )
+      : [];
 
     if (!Array.isArray(seatsArray) || seatsArray.length === 0) {
       throw new BadRequestException('Showtime seat information is not available');
@@ -371,8 +373,8 @@ export class BookingService {
       // Get ticket type from request, default to 'ADULT'
       const ticketType = ticketTypeMap.get(seat.id) || 'ADULT';
       
-      // Find price from showtime pricing data
-      const priceInfo = showtimeData.ticketPricing?.find(
+      // Find price from showtime pricing data (property name is ticketPrices, not ticketPricing)
+      const priceInfo = showtimeData.ticketPrices?.find(
         (p: any) =>
           p.seatType === seat.type &&
           p.ticketType === ticketType
@@ -468,10 +470,11 @@ export class BookingService {
       id: booking.id,
       bookingCode: booking.booking_code,
       showtimeId: booking.showtime_id,
+      // Cinema service returns showtime.movie, showtime.cinema, showtime.hall if available
       movieTitle: showtimeData?.showtime?.movie?.title || 'Movie Title',
-      cinemaName: showtimeData?.showtime?.cinema?.name || 'Cinema Name',
+      cinemaName: showtimeData?.showtime?.cinema?.name || showtimeData?.cinemaName || 'Cinema Name',
       hallName: showtimeData?.showtime?.hall?.name || 'Hall Name',
-      startTime: showtimeData?.showtime?.startTime || new Date(),
+      startTime: showtimeData?.showtime?.start_time || showtimeData?.showtime?.startTime || new Date(),
       seatCount: booking.tickets?.length || 0,
       totalAmount: Number(booking.final_amount),
       status: booking.status as BookingStatus,
@@ -481,10 +484,15 @@ export class BookingService {
 
   private mapToDetailDto(booking: any, showtimeData?: any): BookingDetailDto {
     // Create a map of seat details from showtime data
-    const seatsArray: any[] = showtimeData?.seats
-      ? showtimeData.seats
-      : showtimeData?.seat_map
-      ? showtimeData.seat_map.flatMap((row: any) => (row.seats || []).map((s: any) => ({ ...s, type: s.seatType || s.type })))
+    // Cinema service always returns seat_map, not seats
+    const seatsArray: any[] = showtimeData?.seat_map
+      ? showtimeData.seat_map.flatMap((row: any) => 
+          (row.seats || []).map((s: any) => ({ 
+            ...s, 
+            row: row.row,  // Preserve row from parent
+            type: s.seatType || s.type 
+          }))
+        )
       : [];
 
     const seatMap = new Map((seatsArray || []).map((s: any) => [s.id, s]));
@@ -585,12 +593,12 @@ export class BookingService {
     }
 
     // Get seat details from showtime data
-    const seatsArray = showtimeData?.seats
-      ? showtimeData.seats
-      : showtimeData?.seat_map
-      ? showtimeData.seat_map.flatMap((row: { seats?: unknown[] }) =>
+    // Cinema service always returns seat_map (array of rows), not seats
+    const seatsArray = showtimeData?.seat_map
+      ? showtimeData.seat_map.flatMap((row: { row?: string; seats?: unknown[] }) =>
           (row.seats || []).map((s: Record<string, unknown>) => ({
             ...s,
+            row: row.row,  // Preserve row from parent
             type: s.seatType || s.type,
           }))
         )
@@ -683,14 +691,14 @@ export class BookingService {
       },
       cinema: {
         id: showtimeData?.showtime?.cinema?.id || '',
-        name: showtimeData?.showtime?.cinema?.name || 'Cinema',
+        name: showtimeData?.showtime?.cinema?.name || showtimeData?.cinemaName || 'Cinema',
         address: showtimeData?.showtime?.cinema?.address || '',
         hallName: showtimeData?.showtime?.hall?.name || 'Hall',
       },
       showtime: {
         id: booking.showtime_id,
-        startTime: showtimeData?.showtime?.startTime || new Date(),
-        endTime: showtimeData?.showtime?.endTime || new Date(),
+        startTime: showtimeData?.showtime?.start_time || showtimeData?.showtime?.startTime || new Date(),
+        endTime: showtimeData?.showtime?.end_time || showtimeData?.showtime?.endTime || new Date(),
         format: showtimeData?.showtime?.format || '2D',
         language: showtimeData?.showtime?.language || 'Vietnamese',
       },

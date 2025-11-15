@@ -84,6 +84,10 @@ export class RedisPubSubService {
     return (await this.baseClient.exists(key)) > 0;
   }
 
+  async ttl(key: string): Promise<number> {
+    return await this.baseClient.ttl(key);
+  }
+
   async del(...keys: string[]) {
     return this.baseClient.del(...keys);
   }

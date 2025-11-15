@@ -9,7 +9,7 @@ import {
 import { PrismaService } from '../prisma.service';
 import { RealtimeService } from '../realtime/realtime.service';
 import { ShowtimeSeatMapper } from './showtime-seat.mapper';
-import { LayoutType } from 'apps/cinema-service/generated/prisma';
+import { LayoutType } from '../../../generated/prisma';
 
 @Injectable()
 export class ShowtimeService {
@@ -164,5 +164,10 @@ export class ShowtimeService {
     if (hallId)
       await this.realtimeService.deleteCacheByPrefix(`hall:${hallId}:seats`);
     await this.realtimeService.deleteCacheByPrefix('ticketPricing');
+  }
+
+  async getSessionTTL(userId: string): Promise<{ ttl: number }> {
+    const ttl = await this.realtimeService.getSessionTTL(userId);
+    return { ttl };
   }
 }

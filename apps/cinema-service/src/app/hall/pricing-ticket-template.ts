@@ -3,7 +3,7 @@ import {
   SeatType,
   TicketType,
   TimeSlot,
-} from 'apps/cinema-service/generated/prisma';
+} from '../../../generated/prisma';
 
 export const BaseSeatPrice: Record<SeatType, number> = {
   STANDARD: 70000,

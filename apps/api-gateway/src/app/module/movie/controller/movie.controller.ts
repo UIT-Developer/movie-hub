@@ -32,6 +32,11 @@ export class MovieController {
     return await this.movieService.getMovieDetail(id);
   }
 
+  @Get(':id/releases')
+  async getMovieRelease(@Param('id') id: string) {
+    return this.movieService.getMovieRelease(id);
+  }
+
   @Post()
   async createMovie(@Body() request: CreateMovieRequest) {
     return this.movieService.createMovie(request);

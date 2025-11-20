@@ -1,8 +1,10 @@
 import {
+  CreateMovieReleaseRequest,
   CreateMovieRequest,
   MovieQuery,
   MovieServiceMessage,
   SERVICE_NAME,
+  UpdateMovieReleaseRequest,
   UpdateMovieRequest,
 } from '@movie-hub/shared-types';
 import { Inject, Injectable, Logger } from '@nestjs/common';
@@ -64,6 +66,52 @@ export class MovieService {
     try {
       return await firstValueFrom(
         this.client.send(MovieServiceMessage.MOVIE.DELETED, id)
+      );
+    } catch (error) {
+      throw new RpcException(error);
+    }
+  }
+
+  // Movie Release Date
+  async getMovieRelease(movieId: string) {
+    try {
+      return await firstValueFrom(
+        this.client.send(MovieServiceMessage.MOVIE.GET_LIST_RELEASE, movieId)
+      );
+    } catch (error) {
+      throw new RpcException(error);
+    }
+  }
+
+  async createMovieRelease(request: CreateMovieReleaseRequest) {
+    try {
+      return await firstValueFrom(
+        this.client.send(MovieServiceMessage.MOVIE_RELEASE.CREATED, request)
+      );
+    } catch (error) {
+      throw new RpcException(error);
+    }
+  }
+  async updateMovieRelease(
+    id: string,
+    updateMovieReleaseRequest: UpdateMovieReleaseRequest
+  ) {
+    try {
+      return await firstValueFrom(
+        this.client.send(MovieServiceMessage.MOVIE_RELEASE.UPDATED, {
+          id,
+          updateMovieReleaseRequest,
+        })
+      );
+    } catch (error) {
+      throw new RpcException(error);
+    }
+  }
+
+  async deleteMovieRelease(id: string) {
+    try {
+      return await firstValueFrom(
+        this.client.send(MovieServiceMessage.MOVIE_RELEASE.DELETED, id)
       );
     } catch (error) {
       throw new RpcException(error);

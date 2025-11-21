@@ -87,4 +87,10 @@ export class MovieController {
   async deleteMovieRelease(@Payload() id: string) {
     return this.movieService.deleteMovieRelease(id);
   }
+
+  // Function for internal microservice
+  @MessagePattern(MovieServiceMessage.MOVIE.GET_LIST_BY_ID)
+  async getMovieByListId(@Payload() movieIds: string[]) {
+    return this.movieService.getMovieByListId(movieIds);
+  }
 }

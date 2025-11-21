@@ -8,7 +8,6 @@ import { APP_PIPE } from '@nestjs/core';
 import { ZodValidationPipe } from 'nestjs-zod';
 import { RealtimeModule } from './module/realtime/realtime.module';
 import { BookingModule } from './module/booking/booking.module';
-import { PaymentModule } from './module/payment/payment.module';
 
 @Module({
   imports: [
@@ -30,8 +29,7 @@ import { PaymentModule } from './module/payment/payment.module';
     UserModule,
     MovieModule,
     CinemaModule,
-    BookingModule,
-    PaymentModule,
+    BookingModule, // Includes: booking, payment, concession, promotion controllers
     RealtimeModule,
   ],
   controllers: [],

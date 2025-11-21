@@ -5,6 +5,7 @@ import {
   CreateBookingDto,
   BookingDetailDto,
   BookingSummaryDto,
+  BookingCalculationDto,
   BookingStatus,
 } from '@movie-hub/shared-types';
 
@@ -53,5 +54,12 @@ export class BookingController {
       data.userId,
       data.reason
     );
+  }
+
+  @MessagePattern('booking.getSummary')
+  async getSummary(
+    @Payload() data: { id: string; userId: string }
+  ): Promise<BookingCalculationDto> {
+    return this.bookingService.getBookingSummary(data.id, data.userId);
   }
 }

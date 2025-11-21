@@ -1,10 +1,12 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import {
   PromotionDto,
   PromotionType,
   ValidatePromotionDto,
   ValidatePromotionResponseDto,
+  CreatePromotionDto,
+  UpdatePromotionDto,
 } from '@movie-hub/shared-types';
 
 @Injectable()
@@ -108,6 +110,164 @@ export class PromotionService {
       finalAmount,
       message: 'Promotion code is valid',
     };
+  }
+
+  async findOne(id: string): Promise<PromotionDto> {
+    const promotion = await this.prisma.promotions.findUnique({
+      where: { id },
+    });
+
+    if (!promotion) {
+      throw new NotFoundException('Promotion not found');
+    }
+
+    return this.mapToDto(promotion);
+  }
+
+  async findByCode(code: string): Promise<PromotionDto> {
+    const promotion = await this.prisma.promotions.findUnique({
+      where: { code },
+    });
+
+    if (!promotion) {
+      throw new NotFoundException('Promotion not found');
+    }
+
+    return this.mapToDto(promotion);
+  }
+
+  async create(dto: CreatePromotionDto): Promise<PromotionDto> {
+    // Check if promotion code already exists
+    const existing = await this.prisma.promotions.findUnique({
+      where: { code: dto.code },
+    });
+
+    if (existing) {
+      throw new BadRequestException('Promotion code already exists');
+    }
+
+    // Validate dates
+    if (dto.validFrom >= dto.validTo) {
+      throw new BadRequestException(
+        'Valid from date must be before valid to date'
+      );
+    }
+
+    const promotion = await this.prisma.promotions.create({
+      data: {
+        code: dto.code.toUpperCase(),
+        name: dto.name,
+        description: dto.description,
+        type: dto.type,
+        value: dto.value,
+        min_purchase: dto.minPurchase,
+        max_discount: dto.maxDiscount,
+        valid_from: dto.validFrom,
+        valid_to: dto.validTo,
+        usage_limit: dto.usageLimit,
+        usage_per_user: dto.usagePerUser,
+        current_usage: 0,
+        applicable_for: dto.applicableFor || [],
+        conditions: dto.conditions,
+        active: dto.active ?? true,
+      },
+    });
+
+    return this.mapToDto(promotion);
+  }
+
+  async update(id: string, dto: UpdatePromotionDto): Promise<PromotionDto> {
+    // Check if promotion exists
+    const existing = await this.prisma.promotions.findUnique({
+      where: { id },
+    });
+
+    if (!existing) {
+      throw new NotFoundException('Promotion not found');
+    }
+
+    // Validate dates if provided
+    const validFrom = dto.validFrom || existing.valid_from;
+    const validTo = dto.validTo || existing.valid_to;
+
+    if (validFrom >= validTo) {
+      throw new BadRequestException(
+        'Valid from date must be before valid to date'
+      );
+    }
+
+    const promotion = await this.prisma.promotions.update({
+      where: { id },
+      data: {
+        name: dto.name,
+        description: dto.description,
+        type: dto.type,
+        value: dto.value,
+        min_purchase: dto.minPurchase,
+        max_discount: dto.maxDiscount,
+        valid_from: dto.validFrom,
+        valid_to: dto.validTo,
+        usage_limit: dto.usageLimit,
+        usage_per_user: dto.usagePerUser,
+        applicable_for: dto.applicableFor,
+        conditions: dto.conditions,
+        active: dto.active,
+      },
+    });
+
+    return this.mapToDto(promotion);
+  }
+
+  async delete(id: string): Promise<{ message: string }> {
+    // Check if promotion exists
+    const promotion = await this.prisma.promotions.findUnique({
+      where: { id },
+    });
+
+    if (!promotion) {
+      throw new NotFoundException('Promotion not found');
+    }
+
+    // Check if promotion is used in any active bookings
+    const activeBookings = await this.prisma.bookings.count({
+      where: {
+        promotion_code: promotion.code,
+        status: {
+          in: ['PENDING', 'CONFIRMED'],
+        },
+      },
+    });
+
+    if (activeBookings > 0) {
+      throw new BadRequestException(
+        'Cannot delete promotion that is used in active bookings. Consider deactivating it instead.'
+      );
+    }
+
+    await this.prisma.promotions.delete({
+      where: { id },
+    });
+
+    return { message: 'Promotion deleted successfully' };
+  }
+
+  async toggleActive(id: string): Promise<PromotionDto> {
+    const promotion = await this.prisma.promotions.findUnique({
+      where: { id },
+    });
+
+    if (!promotion) {
+      throw new NotFoundException('Promotion not found');
+    }
+
+    const updated = await this.prisma.promotions.update({
+      where: { id },
+      data: {
+        active: !promotion.active,
+      },
+    });
+
+    return this.mapToDto(updated);
   }
 
   private mapToDto(promotion: any): PromotionDto {

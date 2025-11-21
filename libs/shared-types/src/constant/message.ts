@@ -10,6 +10,12 @@ export const MovieServiceMessage = {
     UPDATED: 'movie.updated',
     GET_DETAIL: 'movie.detail',
     DELETED: 'movie.deleted',
+    GET_LIST_RELEASE: 'movie.release.list',
+  },
+  MOVIE_RELEASE: {
+    CREATED: 'movie.release.created',
+    UPDATED: 'movie.release.updated',
+    DELETED: 'movie.release.deleted',
   },
   GENRE: {
     GET_LIST: 'genre.list',
@@ -38,6 +44,7 @@ export const CinemaMessage = {
   },
   SHOWTIME: {
     GET_SHOWTIME_SEATS: 'showtime.get_showtime_seats',
+    GET_SEATS_HELD_BY_USER: 'showtime.get_seats_held_by_user',
     GET_SESSION_TTL: 'showtime.get_session_ttl',
   },
   TICKET_PRICING: {
@@ -50,4 +57,32 @@ export const CinemaMessage = {
   SEARCH_CINEMAS: 'CINEMA.SEARCH_CINEMAS',
   GET_AVAILABLE_CITIES: 'CINEMA.GET_AVAILABLE_CITIES',
   GET_AVAILABLE_DISTRICTS: 'CINEMA.GET_AVAILABLE_DISTRICTS',
+};
+
+export const BookingMessage = {
+  CREATE: 'booking.create',
+  FIND_ALL: 'booking.findAll',
+  FIND_ONE: 'booking.findOne',
+  CANCEL: 'booking.cancel',
+  GET_SUMMARY: 'booking.getSummary',
+};
+
+export const ConcessionMessage = {
+  FIND_ALL: 'concession.findAll',
+  FIND_ONE: 'concession.findOne',
+  CREATE: 'concession.create',
+  UPDATE: 'concession.update',
+  DELETE: 'concession.delete',
+  UPDATE_INVENTORY: 'concession.updateInventory',
+};
+
+export const PromotionMessage = {
+  FIND_ALL: 'promotion.findAll',
+  FIND_ONE: 'promotion.findOne',
+  FIND_BY_CODE: 'promotion.findByCode',
+  VALIDATE: 'promotion.validate',
+  CREATE: 'promotion.create',
+  UPDATE: 'promotion.update',
+  DELETE: 'promotion.delete',
+  TOGGLE_ACTIVE: 'promotion.toggleActive',
 };

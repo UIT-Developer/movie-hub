@@ -2,14 +2,21 @@ import { Controller } from '@nestjs/common';
 import { ShowtimeService } from './showtime.service';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import {
+  BatchCreateShowtimesInput,
   CinemaMessage,
+  CreateShowtimeRequest,
   GetShowtimesQuery,
   ShowtimeSummaryResponse,
+  UpdateShowtimeRequest,
 } from '@movie-hub/shared-types';
+import { ShowtimeCommandService } from './showtime-command.service';
 
 @Controller('showtimes')
 export class ShowtimeController {
-  constructor(private readonly showtimeService: ShowtimeService) {}
+  constructor(
+    private readonly showtimeService: ShowtimeService,
+    private readonly showtimeCommandService: ShowtimeCommandService
+  ) {}
 
   @MessagePattern(CinemaMessage.CINEMA.GET_SHOWTIME)
   getMovieShowtimesAtCinema(
@@ -43,5 +50,34 @@ export class ShowtimeController {
       payload.showtimeId,
       payload.userId
     );
+  }
+
+  @MessagePattern(CinemaMessage.SHOWTIME.CREATE_SHOWTIME)
+  createShowtime(@Payload() payload: CreateShowtimeRequest) {
+    return this.showtimeCommandService.createShowtime(payload);
+  }
+
+  @MessagePattern(CinemaMessage.SHOWTIME.BATCH_CREATE_SHOWTIMES)
+  batchCreateShowtimes(@Payload() payload: BatchCreateShowtimesInput) {
+    return this.showtimeCommandService.batchCreateShowtimes(payload);
+  }
+
+  @MessagePattern(CinemaMessage.SHOWTIME.UPDATE_SHOWTIME)
+  updateShowtime(
+    @Payload()
+    payload: {
+      showtimeId: string;
+      updateData: UpdateShowtimeRequest;
+    }
+  ) {
+    return this.showtimeCommandService.updateShowtime(
+      payload.showtimeId,
+      payload.updateData
+    );
+  }
+
+  @MessagePattern(CinemaMessage.SHOWTIME.DELETE_SHOWTIME)
+  deleteShowtime(@Payload() payload: { showtimeId: string }) {
+    return this.showtimeCommandService.cancelShowtime(payload.showtimeId);
   }
 }

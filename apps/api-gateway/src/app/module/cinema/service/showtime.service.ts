@@ -1,4 +1,10 @@
-import { CinemaMessage, SERVICE_NAME } from '@movie-hub/shared-types';
+import {
+  BatchCreateShowtimesInput,
+  CinemaMessage,
+  CreateShowtimeRequest,
+  SERVICE_NAME,
+  UpdateSeatStatusRequest,
+} from '@movie-hub/shared-types';
 import { Inject, Injectable } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { lastValueFrom } from 'rxjs';
@@ -27,6 +33,41 @@ export class ShowtimeService {
       this.cinemaClient.send(CinemaMessage.SHOWTIME.GET_SESSION_TTL, {
         showtimeId,
         userId,
+      })
+    );
+  }
+
+  async createShowtime(body: CreateShowtimeRequest) {
+    return lastValueFrom(
+      this.cinemaClient.send(CinemaMessage.SHOWTIME.CREATE_SHOWTIME, body)
+    );
+  }
+
+  async createBatchShowtimes(body: BatchCreateShowtimesInput) {
+    return lastValueFrom(
+      this.cinemaClient.send(
+        CinemaMessage.SHOWTIME.BATCH_CREATE_SHOWTIMES,
+        body
+      )
+    );
+  }
+
+  async updateShowtime(
+    showtimeId: string,
+    updateData: UpdateSeatStatusRequest
+  ) {
+    return lastValueFrom(
+      this.cinemaClient.send(CinemaMessage.SHOWTIME.UPDATE_SHOWTIME, {
+        showtimeId,
+        updateData,
+      })
+    );
+  }
+
+  async deleteShowtime(showtimeId: string) {
+    return lastValueFrom(
+      this.cinemaClient.send(CinemaMessage.SHOWTIME.DELETE_SHOWTIME, {
+        showtimeId,
       })
     );
   }

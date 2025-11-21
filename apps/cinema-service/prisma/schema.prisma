@@ -175,6 +175,7 @@ model TicketPricing {
 model Showtimes {
   id              String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   movie_id        String         @db.Uuid
+  movie_release_id String        @db.Uuid
   cinema_id       String         @db.Uuid
   hall_id         String         @db.Uuid
   start_time      DateTime       @db.Timestamp(6)

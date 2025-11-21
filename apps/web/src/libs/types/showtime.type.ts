@@ -35,18 +35,6 @@ export enum ShowtimeStatusEnum {
   CANCELLED = 'CANCELLED',
   COMPLETED = 'COMPLETED',
 }
-export enum TimeSlotEnum {
-  MORNING = 'MORNING',
-  AFTERNOON = 'AFTERNOON',
-  EVENING = 'EVENING',
-  LATE_NIGHT = 'LATE_NIGHT',
-}
-export enum TicketTypeEnum {
-  ADULT = 'ADULT',
-  CHILD = 'CHILD',
-  STUDENT = 'STUDENT',
-  COUPLE = 'COUPLE',
-}
 
 export enum LayoutTypeEnum {
   STANDARD = 'STANDARD',
@@ -55,6 +43,15 @@ export enum LayoutTypeEnum {
 }
 
 
+export interface SeatItemDto {
+  id: string;
+  number: number;
+  seatType: SeatTypeEnum;
+  seatStatus: SeatStatusEnum;
+  reservationStatus: ReservationStatusEnum;
+  isHeldByCurrentUser?: boolean;
+}
+
 export interface SeatRowDto {
   row: string;
   seats: SeatItemDto[];
@@ -62,10 +59,10 @@ export interface SeatRowDto {
 
 export interface ShowtimeInfoDto {
   id: string;
+  movieId: string;
   start_time: Date;
   end_time: Date;
   dateType: DayTypeEnum;
-  timeSlot: TimeSlotEnum;
   format: FormatEnum;
   language: string;
   subtitles: string[];
@@ -73,14 +70,17 @@ export interface ShowtimeInfoDto {
 
 export interface TicketPricingDto {
   seatType: SeatTypeEnum;
-  ticketType: TicketTypeEnum;
   price: number;
 }
 
 export interface ShowtimeSeatResponse {
   showtime: ShowtimeInfoDto;
+  cinemaId: string;
+  cinemaName: string;
+  hallId: string;
+  hallName: string;
+  layoutType: LayoutTypeEnum;
   seat_map: SeatRowDto[];
-  ticketTypes: TicketTypeEnum[];
   ticketPrices: TicketPricingDto[];
   rules: {
     max_selectable: number;
@@ -106,7 +106,7 @@ export interface ShowtimeInfoDto {
   start_time: Date;
   end_time: Date;
   dateType: DayTypeEnum;
-  timeSlot: TimeSlotEnum;
+
   format: FormatEnum;
   language: string;
   subtitles: string[];
@@ -114,14 +114,17 @@ export interface ShowtimeInfoDto {
 
 export interface TicketPricingDto {
   seatType: SeatTypeEnum;
-  ticketType: TicketTypeEnum;
   price: number;
 }
 
 export interface ShowtimeSeatResponse {
   showtime: ShowtimeInfoDto;
+  cinemaId: string;
+  cinemaName: string;
+  hallId: string;
+  hallName: string;
+  layoutType: LayoutTypeEnum;
   seat_map: SeatRowDto[];
-  ticketTypes: TicketTypeEnum[];
   ticketPrices: TicketPricingDto[];
   rules: {
     max_selectable: number;

@@ -7,7 +7,7 @@ import {
   SeatRowDto,
   SeatTypeEnum,
   ShowtimeSeatResponse,
-  TicketTypeEnum,
+
 } from '../libs/types/showtime.type';
 import { updateLocalStorage } from '../app/utils/update-local-storage';
 const foodList = [
@@ -42,8 +42,8 @@ type BookingState = {
   seatReservationStatus: Record<string, ReservationStatusEnum>;
   seatHeldByUser: Record<string, boolean>;
   seatMap: SeatRowDto[];
-  tickets: { key: TicketTypeEnum; label: string; price: number }[];
-  ticketCounts: Record<TicketTypeEnum, number>;
+  tickets: { key: SeatTypeEnum; label: string; price: number }[];
+  ticketCounts: Record<SeatTypeEnum, number>;
   maxTickets: number;
   holdTimeSeconds: number;
   socketConnected: boolean;
@@ -57,15 +57,15 @@ type BookingState = {
 
   initBookingData: (data: ShowtimeSeatResponse) => void;
   toggleSeat: (seatLabel: string) => void;
-  updateTicketCount: (type: TicketTypeEnum, delta: number) => void;
+  updateTicketCount: (type: SeatTypeEnum, delta: number) => void;
   resetBooking: () => void;
 
   totalTickets: number;
   totalPrice: number;
 
-    foodSelections: Record<string, number>; // key = foodId, value = quantity
+  foodSelections: Record<string, number>; // key = foodId, value = quantity
   setFoodSelection: (foodId: string, qty: number) => void;
-  totalFoodPrice: number
+  totalFoodPrice: number;
 };
 
 let socket: Socket | null = null;
@@ -77,7 +77,7 @@ export const useBookingStore = create<BookingState>((set, get) => ({
   seatHeldByUser: {},
   seatMap: [],
   tickets: [],
-  ticketCounts: {} as Record<TicketTypeEnum, number>,
+  ticketCounts: {} as Record<SeatTypeEnum, number>,
   maxTickets: 8,
   totalPrice: 0,
   totalTickets: 0,
@@ -109,24 +109,24 @@ export const useBookingStore = create<BookingState>((set, get) => ({
       }),
     }));
 
-    const tickets = data.ticketTypes.map((type) => {
-      const pricing = data.ticketPrices.find(
-        (p) => p.ticketType === type && p.seatType === SeatTypeEnum.STANDARD
-      );
+    const tickets = data.ticketPrices.map((type) => {
+      const pricing = type.price;
       const label =
-        type === TicketTypeEnum.ADULT
-          ? 'Người lớn'
-          : type === TicketTypeEnum.STUDENT
-          ? 'Học sinh/Sinh viên'
-          : type === TicketTypeEnum.CHILD
-          ? 'Trẻ em'
-          : 'Đôi';
-      return { key: type, label, price: pricing?.price ?? 0 };
+        type.seatType === SeatTypeEnum.STANDARD
+          ? 'Ghế thường'
+          : type.seatType === SeatTypeEnum.PREMIUM
+          ? 'Vé cao cấp'
+          : type.seatType === SeatTypeEnum.VIP
+          ? 'Vé VIP'
+          : type.seatType === SeatTypeEnum.COUPLE
+          ? 'Vé đôi'
+          : 'Vé xe lăn';
+      return { key: type.seatType, label, price: pricing ?? 0 };
     });
 
     const ticketCounts = Object.fromEntries(
-      data.ticketTypes.map((t) => [t, 0])
-    ) as Record<TicketTypeEnum, number>;
+      data.ticketPrices.map((t) => [t.seatType, 0])
+    ) as Record<SeatTypeEnum, number>;
 
     set({
       currentShowtimeId: data.showtime.id,
@@ -386,7 +386,7 @@ export const useBookingStore = create<BookingState>((set, get) => ({
     }
     set({
       selectedSeats: [],
-      ticketCounts: {} as Record<TicketTypeEnum, number>,
+      ticketCounts: {} as Record<SeatTypeEnum, number>,
     });
   },
 }));

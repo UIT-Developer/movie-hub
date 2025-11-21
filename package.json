@@ -6,7 +6,8 @@
     "dev:core": "nx run-many -t=serve --projects=api-gateway,cinema-service --output-style=stream",
     "dev:all": "nx run-many -t=serve --all --outputStyle=stream ",
     "dev:web": "nx serve web",
-    "prisma:generate": "nx run-many -t=prisma:generate --all"
+    "prisma:generate": "nx run-many -t=prisma:generate --all",
+    "seed:cinema": "node apps/cinema-service/prisma/seed_cinema.js"
   },
   "private": true,
   "dependencies": {

@@ -24,7 +24,7 @@ export const MovieList = ({ isShowing }: MovieListProps) => {
 
 
   return (
-    <div className="relative md:px-16 lg:px-40 overflow-hidden min-h-[80vh]">
+    <div className="relative md:px-16 lg:px-40 overflow-hidden">
       {isError ? (
         <ErrorFallback message={error.message} />
       ) : (

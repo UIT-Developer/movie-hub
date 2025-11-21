@@ -11,6 +11,7 @@ export const MovieServiceMessage = {
     GET_DETAIL: 'movie.detail',
     DELETED: 'movie.deleted',
     GET_LIST_RELEASE: 'movie.release.list',
+    GET_LIST_BY_ID: 'movie.list.by-id',
   },
   MOVIE_RELEASE: {
     CREATED: 'movie.release.created',

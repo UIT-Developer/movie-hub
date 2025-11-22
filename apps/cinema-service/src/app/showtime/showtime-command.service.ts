@@ -13,11 +13,7 @@ import {
   MovieServiceMessage,
   UpdateShowtimeRequest,
 } from '@movie-hub/shared-types';
-import {
-  DayType,
-  Format,
-  ShowtimeStatus,
-} from 'apps/cinema-service/generated/prisma';
+import { DayType, Format, ShowtimeStatus } from '../../../generated/prisma';
 import { ClientProxy } from '@nestjs/microservices';
 
 @Injectable()
@@ -42,7 +38,6 @@ export class ShowtimeCommandService {
       subtitles,
     } = dto;
 
-    const hall = await this.validateHall(cinemaId, hallId);
     const { movie, release } = await this.fetchMovieAndRelease(
       movieId,
       movieReleaseId
@@ -93,7 +88,6 @@ export class ShowtimeCommandService {
       subtitles,
     } = input;
 
-    const hall = await this.validateHall(cinemaId, hallId);
     const { movie, release } = await this.fetchMovieAndRelease(
       movieId,
       movieReleaseId
@@ -113,8 +107,8 @@ export class ShowtimeCommandService {
     const runtime = movie.runtime;
     const bufferMin = 15;
 
-    // generate days
     const days: Date[] = [];
+    // eslint-disable-next-line prefer-const
     let d = new Date(startDate);
     while (d <= new Date(endDate)) {
       const dow = d.getDay();
@@ -277,14 +271,6 @@ export class ShowtimeCommandService {
   // ===========================
   // HELPERS
   // ===========================
-  private async validateHall(cinemaId: string, hallId: string) {
-    const hall = await this.prisma.halls.findFirst({
-      where: { id: hallId, cinema_id: cinemaId },
-    });
-    if (!hall) throw new NotFoundException('Hall not found in this cinema');
-    return hall;
-  }
-
   private async getTotalSeats(hallId: string) {
     return this.prisma.seats.count({ where: { hall_id: hallId } });
   }

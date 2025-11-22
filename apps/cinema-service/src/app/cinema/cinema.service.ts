@@ -10,7 +10,7 @@ import {
 } from '@movie-hub/shared-types';
 import { CinemaMapper } from './cinema.mapper';
 import { PaginationQuery, ServiceResult } from '@movie-hub/shared-types/common';
-import { ShowtimeStatus } from 'apps/cinema-service/generated/prisma';
+import { ShowtimeStatus } from '../../../generated/prisma';
 import { ClientProxy } from '@nestjs/microservices';
 import { lastValueFrom, timeout } from 'rxjs';
 import { ShowtimeMapper } from '../showtime/showtime.mapper';

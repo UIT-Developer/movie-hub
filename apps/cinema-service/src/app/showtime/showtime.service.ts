@@ -5,17 +5,25 @@ import {
   ShowtimeSummaryResponse,
   ShowtimeSeatResponse,
   ReservationStatusEnum,
+  AdminGetShowtimesQuery,
+  SeatPricingDto,
+  SeatTypeEnum,
 } from '@movie-hub/shared-types';
 import { PrismaService } from '../prisma.service';
 import { RealtimeService } from '../realtime/realtime.service';
 import { ShowtimeSeatMapper } from './showtime-seat.mapper';
-import { LayoutType } from '../../../generated/prisma';
+import {
+  Format,
+  LayoutType,
+  Prisma,
+  SeatType,
+  ShowtimeStatus,
+} from '../../../generated/prisma';
 
 @Injectable()
 export class ShowtimeService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly mapper: ShowtimeMapper,
     private readonly showtimeSeatMapper: ShowtimeSeatMapper,
     private readonly realtimeService: RealtimeService
   ) {}
@@ -39,12 +47,54 @@ export class ShowtimeService {
             gte: new Date(`${query.date}T00:00:00.000Z`),
             lt: new Date(`${query.date}T23:59:59.999Z`),
           },
+          status: ShowtimeStatus.SELLING,
         },
         orderBy: { start_time: 'asc' },
       });
 
-      return this.mapper.toShowtimeSummaryList(showtimes);
+      return ShowtimeMapper.toShowtimeSummaryList(showtimes);
     });
+  }
+
+  async adminGetMovieShowtimes(
+    cinemaId: string,
+    movieId: string,
+    query: AdminGetShowtimesQuery
+  ): Promise<ShowtimeSummaryResponse[]> {
+    const { date, status, format, hallId, language } = query;
+
+    // Tạo điều kiện where động cho Prisma
+    const where: Prisma.ShowtimesWhereInput = {
+      cinema_id: cinemaId,
+      movie_id: movieId,
+      start_time: {
+        gte: new Date(`${date}T00:00:00.000Z`),
+        lt: new Date(`${date}T23:59:59.999Z`),
+      },
+    };
+
+    if (status) {
+      where.status = status as ShowtimeStatus;
+    }
+
+    if (format) {
+      where.format = format as Format;
+    }
+
+    if (hallId) {
+      where.hall_id = hallId;
+    }
+
+    if (language) {
+      where.language = language;
+    }
+
+    const showtimes = await this.prisma.showtimes.findMany({
+      where,
+      orderBy: { start_time: 'asc' },
+    });
+
+    return ShowtimeMapper.toShowtimeSummaryList(showtimes);
   }
 
   /**
@@ -85,7 +135,7 @@ export class ShowtimeService {
     );
 
     // ✅ Cache ticket pricing
-    const ticketPricingCacheKey = `ticketPricing:${showtime.hall_id}:${showtime.day_type}:${showtime.time_slot}`;
+    const ticketPricingCacheKey = `ticketPricing:${showtime.hall_id}:${showtime.day_type}`;
     const ticketPricings = await this.realtimeService.getOrSetCache(
       ticketPricingCacheKey,
       3600 * 6,
@@ -94,7 +144,6 @@ export class ShowtimeService {
           where: {
             hall_id: showtime.hall_id,
             day_type: showtime.day_type,
-            time_slot: showtime.time_slot,
           },
         });
       }
@@ -125,18 +174,25 @@ export class ShowtimeService {
       }
     });
 
+    // Lấy cinema name
     const cinemaName = await this.prisma.cinemas
       .findUnique({ where: { id: showtime.cinema_id } })
-      .then((c) => c?.name || '');
+      .then((c) => c?.name ?? '');
 
-    const layoutType = await this.prisma.halls
-      .findUnique({ where: { id: showtime.hall_id } })
-      .then((h) => h?.layout_type || LayoutType.STANDARD);
+    // Lấy hall (trả về object an toàn)
+    const hall = await this.prisma.halls.findUnique({
+      where: { id: showtime.hall_id },
+    });
+
+    // Chuẩn bị giá trị mặc định nếu hall null
+    const hallName = hall?.name ?? '';
+    const layoutType = hall?.layout_type ?? LayoutType.STANDARD;
 
     // 🧠 Mapping response cuối cùng
     return this.showtimeSeatMapper.toShowtimeSeatResponse({
       showtime,
       cinemaName,
+      hallName,
       layoutType,
       seats,
       reservedMap,
@@ -149,8 +205,71 @@ export class ShowtimeService {
   async getSeatsHeldByUser(
     showtimeId: string,
     userId: string
-  ): Promise<string[]> {
-    return this.realtimeService.getUserHeldSeats(showtimeId, userId);
+  ): Promise<SeatPricingDto[]> {
+    const showtime = await this.prisma.showtimes.findUnique({
+      where: { id: showtimeId },
+      select: { id: true, hall_id: true, day_type: true },
+    });
+    if (!showtime) throw new NotFoundException('Showtime not found');
+
+    // 1) seatIds từ realtime
+    const seatIds = await this.realtimeService.getUserHeldSeats(
+      showtimeId,
+      userId
+    );
+    if (!seatIds || seatIds.length === 0) return [];
+
+    // 2) Lấy seats (chỉ cần id và type)
+    const seats = await this.prisma.seats.findMany({
+      where: { id: { in: seatIds } },
+      select: {
+        id: true,
+        type: true,
+        hall_id: true,
+        row_letter: true,
+        seat_number: true,
+      },
+    });
+
+    // 3) Nếu không có seat types thì trả giá 0
+    const seatTypes = Array.from(
+      new Set(seats.map((s) => s.type).filter(Boolean))
+    ) as SeatType[];
+    let ticketPricings = [];
+    if (seatTypes.length > 0) {
+      // 4) Lấy tất cả pricings cho hall + day + các seat types cần thiết
+      ticketPricings = await this.prisma.ticketPricing.findMany({
+        where: {
+          hall_id: showtime.hall_id,
+          day_type: showtime.day_type,
+          seat_type: { in: seatTypes },
+        },
+        // chọn trường cần thiết
+        select: { seat_type: true, price: true },
+      });
+    }
+
+    // 5) Map seat_type -> pricing (để tra nhanh O(1))
+    const pricingBySeatType = new Map<SeatType, number>();
+    for (const tp of ticketPricings) {
+      // nếu có nhiều bản ghi cùng seat_type, bạn có thể decide lấy first/lowest/highest
+      pricingBySeatType.set(tp.seat_type, tp.price);
+    }
+
+    // 6) Build response
+    const response: SeatPricingDto[] = seats.map((seat) => {
+      const price = seat.type ? pricingBySeatType.get(seat.type) ?? 0 : 0;
+      return {
+        id: seat.id,
+        hallId: seat.hall_id,
+        rowLetter: seat.row_letter,
+        seatNumber: seat.seat_number,
+        type: seat.type as SeatTypeEnum,
+        price,
+      };
+    });
+
+    return response;
   }
 
   /**
@@ -166,8 +285,11 @@ export class ShowtimeService {
     await this.realtimeService.deleteCacheByPrefix('ticketPricing');
   }
 
-  async getSessionTTL(userId: string): Promise<{ ttl: number }> {
-    const ttl = await this.realtimeService.getSessionTTL(userId);
+  async getSessionTTL(
+    showtimeId: string,
+    userId: string
+  ): Promise<{ ttl: number }> {
+    const ttl = await this.realtimeService.getUserTTL(showtimeId, userId);
     return { ttl };
   }
 }

@@ -7,10 +7,10 @@ export interface CinemaDetailResponse extends CinemaSummaryResponse {
   description?: string;
   amenities?: string[];
   facilities?: Record<string, any>;
-  virtual_tour_360_url?: string;
-  operating_hours?: Record<string, any>;
-  social_media?: Record<string, any>;
+  virtualTour360Url?: string;
+  operatingHours?: Record<string, any>;
+  socialMedia?: Record<string, any>;
   timezone: string;
-  created_at: string;
-  updated_at: string;
+  createdAt: Date;
+  updatedAt: Date;
 }

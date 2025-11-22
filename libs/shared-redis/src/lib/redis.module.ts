@@ -3,8 +3,9 @@ import Redis, { RedisOptions } from 'ioredis';
 import { RedisPubSubService } from './redis.service';
 
 export interface RedisModuleOptions {
-  name?: string; // nếu có nhiều redis
-  config: RedisOptions;
+  name?: string;
+  url?: string; // thêm url
+  config?: RedisOptions; // optional nếu dùng url
 }
 
 @Global()
@@ -16,7 +17,10 @@ export class RedisModule {
     const redisProvider = {
       provide: `REDIS_${connectionName.toUpperCase()}_CLIENT`,
       useFactory: async () => {
-        const client = new Redis(options.config);
+        const client = options.url
+          ? new Redis(options.url) // Upstash, Docker, Cloud...
+          : new Redis(options.config!); // Local (host/port)
+
         return client;
       },
     };
@@ -39,7 +43,7 @@ export class RedisModule {
     name?: string;
     useFactory: (
       ...args: any[]
-    ) => RedisModuleOptions['config'] | Promise<RedisModuleOptions['config']>;
+    ) => RedisModuleOptions | Promise<RedisModuleOptions>;
     inject?: any[];
     imports?: any[];
   }): DynamicModule {
@@ -49,7 +53,11 @@ export class RedisModule {
       provide: `REDIS_${connectionName.toUpperCase()}_CLIENT`,
       useFactory: async (...args: any[]) => {
         const config = await options.useFactory(...args);
-        const client = new Redis(config);
+
+        const client = config.url
+          ? new Redis(config.url)
+          : new Redis(config.config!);
+
         return client;
       },
       inject: options.inject || [],

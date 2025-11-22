@@ -6,7 +6,10 @@ import {
   CreateCinemaRequest,
   UpdateCinemaRequest,
 } from '@movie-hub/shared-types';
-import { LoggingInterceptor } from '@movie-hub/shared-types/common';
+import {
+  LoggingInterceptor,
+  PaginationQuery,
+} from '@movie-hub/shared-types/common';
 
 @Controller('cinema')
 @UseInterceptors(new LoggingInterceptor('Cinema-Service'))
@@ -36,5 +39,20 @@ export class CinemaController {
   @MessagePattern(CinemaMessage.CINEMA.DELETE)
   async deleteMovie(@Payload() cinemaId: string) {
     return this.cinemaService.deleteCinema(cinemaId);
+  }
+
+  @MessagePattern(CinemaMessage.MOVIE.GET_MOVIES_BY_CINEMA)
+  async getMoviesByCinema(
+    @Payload() payload: { cinemaId: string; query: PaginationQuery }
+  ) {
+    return this.cinemaService.getMoviesByCinema(
+      payload.cinemaId,
+      payload.query
+    );
+  }
+
+  @MessagePattern(CinemaMessage.MOVIE.GET_ALL_MOVIES_AT_CINEMAS)
+  async getAllMoviesAtCinemas() {
+    return this.cinemaService.getAllMoviesWithShowtimes();
   }
 }

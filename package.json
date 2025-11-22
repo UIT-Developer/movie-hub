@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "license": "MIT",
   "scripts": {
-    "dev:core": "nx run-many -t=serve --projects=api-gateway,cinema-service --output-style=stream",
+    "dev:core": "nx run-many -t=serve --projects=api-gateway,cinema-service,movie-service --output-style=stream",
     "dev:all": "nx run-many -t=serve --all --outputStyle=stream",
     "prisma:generate": "nx run-many -t=prisma:generate --all"
   },

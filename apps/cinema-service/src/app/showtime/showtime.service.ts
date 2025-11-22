@@ -5,17 +5,22 @@ import {
   ShowtimeSummaryResponse,
   ShowtimeSeatResponse,
   ReservationStatusEnum,
+  AdminGetShowtimesQuery,
 } from '@movie-hub/shared-types';
 import { PrismaService } from '../prisma.service';
 import { RealtimeService } from '../realtime/realtime.service';
 import { ShowtimeSeatMapper } from './showtime-seat.mapper';
-import { LayoutType } from '../../../generated/prisma';
+import {
+  Format,
+  LayoutType,
+  Prisma,
+  ShowtimeStatus,
+} from '../../../generated/prisma';
 
 @Injectable()
 export class ShowtimeService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly mapper: ShowtimeMapper,
     private readonly showtimeSeatMapper: ShowtimeSeatMapper,
     private readonly realtimeService: RealtimeService
   ) {}
@@ -39,12 +44,54 @@ export class ShowtimeService {
             gte: new Date(`${query.date}T00:00:00.000Z`),
             lt: new Date(`${query.date}T23:59:59.999Z`),
           },
+          status: ShowtimeStatus.SELLING,
         },
         orderBy: { start_time: 'asc' },
       });
 
-      return this.mapper.toShowtimeSummaryList(showtimes);
+      return ShowtimeMapper.toShowtimeSummaryList(showtimes);
     });
+  }
+
+  async adminGetMovieShowtimes(
+    cinemaId: string,
+    movieId: string,
+    query: AdminGetShowtimesQuery
+  ): Promise<ShowtimeSummaryResponse[]> {
+    const { date, status, format, hallId, language } = query;
+
+    // Tạo điều kiện where động cho Prisma
+    const where: Prisma.ShowtimesWhereInput = {
+      cinema_id: cinemaId,
+      movie_id: movieId,
+      start_time: {
+        gte: new Date(`${date}T00:00:00.000Z`),
+        lt: new Date(`${date}T23:59:59.999Z`),
+      },
+    };
+
+    if (status) {
+      where.status = status as ShowtimeStatus;
+    }
+
+    if (format) {
+      where.format = format as Format;
+    }
+
+    if (hallId) {
+      where.hall_id = hallId;
+    }
+
+    if (language) {
+      where.language = language;
+    }
+
+    const showtimes = await this.prisma.showtimes.findMany({
+      where,
+      orderBy: { start_time: 'asc' },
+    });
+
+    return ShowtimeMapper.toShowtimeSummaryList(showtimes);
   }
 
   /**
@@ -85,7 +132,7 @@ export class ShowtimeService {
     );
 
     // ✅ Cache ticket pricing
-    const ticketPricingCacheKey = `ticketPricing:${showtime.hall_id}:${showtime.day_type}:${showtime.time_slot}`;
+    const ticketPricingCacheKey = `ticketPricing:${showtime.hall_id}:${showtime.day_type}`;
     const ticketPricings = await this.realtimeService.getOrSetCache(
       ticketPricingCacheKey,
       3600 * 6,
@@ -94,7 +141,6 @@ export class ShowtimeService {
           where: {
             hall_id: showtime.hall_id,
             day_type: showtime.day_type,
-            time_slot: showtime.time_slot,
           },
         });
       }
@@ -125,18 +171,25 @@ export class ShowtimeService {
       }
     });
 
+    // Lấy cinema name
     const cinemaName = await this.prisma.cinemas
       .findUnique({ where: { id: showtime.cinema_id } })
-      .then((c) => c?.name || '');
+      .then((c) => c?.name ?? '');
 
-    const layoutType = await this.prisma.halls
-      .findUnique({ where: { id: showtime.hall_id } })
-      .then((h) => h?.layout_type || LayoutType.STANDARD);
+    // Lấy hall (trả về object an toàn)
+    const hall = await this.prisma.halls.findUnique({
+      where: { id: showtime.hall_id },
+    });
+
+    // Chuẩn bị giá trị mặc định nếu hall null
+    const hallName = hall?.name ?? '';
+    const layoutType = hall?.layout_type ?? LayoutType.STANDARD;
 
     // 🧠 Mapping response cuối cùng
     return this.showtimeSeatMapper.toShowtimeSeatResponse({
       showtime,
       cinemaName,
+      hallName,
       layoutType,
       seats,
       reservedMap,
@@ -166,8 +219,11 @@ export class ShowtimeService {
     await this.realtimeService.deleteCacheByPrefix('ticketPricing');
   }
 
-  async getSessionTTL(userId: string): Promise<{ ttl: number }> {
-    const ttl = await this.realtimeService.getSessionTTL(userId);
+  async getSessionTTL(
+    showtimeId: string,
+    userId: string
+  ): Promise<{ ttl: number }> {
+    const ttl = await this.realtimeService.getUserTTL(showtimeId, userId);
     return { ttl };
   }
 }

@@ -4,19 +4,10 @@ import { FoodCard } from './_components/food-card';
 import { Button } from '@movie-hub/shacdn-ui/button';
 import { useRouter } from 'next/navigation';
 import { useCallback } from 'react';
+import { ConcessionDto } from '@movie-hub/shared-types';
 
-interface FoodItem {
-  id: string;
-  name: string;
-  price: number;
-  image: string;
-}
 
-interface FoodSelectorProps {
-  foodList: FoodItem[];
-}
-
-export const FoodSelector = ({ foodList }: FoodSelectorProps) => {
+export const FoodSelector = () => {
   const {
     foodSelections,
     setFoodSelection,
@@ -57,7 +48,7 @@ export const FoodSelector = ({ foodList }: FoodSelectorProps) => {
             id={food.id}
             name={food.name}
             price={food.price}
-            image={food.image}
+            image={food.imageUrl || '/images/placeholder-bg.png'}
             quantity={foodSelections[food.id] || 0}
             onIncrement={() => handleIncrement(food.id)}
             onDecrement={() => handleDecrement(food.id)}

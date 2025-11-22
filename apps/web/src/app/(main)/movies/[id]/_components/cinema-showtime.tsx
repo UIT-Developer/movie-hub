@@ -30,7 +30,7 @@ export const CinemaShowtime = ({
   const { data: showtimes, isLoading } = useGetMovieShowtimesAtCinema(
     '6499d9b3-dbb3-46f5-b922-3abf5631ee3a',
     '2d63930f-8aea-4ebc-92c2-5a0518b509e9',
-    { date: selectedDate }
+    { date: '2025-11-24' }
   );
 
   const handleClick = (showtimeId: string) => {
@@ -97,7 +97,7 @@ export const CinemaShowtime = ({
                       <button
                         key={s.id}
                         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-                        onClick={() => !disabled && handleClick(s.id)}
+                        onClick={() => !disabled &&  s.id && handleClick(s.id)}
                         disabled={disabled}
                         className={`border rounded-md px-3 py-1 transition-all ${
                           disabled

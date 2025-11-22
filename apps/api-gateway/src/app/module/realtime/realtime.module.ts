@@ -1,18 +1,25 @@
 import { Module } from '@nestjs/common';
 import { RealtimeGateway } from './gateway/realtime.gateway';
 import { RedisModule } from '@movie-hub/shared-redis';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 
 @Module({
   imports: [
-    RedisModule.forRoot({
+    RedisModule.forRootAsync({
       name: 'gateway',
-      config: {
-        host: process.env.REDIS_HOST ?? 'localhost',
-        port: +(process.env.REDIS_PORT ?? 6379),
-        db: 0,
-      },
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        url: config.get('REDIS_URL'),
+        config: {
+          host: config.get('REDIS_HOST'),
+          port: +config.get('REDIS_PORT'),
+          db: 0,
+        },
+      }),
     }),
   ],
+
   providers: [RealtimeGateway],
   exports: [],
 })

@@ -1,11 +1,11 @@
-import { ShowtimeStatusEnum } from '../../enum';
+import { FormatEnum, ShowtimeStatusEnum } from '../../enum';
 
 export interface ShowtimeSummaryResponse {
   id?: string;
   hallId: string;
   startTime: Date;
   endTime: Date;
-  // format: FormatEnum;
+  format: FormatEnum;
   // language?: string;
   // subtitles?: Array<string>;
   // basePrice: number;

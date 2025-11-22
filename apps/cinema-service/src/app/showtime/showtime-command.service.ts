@@ -10,8 +10,6 @@ import { PrismaService } from '../prisma.service';
 import {
   BatchCreateShowtimesInput,
   CreateShowtimeRequest,
-  MovieDetailResponse,
-  MovieReleaseResponse,
   MovieServiceMessage,
   UpdateShowtimeRequest,
 } from '@movie-hub/shared-types';

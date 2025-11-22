@@ -2,6 +2,7 @@ import { Controller } from '@nestjs/common';
 import { ShowtimeService } from './showtime.service';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import {
+  AdminGetShowtimesQuery,
   BatchCreateShowtimesInput,
   CinemaMessage,
   CreateShowtimeRequest,
@@ -28,6 +29,22 @@ export class ShowtimeController {
     }
   ): Promise<ShowtimeSummaryResponse[]> {
     return this.showtimeService.getMovieShowtimesAtCinema(
+      payload.cinemaId,
+      payload.movieId,
+      payload.query
+    );
+  }
+
+  @MessagePattern(CinemaMessage.CINEMA.ADMIN_GET_SHOWTIME)
+  adminGetMovieShowtimes(
+    @Payload()
+    payload: {
+      cinemaId: string;
+      movieId: string;
+      query: AdminGetShowtimesQuery;
+    }
+  ): Promise<ShowtimeSummaryResponse[]> {
+    return this.showtimeService.adminGetMovieShowtimes(
       payload.cinemaId,
       payload.movieId,
       payload.query

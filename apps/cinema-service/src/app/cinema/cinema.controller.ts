@@ -50,4 +50,9 @@ export class CinemaController {
       payload.query
     );
   }
+
+  @MessagePattern(CinemaMessage.MOVIE.GET_ALL_MOVIES_AT_CINEMAS)
+  async getAllMoviesAtCinemas() {
+    return this.cinemaService.getAllMoviesWithShowtimes();
+  }
 }

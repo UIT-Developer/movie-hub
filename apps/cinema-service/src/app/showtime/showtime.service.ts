@@ -5,17 +5,22 @@ import {
   ShowtimeSummaryResponse,
   ShowtimeSeatResponse,
   ReservationStatusEnum,
+  AdminGetShowtimesQuery,
 } from '@movie-hub/shared-types';
 import { PrismaService } from '../prisma.service';
 import { RealtimeService } from '../realtime/realtime.service';
 import { ShowtimeSeatMapper } from './showtime-seat.mapper';
-import { LayoutType } from '../../../generated/prisma';
+import {
+  Format,
+  LayoutType,
+  Prisma,
+  ShowtimeStatus,
+} from '../../../generated/prisma';
 
 @Injectable()
 export class ShowtimeService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly mapper: ShowtimeMapper,
     private readonly showtimeSeatMapper: ShowtimeSeatMapper,
     private readonly realtimeService: RealtimeService
   ) {}
@@ -39,12 +44,54 @@ export class ShowtimeService {
             gte: new Date(`${query.date}T00:00:00.000Z`),
             lt: new Date(`${query.date}T23:59:59.999Z`),
           },
+          status: ShowtimeStatus.SELLING,
         },
         orderBy: { start_time: 'asc' },
       });
 
-      return this.mapper.toShowtimeSummaryList(showtimes);
+      return ShowtimeMapper.toShowtimeSummaryList(showtimes);
     });
+  }
+
+  async adminGetMovieShowtimes(
+    cinemaId: string,
+    movieId: string,
+    query: AdminGetShowtimesQuery
+  ): Promise<ShowtimeSummaryResponse[]> {
+    const { date, status, format, hallId, language } = query;
+
+    // Tạo điều kiện where động cho Prisma
+    const where: Prisma.ShowtimesWhereInput = {
+      cinema_id: cinemaId,
+      movie_id: movieId,
+      start_time: {
+        gte: new Date(`${date}T00:00:00.000Z`),
+        lt: new Date(`${date}T23:59:59.999Z`),
+      },
+    };
+
+    if (status) {
+      where.status = status as ShowtimeStatus;
+    }
+
+    if (format) {
+      where.format = format as Format;
+    }
+
+    if (hallId) {
+      where.hall_id = hallId;
+    }
+
+    if (language) {
+      where.language = language;
+    }
+
+    const showtimes = await this.prisma.showtimes.findMany({
+      where,
+      orderBy: { start_time: 'asc' },
+    });
+
+    return ShowtimeMapper.toShowtimeSummaryList(showtimes);
   }
 
   /**

@@ -1,17 +1,26 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import {
   CinemaDetailResponse,
   CreateCinemaRequest,
+  MovieDetailResponse,
+  MovieServiceMessage,
   ResourceNotFoundException,
   UpdateCinemaRequest,
 } from '@movie-hub/shared-types';
 import { CinemaMapper } from './cinema.mapper';
-import { ServiceResult } from '@movie-hub/shared-types/common';
+import { PaginationQuery, ServiceResult } from '@movie-hub/shared-types/common';
+import { ShowtimeStatus } from 'apps/cinema-service/generated/prisma';
+import { ClientProxy } from '@nestjs/microservices';
+import { lastValueFrom, timeout } from 'rxjs';
+import { ShowtimeMapper } from '../showtime/showtime.mapper';
 
 @Injectable()
 export class CinemaService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Inject('MOVIE_SERVICE') private readonly movieClient: ClientProxy
+  ) {}
 
   async createCinema(createCinemaDto: CreateCinemaRequest) {
     const cinema = await this.prisma.$transaction(async (db) => {
@@ -60,5 +69,200 @@ export class CinemaService {
     return {
       message: 'Delete cinema successfully!',
     };
+  }
+
+  async getMoviesByCinema(cinemaId: string, query: PaginationQuery) {
+    const { page = 1, limit = 10 } = query;
+    const skip = (page - 1) * limit;
+
+    // 1. Lấy tất cả showtimes sắp tới của cinema
+    const now = new Date();
+    const showtimes = await this.prisma.showtimes.findMany({
+      where: {
+        cinema_id: cinemaId,
+        start_time: { gte: now },
+        status: ShowtimeStatus.SELLING,
+      },
+      orderBy: { start_time: 'asc' },
+    });
+
+    if (!showtimes.length) {
+      return {
+        meta: {
+          page,
+          limit,
+          totalRecords: 0,
+          totalPages: 0,
+          hasPrev: false,
+          hasNext: false,
+        },
+        data: [],
+      };
+    }
+
+    // 2. Group showtimes theo movie_id
+    const mapByMovie: Record<string, { movieId: string; showtimes: any[] }> =
+      {};
+    for (const st of showtimes) {
+      if (!mapByMovie[st.movie_id]) {
+        mapByMovie[st.movie_id] = { movieId: st.movie_id, showtimes: [] };
+      }
+      mapByMovie[st.movie_id].showtimes.push(st);
+    }
+
+    // 3. Danh sách movieId và pagination
+    const allMovieIds = Object.keys(mapByMovie);
+    const totalRecords = allMovieIds.length;
+    const totalPages = Math.ceil(totalRecords / limit);
+    const paginatedMovieIds = allMovieIds.slice(skip, skip + limit);
+
+    // 4. Lấy thông tin movie từ movie-service
+    let movies: MovieDetailResponse[] = [];
+    try {
+      const rpcResponse = await lastValueFrom(
+        this.movieClient
+          .send<MovieDetailResponse[]>(
+            MovieServiceMessage.MOVIE.GET_LIST_BY_ID,
+            paginatedMovieIds
+          )
+          .pipe(timeout(5000))
+      );
+      movies = rpcResponse ?? [];
+    } catch (err) {
+      console.error('RPC getMoviesByCinema error:', err);
+      throw new BadRequestException('Cannot fetch movies from movie service');
+    }
+
+    // 5. Ghép showtimes theo ngày gần nhất
+    const response = movies.map((movie) => {
+      const sts = mapByMovie[movie.id]?.showtimes ?? [];
+
+      if (sts.length === 0) {
+        return { ...movie, showtimes: [] };
+      }
+
+      // 5.1 Lấy danh sách unique ngày
+      const dates = [
+        ...new Set(sts.map((s) => s.start_time.toISOString().slice(0, 10))),
+      ];
+
+      const nearestDate = dates.sort()[0]; // YYYY-MM-DD sort
+
+      // 5.2 Lọc showtimes thuộc ngày gần nhất
+      const nearestShowtimes = sts.filter(
+        (s) => s.start_time.toISOString().slice(0, 10) === nearestDate
+      );
+
+      return {
+        ...movie,
+        showtimes: ShowtimeMapper.toShowtimeSummaryList(nearestShowtimes),
+      };
+    });
+
+    // 6. Trả về meta + data
+    return {
+      meta: {
+        page,
+        limit,
+        totalRecords,
+        totalPages,
+        hasPrev: page > 1,
+        hasNext: page < totalPages,
+      },
+      data: response,
+    };
+  }
+
+  async getAllMoviesWithShowtimes() {
+    // 1. Lấy tất cả showtime đang SELLING
+    const showtimes = await this.prisma.showtimes.findMany({
+      where: {
+        status: ShowtimeStatus.SELLING,
+      },
+      include: {
+        cinema: {
+          select: {
+            id: true,
+            name: true,
+            address: true,
+          },
+        },
+      },
+      orderBy: {
+        start_time: 'asc',
+      },
+    });
+
+    if (!showtimes.length) return [];
+
+    // 2. Gom nhóm theo movieId
+    const mapByMovie = new Map<string, typeof showtimes>();
+
+    for (const st of showtimes) {
+      if (!mapByMovie.has(st.movie_id)) {
+        mapByMovie.set(st.movie_id, []);
+      }
+      mapByMovie.get(st.movie_id).push(st);
+    }
+
+    const movieIds = [...mapByMovie.keys()];
+
+    // 3. Gọi movie-service lấy thông tin movie
+    let movies: MovieDetailResponse[] = [];
+    try {
+      movies = await lastValueFrom(
+        this.movieClient
+          .send(MovieServiceMessage.MOVIE.GET_LIST_BY_ID, movieIds)
+          .pipe(timeout(5000))
+      );
+    } catch (err) {
+      console.error('RPC error:', err);
+      throw new BadRequestException('Cannot fetch movies from movie-service');
+    }
+
+    // 4. Merge thông tin + xử lý ngày gần nhất
+    const result = movies.map((movie) => {
+      const sts = mapByMovie.get(movie.id) ?? [];
+
+      // 4.1 Tìm ngày gần nhất có showtime
+      const dates = [
+        ...new Set(sts.map((s) => s.start_time.toISOString().slice(0, 10))),
+      ];
+      const nearestDate = dates.sort()[0]; // YYYY-MM-DD → sort OK
+
+      // 4.2 Filter showtime ở ngày gần nhất
+      const nearestDayShowtimes = sts.filter(
+        (s) => s.start_time.toISOString().slice(0, 10) === nearestDate
+      );
+
+      // 4.3 Gom nhóm theo cinema
+      // 4.3 Gom nhóm theo cinema
+      const cinemaGroups: Record<string, any> = {};
+
+      for (const st of nearestDayShowtimes) {
+        const cid = st.cinema_id;
+
+        if (!cinemaGroups[cid]) {
+          cinemaGroups[cid] = {
+            cinemaId: cid,
+            name: st.cinema.name,
+            address: st.cinema.address,
+            showtimes: [],
+          };
+        }
+
+        // Dùng mapper thay vì format thủ công
+        cinemaGroups[cid].showtimes.push(
+          ShowtimeMapper.toShowtimeSummaryResponse(st)
+        );
+      }
+
+      return {
+        ...movie,
+        cinemas: Object.values(cinemaGroups), // list cinema gồm nhiều showtimes
+      };
+    });
+
+    return result;
   }
 }

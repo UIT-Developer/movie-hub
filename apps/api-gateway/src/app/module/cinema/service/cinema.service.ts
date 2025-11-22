@@ -1,11 +1,12 @@
 import {
+  AdminGetShowtimesQuery,
   CinemaMessage,
   CreateCinemaRequest,
   GetShowtimesQuery,
   SERVICE_NAME,
-  ShowtimeSummaryResponse,
   UpdateCinemaRequest,
 } from '@movie-hub/shared-types';
+import { PaginationQuery } from '@movie-hub/shared-types/common';
 import { Inject, Injectable } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom, lastValueFrom } from 'rxjs';
@@ -136,13 +137,47 @@ export class CinemaService {
     cinemaId: string,
     movieId: string,
     query: GetShowtimesQuery
-  ): Promise<ShowtimeSummaryResponse[]> {
-    return firstValueFrom(
+  ) {
+    const result = await firstValueFrom(
       this.cinemaClient.send(CinemaMessage.CINEMA.GET_SHOWTIME, {
         cinemaId,
         movieId,
         query,
       })
     );
+
+    return { data: result };
+  }
+
+  async adminGetMovieShowtimes(
+    cinemaId: string,
+    movieId: string,
+    query: AdminGetShowtimesQuery
+  ) {
+    const result = await firstValueFrom(
+      this.cinemaClient.send(CinemaMessage.CINEMA.ADMIN_GET_SHOWTIME, {
+        cinemaId,
+        movieId,
+        query,
+      })
+    );
+
+    return { data: result };
+  }
+
+  async getMovieAtCinemas(cinemaId: string, query: PaginationQuery) {
+    return firstValueFrom(
+      this.cinemaClient.send(CinemaMessage.MOVIE.GET_MOVIES_BY_CINEMA, {
+        cinemaId,
+        query,
+      })
+    );
+  }
+
+  async getAllMoviesWithShowtimes() {
+    const result = await lastValueFrom(
+      this.cinemaClient.send(CinemaMessage.MOVIE.GET_ALL_MOVIES_AT_CINEMAS, {})
+    );
+    return { data: result };
   }
 }

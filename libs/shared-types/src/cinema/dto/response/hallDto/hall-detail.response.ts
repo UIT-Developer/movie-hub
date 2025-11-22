@@ -6,9 +6,9 @@ import { HallSummaryResponse } from './hall-summary.response';
 
 export interface HallDetailResponse extends HallSummaryResponse {
   features: string[];
-  cinema_id: string;
+  cinemaId: string;
   layoutType: LayoutTypeEnum;
-  created_at: Date;
-  updated_at: Date;
+  createdAt: Date;
+  updatedAt: Date;
   seatMap: PhysicalSeatRowDto[];
 }

@@ -6,6 +6,8 @@ import {
   ShowtimeSeatResponse,
   ReservationStatusEnum,
   AdminGetShowtimesQuery,
+  SeatPricingDto,
+  SeatTypeEnum,
 } from '@movie-hub/shared-types';
 import { PrismaService } from '../prisma.service';
 import { RealtimeService } from '../realtime/realtime.service';
@@ -14,6 +16,7 @@ import {
   Format,
   LayoutType,
   Prisma,
+  SeatType,
   ShowtimeStatus,
 } from '../../../generated/prisma';
 
@@ -202,8 +205,71 @@ export class ShowtimeService {
   async getSeatsHeldByUser(
     showtimeId: string,
     userId: string
-  ): Promise<string[]> {
-    return this.realtimeService.getUserHeldSeats(showtimeId, userId);
+  ): Promise<SeatPricingDto[]> {
+    const showtime = await this.prisma.showtimes.findUnique({
+      where: { id: showtimeId },
+      select: { id: true, hall_id: true, day_type: true },
+    });
+    if (!showtime) throw new NotFoundException('Showtime not found');
+
+    // 1) seatIds từ realtime
+    const seatIds = await this.realtimeService.getUserHeldSeats(
+      showtimeId,
+      userId
+    );
+    if (!seatIds || seatIds.length === 0) return [];
+
+    // 2) Lấy seats (chỉ cần id và type)
+    const seats = await this.prisma.seats.findMany({
+      where: { id: { in: seatIds } },
+      select: {
+        id: true,
+        type: true,
+        hall_id: true,
+        row_letter: true,
+        seat_number: true,
+      },
+    });
+
+    // 3) Nếu không có seat types thì trả giá 0
+    const seatTypes = Array.from(
+      new Set(seats.map((s) => s.type).filter(Boolean))
+    ) as SeatType[];
+    let ticketPricings = [];
+    if (seatTypes.length > 0) {
+      // 4) Lấy tất cả pricings cho hall + day + các seat types cần thiết
+      ticketPricings = await this.prisma.ticketPricing.findMany({
+        where: {
+          hall_id: showtime.hall_id,
+          day_type: showtime.day_type,
+          seat_type: { in: seatTypes },
+        },
+        // chọn trường cần thiết
+        select: { seat_type: true, price: true },
+      });
+    }
+
+    // 5) Map seat_type -> pricing (để tra nhanh O(1))
+    const pricingBySeatType = new Map<SeatType, number>();
+    for (const tp of ticketPricings) {
+      // nếu có nhiều bản ghi cùng seat_type, bạn có thể decide lấy first/lowest/highest
+      pricingBySeatType.set(tp.seat_type, tp.price);
+    }
+
+    // 6) Build response
+    const response: SeatPricingDto[] = seats.map((seat) => {
+      const price = seat.type ? pricingBySeatType.get(seat.type) ?? 0 : 0;
+      return {
+        id: seat.id,
+        hallId: seat.hall_id,
+        rowLetter: seat.row_letter,
+        seatNumber: seat.seat_number,
+        type: seat.type as SeatTypeEnum,
+        price,
+      };
+    });
+
+    return response;
   }
 
   /**

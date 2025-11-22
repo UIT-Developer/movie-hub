@@ -200,7 +200,6 @@ model SeatReservations {
   showtime_id String            @db.Uuid
   seat_id     String            @db.Uuid
   user_id     String?           @db.Uuid
-  session_id  String?           @db.VarChar(255)
   status      ReservationStatus @default(CONFIRMED)
   booking_id  String?           @db.Uuid
   created_at  DateTime          @default(now()) @db.Timestamp(6)

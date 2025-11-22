@@ -151,6 +151,37 @@ export class RealtimeService implements OnModuleInit, OnModuleDestroy {
   }
 
   // ---------------------------------------
+  // 🎟️ GHẾ ĐÃ ĐƯỢC ĐẶT (BOOKED)
+  // ---------------------------------------
+  async handleSeatBooked(
+    showtimeId: string,
+    userId: string,
+    seatIds: string[]
+  ) {
+    for (const seatId of seatIds) {
+      const seatKey = `hold:showtime:${showtimeId}:${seatId}`;
+      const userKey = `hold:user:${userId}:showtime:${showtimeId}`;
+
+      await Promise.all([
+        this.redis.del(seatKey),
+        this.redis.srem(userKey, seatId),
+      ]);
+    }
+
+    const userKey = `hold:user:${userId}:showtime:${showtimeId}`;
+    const remaining = await this.redis.scard(userKey);
+
+    if (remaining === 0) {
+      await this.redis.del(userKey);
+    }
+
+    await this.redis.publish(
+      'cinema.seat_booked',
+      JSON.stringify({ showtimeId, seatIds, userId })
+    );
+  }
+
+  // ---------------------------------------
   // 🔎 Utility
   // ---------------------------------------
   async getAllHeldSeats(showtimeId: string): Promise<Record<string, string>> {

@@ -9,55 +9,30 @@ import {
 } from '@movie-hub/shacdn-ui/select';
 import { getVietnameseDay } from 'apps/web/src/app/utils/get-vietnamese-day';
 import { useRouter } from 'next/navigation';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { BlurCircle } from '../../../../../components/blur-circle';
 import { CinemaShowtime } from './cinema-showtime';
+import {
+  useGetCinemaDetail,
+  useGetCinemasWithFilters,
+} from 'apps/web/src/hooks/cinema-hooks';
+import { useInView } from 'react-intersection-observer';
 
-// 🎦 Mock data rạp và suất chiếu
-const CINEMAS_BY_LOCATION: Record<
-  string,
-  {
-    id: string;
-    name: string;
-    location: string;
-    showtimes: { id: string; time: string; format: string }[];
-  }[]
-> = {
-  'Hà Nội': [
-    {
-      id: 'cgv-ba-trieu',
-      name: 'CGV Vincom Bà Triệu',
-      location: '191 Bà Triệu, Hai Bà Trưng, Hà Nội',
-
-      showtimes: [
-        { id: 'st-1', time: '10:00', format: '2D Digital' },
-        { id: 'st-2', time: '13:30', format: '2D Digital' },
-        { id: 'st-3', time: '18:45', format: 'IMAX' },
-        { id: 'st-4', time: '21:00', format: 'IMAX' },
-      ],
-    },
-    {
-      id: 'lotte-dong-da',
-      name: 'Lotte Đống Đa',
-      location: '229 Tây Sơn, Đống Đa, Hà Nội',
-      showtimes: [
-        { id: 'st-1', time: '10:00', format: '2D Digital' },
-        { id: 'st-2', time: '13:30', format: '2D Digital' },
-        { id: 'st-3', time: '18:45', format: 'IMAX' },
-        { id: 'st-4', time: '21:00', format: 'IMAX' },
-      ],
-    },
-  ],
-};
-
-type SelectedDateKey = string | null;
-export const DateSelect = ({ id }: { id: string }) => {
+type SelectedDateKey = string;
+export const DateSelect = ({
+  movieId,
+  cinemaId,
+}: {
+  movieId: string;
+  cinemaId?: string;
+}) => {
   const router = useRouter();
   const [selected, setSelected] = useState<SelectedDateKey>(
     new Date().toISOString().split('T')[0]
   );
-  const [selectedLocation, setSelectedLocation] = useState<string>('Hà Nội');
+  const [selectedLocation, setSelectedLocation] =
+    useState<string>('Hồ Chí Minh');
   const [selectedShowtime, setSelectedShowtime] = useState<string | null>();
 
   const next7Days = useMemo(() => {
@@ -69,25 +44,48 @@ export const DateSelect = ({ id }: { id: string }) => {
     });
   }, []);
 
-  const handleSelectShowtime = useCallback(
-    (showtimeId: string) => {
-      setSelectedShowtime(showtimeId);
-    },
-    []
-  );
+  const handleSelectShowtime = useCallback((showtimeId: string) => {
+    setSelectedShowtime(showtimeId);
+  }, []);
 
   const onBookHandler = useCallback(() => {
-    if (!selected) {
-      return toast.error('Please select a date');
-    }
-    if (!selectedShowtime) {
-      return toast.error('Please select a showtime');
-    }
-    router.push('/showtimes/1743dad9-5b78-49a1-be56-5c7205d248b2');
+    if (!selected) return toast.error('Vui lòng chọn ngày');
+    if (!selectedShowtime) return toast.error('Vui lòng chọn suất chiếu');
+    router.push(`/showtimes/${selectedShowtime}`);
     scrollTo(0, 0);
   }, [router, selected, selectedShowtime]);
 
-  const cinemas = CINEMAS_BY_LOCATION[selectedLocation] || [];
+  // Nếu có cinemaId => lấy chi tiết rạp
+  const { data: cinemaDetail } = useGetCinemaDetail(cinemaId ?? '');
+  // Nếu không có cinemaId => lấy danh sách theo city
+
+
+  const { data, fetchNextPage,hasNextPage, isFetchingNextPage, isLoading } =
+    useGetCinemasWithFilters({
+      city: selectedLocation,
+      limit: 10,
+    });
+
+  const { ref, inView } = useInView();
+
+  useEffect(() => {
+    if (inView && hasNextPage) {
+      fetchNextPage();
+    }
+  }, [inView, fetchNextPage, hasNextPage]);
+
+  useEffect(() => {
+    if (cinemaDetail?.city) {
+      setSelectedLocation(cinemaDetail.city);
+    }
+  }, [cinemaDetail]);
+
+  const cinemas =
+    cinemaId && cinemaDetail
+      ? [cinemaDetail]
+      : data
+      ? data.pages.flatMap((page) => page.cinemas)
+      : [];
   return (
     <div id="dateSelect" className="pt-30 relative">
       <div className="flex flex-col items-center justify-between gap-10 relative p-8 bg-rose-500/10  border border-rose-500/20 rounded-lg">
@@ -148,22 +146,37 @@ export const DateSelect = ({ id }: { id: string }) => {
                 />
               </SelectTrigger>
               <SelectContent className="text-rose-400" position="popper">
+                <SelectItem value="Hồ Chí Minh">Hồ Chí Minh</SelectItem>
+                <SelectItem value="Đà Nẵng">Đà Nẵng</SelectItem>
                 <SelectItem value="Hà Nội">Hà Nội</SelectItem>
               </SelectContent>
             </Select>
           </div>
         </div>
         <div className="space-y-4 w-full">
-          {cinemas.map((cinema) => (
-            <CinemaShowtime
-              key={cinema.id}
-              cinemaId={cinema.id}
-              name={cinema.name}
-              location={cinema.location}
-              showtimes={cinema.showtimes}
-              onSelectShowtime={handleSelectShowtime}
-            />
-          ))}
+          {isLoading ? (
+            Array.from({ length: 3 }).map((_, i) => (
+              <CinemaShowtime.Skeleton key={i} />
+            ))
+          ) : cinemas.length === 0 ? (
+            <p className="text-center text-neutral-400 font-semibold">
+              Không có rạp nào
+            </p>
+          ) : (
+            cinemas.map((cinema) => (
+              <CinemaShowtime
+                key={cinema.id}
+                movieId={movieId}
+                cinema={cinema}
+                selectedDate={selected}
+                onSelectShowtime={handleSelectShowtime}
+              />
+            ))
+          )}
+
+          <div ref={ref} className="w-full">
+            {isFetchingNextPage && <CinemaShowtime.Skeleton />}
+          </div>
         </div>
       </div>
     </div>

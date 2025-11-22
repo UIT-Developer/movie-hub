@@ -115,3 +115,11 @@ export const getCinemaDetail= async (
   }
 }
 
+export const getAvailableCities = async (): Promise<string[]> => {
+  try {
+    const response = await api.get('/cinemas/locations/cities');
+    return response.data as string[];
+  } catch (error) {
+    throw error;
+  }
+

@@ -61,7 +61,7 @@ export const foodList = [
 ];
 
 
-export default function BookingPage() {
+export default function SelectFoodPage() {
   return (
     <div className="flex flex-col justify-center md:flex-row px-6 md:px-16 lg:px-40  w-full ">
       <FoodSelector foodList={foodList} />

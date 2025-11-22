@@ -6,6 +6,7 @@ import { Metadata } from 'next';
 import { siteConfig } from '../config/site-config';
 import QueryClientProviders from '../components/providers/query-client-provider';
 import PageWrapper from '../components/providers/page-wrapper';
+import { ModalProvider } from '../components/providers/modal-provider';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -36,7 +37,9 @@ export default function RootLayout({
             afterSignOutUrl="/"
           >
             <PageWrapper>
+            
               <Toaster theme="light" richColors closeButton />
+              <ModalProvider/>
               {children}
             </PageWrapper>
           </ClerkProvider>

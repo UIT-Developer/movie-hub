@@ -18,6 +18,7 @@ import Link from 'next/link';
 import { BlurCircle } from '../../../../../components/blur-circle';
 import { useGetMovieDetail } from 'apps/web/src/hooks/movie-hooks';
 import { ErrorFallback } from 'apps/web/src/components/error-fallback';
+import { useTrailerModal } from 'apps/web/src/stores/trailer-modal-store';
 
 
 export const MovieHeader = ({ movieId }: { movieId: string }) => {
@@ -31,6 +32,9 @@ export const MovieHeader = ({ movieId }: { movieId: string }) => {
         year: 'numeric',
       })
     : 'Chưa rõ ngày phát hành';
+
+
+  const { openModal } = useTrailerModal();
 
   return (
     <>
@@ -131,15 +135,17 @@ export const MovieHeader = ({ movieId }: { movieId: string }) => {
               </p>
 
               <div className="flex items-center gap-2 mt-4">
-                <a
-                  href={movieData.trailerUrl || '#'}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 px-7 py-3 bg-gray-800 hover:bg-gray-900 rounded-md text-sm font-medium active:scale-95 transition"
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    if (movieData.trailerUrl) {
+                      openModal(movieData.trailerUrl);
+                    }
+                  }}
                 >
                   <PlayCircleIcon className="w-5 h-5" />
                   {movieData.trailerUrl ? 'Xem Trailer' : 'Trailer chưa có'}
-                </a>
+                </Button>
 
                 <Button>
                   <Link

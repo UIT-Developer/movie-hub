@@ -4,30 +4,43 @@ import { DateSelect } from './_components/date-select';
 import { MovieCast } from './_components/movie-cast';
 import { MovieHeader } from './_components/movie-header';
 import { getQueryClient } from 'apps/web/src/libs/get-query-client';
+import { getCinemaDetail } from 'apps/web/src/libs/actions/cinemas/cinema-action';
 
 export default async function MovieDetailsPage({
   params,
+  searchParams
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
+  searchParams?: { cinemaId?: string };
 }) {
+  const { id } = await params; // ✅ await params trước
+  const cinemaId = searchParams?.cinemaId;
 
   const queryClient = getQueryClient();
   await queryClient.prefetchQuery({
-    queryKey: ['movie-detail', params.id],
-    queryFn: () => getMovieDetail(params.id),
+    queryKey: ['movie-detail', id],
+    queryFn: () => getMovieDetail(id),
   });
+  if (cinemaId) {
+    await queryClient.prefetchQuery({
+      queryKey: ['cinema-detail', cinemaId],
+      queryFn: () => getCinemaDetail(cinemaId),
+    });
+  }
+
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
       <div className="min-h-screen flex flex-col gap-10 pb-20">
-        <MovieHeader movieId={params.id} />
+        <MovieHeader movieId={id} />
 
         <section className="relative flex flex-col gap-4">
           <p className="text-white text-lg font-bold mt-20">Diễn viên</p>
-          <MovieCast movieId={params.id} />
+          <MovieCast movieId={id} />
         </section>
 
-        <DateSelect id={params.id} />
+        <DateSelect movieId={id} cinemaId={cinemaId} />
       </div>
     </HydrationBoundary>
   );
 }
+

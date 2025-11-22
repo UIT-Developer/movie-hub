@@ -1,5 +1,5 @@
 'use client';
-import { useClerk, UserButton, useUser } from '@clerk/nextjs';
+import { ClerkLoaded, ClerkLoading, SignedIn, SignedOut, SignInButton, useClerk, UserButton, useUser } from '@clerk/nextjs';
 import { Button } from '@movie-hub/shacdn-ui/button';
 import { Logo } from 'apps/web/src/components/logo';
 import { MenuIcon, XIcon } from 'lucide-react';
@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { Search } from './search';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@movie-hub/shacdn-ui/select';
+import { Skeleton } from '@movie-hub/shacdn-ui/skeleton';
 
 export const Navbar = () => {
   const [isOpen, setIsOpen] = useState<boolean>(false);
@@ -76,16 +77,25 @@ export const Navbar = () => {
 
         <div className="flex items-center gap-8 ml-2">
           <Search />
-          {!isSignedIn ? (
-            <Button
-              onClick={() => openSignIn()}
-              className="px-4 py-1 sm:px-7 sm:py-2 transition rounded-full font-medium cursor-pointer"
-            >
-              Login
-            </Button>
-          ) : (
-            <UserButton />
-          )}
+          {/* Khi Clerk đang load → hiện skeleton hình tròn */}
+          <ClerkLoading>
+            <Skeleton className="h-10 w-10 rounded-full" />
+          </ClerkLoading>
+
+          {/* Khi Clerk đã load → render SignedIn/SignedOut */}
+          <ClerkLoaded>
+            <SignedOut>
+              <SignInButton mode="modal">
+                <Button className="px-4 py-1 sm:px-7 sm:py-2 transition rounded-full font-medium cursor-pointer">
+                  Login
+                </Button>
+              </SignInButton>
+            </SignedOut>
+
+            <SignedIn>
+              <UserButton />
+            </SignedIn>
+          </ClerkLoaded>
         </div>
         <MenuIcon
           color="white"

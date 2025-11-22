@@ -21,7 +21,7 @@ export default function Loading() {
         {/* Logo */}
         <div className="flex items-center gap-x-2">
           <Clapperboard size={48} color="white" className="animate-bounce" />
-          <p className="text-3xl font-bold hidden 2xl:flex text-white animate-pulse">
+          <p className="text-3xl font-bold flex text-white animate-pulse">
             Moviehub
           </p>
         </div>

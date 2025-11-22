@@ -10,33 +10,10 @@ import {
 
 } from '../libs/types/showtime.type';
 import { updateLocalStorage } from '../app/utils/update-local-storage';
-const foodList = [
-  {
-    id: 'f1',
-    name: 'Bắp rang bơ',
-    price: 25000,
-    image: 'https://i.imgur.com/1aB6FJX.jpg',
-  },
-  {
-    id: 'f2',
-    name: 'Pepsi',
-    price: 15000,
-    image: 'https://i.imgur.com/7QyLxLm.jpg',
-  },
-  {
-    id: 'f3',
-    name: 'Kẹo',
-    price: 10000,
-    image: 'https://i.imgur.com/Xz2KXWw.jpg',
-  },
-  {
-    id: 'f4',
-    name: 'Combo Bắp + Nước',
-    price: 60000,
-    image: 'https://i.imgur.com/0tDyYV2.jpg',
-  },
-];
+
 type BookingState = {
+  cinemaId?: string;
+  hallName: string;
   currentShowtimeId: string | null;
   selectedSeats: string[]; // row+number
   seatReservationStatus: Record<string, ReservationStatusEnum>;
@@ -57,12 +34,11 @@ type BookingState = {
 
   initBookingData: (data: ShowtimeSeatResponse) => void;
   toggleSeat: (seatLabel: string) => void;
-  updateTicketCount: (type: SeatTypeEnum, delta: number) => void;
+  updateHoldTimeSeconds: (seconds: number) => void;
   resetBooking: () => void;
 
   totalTickets: number;
   totalPrice: number;
-
   foodSelections: Record<string, number>; // key = foodId, value = quantity
   setFoodSelection: (foodId: string, qty: number) => void;
   totalFoodPrice: number;
@@ -71,6 +47,8 @@ type BookingState = {
 let socket: Socket | null = null;
 
 export const useBookingStore = create<BookingState>((set, get) => ({
+  cinemaId: undefined,
+  hallName: '',
   currentShowtimeId: null,
   selectedSeats: [],
   seatReservationStatus: {},
@@ -85,8 +63,6 @@ export const useBookingStore = create<BookingState>((set, get) => ({
   socketConnected: false,
   seatLabelToId: {},
   seatIdToLabel: {},
-  foodSelections: {},
-  totalFoodPrice: 0,
 
   // ---------------- initBookingData ----------------
   initBookingData: (data: ShowtimeSeatResponse) => {
@@ -129,6 +105,7 @@ export const useBookingStore = create<BookingState>((set, get) => ({
     ) as Record<SeatTypeEnum, number>;
 
     set({
+      hallName: data.hallName,
       currentShowtimeId: data.showtime.id,
       seatMap,
       seatReservationStatus,
@@ -153,7 +130,7 @@ export const useBookingStore = create<BookingState>((set, get) => ({
         ticketCounts,
         totalTickets: 0,
         totalPrice: 0,
-        totalPriceFood: 0
+        totalPriceFood: 0,
       };
       localStorage.setItem(storageKey, JSON.stringify(newState));
     } else {
@@ -165,7 +142,7 @@ export const useBookingStore = create<BookingState>((set, get) => ({
             ticketCounts: parsed.ticketCounts || ticketCounts,
             totalTickets: parsed.totalTickets || 0,
             totalPrice: parsed.totalPrice || 0,
-            totalFoodPrice: parsed.totalFoodPrice || 0
+            // totalFoodPrice: parsed.totalFoodPrice || 0
           });
         }
       } else {
@@ -178,8 +155,7 @@ export const useBookingStore = create<BookingState>((set, get) => ({
             ticketCounts,
             totalTickets: 0,
             totalPrice: 0,
-            totalFoodPrice: 0
-            
+            totalFoodPrice: 0,
           })
         );
       }
@@ -190,15 +166,12 @@ export const useBookingStore = create<BookingState>((set, get) => ({
   toggleSeat: (seatLabel: string) => {
     const {
       selectedSeats,
-      totalTickets,
+      tickets,
       seatReservationStatus,
       seatLabelToId,
+      seatMap,
+      maxTickets,
     } = get();
-
-    if (totalTickets === 0) {
-      toast.error('Vui lòng chọn vé trước!');
-      return;
-    }
 
     if (seatReservationStatus[seatLabel] === ReservationStatusEnum.CONFIRMED) {
       toast.error('Ghế này đã được đặt!');
@@ -213,22 +186,55 @@ export const useBookingStore = create<BookingState>((set, get) => ({
       toast.error('Ghế này đang được giữ bởi người dùng khác!');
       return;
     }
+    // Tìm seat object
+    const allSeats = seatMap.flatMap((row) => row.seats);
+    const seatObj = allSeats.find((s) => s.id === seatLabelToId[seatLabel]);
+    if (!seatObj) return;
 
-    if (
-      !selectedSeats.includes(seatLabel) &&
-      selectedSeats.length >= totalTickets
-    ) {
-      toast.error(
-        `Chỉ được chọn tối đa ${totalTickets} ghế theo số vé đã chọn!`
-      );
-      return;
+    let newSeats: string[];
+    if (selectedSeats.includes(seatLabel)) {
+      // bỏ ghế
+      newSeats = selectedSeats.filter((s) => s !== seatLabel);
+    } else {
+      if (selectedSeats.length >= maxTickets) {
+        toast.error(`Chỉ được chọn tối đa ${maxTickets} ghế!`);
+        return;
+      }
+      // thêm ghế
+      newSeats = [...selectedSeats, seatLabel];
     }
 
-    const newSeats = selectedSeats.includes(seatLabel)
-      ? selectedSeats.filter((s) => s !== seatLabel)
-      : [...selectedSeats, seatLabel];
+    // 🔹 Tính lại ticketCounts theo loại ghế
+    const newTicketCounts: Record<SeatTypeEnum, number> = {
+      [SeatTypeEnum.STANDARD]: 0,
+      [SeatTypeEnum.VIP]: 0,
+      [SeatTypeEnum.COUPLE]: 0,
+      [SeatTypeEnum.PREMIUM]: 0,
+      [SeatTypeEnum.WHEELCHAIR]: 0,
+    };
+    newSeats.forEach((label) => {
+      const seat = allSeats.find((s) => s.id === seatLabelToId[label]);
+      if (seat) {
+        newTicketCounts[seat.seatType] =
+          (newTicketCounts[seat.seatType] ?? 0) + 1;
+      }
+    });
 
-    set({ selectedSeats: newSeats });
+    // 🔹 Tính lại tổng số vé
+    const totalTickets = newSeats.length;
+
+    // 🔹 Tính lại tổng tiền
+    const newTotalPrice = tickets.reduce(
+      (sum, t) => sum + t.price * (newTicketCounts[t.key] ?? 0),
+      0
+    );
+
+    set({
+      selectedSeats: newSeats,
+      ticketCounts: newTicketCounts,
+      totalTickets,
+      totalPrice: newTotalPrice,
+    });
 
     // update localStorage
     const currentShowtimeId = get().currentShowtimeId;
@@ -236,6 +242,9 @@ export const useBookingStore = create<BookingState>((set, get) => ({
     updateLocalStorage(
       {
         selectedSeats: newSeats,
+        ticketCounts: newTicketCounts,
+        totalTickets,
+        totalPrice: newTotalPrice,
       },
       storageKey
     );
@@ -251,70 +260,44 @@ export const useBookingStore = create<BookingState>((set, get) => ({
       }
     }
   },
+  foodPriceMap: {},
+  foodSelections: {},
+  totalFoodPrice: 0,
+  setFoodSelection: (foodId, qty) => {
+    // const newSelections = { ...get().foodSelections, [foodId]: qty };
 
-  // ---------------- updateTicketCount ----------------
-  updateTicketCount: (type, delta) => {
-    const { tickets, ticketCounts, selectedSeats, maxTickets } = get();
-    const updated = {
-      ...ticketCounts,
-      [type]: Math.max(0, (ticketCounts[type] ?? 0) + delta),
-    };
-    const total = Object.values(updated).reduce((a, b) => a + b, 0);
 
-    if (total > maxTickets) {
-      toast.error(`Chỉ được chọn tối đa ${maxTickets} vé!`);
-      return;
-    }
+    // const foodList = get().foodSelections; // hoặc lưu foodList vào store khi init
+    // let newTotalFoodPrice = 0;
+    // Object.entries(newSelections).forEach(([id, count]) => {
+    //   // bạn cần có map id -> price, ví dụ lưu trong store
+    //   const foodPrice = get().foodPriceMap?.[id] ?? 0;
+    //   newTotalFoodPrice += foodPrice * count;
+    // });
 
-    let newSelectedSeats = selectedSeats;
-    if (total < selectedSeats.length) newSelectedSeats = [];
+    // set({
+    //   foodSelections: newSelections,
+    //   totalFoodPrice: newTotalFoodPrice,
+    // });
 
-    const newTotalPrice = tickets.reduce(
-      (sum, t) => sum + t.price * (updated[t.key] ?? 0),
-      0
-    );
-
-    set({
-      ticketCounts: updated,
-      selectedSeats: newSelectedSeats,
-      totalTickets: total,
-      totalPrice: newTotalPrice,
-    });
-
-    // update localStorage
-    const currentShowtimeId = get().currentShowtimeId;
-    const storageKey = `bookingState_${currentShowtimeId}`;
-    updateLocalStorage(
-      {
-        ticketCounts: updated,
-        totalTickets: total,
-        totalPrice: newTotalPrice,
-      },
-      storageKey
-    );
+    // // update localStorage
+    // const currentShowtimeId = get().currentShowtimeId;
+    // if (currentShowtimeId) {
+    //   const storageKey = `bookingState_${currentShowtimeId}`;
+    //   updateLocalStorage(
+    //     {
+    //       foodSelections: newSelections,
+    //       totalFoodPrice: newTotalFoodPrice,
+    //     },
+    //     storageKey
+    //   );
+    // }
   },
 
-  setFoodSelection: (foodId, qty) => {
-  set(state => {
-    const updated = { ...state.foodSelections, [foodId]: qty };
-     const totalFoodPrice = Object.entries(updated).reduce((sum, [id, q]) => {
-      const food = foodList.find(f => f.id === id);
-      return sum + (food?.price ?? 0) * q;
-    }, 0);
-    
-    // Update localStorage
-    const currentShowtimeId = state.currentShowtimeId;
-    if (currentShowtimeId) {
-      const storageKey = `bookingState_${currentShowtimeId}`;
-     updateLocalStorage(
-        { foodSelections: updated, totalFoodPrice },
-        storageKey
-      );
-    }
-
-    return { foodSelections: updated, totalFoodPrice };
-  });
-},
+  updateHoldTimeSeconds: (seconds: number) => {
+    set({ holdTimeSeconds: seconds });
+    console.log('Updated holdTimeSeconds to', seconds);
+  },
 
   // ---------------- Socket ----------------
   connectSocket: (showtimeId: string, userId: string) => {

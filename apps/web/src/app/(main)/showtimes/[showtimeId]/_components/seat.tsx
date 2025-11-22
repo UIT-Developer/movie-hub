@@ -31,13 +31,13 @@ export const Seat = ({
   let typeClass = '';
   switch (type) {
     case SeatTypeEnum.STANDARD:
-      typeClass = 'border-rose-500/90 w-8 h-8';
+      typeClass = 'w-4 h-4 sm:w-6 sm:h-6 md:w-8 md:h-8 border-rose-500/90';
       break;
     case SeatTypeEnum.VIP:
-      typeClass = 'border-yellow-500 w-8 h-8';
+      typeClass = 'w-4 h-4 sm:w-6 sm:h-6 md:w-8 md:h-8 border-yellow-500';
       break;
     case SeatTypeEnum.COUPLE:
-      typeClass = 'border-purple-500 w-16 h-8';
+      typeClass = 'w-8 h-4 sm:w-12 sm:h-6 md:w-16 md:h-8 border-purple-500';
       break;
   }
 
@@ -57,13 +57,9 @@ export const Seat = ({
         className={`${baseClass} ${typeClass} ${stateClass} p-0`}
         disabled={isDisabled || isHeld || isConfirmed}
       >
-        <div className="flex w-full h-full gap-1">
-          <div className="flex-1 border-r border-purple-500 flex items-center justify-center">
-            {number}
-          </div>
-          <div className="flex-1 flex items-center justify-center">
-            {number + 1}
-          </div>
+        <div className="flex w-full h-full items-center justify-center">
+          {/* Hiển thị một số duy nhất ở giữa */}
+          <span className="font-semibold">{number}</span>
         </div>
       </Button>
     );

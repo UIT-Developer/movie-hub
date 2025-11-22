@@ -6,7 +6,7 @@ export const useGetConcessions = (query: {
   cinemaId?: string,
   category?: ConcessionCategory,
   available?: boolean
-})  => {
+}) => {
   return useQuery({
     queryKey: ['concessions'],
     queryFn: async () => {
@@ -14,5 +14,6 @@ export const useGetConcessions = (query: {
         query
       );
     },
+    enabled: !!query.cinemaId,
   });
 }

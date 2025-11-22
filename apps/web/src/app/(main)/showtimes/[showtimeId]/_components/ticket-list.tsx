@@ -1,27 +1,24 @@
 'use client';
-import { TicketTypeEnum } from '@movie-hub/shared-types';
+
+import { SeatTypeEnum } from 'apps/web/src/libs/types/showtime.type';
 import React from 'react';
 
 export type TicketType = {
-  key: TicketTypeEnum;
+  key: SeatTypeEnum;
   label: string;
   price: number;
 };
 
 type TicketTypeListProps = {
   tickets: TicketType[];
-  ticketCounts: Record<TicketTypeEnum, number>;
-  onTicketChange: (type: TicketTypeEnum, delta: number) => void;
 };
 
 export const TicketTypeList: React.FC<TicketTypeListProps> = ({
   tickets,
-  ticketCounts,
-  onTicketChange,
 }) => {
   return (
     <div className="w-full mt-10 text-white flex-col gap-4 items-center justify-center">
-      <h2 className="text-xl font-semibold mb-4 text-center">Chọn loại vé</h2>
+      <h2 className="text-xl font-semibold mb-4 text-center">Giá vé</h2>
 
       <div className="flex flex-row flex-wrap gap-8 items-center justify-center">
         {tickets.map((ticket) => (
@@ -34,25 +31,6 @@ export const TicketTypeList: React.FC<TicketTypeListProps> = ({
               {ticket.price.toLocaleString()} đ
             </p>
 
-            <div className="flex items-center gap-2">
-              <button
-                className="px-3 py-1 rounded-md bg-rose-700/30 text-rose-400 border-rose-700/60 hover:bg-rose-600 hover:text-white hover:border-rose-500"
-                onClick={() => onTicketChange(ticket.key, -1)}
-              >
-                -
-              </button>
-
-              <span className="w-[20px] text-center">
-                {ticketCounts[ticket.key] ?? 0}
-              </span>
-
-              <button
-                className="px-3 py-1 rounded-md bg-rose-700/30 text-rose-400 border-rose-700/60 hover:bg-rose-600 hover:text-white hover:border-rose-500"
-                onClick={() => onTicketChange(ticket.key, 1)}
-              >
-                +
-              </button>
-            </div>
           </div>
         ))}
       </div>

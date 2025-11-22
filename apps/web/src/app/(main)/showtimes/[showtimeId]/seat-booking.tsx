@@ -2,7 +2,7 @@
 import { useAuth, useClerk, useUser } from '@clerk/nextjs';
 import { Button } from '@movie-hub/shacdn-ui/button';
 import { BlurCircle } from 'apps/web/src/components/blur-circle';
-import { useGetShowtimeSeats } from 'apps/web/src/hooks/showtime-hooks';
+import { useGetSessionTTL, useGetShowtimeSeats } from 'apps/web/src/hooks/showtime-hooks';
 import { useBookingStore } from 'apps/web/src/stores/booking-store';
 import { Film, LogIn } from 'lucide-react';
 import { useEffect } from 'react';
@@ -14,17 +14,15 @@ import { RequireSignIn } from 'apps/web/src/components/require-sign-in';
 import BookingBar from './_components/booking-summary';
 import { LayoutTypeEnum } from 'apps/web/src/libs/types/showtime.type';
 
-
-const SeatBookingPage = () => {
-  const { isSignedIn, user } = useUser();
-  const { getToken } = useAuth();
+export const SeatBooking = ({ showtimeId }: { showtimeId: string }) => {
+  const { user } = useUser();
 
 
-
-  const { data } = useGetShowtimeSeats(
-'cbeb33e0-7166-47fa-b497-a0a509343599'
-  );
+  const { data } = useGetShowtimeSeats(showtimeId);
+  const { data: ttlResponse } = useGetSessionTTL(showtimeId);
+  console.log('TTL Response:', ttlResponse);
   const {
+    hallName,
     seatMap,
     seatReservationStatus,
     seatHeldByUser,
@@ -33,7 +31,7 @@ const SeatBookingPage = () => {
     tickets,
     initBookingData,
     toggleSeat,
-    updateTicketCount,
+    updateHoldTimeSeconds,
     connectSocket,
     disconnectSocket,
   } = useBookingStore();
@@ -43,22 +41,26 @@ const SeatBookingPage = () => {
   }, [data, initBookingData]);
 
   useEffect(() => {
-    const token = getToken();
-    if (!isSignedIn || !token) return;
 
-    connectSocket('cbeb33e0-7166-47fa-b497-a0a509343599', user.id);
+    if (!user) return;
+
+    connectSocket(showtimeId, user.id);
+
+    if (ttlResponse?.ttl && ttlResponse?.ttl > 0) {
+      updateHoldTimeSeconds(ttlResponse.ttl);
+    }
     return () => {
       disconnectSocket();
     };
-  }, [isSignedIn, data, connectSocket, disconnectSocket, getToken, user]);
+  }, [data, connectSocket, disconnectSocket, user, showtimeId, ttlResponse, updateHoldTimeSeconds]);
 
   return (
     <RequireSignIn>
       <div className="flex flex-col md:flex-row px-6  w-full ">
-        <div className="relative flex-1 flex flex-col items-center max-md:mt-16 gap-4">
+        <div className="relative flex-1 flex flex-col items-center max-md:mt-10 gap-4">
           <BlurCircle top="-100px" left="-100px" />
           <BlurCircle bottom="0" right="0" />
-          <h1 className="text-2xl font-bold text-white">Chọn chỗ</h1>
+          <h1 className="text-2xl font-bold text-white">{hallName}</h1>
           <CinemaScreen />
           <SeatGrid
             layoutType={LayoutTypeEnum.STANDARD}
@@ -69,16 +71,10 @@ const SeatBookingPage = () => {
             onSeatClick={toggleSeat}
           />
           <SeatLegend />
-          <TicketTypeList
-            tickets={tickets}
-            ticketCounts={ticketCounts}
-            onTicketChange={updateTicketCount}
-          />
+          <TicketTypeList tickets={tickets} />
         </div>
       </div>
       <BookingBar />
     </RequireSignIn>
   );
 };
-
-export default SeatBookingPage;

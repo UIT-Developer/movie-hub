@@ -34,10 +34,9 @@ export const SeatLegend = () => (
     {seatLegendItems.map((item) => (
       <div key={item.label} className="flex items-center gap-2">
         {item.type === SeatTypeEnum.COUPLE ? (
-          <div className="flex">
-            <div className={`h-5 w-5 rounded border ${item.color}`} />
-            <div className={`h-5 w-5 rounded border ${item.color}`} />
-          </div>
+          
+            <div className={`h-5 w-10 rounded border ${item.color}`} />
+          
         ) : (
           <div className={`h-5 w-5 rounded ${item.color}`} />
         )}

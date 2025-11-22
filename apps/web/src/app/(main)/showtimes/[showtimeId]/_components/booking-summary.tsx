@@ -11,7 +11,8 @@ export default function BookingBar() {
   const {
     selectedSeats,
     totalPrice,
-    totalTickets,
+    tickets,
+    ticketCounts,
     holdTimeSeconds,
     resetBooking,
     currentShowtimeId,
@@ -68,9 +69,23 @@ export default function BookingBar() {
 
               <div className="hidden sm:block h-4 w-px bg-gray-700 mx-2" />
 
-              <div>
-                <span className="font-medium">Số lượng: </span>
-                <span>{totalTickets}</span>
+              <div className="flex flex-col">
+                <span className="font-medium">Số lượng theo loại vé:</span>
+                <div className="mt-1 space-y-1">
+                  {tickets.map((ticket) => {
+                    const count = ticketCounts[ticket.key] ?? 0;
+                    if (count === 0) return null; // chỉ hiện loại vé có số lượng > 0
+                    return (
+                      <div
+                        key={ticket.key}
+                        className="flex justify-between text-xs"
+                      >
+                        <span>{ticket.label}</span>
+                        <span className="font-semibold">x{count}</span>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
 
               <div className="hidden sm:block h-4 w-px bg-gray-700 mx-2" />

@@ -1,9 +1,8 @@
 import {
-  SeatItemDto,
-  SeatRowDto,
   ReservationStatusEnum,
-  SeatTypeEnum,
+  SeatRowDto,
   SeatStatusEnum,
+  SeatTypeEnum
 } from 'apps/web/src/libs/types/showtime.type';
 import { Seat } from './seat';
 
@@ -78,7 +77,7 @@ const renderSeats = ({
 export const standardLayout = (props: LayoutRenderProps) => (
   <div
     key={props.rowData.row}
-    className="flex gap-2 items-center justify-start"
+    className="flex gap-2 items-center justify-start overflow"
   >
     <div className="w-6 text-right text-gray-400 font-semibold">
       {props.rowData.row}

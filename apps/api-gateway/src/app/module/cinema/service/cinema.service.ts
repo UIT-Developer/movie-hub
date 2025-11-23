@@ -9,7 +9,7 @@ import {
 import { PaginationQuery } from '@movie-hub/shared-types/common';
 import { Inject, Injectable } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
-import { firstValueFrom, lastValueFrom } from 'rxjs';
+import { lastValueFrom } from 'rxjs';
 
 @Injectable()
 export class CinemaService {
@@ -138,15 +138,13 @@ export class CinemaService {
     movieId: string,
     query: GetShowtimesQuery
   ) {
-    const result = await firstValueFrom(
+    return lastValueFrom(
       this.cinemaClient.send(CinemaMessage.CINEMA.GET_SHOWTIME, {
         cinemaId,
         movieId,
         query,
       })
     );
-
-    return { data: result };
   }
 
   async adminGetMovieShowtimes(
@@ -154,19 +152,17 @@ export class CinemaService {
     movieId: string,
     query: AdminGetShowtimesQuery
   ) {
-    const result = await firstValueFrom(
+    return lastValueFrom(
       this.cinemaClient.send(CinemaMessage.CINEMA.ADMIN_GET_SHOWTIME, {
         cinemaId,
         movieId,
         query,
       })
     );
-
-    return { data: result };
   }
 
   async getMovieAtCinemas(cinemaId: string, query: PaginationQuery) {
-    return firstValueFrom(
+    return lastValueFrom(
       this.cinemaClient.send(CinemaMessage.MOVIE.GET_MOVIES_BY_CINEMA, {
         cinemaId,
         query,
@@ -175,9 +171,8 @@ export class CinemaService {
   }
 
   async getAllMoviesWithShowtimes() {
-    const result = await lastValueFrom(
+    return lastValueFrom(
       this.cinemaClient.send(CinemaMessage.MOVIE.GET_ALL_MOVIES_AT_CINEMAS, {})
     );
-    return { data: result };
   }
 }

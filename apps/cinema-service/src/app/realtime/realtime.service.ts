@@ -6,7 +6,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { RedisPubSubService } from '@movie-hub/shared-redis';
-import { SeatEvent } from '@movie-hub/shared-types';
+import { SeatEvent, BookingConfirmedEvent } from '@movie-hub/shared-types';
 
 @Injectable()
 export class RealtimeService implements OnModuleInit, OnModuleDestroy {
@@ -21,6 +21,7 @@ export class RealtimeService implements OnModuleInit, OnModuleDestroy {
   async onModuleInit() {
     this.logger.log('✅ RealtimeService initialized');
     await this.subscribeToGatewayChannels();
+    await this.subscribeToBookingEvents();
   }
 
   private async subscribeToGatewayChannels() {
@@ -30,6 +31,27 @@ export class RealtimeService implements OnModuleInit, OnModuleDestroy {
     await this.redis.subscribe('gateway.release_seat', (msg) =>
       this.handleGatewayMessage('gateway.release_seat', msg)
     );
+  }
+
+  private async subscribeToBookingEvents() {
+    await this.redis.subscribe('booking.confirmed', (msg) =>
+      this.handleBookingConfirmed(msg)
+    );
+  }
+
+  private async handleBookingConfirmed(message: string) {
+    try {
+      const event = JSON.parse(message) as BookingConfirmedEvent;
+      this.logger.log(
+        `Received booking.confirmed event for booking ${event.bookingId}`
+      );
+      await this.handleSeatBooked(event.showtimeId, event.userId, event.seatIds);
+    } catch (error) {
+      this.logger.error(
+        `Failed to handle booking.confirmed event: ${error.message}`,
+        error.stack
+      );
+    }
   }
 
   private async handleGatewayMessage(channel: string, message: string) {

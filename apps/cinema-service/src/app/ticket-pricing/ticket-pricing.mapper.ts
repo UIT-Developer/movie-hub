@@ -4,9 +4,9 @@ export class TicketPricingMapper {
   static toTicketPricingResponse(entity): TicketPricingResponse {
     return {
       id: entity.id,
-      hallId: entity.hallId,
-      seatType: entity.seatType,
-      dayType: entity.dayType,
+      hallId: entity.hall_id,
+      seatType: entity.seat_type,
+      dayType: entity.day_type,
       price: Number(entity.price), // Convert Prisma Decimal to number
     };
   }

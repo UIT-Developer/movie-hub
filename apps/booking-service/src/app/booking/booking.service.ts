@@ -60,6 +60,37 @@ export class BookingService {
       );
     }
 
+    // ✅ STEP 1.5: Check if any of the held seats are already booked in the database
+    const seatIds = heldSeatsWithPricing.map((seat) => seat.id);
+    const existingTickets = await this.prisma.tickets.findMany({
+      where: {
+        seat_id: { in: seatIds },
+        booking: {
+          showtime_id: dto.showtimeId,
+          status: {
+            in: [BookingStatus.PENDING, BookingStatus.CONFIRMED],
+          },
+        },
+      },
+      include: {
+        booking: {
+          select: {
+            id: true,
+            showtime_id: true,
+            status: true,
+            user_id: true,
+          },
+        },
+      },
+    });
+
+    if (existingTickets.length > 0) {
+      const bookedSeatIds = existingTickets.map((t) => t.seat_id);
+      throw new BadRequestException(
+        `Cannot create booking. The following seats are already booked: ${bookedSeatIds.join(', ')}`
+      );
+    }
+
     // ✅ STEP 2: Get showtime details with seat information from Cinema Service
     const showtimeData = await this.getShowtimeDetails(dto.showtimeId, userId);
     
@@ -170,7 +201,7 @@ export class BookingService {
         promotion_code: dto.promotionCode,
         status: BookingStatus.PENDING,
         payment_status: PaymentStatus.PENDING,
-        expires_at: new Date(Date.now() + 10 * 60 * 1000), // 5 minutes to complete payment
+        expires_at: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes to complete payment
         tickets: {
           create: ticketPrices.map((ticket) => ({
             seat_id: ticket.seatId,

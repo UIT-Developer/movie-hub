@@ -1,0 +1,6 @@
+export enum PromotionType {
+  PERCENTAGE = 'PERCENTAGE',
+  FIXED_AMOUNT = 'FIXED_AMOUNT',
+  FREE_ITEM = 'FREE_ITEM',
+  POINTS = 'POINTS',
+}

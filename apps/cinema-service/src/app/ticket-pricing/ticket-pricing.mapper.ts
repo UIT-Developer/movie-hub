@@ -7,7 +7,7 @@ export class TicketPricingMapper {
       hallId: entity.hallId,
       seatType: entity.seatType,
       dayType: entity.dayType,
-      price: entity.price,
+      price: Number(entity.price), // Convert Prisma Decimal to number
     };
   }
 

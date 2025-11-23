@@ -9,6 +9,7 @@ import {
   GetShowtimesQuery,
   ShowtimeSummaryResponse,
   UpdateShowtimeRequest,
+  SeatPricingDto
 } from '@movie-hub/shared-types';
 import { ShowtimeCommandService } from './showtime-command.service';
 
@@ -64,7 +65,7 @@ export class ShowtimeController {
   @MessagePattern(CinemaMessage.SHOWTIME.GET_SEATS_HELD_BY_USER)
   getSeatsHeldByUser(
     @Payload() payload: { showtimeId: string; userId: string }
-  ): Promise<string[]> {
+  ): Promise<SeatPricingDto[]> {
     return this.showtimeService.getSeatsHeldByUser(
       payload.showtimeId,
       payload.userId

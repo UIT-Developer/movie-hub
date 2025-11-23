@@ -1,4 +1,7 @@
-import { FormatEnum, ShowtimeStatusEnum } from '../../enum';
+import {
+  FormatEnum,
+  ShowtimeStatusEnum,
+} from '@movie-hub/shared-types/cinema/enum';
 
 export interface ShowtimeSummaryResponse {
   id?: string;
@@ -6,8 +9,5 @@ export interface ShowtimeSummaryResponse {
   startTime: Date;
   endTime: Date;
   format: FormatEnum;
-  // language?: string;
-  // subtitles?: Array<string>;
-  // basePrice: number;
   status: ShowtimeStatusEnum;
 }

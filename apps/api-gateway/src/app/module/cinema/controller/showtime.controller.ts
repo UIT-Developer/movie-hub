@@ -17,6 +17,7 @@ import {
   BatchCreateShowtimesInput,
   CreateShowtimeRequest,
   UpdateSeatStatusRequest,
+  UpdateShowtimeRequest,
 } from '@movie-hub/shared-types';
 
 @Controller({
@@ -67,7 +68,7 @@ export class ShowtimeController {
   @UseGuards(ClerkAuthGuard)
   updateShowtime(
     @Param('id') showtimeId: string,
-    @Body() updateData: UpdateSeatStatusRequest
+    @Body() updateData: UpdateShowtimeRequest
   ) {
     return this.showtimeService.updateShowtime(showtimeId, updateData);
   }

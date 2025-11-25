@@ -10,7 +10,34 @@ import {
   BookingStatus,
   PaymentStatus,
   CinemaMessage,
+  ShowtimeSeatResponse,
+  SeatItemDto,
+  SeatRowDto,
+  SeatTypeEnum,
+  FormatEnum,
+  SeatPricingDto,
+  SeatStatusEnum,
+  ReservationStatusEnum,
 } from '@movie-hub/shared-types';
+import { Prisma, Concessions, Tickets } from '../../../generated/prisma';
+
+// Type for booking with full relations using Prisma's generated types
+type BookingWithRelations = Prisma.BookingsGetPayload<{
+  include: {
+    tickets: true;
+    booking_concessions: {
+      include: {
+        concession: true;
+      };
+    };
+  };
+}>;
+
+// Type for seat detail from showtime response
+interface SeatDetail extends SeatItemDto {
+  row: string;
+  type: SeatTypeEnum;
+}
 
 @Injectable()
 export class BookingService {
@@ -24,11 +51,43 @@ export class BookingService {
     dto: CreateBookingDto
   ): Promise<BookingDetailDto> {
     // ✅ STEP 1: Get seats currently held by user from Cinema Service (Redis)
-    const heldSeatIds = await this.getSeatsHeldByUser(dto.showtimeId, userId);
+    // Returns SeatPricingDto[] with seat details and pricing
+    const heldSeatsWithPricing = await this.getSeatsHeldByUser(dto.showtimeId, userId);
 
-    if (heldSeatIds.length === 0) {
+    if (heldSeatsWithPricing.length === 0) {
       throw new BadRequestException(
         'No seats are currently held by this user. Please hold seats via WebSocket first.'
+      );
+    }
+
+    // ✅ STEP 1.5: Check if any of the held seats are already booked in the database
+    const seatIds = heldSeatsWithPricing.map((seat) => seat.id);
+    const existingTickets = await this.prisma.tickets.findMany({
+      where: {
+        seat_id: { in: seatIds },
+        booking: {
+          showtime_id: dto.showtimeId,
+          status: {
+            in: [BookingStatus.PENDING, BookingStatus.CONFIRMED],
+          },
+        },
+      },
+      include: {
+        booking: {
+          select: {
+            id: true,
+            showtime_id: true,
+            status: true,
+            user_id: true,
+          },
+        },
+      },
+    });
+
+    if (existingTickets.length > 0) {
+      const bookedSeatIds = existingTickets.map((t) => t.seat_id);
+      throw new BadRequestException(
+        `Cannot create booking. The following seats are already booked: ${bookedSeatIds.join(', ')}`
       );
     }
 
@@ -39,42 +98,28 @@ export class BookingService {
       throw new BadRequestException('Showtime not found');
     }
 
-    // ✅ STEP 3: Validate that all held seats match the booking request (if seats provided)
-    // Note: We prioritize Redis held seats over dto.seats
-    // Cinema service returns seat_map (array of rows), we need to flatten it
-    const seatsArray: any[] = showtimeData.seat_map
-      ? // flatten seat_map -> seats, preserve row information
-        showtimeData.seat_map.flatMap((row: any) =>
-          (row.seats || []).map((s: any) => ({ 
-            ...s, 
-            row: row.row,  // Add row letter from parent
-            type: s.seatType || s.type 
-          }))
-        )
-      : [];
-
-    if (!Array.isArray(seatsArray) || seatsArray.length === 0) {
-      throw new BadRequestException('Showtime seat information is not available');
-    }
-
-    const seatMap = new Map(seatsArray.map((s) => [s.id, s]));
-
-    // Get seat details for held seats
-    const heldSeatsDetails = heldSeatIds
-      .map((seatId) => seatMap.get(seatId))
-      .filter((seat) => seat !== undefined);
-
-    if (heldSeatsDetails.length !== heldSeatIds.length) {
-      throw new BadRequestException(
-        'Some held seats are not available in this showtime'
-      );
-    }
+    // ✅ STEP 3: Build seat details from held seats with pricing
+    // Convert SeatPricingDto to SeatDetail format
+    const heldSeatsDetails: SeatDetail[] = heldSeatsWithPricing.map((seat) => ({
+      id: seat.id,
+      row: seat.rowLetter,
+      number: seat.seatNumber,
+      type: seat.type,
+      seatType: seat.type,
+      seatStatus: SeatStatusEnum.ACTIVE,
+      reservationStatus: ReservationStatusEnum.HELD,
+      isHeldByCurrentUser: true,
+    }));
 
     // ✅ STEP 4: Calculate pricing based on actual held seats
     const ticketPrices = await this.calculateTicketPrices(
       heldSeatsDetails,
-      dto.seats,
-      showtimeData
+      heldSeatsWithPricing
+    );
+
+    // Create seat type map for ticket creation
+    const seatTypeMap = new Map(
+      heldSeatsDetails.map((s) => [s.id, s.type])
     );
     
     const ticketsSubtotal = ticketPrices.reduce((sum, t) => sum + t.price, 0);
@@ -127,7 +172,7 @@ export class BookingService {
     let pointsDiscount = 0;
 
     if (dto.promotionCode) {
-      discount = await this.calculatePromotion(dto.promotionCode, subtotal, userId);
+      discount = await this.calculatePromotion(dto.promotionCode, subtotal);
     }
 
     if (dto.usePoints && dto.usePoints > 0) {
@@ -156,12 +201,12 @@ export class BookingService {
         promotion_code: dto.promotionCode,
         status: BookingStatus.PENDING,
         payment_status: PaymentStatus.PENDING,
-        expires_at: new Date(Date.now() + 10 * 60 * 1000), // 5 minutes to complete payment
+        expires_at: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes to complete payment
         tickets: {
           create: ticketPrices.map((ticket) => ({
             seat_id: ticket.seatId,
             ticket_code: this.generateTicketCode(),
-            ticket_type: ticket.ticketType,
+            ticket_type: seatTypeMap.get(ticket.seatId) || 'STANDARD', // Use seat type as ticket type
             price: ticket.price,
           })),
         },
@@ -198,7 +243,7 @@ export class BookingService {
   ): Promise<{ data: BookingSummaryDto[]; total: number }> {
     const skip = (page - 1) * limit;
 
-    const where: any = { user_id: userId };
+    const where: Prisma.BookingsWhereInput = { user_id: userId };
     if (status) {
       where.status = status;
     }
@@ -208,6 +253,11 @@ export class BookingService {
         where,
         include: {
           tickets: true,
+          booking_concessions: {
+            include: {
+              concession: true,
+            },
+          },
         },
         orderBy: { created_at: 'desc' },
         skip,
@@ -327,7 +377,10 @@ export class BookingService {
   /**
    * Get showtime details with seat information from Cinema Service
    */
-  private async getShowtimeDetails(showtimeId: string, userId?: string) {
+  private async getShowtimeDetails(
+    showtimeId: string,
+    userId?: string
+  ): Promise<ShowtimeSeatResponse> {
     try {
       const showtimeData = await firstValueFrom(
         this.cinemaClient.send(CinemaMessage.SHOWTIME.GET_SHOWTIME_SEATS, {
@@ -335,8 +388,8 @@ export class BookingService {
           userId,
         })
       );
-      return showtimeData as any; // ShowtimeSeatResponse type
-    } catch (error) {
+      return showtimeData as ShowtimeSeatResponse;
+    } catch {
       throw new BadRequestException(
         'Failed to get showtime details from cinema service'
       );
@@ -346,7 +399,9 @@ export class BookingService {
   /**
    * Get concession details from database
    */
-  private async getConcessionDetails(concessionIds: string[]) {
+  private async getConcessionDetails(
+    concessionIds: string[]
+  ): Promise<Concessions[]> {
     return this.prisma.concessions.findMany({
       where: {
         id: { in: concessionIds },
@@ -355,36 +410,26 @@ export class BookingService {
   }
 
   /**
-   * Calculate ticket prices based on seat types and ticket types
+   * Calculate ticket prices based on seat types
+   * ✅ Get prices from Cinema Service (SeatPricingDto already has pricing by seat_type)
    */
   private async calculateTicketPrices(
-    heldSeatsDetails: any[],
-    requestedSeats: { seatId: string; ticketType: string }[],
-    showtimeData: any
-  ): Promise<Array<{ seatId: string; ticketType: string; price: number }>> {
-    const ticketPrices: Array<{ seatId: string; ticketType: string; price: number }> = [];
+    heldSeatsDetails: SeatDetail[],
+    heldSeatsWithPricing: SeatPricingDto[]
+  ): Promise<Array<{ seatId: string; price: number }>> {
+    const ticketPrices: Array<{ seatId: string; price: number }> = [];
 
-    // Create a map of requested ticket types by seat ID
-    const ticketTypeMap = new Map(
-      requestedSeats?.map((s) => [s.seatId, s.ticketType]) || []
+    // Create a map of pricing by seat ID from SeatPricingDto
+    const priceMap = new Map(
+      heldSeatsWithPricing.map((s) => [s.id, s.price])
     );
 
     for (const seat of heldSeatsDetails) {
-      // Get ticket type from request, default to 'ADULT'
-      const ticketType = ticketTypeMap.get(seat.id) || 'ADULT';
-      
-      // Find price from showtime pricing data (property name is ticketPrices, not ticketPricing)
-      const priceInfo = showtimeData.ticketPrices?.find(
-        (p: any) =>
-          p.seatType === seat.type &&
-          p.ticketType === ticketType
-      );
-
-      const price = priceInfo ? Number(priceInfo.price) : 100000; // Default price
+      // Get price from SeatPricingDto (based on seat_type and day_type)
+      const price = priceMap.get(seat.id) || 0;
 
       ticketPrices.push({
         seatId: seat.id,
-        ticketType,
         price,
       });
     }
@@ -397,8 +442,7 @@ export class BookingService {
    */
   private async calculatePromotion(
     promotionCode: string,
-    subtotal: number,
-    userId: string
+    subtotal: number
   ): Promise<number> {
     const promotion = await this.prisma.promotions.findFirst({
       where: {
@@ -465,16 +509,19 @@ export class BookingService {
     return points * 1000;
   }
 
-  private mapToSummaryDto(booking: any, showtimeData?: any): BookingSummaryDto {
+  private mapToSummaryDto(
+    booking: BookingWithRelations,
+    showtimeData?: ShowtimeSeatResponse
+  ): BookingSummaryDto {
     return {
       id: booking.id,
       bookingCode: booking.booking_code,
       showtimeId: booking.showtime_id,
-      // Cinema service returns showtime.movie, showtime.cinema, showtime.hall if available
-      movieTitle: showtimeData?.showtime?.movie?.title || 'Movie Title',
-      cinemaName: showtimeData?.showtime?.cinema?.name || showtimeData?.cinemaName || 'Cinema Name',
-      hallName: showtimeData?.showtime?.hall?.name || 'Hall Name',
-      startTime: showtimeData?.showtime?.start_time || showtimeData?.showtime?.startTime || new Date(),
+      // Cinema service returns cinemaName as string directly
+      movieTitle: 'Movie', // TODO: Need to fetch from movie service separately
+      cinemaName: showtimeData?.cinemaName || 'Cinema',
+      hallName: 'Hall', // TODO: Need to fetch from cinema service separately
+      startTime: showtimeData?.showtime?.start_time || new Date(),
       seatCount: booking.tickets?.length || 0,
       totalAmount: Number(booking.final_amount),
       status: booking.status as BookingStatus,
@@ -482,20 +529,23 @@ export class BookingService {
     };
   }
 
-  private mapToDetailDto(booking: any, showtimeData?: any): BookingDetailDto {
+  private mapToDetailDto(
+    booking: BookingWithRelations,
+    showtimeData?: ShowtimeSeatResponse
+  ): BookingDetailDto {
     // Create a map of seat details from showtime data
     // Cinema service always returns seat_map, not seats
-    const seatsArray: any[] = showtimeData?.seat_map
-      ? showtimeData.seat_map.flatMap((row: any) => 
-          (row.seats || []).map((s: any) => ({ 
+    const seatsArray: SeatDetail[] = showtimeData?.seat_map
+      ? showtimeData.seat_map.flatMap((row: SeatRowDto) => 
+          (row.seats || []).map((s: SeatItemDto) => ({ 
             ...s, 
             row: row.row,  // Preserve row from parent
-            type: s.seatType || s.type 
+            type: s.seatType || s.seatType 
           }))
         )
       : [];
 
-    const seatMap = new Map((seatsArray || []).map((s: any) => [s.id, s]));
+    const seatMap = new Map((seatsArray || []).map((s: SeatDetail) => [s.id, s]));
 
     return {
       ...this.mapToSummaryDto(booking, showtimeData),
@@ -503,7 +553,7 @@ export class BookingService {
       customerName: booking.customer_name,
       customerEmail: booking.customer_email,
       customerPhone: booking.customer_phone,
-      seats: (booking.tickets || []).map((t: any) => {
+      seats: (booking.tickets || []).map((t: Tickets) => {
         const seatDetail = seatMap.get(t.seat_id);
         return {
           seatId: t.seat_id,
@@ -514,7 +564,7 @@ export class BookingService {
           price: Number(t.price),
         };
       }),
-      concessions: (booking.booking_concessions || []).map((bc: any) => ({
+      concessions: (booking.booking_concessions || []).map((bc) => ({
         concessionId: bc.concession_id,
         name: bc.concession?.name || '',
         quantity: bc.quantity,
@@ -537,12 +587,12 @@ export class BookingService {
 
   /**
    * ✅ Get ghế đang được giữ bởi user từ cinema service
-   * Trả về danh sách seat IDs đang được user giữ
+   * Trả về danh sách SeatPricingDto với thông tin ghế và giá
    */
   private async getSeatsHeldByUser(
     showtimeId: string,
     userId: string
-  ): Promise<string[]> {
+  ): Promise<SeatPricingDto[]> {
     try {
       const heldSeats = await firstValueFrom(
         this.cinemaClient.send(
@@ -550,7 +600,7 @@ export class BookingService {
           { showtimeId, userId }
         )
       );
-      return heldSeats as string[];
+      return heldSeats as SeatPricingDto[];
     } catch {
       throw new BadRequestException(
         'Failed to get held seats from cinema service. Please try again.'
@@ -593,20 +643,20 @@ export class BookingService {
     }
 
     // Get seat details from showtime data
-    // Cinema service always returns seat_map (array of rows), not seats
-    const seatsArray = showtimeData?.seat_map
-      ? showtimeData.seat_map.flatMap((row: { row?: string; seats?: unknown[] }) =>
-          (row.seats || []).map((s: Record<string, unknown>) => ({
+    // Cinema service returns seat_map (array of SeatRowDto)
+    const seatsArray: SeatDetail[] = showtimeData?.seat_map
+      ? showtimeData.seat_map.flatMap((row: SeatRowDto) =>
+          (row.seats || []).map((s: SeatItemDto) => ({
             ...s,
             row: row.row,  // Preserve row from parent
-            type: s.seatType || s.type,
+            type: s.seatType, // Use seatType from SeatItemDto
           }))
         )
       : [];
 
     const seatMap = new Map(
-      (seatsArray || []).map((s: { id: string }) => [s.id, s])
-    ) as Map<string, Record<string, unknown>>;
+      (seatsArray || []).map((s: SeatDetail) => [s.id, s])
+    );
 
     // Group tickets by ticket type
     const ticketGroups = this.groupTicketsByType(booking.tickets, seatMap);
@@ -683,23 +733,23 @@ export class BookingService {
     // Build the summary
     const summary: BookingCalculationDto = {
       movie: {
-        id: showtimeData?.showtime?.movie?.id || '',
-        title: showtimeData?.showtime?.movie?.title || 'Movie',
-        posterUrl: showtimeData?.showtime?.movie?.posterUrl,
-        duration: showtimeData?.showtime?.movie?.duration || 0,
-        rating: showtimeData?.showtime?.movie?.rating || 'N/A',
+        id: '', // TODO: Fetch from movie service
+        title: 'Movie', // TODO: Fetch from movie service
+        posterUrl: undefined,
+        duration: 0,
+        rating: 'N/A',
       },
       cinema: {
-        id: showtimeData?.showtime?.cinema?.id || '',
-        name: showtimeData?.showtime?.cinema?.name || showtimeData?.cinemaName || 'Cinema',
-        address: showtimeData?.showtime?.cinema?.address || '',
-        hallName: showtimeData?.showtime?.hall?.name || 'Hall',
+        id: '', // TODO: Fetch from cinema service
+        name: showtimeData?.cinemaName || 'Cinema',
+        address: '',
+        hallName: 'Hall', // TODO: Fetch from cinema service
       },
       showtime: {
         id: booking.showtime_id,
-        startTime: showtimeData?.showtime?.start_time || showtimeData?.showtime?.startTime || new Date(),
-        endTime: showtimeData?.showtime?.end_time || showtimeData?.showtime?.endTime || new Date(),
-        format: showtimeData?.showtime?.format || '2D',
+        startTime: showtimeData?.showtime?.start_time || new Date(),
+        endTime: showtimeData?.showtime?.end_time || new Date(),
+        format: showtimeData?.showtime?.format || FormatEnum.TWO_D,
         language: showtimeData?.showtime?.language || 'Vietnamese',
       },
       ticketGroups,
@@ -735,7 +785,7 @@ export class BookingService {
       ticket_type: string;
       price: unknown;
     }>,
-    seatMap: Map<string, Record<string, unknown>>
+    seatMap: Map<string, SeatDetail>
   ) {
     const groups: Record<
       string,

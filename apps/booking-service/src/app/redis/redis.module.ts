@@ -1,15 +1,13 @@
 import { Global, Module } from '@nestjs/common';
 import { RedisModule } from '@movie-hub/shared-redis';
-import { RealtimeService } from './realtime.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { ResolveBookingService } from './resolve-booking.service';
-import { PrismaService } from '../prisma.service';
+import { BookingEventService } from './booking-event.service';
 
 @Global()
 @Module({
   imports: [
     RedisModule.forRootAsync({
-      name: 'cinema',
+      name: 'booking',
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
@@ -22,7 +20,7 @@ import { PrismaService } from '../prisma.service';
       }),
     }),
   ],
-  providers: [RealtimeService, ResolveBookingService, PrismaService],
-  exports: [RealtimeService],
+  providers: [BookingEventService],
+  exports: [BookingEventService],
 })
-export class RealtimeModule {}
+export class BookingRedisModule {}

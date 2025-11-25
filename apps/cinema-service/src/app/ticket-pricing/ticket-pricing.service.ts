@@ -2,27 +2,35 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import { TicketPricingResponse } from '@movie-hub/shared-types';
 import { TicketPricingMapper } from './ticket-pricing.mapper';
+import { ServiceResult } from '@movie-hub/shared-types/common';
 
 @Injectable()
 export class TicketPricingService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getPricingForHall(hallId: string): Promise<TicketPricingResponse[]> {
+  async getPricingForHall(
+    hallId: string
+  ): Promise<ServiceResult<TicketPricingResponse[]>> {
     const pricings = await this.prisma.ticketPricing.findMany({
       where: { hall_id: hallId },
     });
-
-    return TicketPricingMapper.toTicketPricingResponses(pricings);
+    return {
+      data: TicketPricingMapper.toTicketPricingResponses(pricings),
+      message: 'Ticket pricings retrieved successfully',
+    };
   }
 
   async updateTicketPricing(
     pricingId: string,
     price: number
-  ): Promise<TicketPricingResponse> {
+  ): Promise<ServiceResult<TicketPricingResponse>> {
     const updatedPricing = await this.prisma.ticketPricing.update({
       where: { id: pricingId },
       data: { price },
     });
-    return TicketPricingMapper.toTicketPricingResponse(updatedPricing);
+    return {
+      data: TicketPricingMapper.toTicketPricingResponse(updatedPricing),
+      message: 'Ticket pricing updated successfully',
+    };
   }
 }

@@ -5,7 +5,7 @@ import {
   ReservationStatusEnum,
   SeatStatusEnum,
   SeatTypeEnum,
-} from '../../enum';
+} from '../../../enum';
 
 export interface SeatItemDto {
   id: string;

@@ -9,10 +9,12 @@ import {
   PaymentMethod,
   BookingStatus,
   TicketStatus,
+  BookingDetailDto,
 } from '@movie-hub/shared-types';
 import * as crypto from 'crypto';
 import moment from 'moment';
 import * as querystring from 'qs';
+import { BookingEventService } from '../redis/booking-event.service';
 
 @Injectable()
 export class PaymentService {
@@ -24,7 +26,8 @@ export class PaymentService {
 
   constructor(
     private prisma: PrismaService,
-    private configService: ConfigService
+    private configService: ConfigService,
+    private bookingEventService: BookingEventService
   ) {
     this.vnp_TmnCode = this.configService.get('VNPAY_TMN_CODE') || 'EX6ATLAM';
     this.vnp_HashSecret = this.configService.get('VNPAY_HASH_SECRET') || 'ID4MX46WVEFNI39KLW9JUFHDR0I4U3IB';
@@ -69,7 +72,7 @@ export class PaymentService {
     });
 
       // Use the validated paymentAmount instead of dto.amount
-      const paymentUrl = await this.createVNPayUrl(payment.id, booking.id, paymentAmount, ipAddr);
+      const paymentUrl = await this.createVNPayUrl(payment.id, booking.id, booking.expires_at, paymentAmount, ipAddr);
       
       await this.prisma.payments.update({
         where: { id: payment.id },
@@ -83,6 +86,7 @@ export class PaymentService {
   async createVNPayUrl(
     paymentId: string,
     bookingId: string,
+    expireAt : Date,
     amount: number,
     ipAddr: string
   ): Promise<string> {
@@ -91,12 +95,14 @@ export class PaymentService {
       throw new Error('Invalid payment amount for VNPay URL generation');
     }
 
-    process.env.TZ = 'Asia/Ho_Chi_Minh';
     
-    const date = new Date();
-    const createDate = moment(date).format('YYYYMMDDHHmmss');
-    // Expire after 15 minutes - not used in VNPay request
-    const expireDate = moment(date).add(15, 'minutes').format('YYYYMMDDHHmmss');
+    
+    // Use moment with timezone awareness - ensure all dates use Asia/Ho_Chi_Minh
+   
+    const createDate = moment.utc().utcOffset('+07:00').format('YYYYMMDDHHmmss');
+    
+    // Convert expireAt to Vietnam timezone (UTC+7) and format
+    const expireDate = moment.utc(expireAt).utcOffset('+07:00').format('YYYYMMDDHHmmss');
     
     const orderId = paymentId;
     const locale = 'vn';
@@ -207,6 +213,20 @@ export class PaymentService {
           }),
         ]);
 
+        // Publish booking completed event to Redis
+        const tickets = await this.prisma.tickets.findMany({
+          where: { booking_id: payment.booking_id },
+          select: { seat_id: true },
+        });
+
+        await this.bookingEventService.publishBookingConfirmed({
+           
+          userId: payment.booking.user_id,
+          showtimeId: payment.booking.showtime_id,
+          bookingId: payment.booking_id,
+          seatIds: tickets.map((t) => t.seat_id),
+        });
+
         return { RspCode: '00', Message: 'Success' };
       } else {
         await this.prisma.$transaction([
@@ -233,7 +253,7 @@ export class PaymentService {
       return { RspCode: '99', Message: 'Update failed, please retry' };
     }
   }
-
+//  //## DONT USE THIS , use ipn instead
   async handleVNPayReturn(vnpParams: Record<string, string>): Promise<{ status: string; code: string }> {
     const secureHash = vnpParams.vnp_SecureHash;  
     

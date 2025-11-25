@@ -27,11 +27,7 @@ const subtotal =
   heldSeats.reduce((s, t) => s + t.price, 0) +
   concessions.reduce((s, c) => s + c.price, 0);
 
-export const PaymentSection = ({
-  setLoading,
-}: {
-  setLoading: (v: boolean) => void;
-}) => {
+export const PaymentSection = () => {
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod | null>(
     null
   );
@@ -53,7 +49,7 @@ export const PaymentSection = ({
     }
 
     try {
-      setLoading(true);
+   
 
       const booking = await createBooking.mutateAsync({
         showtimeId: 'showtime-123',
@@ -87,8 +83,6 @@ export const PaymentSection = ({
     } catch (err) {
       console.error(err);
       toast.error('Không thể tạo thanh toán. Vui lòng thử lại.');
-    } finally {
-      setLoading(false);
     }
   };
   const [voucher, setVoucher] = useState('');

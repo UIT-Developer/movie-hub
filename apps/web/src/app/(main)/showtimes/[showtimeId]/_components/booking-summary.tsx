@@ -44,7 +44,7 @@ export default function BookingBar() {
 
   const onClickContinue = useCallback(() => {
     if (currentShowtimeId) {
-      router.push(`${currentShowtimeId}/select-food`);
+      router.push(`${currentShowtimeId}/checkout`);
     }
   }, [router, currentShowtimeId]);
 
@@ -58,10 +58,11 @@ export default function BookingBar() {
           transition={{ type: 'spring', stiffness: 120, damping: 15 }}
           className="fixed bottom-0 left-0 right-0 z-50 bg-black text-white border-t border-gray-700 shadow-lg"
         >
-          <div className="max-w-4xl mx-auto flex justify-between items-center p-4 text-sm">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-              <div>
+          <div className="max-w-4xl mx-auto flex justify-between items-center p-2 gap-2 text-sm">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <div className='flex flex-wrap'>
                 <span className="font-medium">Ghế đã chọn: </span>
+                <div></div>
                 <span>
                   {selectedSeats.map((seatLabel) => seatLabel).join(', ')}
                 </span>
@@ -69,7 +70,7 @@ export default function BookingBar() {
 
               <div className="hidden sm:block h-4 w-px bg-gray-700 mx-2" />
 
-              <div className="flex flex-col">
+              <div className="flex flex-col p-2">
                 <span className="font-medium">Số lượng theo loại vé:</span>
                 <div className="mt-1 space-y-1">
                   {tickets.map((ticket) => {

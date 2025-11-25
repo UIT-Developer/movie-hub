@@ -6,12 +6,19 @@ import {
   createBooking,
   getUserBookings,
 } from '../libs/actions/booking/booking-action';
+import { getQueryClient } from '../libs/get-query-client';
 
 export const useCreateBooking = () => {
+  const queryClient = getQueryClient();
   return useMutation({
     mutationKey: ['create-booking'],
     mutationFn: async (data: CreateBookingDto) => {
       return await createBooking(data);
+    },
+    onSuccess: () => {
+      toast.success('Đặt vé thành công!');
+      queryClient.invalidateQueries({ queryKey: ['user-bookings'] });
+
     },
     onError: (error) => {
       toast.error(

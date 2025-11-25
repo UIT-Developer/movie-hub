@@ -1,12 +1,11 @@
-import { Toaster } from 'sonner';
-import './global.css';
 import { ClerkProvider } from '@clerk/nextjs';
-import { Inter } from 'next/font/google';
 import { Metadata } from 'next';
-import { siteConfig } from '../config/site-config';
-import QueryClientProviders from '../components/providers/query-client-provider';
+import { Inter } from 'next/font/google';
+import { Toaster } from 'sonner';
 import PageWrapper from '../components/providers/page-wrapper';
-import { ModalProvider } from '../components/providers/modal-provider';
+import QueryClientProviders from '../components/providers/query-client-provider';
+import { siteConfig } from '../config/site-config';
+import './global.css';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -39,7 +38,7 @@ export default function RootLayout({
             <PageWrapper>
             
               <Toaster theme="light" richColors closeButton />
-              <ModalProvider/>
+              
               {children}
             </PageWrapper>
           </ClerkProvider>

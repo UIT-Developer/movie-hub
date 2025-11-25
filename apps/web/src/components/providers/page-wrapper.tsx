@@ -2,24 +2,21 @@
 import { useState, useEffect } from 'react';
 import Loading from '../loading';
 
-
 export default function PageWrapper({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const [loading, setLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    // Khi mount xong => tắt loading
-    const timeout = setTimeout(() => setLoading(false), 1000);
-    return () => clearTimeout(timeout);
+    // Khi client mount xong thì bật mounted
+    setMounted(true);
   }, []);
 
-  return (
-    <>
-      {loading && <Loading />}
-      {children}
-    </>
-  );
+  if (!mounted) {
+    return <Loading />;
+  }
+
+  return <>{children}</>;
 }

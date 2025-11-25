@@ -5,6 +5,7 @@ import { MovieCast } from './_components/movie-cast';
 import { MovieHeader } from './_components/movie-header';
 import { getQueryClient } from 'apps/web/src/libs/get-query-client';
 import { getCinemaDetail } from 'apps/web/src/libs/actions/cinemas/cinema-action';
+import { TrailerModal } from 'apps/web/src/components/modal/trailer-modal';
 
 export default async function MovieDetailsPage({
   params,
@@ -39,6 +40,7 @@ export default async function MovieDetailsPage({
         </section>
 
         <DateSelect movieId={id} cinemaId={cinemaId} />
+        <TrailerModal/>
       </div>
     </HydrationBoundary>
   );

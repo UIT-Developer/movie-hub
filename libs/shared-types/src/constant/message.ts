@@ -75,6 +75,19 @@ export const BookingMessage = {
   FIND_ONE: 'booking.findOne',
   CANCEL: 'booking.cancel',
   GET_SUMMARY: 'booking.getSummary',
+  FIND_USER_BOOKING_BY_SHOWTIME: 'booking.findUserBookingByShowtime',
+  // Admin operations
+  ADMIN_FIND_ALL: 'booking.admin.findAll',
+  FIND_BY_SHOWTIME: 'booking.findByShowtime',
+  FIND_BY_CINEMA: 'booking.findByCinema',
+  FIND_BY_DATE_RANGE: 'booking.findByDateRange',
+  UPDATE_STATUS: 'booking.updateStatus',
+  CONFIRM: 'booking.confirm',
+  COMPLETE: 'booking.complete',
+  EXPIRE: 'booking.expire',
+  // Statistics
+  GET_STATISTICS: 'booking.getStatistics',
+  GET_REVENUE_REPORT: 'booking.getRevenueReport',
 };
 
 export const ConcessionMessage = {
@@ -95,4 +108,51 @@ export const PromotionMessage = {
   UPDATE: 'promotion.update',
   DELETE: 'promotion.delete',
   TOGGLE_ACTIVE: 'promotion.toggleActive',
+};
+
+export const PaymentMessage = {
+  CREATE: 'payment.create',
+  FIND_ONE: 'payment.findOne',
+  FIND_BY_BOOKING: 'payment.findByBooking',
+  VNPAY_IPN: 'payment.vnpay.ipn',
+  VNPAY_RETURN: 'payment.vnpay.return',
+  // Admin operations
+  ADMIN_FIND_ALL: 'payment.admin.findAll',
+  FIND_BY_STATUS: 'payment.findByStatus',
+  FIND_BY_DATE_RANGE: 'payment.findByDateRange',
+  RETRY: 'payment.retry',
+  CANCEL: 'payment.cancel',
+  // Statistics
+  GET_STATISTICS: 'payment.getStatistics',
+};
+
+export const TicketMessage = {
+  FIND_ONE: 'ticket.findOne',
+  FIND_BY_CODE: 'ticket.findByCode',
+  VALIDATE: 'ticket.validate',
+  USE: 'ticket.use',
+  GENERATE_QR: 'ticket.generateQR',
+  // Admin operations
+  ADMIN_FIND_ALL: 'ticket.admin.findAll',
+  FIND_BY_SHOWTIME: 'ticket.findByShowtime',
+  FIND_BY_BOOKING: 'ticket.findByBooking',
+  BULK_VALIDATE: 'ticket.bulkValidate',
+  CANCEL: 'ticket.cancel',
+};
+
+export const LoyaltyMessage = {
+  GET_BALANCE: 'loyalty.getBalance',
+  GET_TRANSACTIONS: 'loyalty.getTransactions',
+  EARN_POINTS: 'loyalty.earnPoints',
+  REDEEM_POINTS: 'loyalty.redeemPoints',
+};
+
+export const RefundMessage = {
+  CREATE: 'refund.create',
+  FIND_ALL: 'refund.findAll',
+  FIND_ONE: 'refund.findOne',
+  FIND_BY_PAYMENT: 'refund.findByPayment',
+  PROCESS: 'refund.process',
+  APPROVE: 'refund.approve',
+  REJECT: 'refund.reject',
 };

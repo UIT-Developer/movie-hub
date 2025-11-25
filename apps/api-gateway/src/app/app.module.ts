@@ -29,7 +29,7 @@ import { BookingModule } from './module/booking/booking.module';
     UserModule,
     MovieModule,
     CinemaModule,
-    BookingModule, // Includes: booking, payment, concession, promotion controllers
+    BookingModule, // Includes: booking, payment, refund, concession, promotion, ticket, loyalty controllers
     RealtimeModule,
   ],
   controllers: [],

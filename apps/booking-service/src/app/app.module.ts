@@ -10,7 +10,9 @@ import { ConcessionModule } from './concession/concession.module';
 import { PromotionModule } from './promotion/promotion.module';
 import { LoyaltyModule } from './loyalty/loyalty.module';
 import { TicketModule } from './ticket/ticket.module';
+import { RefundModule } from './refund/refund.module';
 import { BookingRedisModule } from './redis/redis.module';
+import { NotificationModule } from './notification/notification.module';
 import Joi from 'joi';
 
 @Module({
@@ -26,18 +28,28 @@ import Joi from 'joi';
         CINEMA_PORT: Joi.number().default(3003),
         NODE_ENV: Joi.string().valid('development', 'production').default('development'),
         LOG_LEVEL: Joi.string().default('debug'),
+        // Email configuration (optional)
+        EMAIL_ENABLED: Joi.string().default('false'),
+        EMAIL_HOST: Joi.string().default('smtp.gmail.com'),
+        EMAIL_PORT: Joi.number().default(587),
+        EMAIL_SECURE: Joi.string().default('false'),
+        EMAIL_USER: Joi.string().optional(),
+        EMAIL_PASSWORD: Joi.string().optional(),
+        EMAIL_FROM: Joi.string().default('MovieHub <noreply@moviehub.com>'),
       }),
     }),
     CacheModule.register({
       isGlobal: true,
     }),
     BookingRedisModule,
+    NotificationModule,
     BookingModule,
     PaymentModule,
     ConcessionModule,
     PromotionModule,
     LoyaltyModule,
     TicketModule,
+    RefundModule,
   ],
   controllers: [AppController],
   providers: [AppService, PrismaService],

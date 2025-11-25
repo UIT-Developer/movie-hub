@@ -53,6 +53,9 @@ export interface BookingDetailDto extends BookingSummaryDto {
 
 //Extented summary with breakdown 
 export interface BookingCalculationDto {
+  // Booking ID
+  bookingId: string;
+  
   // Movie & Showtime Info
   movie: {
     id: string;
@@ -131,7 +134,19 @@ export interface BookingCalculationDto {
     newBalance: number;
   };
 
+  // Payment Information (available pending payment)
+  payment?: {
+    id: string;
+    amount: number;
+    paymentMethod?: string;
+    paymentUrl?: string;
+    status: string;
+    createdAt: Date;
+  };
+
   // Metadata
-  bookingCode?: string;
+  bookingCode: string;
+  status: BookingStatus;
+  paymentStatus: PaymentStatus;
   expiresAt?: Date;
 }

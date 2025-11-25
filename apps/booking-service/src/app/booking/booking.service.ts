@@ -2,6 +2,7 @@ import { Injectable, BadRequestException, Inject } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
 import { PrismaService } from '../prisma.service';
+import { NotificationService } from '../notification/notification.service';
 import {
   CreateBookingDto,
   BookingDetailDto,
@@ -9,6 +10,7 @@ import {
   BookingCalculationDto,
   BookingStatus,
   PaymentStatus,
+  TicketStatus,
   CinemaMessage,
   ShowtimeSeatResponse,
   SeatItemDto,
@@ -16,8 +18,13 @@ import {
   SeatTypeEnum,
   FormatEnum,
   SeatPricingDto,
+  SeatPricingWithTtlDto,
   SeatStatusEnum,
   ReservationStatusEnum,
+  UpdateBookingDto,
+  RescheduleBookingDto,
+  RefundCalculationDto,
+  CancelBookingWithRefundDto,
 } from '@movie-hub/shared-types';
 import { Prisma, Concessions, Tickets } from '../../../generated/prisma';
 
@@ -41,18 +48,43 @@ interface SeatDetail extends SeatItemDto {
 
 @Injectable()
 export class BookingService {
+  // Refund policy constants
+  private readonly CANCELLATION_HOURS_BEFORE = 2; // Must cancel 2 hours before showtime
+  private readonly REFUND_PERCENTAGE = 70; // 70% refund on tickets
+  private readonly MAX_RESCHEDULES = 1; // Max 1 reschedule per booking
+
   constructor(
     private prisma: PrismaService,
-    @Inject('CINEMA_SERVICE') private cinemaClient: ClientProxy
+    @Inject('CINEMA_SERVICE') private cinemaClient: ClientProxy,
+    private notificationService: NotificationService
   ) {}
 
   async createBooking(
     userId: string,
     dto: CreateBookingDto
-  ): Promise<BookingDetailDto> {
+  ): Promise<BookingCalculationDto> {
+    // ✅ STEP 0: Check if user already has a pending booking for this showtime
+    const existingPendingBooking = await this.prisma.bookings.findFirst({
+      where: {
+        user_id: userId,
+        showtime_id: dto.showtimeId,
+        status: BookingStatus.PENDING,
+        expires_at: {
+          gte: new Date(), // Not expired yet
+        },
+      },
+    });
+
+    if (existingPendingBooking) {
+      throw new BadRequestException(
+        `You already have a pending booking (${existingPendingBooking.booking_code}) for this showtime. Please complete or cancel it first.`
+      );
+    }
+
     // ✅ STEP 1: Get seats currently held by user from Cinema Service (Redis)
-    // Returns SeatPricingDto[] with seat details and pricing
-    const heldSeatsWithPricing = await this.getSeatsHeldByUser(dto.showtimeId, userId);
+    // Returns SeatPricingWithTtlDto with seat details, pricing, and lock TTL
+    const heldSeatsData = await this.getSeatsHeldByUser(dto.showtimeId, userId);
+    const { seats: heldSeatsWithPricing, lockTtl: sessionTTL } = heldSeatsData;
 
     if (heldSeatsWithPricing.length === 0) {
       throw new BadRequestException(
@@ -60,22 +92,30 @@ export class BookingService {
       );
     }
 
-    // ✅ STEP 1.5: Check if any of the held seats are already booked in the database
+    // ✅ STEP 1.1: Validate seat lock TTL
+    // Ensure seats are still locked before creating booking
+    if (sessionTTL <= 0) {
+      throw new BadRequestException(
+        'Seat lock has expired. Please hold seats again via WebSocket.'
+      );
+    }
+
+    // ✅ STEP 1.5: Check if any of the held seats already have VALID tickets (usable tickets)
+    // Only check for VALID tickets to prevent duplicate usable tickets for the same seat
     const seatIds = heldSeatsWithPricing.map((seat) => seat.id);
-    const existingTickets = await this.prisma.tickets.findMany({
+    const existingValidTickets = await this.prisma.tickets.findMany({
       where: {
         seat_id: { in: seatIds },
         booking: {
           showtime_id: dto.showtimeId,
-          status: {
-            in: [BookingStatus.PENDING, BookingStatus.CONFIRMED],
-          },
         },
+        status: TicketStatus.VALID, // Only check VALID tickets
       },
       include: {
         booking: {
           select: {
             id: true,
+            booking_code: true,
             showtime_id: true,
             status: true,
             user_id: true,
@@ -84,10 +124,10 @@ export class BookingService {
       },
     });
 
-    if (existingTickets.length > 0) {
-      const bookedSeatIds = existingTickets.map((t) => t.seat_id);
+    if (existingValidTickets.length > 0) {
+      const bookedSeatIds = existingValidTickets.map((t) => t.seat_id);
       throw new BadRequestException(
-        `Cannot create booking. The following seats are already booked: ${bookedSeatIds.join(', ')}`
+        `Cannot create booking. The following seats already have valid tickets: ${bookedSeatIds.join(', ')}`
       );
     }
 
@@ -201,13 +241,14 @@ export class BookingService {
         promotion_code: dto.promotionCode,
         status: BookingStatus.PENDING,
         payment_status: PaymentStatus.PENDING,
-        expires_at: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes to complete payment
+        expires_at: new Date(Date.now() + sessionTTL * 1000), // Use seat lock TTL from cinema-service
         tickets: {
           create: ticketPrices.map((ticket) => ({
             seat_id: ticket.seatId,
             ticket_code: this.generateTicketCode(),
             ticket_type: seatTypeMap.get(ticket.seatId) || 'STANDARD', // Use seat type as ticket type
             price: ticket.price,
+            status: TicketStatus.CANCELLED, // Tickets start as CANCELLED, become VALID after payment
           })),
         },
         booking_concessions: concessionDetails.length > 0
@@ -231,8 +272,8 @@ export class BookingService {
       },
     });
 
-    // ✅ STEP 9: Return enriched booking details
-    return this.mapToDetailDto(booking, showtimeData);
+    // ✅ STEP 9: Return booking calculation with payment info
+    return this.getBookingSummary(booking.id, userId);
   }
 
   async findAllByUser(
@@ -587,20 +628,20 @@ export class BookingService {
 
   /**
    * ✅ Get ghế đang được giữ bởi user từ cinema service
-   * Trả về danh sách SeatPricingDto với thông tin ghế và giá
+   * Trả về SeatPricingWithTtlDto với thông tin ghế, giá, và TTL còn lại
    */
   private async getSeatsHeldByUser(
     showtimeId: string,
     userId: string
-  ): Promise<SeatPricingDto[]> {
+  ): Promise<SeatPricingWithTtlDto> {
     try {
-      const heldSeats = await firstValueFrom(
+      const heldSeatsData = await firstValueFrom(
         this.cinemaClient.send(
           CinemaMessage.SHOWTIME.GET_SEATS_HELD_BY_USER,
           { showtimeId, userId }
         )
       );
-      return heldSeats as SeatPricingDto[];
+      return heldSeatsData as SeatPricingWithTtlDto;
     } catch {
       throw new BadRequestException(
         'Failed to get held seats from cinema service. Please try again.'
@@ -730,8 +771,36 @@ export class BookingService {
       }
     }
 
+    // Get available payment information (only pending payment)
+    let paymentInfo;
+    try {
+      const pendingPayment = await this.prisma.payments.findFirst({
+        where: {
+          booking_id: booking.id,
+          status: PaymentStatus.PENDING,
+        },
+        orderBy: {
+          created_at: 'desc',
+        },
+      });
+
+      if (pendingPayment) {
+        paymentInfo = {
+          id: pendingPayment.id,
+          amount: Number(pendingPayment.amount),
+          paymentMethod: pendingPayment.payment_method,
+          paymentUrl: pendingPayment.payment_url || undefined,
+          status: pendingPayment.status,
+          createdAt: pendingPayment.created_at,
+        };
+      }
+    } catch {
+      // If payment not available, skip
+    }
+
     // Build the summary
     const summary: BookingCalculationDto = {
+      bookingId: booking.id,
       movie: {
         id: '', // TODO: Fetch from movie service
         title: 'Movie', // TODO: Fetch from movie service
@@ -769,7 +838,10 @@ export class BookingService {
         finalAmount: Number(booking.final_amount),
       },
       loyaltyPoints,
+      payment: paymentInfo,
       bookingCode: booking.booking_code,
+      status: booking.status as BookingStatus,
+      paymentStatus: booking.payment_status as PaymentStatus,
       expiresAt: booking.expires_at,
     };
 
@@ -830,4 +902,873 @@ export class BookingService {
 
     return Object.values(groups);
   }
+
+  // ==================== ADMIN OPERATIONS ====================
+
+  /**
+   * Admin: Find all bookings with comprehensive filters
+   */
+  async adminFindAllBookings(filters: {
+    userId?: string;
+    showtimeId?: string;
+    cinemaId?: string;
+    status?: BookingStatus;
+    paymentStatus?: PaymentStatus;
+    startDate?: Date;
+    endDate?: Date;
+    page?: number;
+    limit?: number;
+    sortBy?: 'created_at' | 'final_amount' | 'expires_at';
+    sortOrder?: 'asc' | 'desc';
+  }): Promise<{ data: BookingSummaryDto[]; total: number }> {
+    const page = filters.page || 1;
+    const limit = filters.limit || 10;
+    const skip = (page - 1) * limit;
+
+    const where: Prisma.BookingsWhereInput = {};
+
+    if (filters.userId) where.user_id = filters.userId;
+    if (filters.showtimeId) where.showtime_id = filters.showtimeId;
+    if (filters.status) where.status = filters.status;
+    if (filters.paymentStatus) where.payment_status = filters.paymentStatus;
+
+    if (filters.startDate || filters.endDate) {
+      where.created_at = {};
+      if (filters.startDate) where.created_at.gte = filters.startDate;
+      if (filters.endDate) where.created_at.lte = filters.endDate;
+    }
+
+    const orderBy: Prisma.BookingsOrderByWithRelationInput = {};
+    const sortBy = filters.sortBy || 'created_at';
+    const sortOrder = filters.sortOrder || 'desc';
+    orderBy[sortBy] = sortOrder;
+
+    const [bookings, total] = await Promise.all([
+      this.prisma.bookings.findMany({
+        where,
+        include: {
+          tickets: true,
+          booking_concessions: {
+            include: {
+              concession: true,
+            },
+          },
+        },
+        orderBy,
+        skip,
+        take: limit,
+      }),
+      this.prisma.bookings.count({ where }),
+    ]);
+
+    // Fetch showtime data for all bookings
+    const showtimePromises = bookings.map(async (booking) => {
+      try {
+        return await this.getShowtimeDetails(booking.showtime_id);
+      } catch {
+        return null;
+      }
+    });
+
+    const showtimeDataArray = await Promise.all(showtimePromises);
+
+    return {
+      data: bookings.map((b, index) => this.mapToSummaryDto(b, showtimeDataArray[index])),
+      total,
+    };
+  }
+
+  /**
+   * Find all bookings for a specific showtime
+   */
+  async findBookingsByShowtime(
+    showtimeId: string,
+    status?: BookingStatus
+  ): Promise<BookingSummaryDto[]> {
+    const where: Prisma.BookingsWhereInput = { showtime_id: showtimeId };
+    if (status) where.status = status;
+
+    const bookings = await this.prisma.bookings.findMany({
+      where,
+      include: {
+        tickets: true,
+        booking_concessions: {
+          include: {
+            concession: true,
+          },
+        },
+      },
+      orderBy: { created_at: 'desc' },
+    });
+
+    // Get showtime data once (same for all bookings)
+    let showtimeData;
+    try {
+      showtimeData = await this.getShowtimeDetails(showtimeId);
+    } catch {
+      showtimeData = null;
+    }
+
+    return bookings.map((b) => this.mapToSummaryDto(b, showtimeData));
+  }
+
+  /**
+   * Find bookings by date range
+   */
+  async findBookingsByDateRange(filters: {
+    startDate: Date;
+    endDate: Date;
+    status?: BookingStatus;
+    page?: number;
+    limit?: number;
+  }): Promise<{ data: BookingSummaryDto[]; total: number }> {
+    const page = filters.page || 1;
+    const limit = filters.limit || 10;
+    const skip = (page - 1) * limit;
+
+    const where: Prisma.BookingsWhereInput = {
+      created_at: {
+        gte: filters.startDate,
+        lte: filters.endDate,
+      },
+    };
+
+    if (filters.status) where.status = filters.status;
+
+    const [bookings, total] = await Promise.all([
+      this.prisma.bookings.findMany({
+        where,
+        include: {
+          tickets: true,
+          booking_concessions: {
+            include: {
+              concession: true,
+            },
+          },
+        },
+        orderBy: { created_at: 'desc' },
+        skip,
+        take: limit,
+      }),
+      this.prisma.bookings.count({ where }),
+    ]);
+
+    // Fetch showtime data for all bookings
+    const showtimePromises = bookings.map(async (booking) => {
+      try {
+        return await this.getShowtimeDetails(booking.showtime_id);
+      } catch {
+        return null;
+      }
+    });
+
+    const showtimeDataArray = await Promise.all(showtimePromises);
+
+    return {
+      data: bookings.map((b, index) => this.mapToSummaryDto(b, showtimeDataArray[index])),
+      total,
+    };
+  }
+
+  /**
+   * Admin: Update booking status
+   */
+  async updateBookingStatus(
+    bookingId: string,
+    status: BookingStatus,
+    reason?: string
+  ): Promise<BookingDetailDto> {
+    const booking = await this.prisma.bookings.findUnique({
+      where: { id: bookingId },
+    });
+
+    if (!booking) {
+      throw new BadRequestException('Booking not found');
+    }
+
+    const data: Prisma.BookingsUpdateInput = { status };
+
+    if (status === BookingStatus.CANCELLED) {
+      data.cancelled_at = new Date();
+      data.cancellation_reason = reason;
+    }
+
+    const updated = await this.prisma.bookings.update({
+      where: { id: bookingId },
+      data,
+      include: {
+        tickets: true,
+        booking_concessions: {
+          include: {
+            concession: true,
+          },
+        },
+      },
+    });
+
+    // Fetch showtime data
+    let showtimeData;
+    try {
+      showtimeData = await this.getShowtimeDetails(updated.showtime_id);
+    } catch {
+      showtimeData = null;
+    }
+
+    return this.mapToDetailDto(updated, showtimeData);
+  }
+
+  /**
+   * Confirm booking (after successful payment)
+   */
+  async confirmBooking(bookingId: string): Promise<BookingDetailDto> {
+    return this.updateBookingStatus(bookingId, BookingStatus.CONFIRMED);
+  }
+
+  /**
+   * Complete booking (after showtime ends)
+   */
+  async completeBooking(bookingId: string): Promise<BookingDetailDto> {
+    return this.updateBookingStatus(bookingId, BookingStatus.COMPLETED);
+  }
+
+  /**
+   * Expire booking (auto-expiration of pending bookings)
+   */
+  async expireBooking(bookingId: string): Promise<BookingDetailDto> {
+    return this.updateBookingStatus(bookingId, BookingStatus.EXPIRED, 'Payment timeout');
+  }
+
+  // ==================== STATISTICS & REPORTS ====================
+
+  /**
+   * Get comprehensive booking statistics
+   */
+  async getBookingStatistics(filters: {
+    startDate?: Date;
+    endDate?: Date;
+    cinemaId?: string;
+    showtimeId?: string;
+  }): Promise<any> {
+    const where: Prisma.BookingsWhereInput = {};
+
+    if (filters.startDate || filters.endDate) {
+      where.created_at = {};
+      if (filters.startDate) where.created_at.gte = filters.startDate;
+      if (filters.endDate) where.created_at.lte = filters.endDate;
+    }
+
+    if (filters.showtimeId) where.showtime_id = filters.showtimeId;
+
+    const bookings = await this.prisma.bookings.findMany({
+      where,
+      include: {
+        tickets: true,
+        booking_concessions: {
+          include: {
+            concession: true,
+          },
+        },
+      },
+    });
+
+    const totalBookings = bookings.length;
+    const totalRevenue = bookings.reduce((sum, b) => sum + Number(b.final_amount), 0);
+    const averageBookingValue = totalBookings > 0 ? totalRevenue / totalBookings : 0;
+
+    // Group by status
+    const bookingsByStatus = Object.values(BookingStatus).map((status) => {
+      const statusBookings = bookings.filter((b) => b.status === status);
+      return {
+        status,
+        count: statusBookings.length,
+        revenue: statusBookings.reduce((sum, b) => sum + Number(b.final_amount), 0),
+      };
+    });
+
+    // Group by payment status
+    const bookingsByPaymentStatus = Object.values(PaymentStatus).map((status) => {
+      const count = bookings.filter((b) => b.payment_status === status).length;
+      return { status, count };
+    });
+
+    // Top concessions
+    const concessionStats = new Map<string, { name: string; quantity: number; revenue: number }>();
+    
+    bookings.forEach((booking) => {
+      booking.booking_concessions?.forEach((bc) => {
+        const key = bc.concession_id;
+        if (!concessionStats.has(key)) {
+          concessionStats.set(key, {
+            name: bc.concession?.name || 'Unknown',
+            quantity: 0,
+            revenue: 0,
+          });
+        }
+        const stats = concessionStats.get(key)!;
+        stats.quantity += bc.quantity;
+        stats.revenue += Number(bc.total_price);
+      });
+    });
+
+    const topConcessions = Array.from(concessionStats.entries())
+      .map(([concessionId, stats]) => ({ concessionId, ...stats }))
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, 10);
+
+    // Top promotions
+    const promotionStats = new Map<string, { usageCount: number; totalDiscount: number }>();
+    
+    bookings.forEach((booking) => {
+      if (booking.promotion_code) {
+        if (!promotionStats.has(booking.promotion_code)) {
+          promotionStats.set(booking.promotion_code, {
+            usageCount: 0,
+            totalDiscount: 0,
+          });
+        }
+        const stats = promotionStats.get(booking.promotion_code)!;
+        stats.usageCount++;
+        stats.totalDiscount += Number(booking.discount);
+      }
+    });
+
+    const topPromotions = Array.from(promotionStats.entries())
+      .map(([code, stats]) => ({ code, ...stats }))
+      .sort((a, b) => b.usageCount - a.usageCount)
+      .slice(0, 10);
+
+    return {
+      totalBookings,
+      totalRevenue,
+      averageBookingValue,
+      bookingsByStatus,
+      bookingsByPaymentStatus,
+      topConcessions,
+      topPromotions,
+      period: filters.startDate && filters.endDate ? {
+        startDate: filters.startDate,
+        endDate: filters.endDate,
+      } : undefined,
+    };
+  }
+
+  /**
+   * Get revenue report
+   */
+  async getRevenueReport(filters: {
+    startDate: Date;
+    endDate: Date;
+    cinemaId?: string;
+    groupBy?: 'day' | 'week' | 'month' | 'cinema';
+  }): Promise<any> {
+    const where: Prisma.BookingsWhereInput = {
+      created_at: {
+        gte: filters.startDate,
+        lte: filters.endDate,
+      },
+      status: BookingStatus.CONFIRMED, // Only confirmed bookings count towards revenue
+    };
+
+    if (filters.cinemaId) {
+      // Would need cinema_id in bookings table or join through showtime
+      // For now, we'll skip this filter
+    }
+
+    const bookings = await this.prisma.bookings.findMany({
+      where,
+      include: {
+        tickets: true,
+        booking_concessions: {
+          include: {
+            concession: true,
+          },
+        },
+      },
+    });
+
+    // Calculate totals
+    const totalRevenue = bookings.reduce((sum, b) => sum + Number(b.final_amount), 0);
+    
+    const totalTicketRevenue = bookings.reduce((sum, b) => {
+      const ticketTotal = b.tickets?.reduce((tSum, t) => tSum + Number(t.price), 0) || 0;
+      return sum + ticketTotal;
+    }, 0);
+
+    const totalConcessionRevenue = bookings.reduce((sum, b) => {
+      const concessionTotal = b.booking_concessions?.reduce(
+        (cSum, bc) => cSum + Number(bc.total_price),
+        0
+      ) || 0;
+      return sum + concessionTotal;
+    }, 0);
+
+    const totalDiscount = bookings.reduce(
+      (sum, b) => sum + Number(b.discount) + Number(b.points_discount),
+      0
+    );
+
+    // Get refund amount
+    const refunds = await this.prisma.refunds.findMany({
+      where: {
+        status: 'COMPLETED',
+        created_at: {
+          gte: filters.startDate,
+          lte: filters.endDate,
+        },
+      },
+    });
+
+    const totalRefund = refunds.reduce((sum, r) => sum + Number(r.amount), 0);
+
+    const netRevenue = totalRevenue - totalRefund;
+    const bookingCount = bookings.length;
+    const averageBookingValue = bookingCount > 0 ? totalRevenue / bookingCount : 0;
+
+    // Revenue by period (simplified - just daily for now)
+    const revenueByPeriod: any[] = [];
+    
+    if (filters.groupBy === 'day' || !filters.groupBy) {
+      const dateMap = new Map<string, { revenue: number; count: number }>();
+      
+      bookings.forEach((booking) => {
+        const date = booking.created_at.toISOString().split('T')[0];
+        if (!dateMap.has(date)) {
+          dateMap.set(date, { revenue: 0, count: 0 });
+        }
+        const stats = dateMap.get(date)!;
+        stats.revenue += Number(booking.final_amount);
+        stats.count++;
+      });
+
+      dateMap.forEach((stats, date) => {
+        revenueByPeriod.push({
+          period: date,
+          revenue: stats.revenue,
+          bookingCount: stats.count,
+        });
+      });
+
+      revenueByPeriod.sort((a, b) => a.period.localeCompare(b.period));
+    }
+
+    return {
+      totalRevenue,
+      totalTicketRevenue,
+      totalConcessionRevenue,
+      totalDiscount,
+      totalRefund,
+      netRevenue,
+      bookingCount,
+      averageBookingValue,
+      revenueByPeriod,
+      period: {
+        startDate: filters.startDate,
+        endDate: filters.endDate,
+      },
+    };
+  }
+
+  // ==================== NEW FEATURES ====================
+
+  /**
+   * Calculate refund amount based on cancellation policy
+   * Policy: Cancel before 2 hours → 70% refund on tickets only
+   */
+  async calculateRefund(bookingId: string, userId: string): Promise<RefundCalculationDto> {
+    const booking = await this.prisma.bookings.findFirst({
+      where: { id: bookingId, user_id: userId },
+      include: {
+        tickets: true,
+        booking_concessions: true,
+      },
+    });
+
+    if (!booking) {
+      throw new BadRequestException('Booking not found');
+    }
+
+    // Get showtime details to check timing
+    let showtimeData;
+    try {
+      showtimeData = await this.getShowtimeDetails(booking.showtime_id, userId);
+    } catch {
+      throw new BadRequestException('Cannot fetch showtime information');
+    }
+
+    const showtimeStart = new Date(showtimeData.showtime.start_time);
+    const now = new Date();
+    const hoursUntilShowtime = (showtimeStart.getTime() - now.getTime()) / (1000 * 60 * 60);
+
+    // Check if booking can be cancelled
+    if (hoursUntilShowtime < this.CANCELLATION_HOURS_BEFORE) {
+      return {
+        canRefund: false,
+        refundAmount: 0,
+        refundPercentage: 0,
+        ticketAmount: 0,
+        concessionsAmount: 0,
+        reason: `Cancellation must be made at least ${this.CANCELLATION_HOURS_BEFORE} hours before showtime`,
+        deadline: new Date(showtimeStart.getTime() - this.CANCELLATION_HOURS_BEFORE * 60 * 60 * 1000),
+      };
+    }
+
+    // Check if already cancelled or refunded
+    if (booking.status === BookingStatus.CANCELLED) {
+      return {
+        canRefund: false,
+        refundAmount: 0,
+        refundPercentage: 0,
+        ticketAmount: 0,
+        concessionsAmount: 0,
+        reason: 'Booking is already cancelled',
+      };
+    }
+
+    // Calculate ticket amount (from actual tickets, not subtotal)
+    const ticketAmount = booking.tickets?.reduce((sum, t) => sum + Number(t.price), 0) || 0;
+    
+    // Concessions are NOT refundable
+    const concessionsAmount = booking.booking_concessions?.reduce(
+      (sum, bc) => sum + Number(bc.total_price),
+      0
+    ) || 0;
+
+    // Calculate refund: 70% of ticket price only
+    const refundAmount = Math.round((ticketAmount * this.REFUND_PERCENTAGE) / 100);
+
+    return {
+      canRefund: true,
+      refundAmount,
+      refundPercentage: this.REFUND_PERCENTAGE,
+      ticketAmount,
+      concessionsAmount,
+      reason: `Refund ${this.REFUND_PERCENTAGE}% of ticket price. Concessions are non-refundable.`,
+      deadline: new Date(showtimeStart.getTime() - this.CANCELLATION_HOURS_BEFORE * 60 * 60 * 1000),
+    };
+  }
+
+  /**
+   * Cancel booking with refund policy validation
+   */
+  async cancelBookingWithRefund(
+    id: string,
+    userId: string,
+    dto: CancelBookingWithRefundDto
+  ): Promise<{ booking: BookingDetailDto; refund?: RefundCalculationDto }> {
+    // Calculate refund eligibility
+    const refundCalc = await this.calculateRefund(id, userId);
+
+    // Cancel the booking
+    const booking = await this.cancelBooking(id, userId, dto.reason);
+
+    // Send notification ASYNC (fire-and-forget, don't block cancellation)
+    this.notificationService.sendBookingCancellation(
+      booking,
+      dto.requestRefund && refundCalc.canRefund ? refundCalc.refundAmount : undefined
+    ).catch(error => {
+      console.error('[Booking] Failed to send cancellation email (async):', error);
+    });
+
+    return {
+      booking,
+      refund: refundCalc,
+    };
+  }
+
+  /**
+   * Update booking before payment (modify seats, concessions, promotions)
+   * Only allowed when status is PENDING and not expired
+   */
+  async updateBooking(
+    id: string,
+    userId: string,
+    dto: UpdateBookingDto
+  ): Promise<BookingDetailDto> {
+    const booking = await this.prisma.bookings.findFirst({
+      where: { id, user_id: userId },
+      include: {
+        tickets: true,
+        booking_concessions: true,
+      },
+    });
+
+    if (!booking) {
+      throw new BadRequestException('Booking not found');
+    }
+
+    if (booking.status !== BookingStatus.PENDING) {
+      throw new BadRequestException('Can only update pending bookings');
+    }
+
+    if (booking.expires_at && new Date() > booking.expires_at) {
+      throw new BadRequestException('Booking has expired');
+    }
+
+    // Update seats if provided
+    if (dto.seats && dto.seats.length > 0) {
+      // Delete existing tickets
+      await this.prisma.tickets.deleteMany({
+        where: { booking_id: id },
+      });
+
+      // Get new seat pricing (extract seats array from response)
+      const heldSeatsData = await this.getSeatsHeldByUser(booking.showtime_id, userId);
+      const seatPriceMap = new Map(heldSeatsData.seats.map(s => [s.id, s.price]));
+
+      // Create new tickets
+      const newTickets = dto.seats.map(seat => ({
+        booking_id: id,
+        seat_id: seat.seatId,
+        ticket_code: this.generateTicketCode(),
+        ticket_type: seat.ticketType,
+        price: seatPriceMap.get(seat.seatId) || 0,
+        status: TicketStatus.CANCELLED, // Will become VALID after payment
+      }));
+
+      await this.prisma.tickets.createMany({
+        data: newTickets,
+      });
+    }
+
+    // Update concessions if provided
+    if (dto.concessions !== undefined) {
+      // Delete existing concessions
+      await this.prisma.bookingConcessions.deleteMany({
+        where: { booking_id: id },
+      });
+
+      if (dto.concessions.length > 0) {
+        const concessionData = await this.getConcessionDetails(
+          dto.concessions.map(c => c.concessionId)
+        );
+
+        const newConcessions = dto.concessions.map(item => {
+          const concession = concessionData.find(c => c.id === item.concessionId);
+          if (!concession) {
+            throw new BadRequestException(`Concession ${item.concessionId} not found`);
+          }
+
+          const totalPrice = Number(concession.price) * item.quantity;
+          return {
+            booking_id: id,
+            concession_id: item.concessionId,
+            quantity: item.quantity,
+            unit_price: Number(concession.price),
+            total_price: totalPrice,
+          };
+        });
+
+        await this.prisma.bookingConcessions.createMany({
+          data: newConcessions,
+        });
+      }
+    }
+
+    // Recalculate pricing
+    const updatedBooking = await this.prisma.bookings.findFirst({
+      where: { id },
+      include: {
+        tickets: true,
+        booking_concessions: {
+          include: { concession: true },
+        },
+      },
+    });
+
+    if (!updatedBooking) {
+      throw new BadRequestException('Failed to retrieve updated booking');
+    }
+
+    const ticketsSubtotal = updatedBooking.tickets?.reduce(
+      (sum, t) => sum + Number(t.price),
+      0
+    ) || 0;
+    const concessionsSubtotal = updatedBooking.booking_concessions?.reduce(
+      (sum, bc) => sum + Number(bc.total_price),
+      0
+    ) || 0;
+    const subtotal = ticketsSubtotal + concessionsSubtotal;
+
+    // Recalculate discounts
+    let discount = 0;
+    let pointsDiscount = 0;
+
+    const promotionCode = dto.promotionCode !== undefined ? dto.promotionCode : booking.promotion_code;
+    if (promotionCode) {
+      discount = await this.calculatePromotion(promotionCode, subtotal);
+    }
+
+    const usePoints = dto.usePoints !== undefined ? dto.usePoints : booking.points_used;
+    if (usePoints > 0) {
+      pointsDiscount = await this.calculatePointsDiscount(usePoints, userId);
+    }
+
+    const finalAmount = Math.max(0, subtotal - discount - pointsDiscount);
+
+    // Update booking amounts
+    await this.prisma.bookings.update({
+      where: { id },
+      data: {
+        subtotal,
+        discount,
+        points_used: usePoints,
+        points_discount: pointsDiscount,
+        final_amount: finalAmount,
+        promotion_code: promotionCode,
+        updated_at: new Date(),
+      },
+    });
+
+    return this.findOne(id, userId);
+  }
+
+  /**
+   * Reschedule booking to a different showtime
+   * Policy: Only 1 reschedule allowed per booking
+   */
+  async rescheduleBooking(
+    id: string,
+    userId: string,
+    dto: RescheduleBookingDto
+  ): Promise<BookingDetailDto> {
+    const booking = await this.prisma.bookings.findFirst({
+      where: { id, user_id: userId },
+      include: {
+        tickets: true,
+      },
+    });
+
+    if (!booking) {
+      throw new BadRequestException('Booking not found');
+    }
+
+    if (booking.status === BookingStatus.CANCELLED) {
+      throw new BadRequestException('Cannot reschedule cancelled booking');
+    }
+
+    if (booking.status === BookingStatus.COMPLETED) {
+      throw new BadRequestException('Cannot reschedule completed booking');
+    }
+
+    // Check reschedule count (using cancellation_reason as metadata for now)
+    // TODO: Add a proper 'reschedule_count' field to schema
+    const rescheduleCount = (booking.cancellation_reason || '').includes('Rescheduled') ? 1 : 0;
+    
+    if (rescheduleCount >= this.MAX_RESCHEDULES) {
+      throw new BadRequestException(`Maximum ${this.MAX_RESCHEDULES} reschedule allowed per booking`);
+    }
+
+    // Get old showtime details
+    let oldShowtimeData;
+    try {
+      oldShowtimeData = await this.getShowtimeDetails(booking.showtime_id, userId);
+    } catch {
+      throw new BadRequestException('Cannot fetch current showtime information');
+    }
+
+    // Validate new showtime
+    let newShowtimeData;
+    try {
+      newShowtimeData = await this.getShowtimeDetails(dto.newShowtimeId, userId);
+    } catch {
+      throw new BadRequestException('Invalid new showtime');
+    }
+
+    // Check timing - cannot reschedule if current showtime is less than 2 hours away
+    const oldShowtimeStart = new Date(oldShowtimeData.showtime.start_time);
+    const now = new Date();
+    const hoursUntilOldShowtime = (oldShowtimeStart.getTime() - now.getTime()) / (1000 * 60 * 60);
+
+    if (hoursUntilOldShowtime < this.CANCELLATION_HOURS_BEFORE) {
+      throw new BadRequestException(
+        `Cannot reschedule within ${this.CANCELLATION_HOURS_BEFORE} hours of showtime`
+      );
+    }
+
+    // Save old booking for notification
+    const oldBookingDetail = await this.findOne(id, userId);
+
+    // Update booking with new showtime
+    // Keep same seats (seat IDs might be different in new showtime, needs validation)
+    await this.prisma.bookings.update({
+      where: { id },
+      data: {
+        showtime_id: dto.newShowtimeId,
+        cancellation_reason: rescheduleCount > 0 
+          ? `Rescheduled ${rescheduleCount + 1} times`
+          : 'Rescheduled from previous showtime',
+        updated_at: new Date(),
+      },
+    });
+
+    // TODO: Validate that seat IDs are still valid for new showtime
+    // TODO: Calculate price difference if seat pricing is different
+
+    const newBookingDetail = await this.findOne(id, userId);
+
+    // Send notification ASYNC (fire-and-forget, don't block reschedule)
+    this.notificationService.sendBookingReschedule(oldBookingDetail, newBookingDetail).catch(error => {
+      console.error('[Booking] Failed to send reschedule email (async):', error);
+    });
+
+    return newBookingDetail;
+  }
+
+  /**
+   * Get cancellation policy information
+   */
+  getCancellationPolicy(): {
+    hoursBeforeShowtime: number;
+    refundPercentage: number;
+    maxReschedules: number;
+    notes: string[];
+  } {
+    return {
+      hoursBeforeShowtime: this.CANCELLATION_HOURS_BEFORE,
+      refundPercentage: this.REFUND_PERCENTAGE,
+      maxReschedules: this.MAX_RESCHEDULES,
+      notes: [
+        `Cancellations must be made at least ${this.CANCELLATION_HOURS_BEFORE} hours before showtime`,
+        `Refund is ${this.REFUND_PERCENTAGE}% of ticket price only`,
+        'Concessions and service fees are non-refundable',
+        `Rescheduling is allowed up to ${this.MAX_RESCHEDULES} time per booking`,
+        'Price difference may apply when rescheduling',
+        'Refunds are processed within 3-7 business days',
+      ],
+    };
+  }
+
+  /**
+   * Find user's booking at a specific showtime
+   * Used when entering showtime screen to check if user already has a booking
+   * Returns BookingCalculationDto if found, null if not found
+   */
+  async findUserBookingByShowtime(
+    showtimeId: string,
+    userId: string,
+    includeStatuses?: BookingStatus[]
+  ): Promise<BookingCalculationDto | null> {
+    const statusFilter = includeStatuses && includeStatuses.length > 0
+      ? { in: includeStatuses }
+      : BookingStatus.PENDING; // Default: only PENDING bookings
+
+    const booking = await this.prisma.bookings.findFirst({
+      where: {
+        user_id: userId,
+        showtime_id: showtimeId,
+        status: statusFilter,
+      },
+      orderBy: {
+        created_at: 'desc', // Get most recent booking if multiple exist
+      },
+    });
+
+    if (!booking) {
+      return null;
+    }
+
+    // Return full booking summary
+    return this.getBookingSummary(booking.id, userId);
+  }
 }
+

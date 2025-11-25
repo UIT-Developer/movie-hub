@@ -2,19 +2,25 @@ import {
   Controller,
   Get,
   Post,
+  Put,
   Body,
   Param,
   Query,
   UseGuards,
+  ParseIntPipe,
+  DefaultValuePipe,
 } from '@nestjs/common';
 import { BookingService } from '../service/booking.service';
 import { ClerkAuthGuard } from '../../../common/guard/clerk-auth.guard';
-import { Permission } from '../../../common/decorator/permission.decorator';
 import { CurrentUserId } from '../../../common/decorator/current-user-id.decorator';
 import {
   CreateBookingDto,
   BookingStatus,
   BookingCalculationDto,
+  AdminFindAllBookingsDto,
+  FindBookingsByDateRangeDto,
+  GetBookingStatisticsDto,
+  GetRevenueReportDto,
 } from '@movie-hub/shared-types';
 
 @Controller({
@@ -40,8 +46,8 @@ export class BookingController {
   async findAll(
     @CurrentUserId() userId: string,
     @Query('status') status?: BookingStatus,
-    @Query('page') page?: number,
-    @Query('limit') limit?: number
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page?: number,
+    @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit?: number
   ) {
     return this.bookingService.findAllByUser(userId, status, page, limit);
   }
@@ -71,5 +77,92 @@ export class BookingController {
     @Param('id') id: string
   ): Promise<BookingCalculationDto> {
     return this.bookingService.getBookingSummary(id, userId);
+  }
+
+  /**
+   * GET /v1/bookings/showtime/:showtimeId/check
+   * Check if user has existing booking for this showtime
+   * Used when entering showtime screen
+   */
+  @Get('showtime/:showtimeId/check')
+  @UseGuards(ClerkAuthGuard)
+  async checkUserBookingAtShowtime(
+    @CurrentUserId() userId: string,
+    @Param('showtimeId') showtimeId: string,
+    @Query('includeStatuses') includeStatuses?: string
+  ): Promise<BookingCalculationDto | null> {
+    // Parse comma-separated statuses if provided
+    const statuses = includeStatuses 
+      ? includeStatuses.split(',').map(s => s.trim() as BookingStatus)
+      : undefined;
+
+    return this.bookingService.findUserBookingByShowtime(
+      showtimeId,
+      userId,
+      statuses
+    );
+  }
+
+  // ==================== ADMIN ENDPOINTS ====================
+
+  @Get('admin/all')
+  @UseGuards(ClerkAuthGuard)
+  async adminFindAll(@Query() filters: AdminFindAllBookingsDto) {
+    return this.bookingService.adminFindAll(filters);
+  }
+
+  @Get('admin/showtime/:showtimeId')
+  @UseGuards(ClerkAuthGuard)
+  async findByShowtime(
+    @Param('showtimeId') showtimeId: string,
+    @Query('status') status?: BookingStatus
+  ) {
+    return this.bookingService.findByShowtime(showtimeId, status);
+  }
+
+  @Get('admin/date-range')
+  @UseGuards(ClerkAuthGuard)
+  async findByDateRange(@Query() filters: FindBookingsByDateRangeDto) {
+    return this.bookingService.findByDateRange(filters);
+  }
+
+  @Put('admin/:id/status')
+  @UseGuards(ClerkAuthGuard)
+  async updateStatus(
+    @Param('id') bookingId: string,
+    @Body('status') status: BookingStatus,
+    @Body('reason') reason?: string
+  ) {
+    return this.bookingService.updateStatus(bookingId, status, reason);
+  }
+
+  @Post('admin/:id/confirm')
+  @UseGuards(ClerkAuthGuard)
+  async confirmBooking(@Param('id') bookingId: string) {
+    return this.bookingService.confirmBooking(bookingId);
+  }
+
+  @Post('admin/:id/complete')
+  @UseGuards(ClerkAuthGuard)
+  async completeBooking(@Param('id') bookingId: string) {
+    return this.bookingService.completeBooking(bookingId);
+  }
+
+  @Post('admin/:id/expire')
+  @UseGuards(ClerkAuthGuard)
+  async expireBooking(@Param('id') bookingId: string) {
+    return this.bookingService.expireBooking(bookingId);
+  }
+
+  @Get('admin/statistics')
+  @UseGuards(ClerkAuthGuard)
+  async getStatistics(@Query() filters: GetBookingStatisticsDto) {
+    return this.bookingService.getStatistics(filters);
+  }
+
+  @Get('admin/revenue-report')
+  @UseGuards(ClerkAuthGuard)
+  async getRevenueReport(@Query() filters: GetRevenueReportDto) {
+    return this.bookingService.getRevenueReport(filters);
   }
 }

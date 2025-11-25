@@ -2,6 +2,7 @@ import {
   Controller,
   Post,
   Get,
+  Put,
   Body,
   Param,
   Query,
@@ -9,12 +10,13 @@ import {
   Req,
   HttpCode,
   HttpStatus,
+  ParseIntPipe,
+  DefaultValuePipe,
 } from '@nestjs/common';
 import { PaymentService } from '../service/payment.service';
 import { ClerkAuthGuard } from '../../../common/guard/clerk-auth.guard';
-import { Permission } from '../../../common/decorator/permission.decorator';
 import { CurrentUserId } from '../../../common/decorator/current-user-id.decorator';
-import { CreatePaymentDto } from '@movie-hub/shared-types';
+import { CreatePaymentDto, AdminFindAllPaymentsDto, PaymentStatus } from '@movie-hub/shared-types';
 import { Request } from 'express';
 
 @Controller({
@@ -57,6 +59,19 @@ export class PaymentController {
   }
 
   /**
+   * Get all payments for a booking
+   * Authenticated endpoint
+   */
+  @Get('booking/:bookingId')
+  @UseGuards(ClerkAuthGuard)
+  async getPaymentsByBooking(
+    @CurrentUserId() userId: string,
+    @Param('bookingId') bookingId: string
+  ) {
+    return this.paymentService.getPaymentByBooking(bookingId);
+  }
+
+  /**
    * VNPay IPN (Instant Payment Notification) webhook
    * PUBLIC endpoint - VNPay server calls this to notify payment status
    * NO authentication required
@@ -75,5 +90,41 @@ export class PaymentController {
   @Get('vnpay/return')
   async vnpayReturn(@Query() query: Record<string, string>) {
     return this.paymentService.handleVNPayReturn(query);
+  }
+
+  // ==================== ADMIN ENDPOINTS ====================
+
+  @Get('admin/all')
+  @UseGuards(ClerkAuthGuard)
+  async adminFindAll(@Query() filters: AdminFindAllPaymentsDto) {
+    return this.paymentService.adminFindAll(filters);
+  }
+
+  @Get('admin/status/:status')
+  @UseGuards(ClerkAuthGuard)
+  async findByStatus(
+    @Param('status') status: PaymentStatus,
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page?: number,
+    @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit?: number
+  ) {
+    return this.paymentService.findByStatus(status, page, limit);
+  }
+
+  @Put('admin/:id/cancel')
+  @UseGuards(ClerkAuthGuard)
+  async cancelPayment(
+    @Param('id') paymentId: string,
+    @Body('reason') reason?: string
+  ) {
+    return this.paymentService.cancelPayment(paymentId, reason);
+  }
+
+  @Get('admin/statistics')
+  @UseGuards(ClerkAuthGuard)
+  async getStatistics(
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string
+  ) {
+    return this.paymentService.getStatistics(startDate, endDate);
   }
 }

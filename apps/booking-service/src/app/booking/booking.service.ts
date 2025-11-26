@@ -12,6 +12,7 @@ import {
   PaymentStatus,
   TicketStatus,
   CinemaMessage,
+  UserMessage,
   ShowtimeSeatResponse,
   SeatItemDto,
   SeatRowDto,
@@ -25,8 +26,12 @@ import {
   RescheduleBookingDto,
   RefundCalculationDto,
   CancelBookingWithRefundDto,
+  ServiceResult,
+  AdminFindAllBookingsDto,
+  UserDetailDto,
+  SERVICE_NAME,
 } from '@movie-hub/shared-types';
-import { Prisma, Concessions, Tickets } from '../../../generated/prisma';
+import { Prisma, Concessions, Tickets, PromotionType } from '../../../generated/prisma';
 
 // Type for booking with full relations using Prisma's generated types
 type BookingWithRelations = Prisma.BookingsGetPayload<{
@@ -55,14 +60,15 @@ export class BookingService {
 
   constructor(
     private prisma: PrismaService,
-    @Inject('CINEMA_SERVICE') private cinemaClient: ClientProxy,
+    @Inject(SERVICE_NAME.CINEMA) private cinemaClient: ClientProxy,
+    @Inject(SERVICE_NAME.USER) private userClient: ClientProxy,
     private notificationService: NotificationService
   ) {}
 
   async createBooking(
     userId: string,
     dto: CreateBookingDto
-  ): Promise<BookingCalculationDto> {
+  ): Promise<ServiceResult<BookingCalculationDto>> {
     // ✅ STEP 0: Check if user already has a pending booking for this showtime
     const existingPendingBooking = await this.prisma.bookings.findFirst({
       where: {
@@ -221,18 +227,39 @@ export class BookingService {
 
     const finalAmount = Math.max(0, subtotal - discount - pointsDiscount);
 
-    // ✅ STEP 7: Generate unique codes
+    // ✅ STEP 7: Fetch user details from User Service
+    let customerName = '';
+    let customerEmail = '';
+    let customerPhone = '';
+
+    try {
+      const userDetails = await firstValueFrom(
+        this.userClient.send<UserDetailDto>(UserMessage.GET_USER_DETAIL, userId)
+      );
+      customerName = userDetails.fullName;
+      customerEmail = userDetails.email;
+      customerPhone = userDetails.phone;
+    } catch (_error) {
+      // Fallback to manual customer info if User Service is unavailable
+      if (dto.customerInfo) {
+        customerName = dto.customerInfo.name || '';
+        customerEmail = dto.customerInfo.email || '';
+        customerPhone = dto.customerInfo.phone || '';
+      }
+    }
+
+    // ✅ STEP 8: Generate unique codes
     const bookingCode = this.generateBookingCode();
 
-    // ✅ STEP 8: Create booking with all tickets and concessions in a transaction
+    // ✅ STEP 9: Create booking with all tickets and concessions in a transaction
     const booking = await this.prisma.bookings.create({
       data: {
         booking_code: bookingCode,
         user_id: userId,
         showtime_id: dto.showtimeId,
-        customer_name: dto.customerInfo?.name || '',
-        customer_email: dto.customerInfo?.email || '',
-        customer_phone: dto.customerInfo?.phone,
+        customer_name: customerName,
+        customer_email: customerEmail,
+        customer_phone: customerPhone,
         subtotal,
         discount,
         points_used: dto.usePoints || 0,
@@ -272,16 +299,19 @@ export class BookingService {
       },
     });
 
-    // ✅ STEP 9: Return booking calculation with payment info
+    // ✅ STEP 10: Return booking calculation with payment info
     return this.getBookingSummary(booking.id, userId);
   }
 
   async findAllByUser(
     userId: string,
-    status?: BookingStatus,
-    page = 1,
-    limit = 10
-  ): Promise<{ data: BookingSummaryDto[]; total: number }> {
+    query: {
+      status?: BookingStatus;
+      page?: number;
+      limit?: number;
+    }
+  ): Promise<ServiceResult<BookingSummaryDto[]>> {
+    const { status, page = 1, limit = 10 } = query;
     const skip = (page - 1) * limit;
 
     const where: Prisma.BookingsWhereInput = { user_id: userId };
@@ -318,13 +348,22 @@ export class BookingService {
 
     const showtimeDataArray = await Promise.all(showtimePromises);
 
+    const totalPages = Math.ceil(total / limit);
+
     return {
       data: bookings.map((b, index) => this.mapToSummaryDto(b, showtimeDataArray[index])),
-      total,
+      meta: {
+        page,
+        limit,
+        totalRecords: total,
+        totalPages,
+        hasPrev: page > 1,
+        hasNext: page < totalPages,
+      },
     };
   }
 
-  async findOne(id: string, userId: string): Promise<BookingDetailDto> {
+  async findOne(id: string, userId: string): Promise<ServiceResult<BookingDetailDto>> {
     const booking = await this.prisma.bookings.findFirst({
       where: { id, user_id: userId },
       include: {
@@ -350,14 +389,14 @@ export class BookingService {
       showtimeData = null;
     }
 
-    return this.mapToDetailDto(booking, showtimeData);
+    return { data: this.mapToDetailDto(booking, showtimeData) };
   }
 
   async cancelBooking(
     id: string,
     userId: string,
     reason?: string
-  ): Promise<BookingDetailDto> {
+  ): Promise<ServiceResult<BookingDetailDto>> {
     const booking = await this.prisma.bookings.findFirst({
       where: { id, user_id: userId },
     });
@@ -399,7 +438,7 @@ export class BookingService {
       showtimeData = null;
     }
 
-    return this.mapToDetailDto(updated, showtimeData);
+    return { data: this.mapToDetailDto(updated, showtimeData), message: 'Booking cancelled successfully' };
   }
 
   // Helper methods
@@ -512,12 +551,12 @@ export class BookingService {
 
     let discount = 0;
 
-    if (promotion.type === 'PERCENTAGE') {
+    if (promotion.type === PromotionType.PERCENTAGE) {
       discount = (subtotal * Number(promotion.value)) / 100;
       if (promotion.max_discount) {
         discount = Math.min(discount, Number(promotion.max_discount));
       }
-    } else if (promotion.type === 'FIXED_AMOUNT') {
+    } else if (promotion.type === PromotionType.FIXED_AMOUNT) {
       discount = Number(promotion.value);
     }
 
@@ -657,7 +696,7 @@ export class BookingService {
   async getBookingSummary(
     bookingId: string,
     userId: string
-  ): Promise<BookingCalculationDto> {
+  ): Promise<ServiceResult<BookingCalculationDto>> {
     // Get complete booking details
     const booking = await this.prisma.bookings.findFirst({
       where: { id: bookingId, user_id: userId },
@@ -845,7 +884,7 @@ export class BookingService {
       expiresAt: booking.expires_at,
     };
 
-    return summary;
+    return { data: summary };
   }
 
   /**
@@ -908,19 +947,9 @@ export class BookingService {
   /**
    * Admin: Find all bookings with comprehensive filters
    */
-  async adminFindAllBookings(filters: {
-    userId?: string;
-    showtimeId?: string;
-    cinemaId?: string;
-    status?: BookingStatus;
-    paymentStatus?: PaymentStatus;
-    startDate?: Date;
-    endDate?: Date;
-    page?: number;
-    limit?: number;
-    sortBy?: 'created_at' | 'final_amount' | 'expires_at';
-    sortOrder?: 'asc' | 'desc';
-  }): Promise<{ data: BookingSummaryDto[]; total: number }> {
+  async adminFindAllBookings(
+    filters: AdminFindAllBookingsDto
+  ): Promise<ServiceResult<BookingSummaryDto[]>> {
     const page = filters.page || 1;
     const limit = filters.limit || 10;
     const skip = (page - 1) * limit;
@@ -972,9 +1001,18 @@ export class BookingService {
 
     const showtimeDataArray = await Promise.all(showtimePromises);
 
+    const totalPages = Math.ceil(total / limit);
+
     return {
       data: bookings.map((b, index) => this.mapToSummaryDto(b, showtimeDataArray[index])),
-      total,
+      meta: {
+        page,
+        limit,
+        totalRecords: total,
+        totalPages,
+        hasPrev: page > 1,
+        hasNext: page < totalPages,
+      },
     };
   }
 
@@ -984,7 +1022,7 @@ export class BookingService {
   async findBookingsByShowtime(
     showtimeId: string,
     status?: BookingStatus
-  ): Promise<BookingSummaryDto[]> {
+  ): Promise<ServiceResult<BookingSummaryDto[]>> {
     const where: Prisma.BookingsWhereInput = { showtime_id: showtimeId };
     if (status) where.status = status;
 
@@ -1009,7 +1047,7 @@ export class BookingService {
       showtimeData = null;
     }
 
-    return bookings.map((b) => this.mapToSummaryDto(b, showtimeData));
+    return { data: bookings.map((b) => this.mapToSummaryDto(b, showtimeData)) };
   }
 
   /**
@@ -1021,7 +1059,7 @@ export class BookingService {
     status?: BookingStatus;
     page?: number;
     limit?: number;
-  }): Promise<{ data: BookingSummaryDto[]; total: number }> {
+  }): Promise<ServiceResult<BookingSummaryDto[]>> {
     const page = filters.page || 1;
     const limit = filters.limit || 10;
     const skip = (page - 1) * limit;
@@ -1064,9 +1102,18 @@ export class BookingService {
 
     const showtimeDataArray = await Promise.all(showtimePromises);
 
+    const totalPages = Math.ceil(total / limit);
+
     return {
       data: bookings.map((b, index) => this.mapToSummaryDto(b, showtimeDataArray[index])),
-      total,
+      meta: {
+        page,
+        limit,
+        totalRecords: total,
+        totalPages,
+        hasPrev: page > 1,
+        hasNext: page < totalPages,
+      },
     };
   }
 
@@ -1077,7 +1124,7 @@ export class BookingService {
     bookingId: string,
     status: BookingStatus,
     reason?: string
-  ): Promise<BookingDetailDto> {
+  ): Promise<ServiceResult<BookingDetailDto>> {
     const booking = await this.prisma.bookings.findUnique({
       where: { id: bookingId },
     });
@@ -1114,27 +1161,27 @@ export class BookingService {
       showtimeData = null;
     }
 
-    return this.mapToDetailDto(updated, showtimeData);
+    return { data: this.mapToDetailDto(updated, showtimeData), message: `Booking status updated to ${status}` };
   }
 
   /**
    * Confirm booking (after successful payment)
    */
-  async confirmBooking(bookingId: string): Promise<BookingDetailDto> {
+  async confirmBooking(bookingId: string): Promise<ServiceResult<BookingDetailDto>> {
     return this.updateBookingStatus(bookingId, BookingStatus.CONFIRMED);
   }
 
   /**
    * Complete booking (after showtime ends)
    */
-  async completeBooking(bookingId: string): Promise<BookingDetailDto> {
+  async completeBooking(bookingId: string): Promise<ServiceResult<BookingDetailDto>> {
     return this.updateBookingStatus(bookingId, BookingStatus.COMPLETED);
   }
 
   /**
    * Expire booking (auto-expiration of pending bookings)
    */
-  async expireBooking(bookingId: string): Promise<BookingDetailDto> {
+  async expireBooking(bookingId: string): Promise<ServiceResult<BookingDetailDto>> {
     return this.updateBookingStatus(bookingId, BookingStatus.EXPIRED, 'Payment timeout');
   }
 
@@ -1238,17 +1285,19 @@ export class BookingService {
       .slice(0, 10);
 
     return {
-      totalBookings,
-      totalRevenue,
-      averageBookingValue,
-      bookingsByStatus,
-      bookingsByPaymentStatus,
-      topConcessions,
-      topPromotions,
-      period: filters.startDate && filters.endDate ? {
-        startDate: filters.startDate,
-        endDate: filters.endDate,
-      } : undefined,
+      data: {
+        totalBookings,
+        totalRevenue,
+        averageBookingValue,
+        bookingsByStatus,
+        bookingsByPaymentStatus,
+        topConcessions,
+        topPromotions,
+        period: filters.startDate && filters.endDate ? {
+          startDate: filters.startDate,
+          endDate: filters.endDate,
+        } : undefined,
+      },
     };
   }
 
@@ -1352,18 +1401,20 @@ export class BookingService {
     }
 
     return {
-      totalRevenue,
-      totalTicketRevenue,
-      totalConcessionRevenue,
-      totalDiscount,
-      totalRefund,
-      netRevenue,
-      bookingCount,
-      averageBookingValue,
-      revenueByPeriod,
-      period: {
-        startDate: filters.startDate,
-        endDate: filters.endDate,
+      data: {
+        totalRevenue,
+        totalTicketRevenue,
+        totalConcessionRevenue,
+        totalDiscount,
+        totalRefund,
+        netRevenue,
+        bookingCount,
+        averageBookingValue,
+        revenueByPeriod,
+        period: {
+          startDate: filters.startDate,
+          endDate: filters.endDate,
+        },
       },
     };
   }
@@ -1374,7 +1425,7 @@ export class BookingService {
    * Calculate refund amount based on cancellation policy
    * Policy: Cancel before 2 hours → 70% refund on tickets only
    */
-  async calculateRefund(bookingId: string, userId: string): Promise<RefundCalculationDto> {
+  async calculateRefund(bookingId: string, userId: string): Promise<ServiceResult<RefundCalculationDto>> {
     const booking = await this.prisma.bookings.findFirst({
       where: { id: bookingId, user_id: userId },
       include: {
@@ -1402,25 +1453,29 @@ export class BookingService {
     // Check if booking can be cancelled
     if (hoursUntilShowtime < this.CANCELLATION_HOURS_BEFORE) {
       return {
-        canRefund: false,
-        refundAmount: 0,
-        refundPercentage: 0,
-        ticketAmount: 0,
-        concessionsAmount: 0,
-        reason: `Cancellation must be made at least ${this.CANCELLATION_HOURS_BEFORE} hours before showtime`,
-        deadline: new Date(showtimeStart.getTime() - this.CANCELLATION_HOURS_BEFORE * 60 * 60 * 1000),
+        data: {
+          canRefund: false,
+          refundAmount: 0,
+          refundPercentage: 0,
+          ticketAmount: 0,
+          concessionsAmount: 0,
+          reason: `Cancellation must be made at least ${this.CANCELLATION_HOURS_BEFORE} hours before showtime`,
+          deadline: new Date(showtimeStart.getTime() - this.CANCELLATION_HOURS_BEFORE * 60 * 60 * 1000),
+        },
       };
     }
 
     // Check if already cancelled or refunded
     if (booking.status === BookingStatus.CANCELLED) {
       return {
-        canRefund: false,
-        refundAmount: 0,
-        refundPercentage: 0,
-        ticketAmount: 0,
-        concessionsAmount: 0,
-        reason: 'Booking is already cancelled',
+        data: {
+          canRefund: false,
+          refundAmount: 0,
+          refundPercentage: 0,
+          ticketAmount: 0,
+          concessionsAmount: 0,
+          reason: 'Booking is already cancelled',
+        },
       };
     }
 
@@ -1437,13 +1492,15 @@ export class BookingService {
     const refundAmount = Math.round((ticketAmount * this.REFUND_PERCENTAGE) / 100);
 
     return {
-      canRefund: true,
-      refundAmount,
-      refundPercentage: this.REFUND_PERCENTAGE,
-      ticketAmount,
-      concessionsAmount,
-      reason: `Refund ${this.REFUND_PERCENTAGE}% of ticket price. Concessions are non-refundable.`,
-      deadline: new Date(showtimeStart.getTime() - this.CANCELLATION_HOURS_BEFORE * 60 * 60 * 1000),
+      data: {
+        canRefund: true,
+        refundAmount,
+        refundPercentage: this.REFUND_PERCENTAGE,
+        ticketAmount,
+        concessionsAmount,
+        reason: `Refund ${this.REFUND_PERCENTAGE}% of ticket price. Concessions are non-refundable.`,
+        deadline: new Date(showtimeStart.getTime() - this.CANCELLATION_HOURS_BEFORE * 60 * 60 * 1000),
+      },
     };
   }
 
@@ -1454,24 +1511,27 @@ export class BookingService {
     id: string,
     userId: string,
     dto: CancelBookingWithRefundDto
-  ): Promise<{ booking: BookingDetailDto; refund?: RefundCalculationDto }> {
+  ): Promise<ServiceResult<{ booking: BookingDetailDto; refund?: RefundCalculationDto }>> {
     // Calculate refund eligibility
-    const refundCalc = await this.calculateRefund(id, userId);
+    const refundCalcResult = await this.calculateRefund(id, userId);
 
     // Cancel the booking
-    const booking = await this.cancelBooking(id, userId, dto.reason);
+    const bookingResult = await this.cancelBooking(id, userId, dto.reason);
 
     // Send notification ASYNC (fire-and-forget, don't block cancellation)
     this.notificationService.sendBookingCancellation(
-      booking,
-      dto.requestRefund && refundCalc.canRefund ? refundCalc.refundAmount : undefined
+      bookingResult.data,
+      dto.requestRefund && refundCalcResult.data.canRefund ? refundCalcResult.data.refundAmount : undefined
     ).catch(error => {
       console.error('[Booking] Failed to send cancellation email (async):', error);
     });
 
     return {
-      booking,
-      refund: refundCalc,
+      data: {
+        booking: bookingResult.data,
+        refund: refundCalcResult.data,
+      },
+      message: 'Booking cancelled with refund calculation',
     };
   }
 
@@ -1483,7 +1543,7 @@ export class BookingService {
     id: string,
     userId: string,
     dto: UpdateBookingDto
-  ): Promise<BookingDetailDto> {
+  ): Promise<ServiceResult<BookingDetailDto>> {
     const booking = await this.prisma.bookings.findFirst({
       where: { id, user_id: userId },
       include: {
@@ -1630,7 +1690,7 @@ export class BookingService {
     id: string,
     userId: string,
     dto: RescheduleBookingDto
-  ): Promise<BookingDetailDto> {
+  ): Promise<ServiceResult<BookingDetailDto>> {
     const booking = await this.prisma.bookings.findFirst({
       where: { id, user_id: userId },
       include: {
@@ -1686,7 +1746,7 @@ export class BookingService {
     }
 
     // Save old booking for notification
-    const oldBookingDetail = await this.findOne(id, userId);
+    const oldBookingDetailResult = await this.findOne(id, userId);
 
     // Update booking with new showtime
     // Keep same seats (seat IDs might be different in new showtime, needs validation)
@@ -1704,14 +1764,14 @@ export class BookingService {
     // TODO: Validate that seat IDs are still valid for new showtime
     // TODO: Calculate price difference if seat pricing is different
 
-    const newBookingDetail = await this.findOne(id, userId);
+    const newBookingDetailResult = await this.findOne(id, userId);
 
     // Send notification ASYNC (fire-and-forget, don't block reschedule)
-    this.notificationService.sendBookingReschedule(oldBookingDetail, newBookingDetail).catch(error => {
+    this.notificationService.sendBookingReschedule(oldBookingDetailResult.data, newBookingDetailResult.data).catch(error => {
       console.error('[Booking] Failed to send reschedule email (async):', error);
     });
 
-    return newBookingDetail;
+    return newBookingDetailResult;
   }
 
   /**
@@ -1747,7 +1807,7 @@ export class BookingService {
     showtimeId: string,
     userId: string,
     includeStatuses?: BookingStatus[]
-  ): Promise<BookingCalculationDto | null> {
+  ): Promise<ServiceResult<BookingCalculationDto | null>> {
     const statusFilter = includeStatuses && includeStatuses.length > 0
       ? { in: includeStatuses }
       : BookingStatus.PENDING; // Default: only PENDING bookings
@@ -1764,7 +1824,7 @@ export class BookingService {
     });
 
     if (!booking) {
-      return null;
+      return { data: null };
     }
 
     // Return full booking summary

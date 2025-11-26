@@ -1,12 +1,11 @@
 import { Injectable, Inject } from '@nestjs/common';
-import { ClientProxy } from '@nestjs/microservices';
+import { ClientProxy, RpcException } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
 import {
   SERVICE_NAME,
   TicketMessage,
   AdminFindAllTicketsDto,
   BulkValidateTicketsDto,
-  TicketDetailDto,
 } from '@movie-hub/shared-types';
 
 @Injectable()
@@ -16,15 +15,23 @@ export class TicketService {
   ) {}
 
   async findOne(id: string) {
-    return firstValueFrom(
-      this.bookingClient.send(TicketMessage.FIND_ONE, { id })
-    );
+    try {
+      return await firstValueFrom(
+        this.bookingClient.send(TicketMessage.FIND_ONE, { id })
+      );
+    } catch (error) {
+      throw new RpcException(error);
+    }
   }
 
   async findByCode(ticketCode: string) {
-    return firstValueFrom(
-      this.bookingClient.send(TicketMessage.FIND_BY_CODE, { ticketCode })
-    );
+    try {
+      return await firstValueFrom(
+        this.bookingClient.send(TicketMessage.FIND_BY_CODE, { ticketCode })
+      );
+    } catch (error) {
+      throw new RpcException(error);
+    }
   }
 
   async validateTicket(
@@ -32,60 +39,88 @@ export class TicketService {
     validationCode?: string,
     cinemaId?: string
   ) {
-    return firstValueFrom(
-      this.bookingClient.send(TicketMessage.VALIDATE, {
-        ticketId,
-        validationCode,
-        cinemaId,
-      })
-    );
+    try {
+      return await firstValueFrom(
+        this.bookingClient.send(TicketMessage.VALIDATE, {
+          ticketId,
+          validationCode,
+          cinemaId,
+        })
+      );
+    } catch (error) {
+      throw new RpcException(error);
+    }
   }
 
   async useTicket(ticketId: string) {
-    return firstValueFrom(
-      this.bookingClient.send(TicketMessage.USE, { ticketId })
-    );
+    try {
+      return await firstValueFrom(
+        this.bookingClient.send(TicketMessage.USE, { ticketId })
+      );
+    } catch (error) {
+      throw new RpcException(error);
+    }
   }
 
   async generateQRCode(ticketId: string) {
-    return firstValueFrom(
-      this.bookingClient.send(TicketMessage.GENERATE_QR, { ticketId })
-    );
+    try {
+      return await firstValueFrom(
+        this.bookingClient.send(TicketMessage.GENERATE_QR, { ticketId })
+      );
+    } catch (error) {
+      throw new RpcException(error);
+    }
   }
 
   // ==================== ADMIN OPERATIONS ====================
 
-  async adminFindAll(
-    filters: AdminFindAllTicketsDto
-  ): Promise<{ data: TicketDetailDto[]; total: number }> {
-    return firstValueFrom(
-      this.bookingClient.send(TicketMessage.ADMIN_FIND_ALL, filters)
-    );
+  async adminFindAll(filters: AdminFindAllTicketsDto) {
+    try {
+      return await firstValueFrom(
+        this.bookingClient.send(TicketMessage.ADMIN_FIND_ALL, { filters })
+      );
+    } catch (error) {
+      throw new RpcException(error);
+    }
   }
 
-  async findByShowtime(showtimeId: string): Promise<TicketDetailDto[]> {
-    return firstValueFrom(
-      this.bookingClient.send(TicketMessage.FIND_BY_SHOWTIME, { showtimeId })
-    );
+  async findByShowtime(showtimeId: string) {
+    try {
+      return await firstValueFrom(
+        this.bookingClient.send(TicketMessage.FIND_BY_SHOWTIME, { showtimeId })
+      );
+    } catch (error) {
+      throw new RpcException(error);
+    }
   }
 
-  async findByBooking(bookingId: string): Promise<TicketDetailDto[]> {
-    return firstValueFrom(
-      this.bookingClient.send(TicketMessage.FIND_BY_BOOKING, { bookingId })
-    );
+  async findByBooking(bookingId: string) {
+    try {
+      return await firstValueFrom(
+        this.bookingClient.send(TicketMessage.FIND_BY_BOOKING, { bookingId })
+      );
+    } catch (error) {
+      throw new RpcException(error);
+    }
   }
 
-  async bulkValidate(
-    bulkValidateDto: BulkValidateTicketsDto
-  ): Promise<{ valid: string[]; invalid: Array<{ ticketId: string; reason: string }> }> {
-    return firstValueFrom(
-      this.bookingClient.send(TicketMessage.BULK_VALIDATE, bulkValidateDto)
-    );
+  async bulkValidate(bulkValidateDto: BulkValidateTicketsDto) {
+    try {
+      return await firstValueFrom(
+        this.bookingClient.send(TicketMessage.BULK_VALIDATE, bulkValidateDto)
+      );
+    } catch (error) {
+      throw new RpcException(error);
+    }
   }
 
-  async cancelTicket(ticketId: string, reason?: string): Promise<TicketDetailDto> {
-    return firstValueFrom(
-      this.bookingClient.send(TicketMessage.CANCEL, { ticketId, reason })
-    );
+  async cancelTicket(ticketId: string, reason?: string) {
+    try {
+      return await firstValueFrom(
+        this.bookingClient.send(TicketMessage.CANCEL, { ticketId, reason })
+      );
+    } catch (error) {
+      throw new RpcException(error);
+    }
   }
 }

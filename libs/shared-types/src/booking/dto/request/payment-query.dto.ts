@@ -1,38 +1,32 @@
 import { PaymentStatus } from '../../enum';
+import { PaginationQuery, SortQuery } from '../../../common';
 
 /**
  * Query parameters for admin to find all payments
  */
-export interface AdminFindAllPaymentsDto {
+export interface AdminFindAllPaymentsDto extends PaginationQuery, SortQuery {
   bookingId?: string;
   status?: PaymentStatus;
   paymentMethod?: string;
   startDate?: Date;
   endDate?: Date;
-  page?: number;
-  limit?: number;
   sortBy?: 'created_at' | 'amount' | 'paid_at';
-  sortOrder?: 'asc' | 'desc';
 }
 
 /**
  * Query parameters for finding payments by status
  */
-export interface FindPaymentsByStatusDto {
+export interface FindPaymentsByStatusDto extends PaginationQuery {
   status: PaymentStatus;
-  page?: number;
-  limit?: number;
 }
 
 /**
  * Query parameters for finding payments by date range
  */
-export interface FindPaymentsByDateRangeDto {
+export interface FindPaymentsByDateRangeDto extends PaginationQuery {
   startDate: Date;
   endDate: Date;
   status?: PaymentStatus;
-  page?: number;
-  limit?: number;
 }
 
 /**

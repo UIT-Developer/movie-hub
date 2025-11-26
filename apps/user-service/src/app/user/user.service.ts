@@ -41,4 +41,17 @@ export class UserService {
   async getUser() {
     return clerkClient.users.getUserList();
   }
+
+  async getUserDetail(userId: string) {
+    const user = await clerkClient.users.getUser(userId);
+    return {
+      id: user.id,
+      email: user.emailAddresses[0]?.emailAddress || '',
+      firstName: user.firstName || '',
+      lastName: user.lastName || '',
+      fullName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.username || 'Guest',
+      phone: user.phoneNumbers[0]?.phoneNumber || '',
+      imageUrl: user.imageUrl,
+    };
+  }
 }

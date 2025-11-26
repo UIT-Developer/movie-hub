@@ -3,9 +3,6 @@ import { MessagePattern, Payload } from '@nestjs/microservices';
 import { BookingService } from './booking.service';
 import {
   CreateBookingDto,
-  BookingDetailDto,
-  BookingSummaryDto,
-  BookingCalculationDto,
   BookingStatus,
   AdminFindAllBookingsDto,
   FindBookingsByShowtimeDto,
@@ -15,7 +12,6 @@ import {
   GetRevenueReportDto,
   UpdateBookingDto,
   RescheduleBookingDto,
-  RefundCalculationDto,
   CancelBookingWithRefundDto,
 } from '@movie-hub/shared-types';
 
@@ -26,39 +22,39 @@ export class BookingController {
   @MessagePattern('booking.create')
   async create(
     @Payload() data: { userId: string; dto: CreateBookingDto }
-  ): Promise<BookingCalculationDto> {
+  ) {
     return this.bookingService.createBooking(data.userId, data.dto);
   }
 
   @MessagePattern('booking.findAll')
   async findAll(
     @Payload()
-    data: {
+    payload: {
       userId: string;
-      status?: BookingStatus;
-      page?: number;
-      limit?: number;
+      query: {
+        status?: BookingStatus;
+        page?: number;
+        limit?: number;
+      };
     }
-  ): Promise<{ data: BookingSummaryDto[]; total: number }> {
+  ) {
     return this.bookingService.findAllByUser(
-      data.userId,
-      data.status,
-      data.page,
-      data.limit
+      payload.userId,
+      payload.query
     );
   }
 
   @MessagePattern('booking.findOne')
   async findOne(
     @Payload() data: { id: string; userId: string }
-  ): Promise<BookingDetailDto> {
+  ) {
     return this.bookingService.findOne(data.id, data.userId);
   }
 
   @MessagePattern('booking.cancel')
   async cancel(
     @Payload() data: { id: string; userId: string; reason?: string }
-  ): Promise<BookingDetailDto> {
+  ) {
     return this.bookingService.cancelBooking(
       data.id,
       data.userId,
@@ -69,7 +65,7 @@ export class BookingController {
   @MessagePattern('booking.getSummary')
   async getSummary(
     @Payload() data: { id: string; userId: string }
-  ): Promise<BookingCalculationDto> {
+  ) {
     return this.bookingService.getBookingSummary(data.id, data.userId);
   }
 
@@ -77,32 +73,32 @@ export class BookingController {
 
   @MessagePattern('booking.admin.findAll')
   async adminFindAll(
-    @Payload() filters: AdminFindAllBookingsDto
-  ): Promise<{ data: BookingSummaryDto[]; total: number }> {
-    return this.bookingService.adminFindAllBookings(filters);
+    @Payload() payload: { filters: AdminFindAllBookingsDto }
+  ) {
+    return this.bookingService.adminFindAllBookings(payload.filters);
   }
 
   @MessagePattern('booking.findByShowtime')
   async findByShowtime(
-    @Payload() data: FindBookingsByShowtimeDto
-  ): Promise<BookingSummaryDto[]> {
+    @Payload() payload: FindBookingsByShowtimeDto
+  ) {
     return this.bookingService.findBookingsByShowtime(
-      data.showtimeId,
-      data.status
+      payload.showtimeId,
+      payload.status
     );
   }
 
   @MessagePattern('booking.findByDateRange')
   async findByDateRange(
-    @Payload() data: FindBookingsByDateRangeDto
-  ): Promise<{ data: BookingSummaryDto[]; total: number }> {
-    return this.bookingService.findBookingsByDateRange(data);
+    @Payload() payload: { filters: FindBookingsByDateRangeDto }
+  ) {
+    return this.bookingService.findBookingsByDateRange(payload.filters);
   }
 
   @MessagePattern('booking.updateStatus')
   async updateStatus(
     @Payload() data: UpdateBookingStatusDto
-  ): Promise<BookingDetailDto> {
+  ) {
     return this.bookingService.updateBookingStatus(
       data.bookingId,
       data.status,
@@ -113,21 +109,21 @@ export class BookingController {
   @MessagePattern('booking.confirm')
   async confirm(
     @Payload() data: { bookingId: string }
-  ): Promise<BookingDetailDto> {
+  ) {
     return this.bookingService.confirmBooking(data.bookingId);
   }
 
   @MessagePattern('booking.complete')
   async complete(
     @Payload() data: { bookingId: string }
-  ): Promise<BookingDetailDto> {
+  ) {
     return this.bookingService.completeBooking(data.bookingId);
   }
 
   @MessagePattern('booking.expire')
   async expire(
     @Payload() data: { bookingId: string }
-  ): Promise<BookingDetailDto> {
+  ) {
     return this.bookingService.expireBooking(data.bookingId);
   }
 
@@ -148,34 +144,35 @@ export class BookingController {
   @MessagePattern('booking.calculateRefund')
   async calculateRefund(
     @Payload() data: { id: string; userId: string }
-  ): Promise<RefundCalculationDto> {
+  ) {
     return this.bookingService.calculateRefund(data.id, data.userId);
   }
 
   @MessagePattern('booking.cancelWithRefund')
   async cancelWithRefund(
     @Payload() data: { id: string; userId: string; dto: CancelBookingWithRefundDto }
-  ): Promise<{ booking: BookingDetailDto; refund?: RefundCalculationDto }> {
+  ) {
     return this.bookingService.cancelBookingWithRefund(data.id, data.userId, data.dto);
   }
 
   @MessagePattern('booking.update')
   async update(
     @Payload() data: { id: string; userId: string; dto: UpdateBookingDto }
-  ): Promise<BookingDetailDto> {
+  ) {
     return this.bookingService.updateBooking(data.id, data.userId, data.dto);
   }
 
   @MessagePattern('booking.reschedule')
   async reschedule(
     @Payload() data: { id: string; userId: string; dto: RescheduleBookingDto }
-  ): Promise<BookingDetailDto> {
+  ) {
     return this.bookingService.rescheduleBooking(data.id, data.userId, data.dto);
   }
 
   @MessagePattern('booking.getCancellationPolicy')
   async getCancellationPolicy() {
-    return this.bookingService.getCancellationPolicy();
+    const result = await this.bookingService.getCancellationPolicy();
+    return { data: result };
   }
 
   @MessagePattern('booking.findUserBookingByShowtime')
@@ -185,7 +182,7 @@ export class BookingController {
       userId: string; 
       includeStatuses?: BookingStatus[];
     }
-  ): Promise<BookingCalculationDto | null> {
+  ) {
     return this.bookingService.findUserBookingByShowtime(
       data.showtimeId,
       data.userId,

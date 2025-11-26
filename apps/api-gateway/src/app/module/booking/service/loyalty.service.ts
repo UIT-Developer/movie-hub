@@ -1,5 +1,5 @@
 import { Injectable, Inject } from '@nestjs/common';
-import { ClientProxy } from '@nestjs/microservices';
+import { ClientProxy, RpcException } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
 import { SERVICE_NAME, LoyaltyMessage, LoyaltyTransactionType } from '@movie-hub/shared-types';
 
@@ -10,9 +10,13 @@ export class LoyaltyService {
   ) {}
 
   async getBalance(userId: string) {
-    return firstValueFrom(
-      this.bookingClient.send(LoyaltyMessage.GET_BALANCE, { userId })
-    );
+    try {
+      return await firstValueFrom(
+        this.bookingClient.send(LoyaltyMessage.GET_BALANCE, { userId })
+      );
+    } catch (error) {
+      throw new RpcException(error);
+    }
   }
 
   async getTransactions(
@@ -21,14 +25,16 @@ export class LoyaltyService {
     page?: number,
     limit?: number
   ) {
-    return firstValueFrom(
-      this.bookingClient.send(LoyaltyMessage.GET_TRANSACTIONS, {
-        userId,
-        type,
-        page,
-        limit,
-      })
-    );
+    try {
+      return await firstValueFrom(
+        this.bookingClient.send(LoyaltyMessage.GET_TRANSACTIONS, {
+          userId,
+          query: { type, page, limit },
+        })
+      );
+    } catch (error) {
+      throw new RpcException(error);
+    }
   }
 
   async earnPoints(
@@ -37,14 +43,18 @@ export class LoyaltyService {
     transactionId?: string,
     description?: string
   ) {
-    return firstValueFrom(
-      this.bookingClient.send(LoyaltyMessage.EARN_POINTS, {
-        userId,
-        points,
-        transactionId,
-        description,
-      })
-    );
+    try {
+      return await firstValueFrom(
+        this.bookingClient.send(LoyaltyMessage.EARN_POINTS, {
+          userId,
+          points,
+          transactionId,
+          description,
+        })
+      );
+    } catch (error) {
+      throw new RpcException(error);
+    }
   }
 
   async redeemPoints(
@@ -53,13 +63,17 @@ export class LoyaltyService {
     transactionId?: string,
     description?: string
   ) {
-    return firstValueFrom(
-      this.bookingClient.send(LoyaltyMessage.REDEEM_POINTS, {
-        userId,
-        points,
-        transactionId,
-        description,
-      })
-    );
+    try {
+      return await firstValueFrom(
+        this.bookingClient.send(LoyaltyMessage.REDEEM_POINTS, {
+          userId,
+          points,
+          transactionId,
+          description,
+        })
+      );
+    } catch (error) {
+      throw new RpcException(error);
+    }
   }
 }

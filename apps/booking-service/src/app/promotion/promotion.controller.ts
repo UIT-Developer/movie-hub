@@ -2,10 +2,8 @@ import { Controller } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { PromotionService } from './promotion.service';
 import {
-  PromotionDto,
   PromotionType,
   ValidatePromotionDto,
-  ValidatePromotionResponseDto,
   CreatePromotionDto,
   UpdatePromotionDto,
 } from '@movie-hub/shared-types';
@@ -15,52 +13,42 @@ export class PromotionController {
   constructor(private readonly promotionService: PromotionService) {}
 
   @MessagePattern('promotion.findAll')
-  async findAll(
-    @Payload() data: { active?: boolean; type?: PromotionType }
-  ): Promise<PromotionDto[]> {
-    return this.promotionService.findAll(data.active, data.type);
+  async findAll(@Payload() payload: { active?: boolean; type?: PromotionType }) {
+    return this.promotionService.findAll(payload.active, payload.type);
   }
 
   @MessagePattern('promotion.validate')
-  async validate(
-    @Payload() data: { code: string; dto: ValidatePromotionDto }
-  ): Promise<ValidatePromotionResponseDto> {
-    return this.promotionService.validatePromotion(data.code, data.dto);
+  async validate(@Payload() payload: { code: string; dto: ValidatePromotionDto }) {
+    return this.promotionService.validatePromotion(payload.code, payload.dto);
   }
 
   @MessagePattern('promotion.findOne')
-  async findOne(@Payload() data: { id: string }): Promise<PromotionDto> {
-    return this.promotionService.findOne(data.id);
+  async findOne(@Payload() payload: { id: string }) {
+    return this.promotionService.findOne(payload.id);
   }
 
   @MessagePattern('promotion.findByCode')
-  async findByCode(@Payload() data: { code: string }): Promise<PromotionDto> {
-    return this.promotionService.findByCode(data.code);
+  async findByCode(@Payload() payload: { code: string }) {
+    return this.promotionService.findByCode(payload.code);
   }
 
   @MessagePattern('promotion.create')
-  async create(
-    @Payload() data: { dto: CreatePromotionDto }
-  ): Promise<PromotionDto> {
-    return this.promotionService.create(data.dto);
+  async create(@Payload() payload: { dto: CreatePromotionDto }) {
+    return this.promotionService.create(payload.dto);
   }
 
   @MessagePattern('promotion.update')
-  async update(
-    @Payload() data: { id: string; dto: UpdatePromotionDto }
-  ): Promise<PromotionDto> {
-    return this.promotionService.update(data.id, data.dto);
+  async update(@Payload() payload: { id: string; dto: UpdatePromotionDto }) {
+    return this.promotionService.update(payload.id, payload.dto);
   }
 
   @MessagePattern('promotion.delete')
-  async delete(
-    @Payload() data: { id: string }
-  ): Promise<{ message: string }> {
-    return this.promotionService.delete(data.id);
+  async delete(@Payload() payload: { id: string }) {
+    return this.promotionService.delete(payload.id);
   }
 
   @MessagePattern('promotion.toggleActive')
-  async toggleActive(@Payload() data: { id: string }): Promise<PromotionDto> {
-    return this.promotionService.toggleActive(data.id);
+  async toggleActive(@Payload() payload: { id: string }) {
+    return this.promotionService.toggleActive(payload.id);
   }
 }

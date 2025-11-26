@@ -7,8 +7,6 @@ import {
   Param,
   Query,
   UseGuards,
-  ParseIntPipe,
-  DefaultValuePipe,
 } from '@nestjs/common';
 import { BookingService } from '../service/booking.service';
 import { ClerkAuthGuard } from '../../../common/guard/clerk-auth.guard';
@@ -21,7 +19,11 @@ import {
   FindBookingsByDateRangeDto,
   GetBookingStatisticsDto,
   GetRevenueReportDto,
+  UpdateBookingDto,
+  RescheduleBookingDto,
+  CancelBookingWithRefundDto,
 } from '@movie-hub/shared-types';
+import { PaginationQuery } from '@movie-hub/shared-types/common';
 
 @Controller({
   version: '1',
@@ -46,10 +48,14 @@ export class BookingController {
   async findAll(
     @CurrentUserId() userId: string,
     @Query('status') status?: BookingStatus,
-    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page?: number,
-    @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit?: number
+    @Query() pagination?: PaginationQuery
   ) {
-    return this.bookingService.findAllByUser(userId, status, page, limit);
+    return this.bookingService.findAllByUser(
+      userId,
+      status,
+      pagination?.page,
+      pagination?.limit
+    );
   }
 
   @Get(':id')
@@ -75,7 +81,7 @@ export class BookingController {
   async getSummary(
     @CurrentUserId() userId: string,
     @Param('id') id: string
-  ): Promise<BookingCalculationDto> {
+  ) {
     return this.bookingService.getBookingSummary(id, userId);
   }
 
@@ -90,7 +96,7 @@ export class BookingController {
     @CurrentUserId() userId: string,
     @Param('showtimeId') showtimeId: string,
     @Query('includeStatuses') includeStatuses?: string
-  ): Promise<BookingCalculationDto | null> {
+  ) {
     // Parse comma-separated statuses if provided
     const statuses = includeStatuses 
       ? includeStatuses.split(',').map(s => s.trim() as BookingStatus)
@@ -164,5 +170,51 @@ export class BookingController {
   @UseGuards(ClerkAuthGuard)
   async getRevenueReport(@Query() filters: GetRevenueReportDto) {
     return this.bookingService.getRevenueReport(filters);
+  }
+
+  // ==================== BOOKING ACTIONS ====================
+
+  @Put(':id')
+  @UseGuards(ClerkAuthGuard)
+  async updateBooking(
+    @CurrentUserId() userId: string,
+    @Param('id') id: string,
+    @Body() dto: UpdateBookingDto
+  ) {
+    return this.bookingService.updateBooking(id, userId, dto);
+  }
+
+  @Post(':id/reschedule')
+  @UseGuards(ClerkAuthGuard)
+  async rescheduleBooking(
+    @CurrentUserId() userId: string,
+    @Param('id') id: string,
+    @Body() dto: RescheduleBookingDto
+  ) {
+    return this.bookingService.rescheduleBooking(id, userId, dto);
+  }
+
+  @Get(':id/refund-calculation')
+  @UseGuards(ClerkAuthGuard)
+  async calculateRefund(
+    @CurrentUserId() userId: string,
+    @Param('id') id: string
+  ) {
+    return this.bookingService.calculateRefund(id, userId);
+  }
+
+  @Post(':id/cancel-with-refund')
+  @UseGuards(ClerkAuthGuard)
+  async cancelWithRefund(
+    @CurrentUserId() userId: string,
+    @Param('id') id: string,
+    @Body() dto: CancelBookingWithRefundDto
+  ) {
+    return this.bookingService.cancelWithRefund(id, userId, dto);
+  }
+
+  @Get('cancellation-policy')
+  async getCancellationPolicy() {
+    return this.bookingService.getCancellationPolicy();
   }
 }

@@ -10,7 +10,8 @@ import {
   PaymentMethod,
   BookingStatus,
   TicketStatus,
-  
+  ServiceResult,
+  AdminFindAllPaymentsDto,
 } from '@movie-hub/shared-types';
 import * as crypto from 'crypto';
 import moment from 'moment';
@@ -43,7 +44,7 @@ export class PaymentService {
     bookingId: string,
     dto: CreatePaymentDto,
     ipAddr: string
-  ): Promise<PaymentDetailDto> {
+  ): Promise<ServiceResult<PaymentDetailDto>> {
     const booking = await this.prisma.bookings.findUnique({
       where: { id: bookingId },
     });
@@ -82,8 +83,10 @@ export class PaymentService {
         data: { payment_url: paymentUrl },
       });
 
-      return this.mapToDto({ ...payment, payment_url: paymentUrl });
+      return { data: this.mapToDto({ ...payment, payment_url: paymentUrl }) };
     
+
+    return { data: this.mapToDto(payment) };
   }
 
   async createVNPayUrl(
@@ -149,7 +152,7 @@ export class PaymentService {
     return paymentUrl;
   }
 
-  async handleVNPayIPN(vnpParams: Record<string, string>): Promise<{ RspCode: string; Message: string }> {
+  async handleVNPayIPN(vnpParams: Record<string, string>): Promise<ServiceResult<{ RspCode: string; Message: string }>> {
     const secureHash = vnpParams.vnp_SecureHash;
     const orderId = vnpParams.vnp_TxnRef;
     const transactionId = vnpParams.vnp_TransactionNo;
@@ -166,29 +169,40 @@ export class PaymentService {
     console.log('[VNPay IPN] computed:', signed);
     console.log('[VNPay IPN] provided:', secureHash);
     if (secureHash !== signed) {
-      return { RspCode: '97', Message: 'Checksum failed' };
+      return { data: { RspCode: '97', Message: 'Checksum failed' } };
     }
 
     const payment = await this.prisma.payments.findUnique({
       where: { id: orderId },
-      include: { booking: true },
+      include: { 
+        booking: {
+          select: {
+            id: true,
+            user_id: true,
+            showtime_id: true,
+            status: true,
+            payment_status: true,
+            expires_at: true,
+          }
+        } 
+      },
     });
 
     if (!payment) {
-      return { RspCode: '01', Message: 'Order not found' };
+      return { data: { RspCode: '01', Message: 'Order not found' } };
     }
 
     if (payment.booking.expires_at && new Date() > payment.booking.expires_at) {
-      return { RspCode: '04', Message: 'Order expired' };
+      return { data: { RspCode: '04', Message: 'Order expired' } };
     }
 
     const amount = parseInt(vnpParams.vnp_Amount) / 100;
     if (Number(payment.amount) !== amount) {
-      return { RspCode: '04', Message: 'Amount invalid' };
+      return { data: { RspCode: '04', Message: 'Amount invalid' } };
     }
 
     if (payment.status !== PaymentStatus.PENDING || payment.booking.status !== BookingStatus.PENDING) {
-      return { RspCode: '02', Message: 'This order has been updated to the payment status' };
+      return { data: { RspCode: '02', Message: 'This order has been updated to the payment status' } };
     }
 
     try {
@@ -236,7 +250,7 @@ export class PaymentService {
           console.error('[Payment] Failed to send booking confirmation email (async):', emailError);
         });
 
-        return { RspCode: '00', Message: 'Success' };
+        return { data: { RspCode: '00', Message: 'Success' } };
       } else {
         await this.prisma.$transaction([
           this.prisma.payments.update({
@@ -256,15 +270,15 @@ export class PaymentService {
           }),
         ]);
 
-        return { RspCode: '00', Message: 'Success' };
+        return { data: { RspCode: '00', Message: 'Success' } };
       }
     } catch {
-      return { RspCode: '99', Message: 'Update failed, please retry' };
+      return { data: { RspCode: '99', Message: 'Update failed, please retry' } };
     }
   }
 //  //## DONT USE THIS , use ipn instead
-  async handleVNPayReturn(vnpParams: Record<string, string>): Promise<{ status: string; code: string }> {
-    const secureHash = vnpParams.vnp_SecureHash;  
+  async handleVNPayReturn(vnpParams: Record<string, string>): Promise<ServiceResult<{ status: string; code: string }>> {
+    const secureHash = vnpParams.vnp_SecureHash;
     
     delete vnpParams.vnp_SecureHash;
     delete vnpParams.vnp_SecureHashType;
@@ -275,13 +289,13 @@ export class PaymentService {
     const signed = hmac.update(Buffer.from(signData, 'utf-8')).digest('hex');
 
     if (secureHash === signed) {
-      return { status: 'success', code: vnpParams.vnp_ResponseCode };
+      return { data: { status: 'success', code: vnpParams.vnp_ResponseCode } };
     } else {
-      return { status: 'error', code: '97' };
+      return { data: { status: 'error', code: '97' } };
     }
   }
 
-  async findOne(id: string): Promise<PaymentDetailDto> {
+  async findOne(id: string): Promise<ServiceResult<PaymentDetailDto>> {
     const payment = await this.prisma.payments.findUnique({
       where: { id },
     });
@@ -290,16 +304,16 @@ export class PaymentService {
       throw new Error('Payment not found');
     }
 
-    return this.mapToDto(payment);
+    return { data: this.mapToDto(payment) };
   }
 
-  async findByBooking(bookingId: string): Promise<PaymentDetailDto[]> {
+  async findByBooking(bookingId: string): Promise<ServiceResult<PaymentDetailDto[]>> {
     const payments = await this.prisma.payments.findMany({
       where: { booking_id: bookingId },
       orderBy: { created_at: 'desc' },
     });
 
-    return payments.map((payment) => this.mapToDto(payment));
+    return { data: payments.map((payment) => this.mapToDto(payment)) };
   }
 
   private sortObject(obj: Record<string, string>): Record<string, string> {
@@ -352,17 +366,9 @@ export class PaymentService {
   /**
    * Admin: Find all payments with comprehensive filters
    */
-  async adminFindAllPayments(filters: {
-    bookingId?: string;
-    status?: PaymentStatus;
-    paymentMethod?: string;
-    startDate?: Date;
-    endDate?: Date;
-    page?: number;
-    limit?: number;
-    sortBy?: 'created_at' | 'amount' | 'paid_at';
-    sortOrder?: 'asc' | 'desc';
-  }): Promise<{ data: PaymentDetailDto[]; total: number }> {
+  async adminFindAllPayments(
+    filters: AdminFindAllPaymentsDto
+  ): Promise<ServiceResult<PaymentDetailDto[]>> {
     const page = filters.page || 1;
     const limit = filters.limit || 10;
     const skip = (page - 1) * limit;
@@ -394,9 +400,18 @@ export class PaymentService {
       this.prisma.payments.count({ where }),
     ]);
 
+    const totalPages = Math.ceil(total / limit);
+
     return {
       data: payments.map((p) => this.mapToDto(p)),
-      total,
+      meta: {
+        page,
+        limit,
+        totalRecords: total,
+        totalPages,
+        hasPrev: page > 1,
+        hasNext: page < totalPages,
+      },
     };
   }
 
@@ -407,7 +422,7 @@ export class PaymentService {
     status: PaymentStatus,
     page = 1,
     limit = 10
-  ): Promise<{ data: PaymentDetailDto[]; total: number }> {
+  ): Promise<ServiceResult<PaymentDetailDto[]>> {
     const skip = (page - 1) * limit;
 
     const [payments, total] = await Promise.all([
@@ -420,9 +435,18 @@ export class PaymentService {
       this.prisma.payments.count({ where: { status } }),
     ]);
 
+    const totalPages = Math.ceil(total / limit);
+
     return {
       data: payments.map((p) => this.mapToDto(p)),
-      total,
+      meta: {
+        page,
+        limit,
+        totalRecords: total,
+        totalPages,
+        hasPrev: page > 1,
+        hasNext: page < totalPages,
+      },
     };
   }
 
@@ -435,7 +459,7 @@ export class PaymentService {
     status?: PaymentStatus;
     page?: number;
     limit?: number;
-  }): Promise<{ data: PaymentDetailDto[]; total: number }> {
+  }): Promise<ServiceResult<PaymentDetailDto[]>> {
     const page = filters.page || 1;
     const limit = filters.limit || 10;
     const skip = (page - 1) * limit;
@@ -459,16 +483,25 @@ export class PaymentService {
       this.prisma.payments.count({ where }),
     ]);
 
+    const totalPages = Math.ceil(total / limit);
+
     return {
       data: payments.map((p) => this.mapToDto(p)),
-      total,
+      meta: {
+        page,
+        limit,
+        totalRecords: total,
+        totalPages,
+        hasPrev: page > 1,
+        hasNext: page < totalPages,
+      },
     };
   }
 
   /**
    * Cancel a pending payment
    */
-  async cancelPayment(paymentId: string): Promise<PaymentDetailDto> {
+  async cancelPayment(paymentId: string): Promise<ServiceResult<PaymentDetailDto>> {
     const payment = await this.prisma.payments.findUnique({
       where: { id: paymentId },
     });
@@ -486,7 +519,7 @@ export class PaymentService {
       data: { status: PaymentStatus.FAILED },
     });
 
-    return this.mapToDto(updated);
+    return { data: this.mapToDto(updated) };
   }
 
   /**
@@ -496,7 +529,7 @@ export class PaymentService {
     startDate?: Date;
     endDate?: Date;
     paymentMethod?: string;
-  }): Promise<any> {
+  }): Promise<ServiceResult<any>> {
     const where: any = {};
 
     if (filters.startDate || filters.endDate) {
@@ -542,19 +575,21 @@ export class PaymentService {
     }, {});
 
     return {
-      totalPayments,
-      totalAmount,
-      successfulPayments,
-      failedPayments,
-      pendingPayments,
-      successRate: totalPayments > 0 ? (successfulPayments / totalPayments) * 100 : 0,
-      averagePaymentAmount: totalPayments > 0 ? totalAmount / totalPayments : 0,
-      paymentsByMethod: Object.values(paymentsByMethod),
-      paymentsByStatus: Object.values(paymentsByStatus),
-      period: filters.startDate && filters.endDate ? {
-        startDate: filters.startDate,
-        endDate: filters.endDate,
-      } : undefined,
+      data: {
+        totalPayments,
+        totalAmount,
+        successfulPayments,
+        failedPayments,
+        pendingPayments,
+        successRate: totalPayments > 0 ? (successfulPayments / totalPayments) * 100 : 0,
+        averagePaymentAmount: totalPayments > 0 ? totalAmount / totalPayments : 0,
+        paymentsByMethod: Object.values(paymentsByMethod),
+        paymentsByStatus: Object.values(paymentsByStatus),
+        period: filters.startDate && filters.endDate ? {
+          startDate: filters.startDate,
+          endDate: filters.endDate,
+        } : undefined,
+      }
     };
   }
 
@@ -583,13 +618,13 @@ export class PaymentService {
       const ticketsWithQR = await Promise.all(
         (fullBooking.tickets || []).map(async (ticket) => {
           try {
-            const qrCode = await this.ticketService.generateQRCode(ticket.id);
+            const qrResult = await this.ticketService.generateQRCode(ticket.id);
             return {
               ticketCode: ticket.ticket_code,
               seatNumber: `${ticket.seat_id}`, // TODO: Parse actual seat row/number
               ticketType: ticket.ticket_type,
               price: Number(ticket.price),
-              qrCode,
+              qrCode: qrResult.data,
             };
           } catch (qrError) {
             console.error(`[Email] Failed to generate QR for ticket ${ticket.id}:`, qrError);

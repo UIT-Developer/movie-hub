@@ -1,16 +1,15 @@
 import { TicketStatus } from '../../enum';
+import { PaginationQuery } from '../../../common';
 
 /**
  * Query parameters for admin to find all tickets
  */
-export interface AdminFindAllTicketsDto {
+export interface AdminFindAllTicketsDto extends PaginationQuery {
   bookingId?: string;
   showtimeId?: string;
   status?: TicketStatus;
   startDate?: Date;
   endDate?: Date;
-  page?: number;
-  limit?: number;
 }
 
 /**

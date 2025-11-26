@@ -60,9 +60,7 @@ export default async function CheckoutPage({
     );
   }
 
-  
 
- 
 
   // 4) Render client components, truyền dữ liệu booking vào props
   return (

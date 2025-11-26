@@ -1,6 +1,8 @@
 const ShowtimesPage = () => {
   return (
-    
+    <div>
+      
+    </div>
   )
 }
 

@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { ClientProxy } from '@nestjs/microservices';
-import { lastValueFrom } from 'rxjs';
+import { ClientProxy, RpcException } from '@nestjs/microservices';
+import { firstValueFrom } from 'rxjs';
 import {
   SERVICE_NAME,
   RefundMessage,
@@ -9,7 +9,6 @@ import {
   ProcessRefundDto,
   ApproveRefundDto,
   RejectRefundDto,
-  RefundDetailDto,
 } from '@movie-hub/shared-types';
 
 @Injectable()
@@ -18,47 +17,76 @@ export class RefundService {
     @Inject(SERVICE_NAME.BOOKING) private readonly bookingClient: ClientProxy
   ) {}
 
-  async createRefund(createRefundDto: CreateRefundDto): Promise<RefundDetailDto> {
-    return lastValueFrom(
-      this.bookingClient.send(RefundMessage.CREATE, createRefundDto)
-    );
+  async createRefund(createRefundDto: CreateRefundDto) {
+    try {
+      return await firstValueFrom(
+        this.bookingClient.send(RefundMessage.CREATE, { dto: createRefundDto })
+      );
+    } catch (error) {
+      throw new RpcException(error);
+    }
   }
 
-  async findAll(
-    filters: FindAllRefundsDto
-  ): Promise<{ data: RefundDetailDto[]; total: number }> {
-    return lastValueFrom(
-      this.bookingClient.send(RefundMessage.FIND_ALL, filters)
-    );
+  async findAll(filters: FindAllRefundsDto) {
+    try {
+      return await firstValueFrom(
+        this.bookingClient.send(RefundMessage.FIND_ALL, { filters })
+      );
+    } catch (error) {
+      throw new RpcException(error);
+    }
   }
 
-  async findOne(id: string): Promise<RefundDetailDto> {
-    return lastValueFrom(this.bookingClient.send(RefundMessage.FIND_ONE, id));
+  async findOne(id: string) {
+    try {
+      return await firstValueFrom(
+        this.bookingClient.send(RefundMessage.FIND_ONE, { id })
+      );
+    } catch (error) {
+      throw new RpcException(error);
+    }
   }
 
-  async findByPayment(paymentId: string): Promise<RefundDetailDto[]> {
-    return lastValueFrom(
-      this.bookingClient.send(RefundMessage.FIND_BY_PAYMENT, paymentId)
-    );
+  async findByPayment(paymentId: string) {
+    try {
+      return await firstValueFrom(
+        this.bookingClient.send(RefundMessage.FIND_BY_PAYMENT, { paymentId })
+      );
+    } catch (error) {
+      throw new RpcException(error);
+    }
   }
 
-  async processRefund(
-    processRefundDto: ProcessRefundDto
-  ): Promise<RefundDetailDto> {
-    return lastValueFrom(
-      this.bookingClient.send(RefundMessage.PROCESS, processRefundDto)
-    );
+  async processRefund(processRefundDto: ProcessRefundDto) {
+    try {
+      return await firstValueFrom(
+        this.bookingClient.send(RefundMessage.PROCESS, { refundId: processRefundDto.refundId })
+      );
+    } catch (error) {
+      throw new RpcException(error);
+    }
   }
 
-  async approveRefund(approveRefundDto: ApproveRefundDto): Promise<RefundDetailDto> {
-    return lastValueFrom(
-      this.bookingClient.send(RefundMessage.APPROVE, approveRefundDto)
-    );
+  async approveRefund(approveRefundDto: ApproveRefundDto) {
+    try {
+      return await firstValueFrom(
+        this.bookingClient.send(RefundMessage.APPROVE, { refundId: approveRefundDto.refundId })
+      );
+    } catch (error) {
+      throw new RpcException(error);
+    }
   }
 
-  async rejectRefund(rejectRefundDto: RejectRefundDto): Promise<RefundDetailDto> {
-    return lastValueFrom(
-      this.bookingClient.send(RefundMessage.REJECT, rejectRefundDto)
-    );
+  async rejectRefund(rejectRefundDto: RejectRefundDto) {
+    try {
+      return await firstValueFrom(
+        this.bookingClient.send(RefundMessage.REJECT, {
+          refundId: rejectRefundDto.refundId,
+          reason: rejectRefundDto.reason,
+        })
+      );
+    } catch (error) {
+      throw new RpcException(error);
+    }
   }
 }

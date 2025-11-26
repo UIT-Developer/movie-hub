@@ -16,4 +16,9 @@ export class UserController {
   getUser() {
     return this.userService.getUser();
   }
+
+  @MessagePattern(UserMessage.GET_USER_DETAIL)
+  async getUserDetail(userId: string) {
+    return this.userService.getUserDetail(userId);
+  }
 }

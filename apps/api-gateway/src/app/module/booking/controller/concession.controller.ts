@@ -31,7 +31,7 @@ export class ConcessionController {
     @Query('cinemaId') cinemaId?: string,
     @Query('category') category?: ConcessionCategory,
     @Query('available') available?: string
-  ): Promise<ConcessionDto[]> {
+  ) {
     return this.concessionService.findAll(
       cinemaId,
       category,
@@ -40,15 +40,13 @@ export class ConcessionController {
   }
 
   @Get(':id')
-  async findOne(@Param('id') id: string): Promise<ConcessionDto> {
+  async findOne(@Param('id') id: string) {
     return this.concessionService.findOne(id);
   }
 
   @Post()
   @UseGuards(ClerkAuthGuard)
-  async create(
-    @Body() createConcessionDto: CreateConcessionDto
-  ): Promise<ConcessionDto> {
+  async create(@Body() createConcessionDto: CreateConcessionDto) {
     return this.concessionService.create(createConcessionDto);
   }
 
@@ -57,13 +55,13 @@ export class ConcessionController {
   async update(
     @Param('id') id: string,
     @Body() updateConcessionDto: UpdateConcessionDto
-  ): Promise<ConcessionDto> {
+  ) {
     return this.concessionService.update(id, updateConcessionDto);
   }
 
   @Delete(':id')
   @UseGuards(ClerkAuthGuard)
-  async delete(@Param('id') id: string): Promise<{ message: string }> {
+  async delete(@Param('id') id: string) {
     return this.concessionService.delete(id);
   }
 
@@ -72,7 +70,7 @@ export class ConcessionController {
   async updateInventory(
     @Param('id') id: string,
     @Body('quantity') quantity: number
-  ): Promise<ConcessionDto> {
+  ) {
     return this.concessionService.updateInventory(id, quantity);
   }
 }

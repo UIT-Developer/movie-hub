@@ -1,13 +1,17 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
-import { TicketDetailDto, TicketStatus } from '@movie-hub/shared-types';
+import {
+  TicketDetailDto,
+  TicketStatus,
+  ServiceResult,
+} from '@movie-hub/shared-types';
 import * as QRCode from 'qrcode';
 
 @Injectable()
 export class TicketService {
   constructor(private prisma: PrismaService) {}
 
-  async findOne(id: string): Promise<TicketDetailDto> {
+  async findOne(id: string): Promise<ServiceResult<TicketDetailDto>> {
     const ticket = await this.prisma.tickets.findUnique({
       where: { id },
       include: {
@@ -19,10 +23,12 @@ export class TicketService {
       throw new Error('Ticket not found');
     }
 
-    return this.mapToDto(ticket);
+    return {
+      data: this.mapToDto(ticket),
+    };
   }
 
-  async findByCode(ticketCode: string): Promise<TicketDetailDto> {
+  async findByCode(ticketCode: string): Promise<ServiceResult<TicketDetailDto>> {
     const ticket = await this.prisma.tickets.findUnique({
       where: { ticket_code: ticketCode },
       include: {
@@ -34,14 +40,16 @@ export class TicketService {
       throw new Error('Ticket not found');
     }
 
-    return this.mapToDto(ticket);
+    return {
+      data: this.mapToDto(ticket),
+    };
   }
 
   async validateTicket(
     ticketId: string,
     validationCode?: string,
     cinemaId?: string
-  ): Promise<{ valid: boolean; message: string; ticket?: TicketDetailDto }> {
+  ): Promise<ServiceResult<{ valid: boolean; message: string; ticket?: TicketDetailDto }>> {
     const ticket = await this.prisma.tickets.findUnique({
       where: { id: ticketId },
       include: {
@@ -51,15 +59,19 @@ export class TicketService {
 
     if (!ticket) {
       return {
-        valid: false,
-        message: 'Ticket not found',
+        data: {
+          valid: false,
+          message: 'Ticket not found',
+        },
       };
     }
 
     if (ticket.status !== TicketStatus.VALID) {
       return {
-        valid: false,
-        message: `Ticket is ${ticket.status.toLowerCase()}`,
+        data: {
+          valid: false,
+          message: `Ticket is ${ticket.status.toLowerCase()}`,
+        },
       };
     }
 
@@ -67,13 +79,15 @@ export class TicketService {
     // e.g., check cinema_id, showtime, etc.
 
     return {
-      valid: true,
-      message: 'Ticket is valid',
-      ticket: this.mapToDto(ticket),
+      data: {
+        valid: true,
+        message: 'Ticket is valid',
+        ticket: this.mapToDto(ticket),
+      },
     };
   }
 
-  async useTicket(ticketId: string): Promise<TicketDetailDto> {
+  async useTicket(ticketId: string): Promise<ServiceResult<TicketDetailDto>> {
     const ticket = await this.prisma.tickets.update({
       where: { id: ticketId },
       data: {
@@ -85,14 +99,17 @@ export class TicketService {
       },
     });
 
-    return this.mapToDto(ticket);
+    return {
+      data: this.mapToDto(ticket),
+      message: 'Ticket marked as used',
+    };
   }
 
   /**
    * Generate QR code as Base64 data URL for a ticket
    * QR code contains: ticket code, booking ID, seat info for validation
    */
-  async generateQRCode(ticketId: string): Promise<string> {
+  async generateQRCode(ticketId: string): Promise<ServiceResult<string>> {
     const ticket = await this.prisma.tickets.findUnique({
       where: { id: ticketId },
       include: {
@@ -128,7 +145,10 @@ export class TicketService {
       data: { qr_code: qrCodeDataURL },
     });
 
-    return qrCodeDataURL;
+    return {
+      data: qrCodeDataURL,
+      message: 'QR code generated successfully',
+    };
   }
 
   private mapToDto(ticket: any): TicketDetailDto {
@@ -165,7 +185,7 @@ export class TicketService {
     endDate?: Date;
     page?: number;
     limit?: number;
-  }): Promise<{ data: TicketDetailDto[]; total: number }> {
+  }): Promise<ServiceResult<TicketDetailDto[]>> {
     const page = filters.page || 1;
     const limit = filters.limit || 10;
     const skip = (page - 1) * limit;
@@ -201,9 +221,18 @@ export class TicketService {
       this.prisma.tickets.count({ where }),
     ]);
 
+    const totalPages = Math.ceil(total / limit);
+
     return {
       data: tickets.map((t) => this.mapToDto(t)),
-      total,
+      meta: {
+        page,
+        limit,
+        totalRecords: total,
+        totalPages,
+        hasPrev: page > 1,
+        hasNext: page < totalPages,
+      },
     };
   }
 
@@ -213,7 +242,7 @@ export class TicketService {
   async findTicketsByShowtime(
     showtimeId: string,
     status?: TicketStatus
-  ): Promise<TicketDetailDto[]> {
+  ): Promise<ServiceResult<TicketDetailDto[]>> {
     const where: any = {
       booking: {
         showtime_id: showtimeId,
@@ -230,13 +259,15 @@ export class TicketService {
       orderBy: { created_at: 'desc' },
     });
 
-    return tickets.map((t) => this.mapToDto(t));
+    return {
+      data: tickets.map((t) => this.mapToDto(t)),
+    };
   }
 
   /**
    * Find all tickets for a specific booking
    */
-  async findTicketsByBooking(bookingId: string): Promise<TicketDetailDto[]> {
+  async findTicketsByBooking(bookingId: string): Promise<ServiceResult<TicketDetailDto[]>> {
     const tickets = await this.prisma.tickets.findMany({
       where: { booking_id: bookingId },
       include: {
@@ -245,7 +276,9 @@ export class TicketService {
       orderBy: { created_at: 'asc' },
     });
 
-    return tickets.map((t) => this.mapToDto(t));
+    return {
+      data: tickets.map((t) => this.mapToDto(t)),
+    };
   }
 
   /**
@@ -254,10 +287,10 @@ export class TicketService {
   async bulkValidateTickets(
     ticketIds: string[],
     cinemaId?: string
-  ): Promise<{
+  ): Promise<ServiceResult<{
     valid: string[];
     invalid: { ticketId: string; reason: string }[];
-  }> {
+  }>> {
     const tickets = await this.prisma.tickets.findMany({
       where: {
         id: { in: ticketIds },
@@ -291,7 +324,9 @@ export class TicketService {
       valid.push(ticketId);
     }
 
-    return { valid, invalid };
+    return {
+      data: { valid, invalid },
+    };
   }
 
   /**
@@ -300,7 +335,7 @@ export class TicketService {
   async cancelTicket(
     ticketId: string,
     reason?: string
-  ): Promise<TicketDetailDto> {
+  ): Promise<ServiceResult<TicketDetailDto>> {
     const ticket = await this.prisma.tickets.findUnique({
       where: { id: ticketId },
     });
@@ -321,6 +356,9 @@ export class TicketService {
       },
     });
 
-    return this.mapToDto(updated);
+    return {
+      data: this.mapToDto(updated),
+      message: 'Ticket cancelled successfully',
+    };
   }
 }

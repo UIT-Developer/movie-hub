@@ -7,13 +7,14 @@ import {
   BookingStatus,
   BookingMessage,
   AdminFindAllBookingsDto,
-  FindBookingsByShowtimeDto,
   FindBookingsByDateRangeDto,
-  UpdateBookingStatusDto,
   GetBookingStatisticsDto,
   GetRevenueReportDto,
-  BookingStatisticsDto,
-  RevenueReportDto,
+  UpdateBookingDto,
+  RescheduleBookingDto,
+  RefundCalculationDto,
+  CancelBookingWithRefundDto,
+  ServiceResult,
 } from '@movie-hub/shared-types';
 import { Inject, Injectable } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
@@ -28,7 +29,7 @@ export class BookingService {
   async createBooking(
     userId: string,
     dto: CreateBookingDto
-  ): Promise<BookingCalculationDto> {
+  ): Promise<ServiceResult<BookingCalculationDto>> {
     return lastValueFrom(
       this.bookingClient.send(BookingMessage.CREATE, { userId, dto })
     );
@@ -39,7 +40,7 @@ export class BookingService {
     status?: BookingStatus,
     page?: number,
     limit?: number
-  ): Promise<{ data: BookingSummaryDto[]; total: number }> {
+  ): Promise<ServiceResult<BookingSummaryDto[]>> {
     return lastValueFrom(
       this.bookingClient.send(BookingMessage.FIND_ALL, {
         userId,
@@ -50,7 +51,7 @@ export class BookingService {
     );
   }
 
-  async findOne(id: string, userId: string): Promise<BookingDetailDto> {
+  async findOne(id: string, userId: string): Promise<ServiceResult<BookingDetailDto>> {
     return lastValueFrom(
       this.bookingClient.send(BookingMessage.FIND_ONE, { id, userId })
     );
@@ -60,7 +61,7 @@ export class BookingService {
     id: string,
     userId: string,
     reason?: string
-  ): Promise<BookingDetailDto> {
+  ): Promise<ServiceResult<BookingDetailDto>> {
     return lastValueFrom(
       this.bookingClient.send(BookingMessage.CANCEL, { id, userId, reason })
     );
@@ -69,7 +70,7 @@ export class BookingService {
   async getBookingSummary(
     id: string,
     userId: string
-  ): Promise<BookingCalculationDto> {
+  ): Promise<ServiceResult<BookingCalculationDto>> {
     return lastValueFrom(
       this.bookingClient.send(BookingMessage.GET_SUMMARY, { id, userId })
     );
@@ -83,7 +84,7 @@ export class BookingService {
     showtimeId: string,
     userId: string,
     includeStatuses?: BookingStatus[]
-  ): Promise<BookingCalculationDto | null> {
+  ): Promise<ServiceResult<BookingCalculationDto | null>> {
     return lastValueFrom(
       this.bookingClient.send(BookingMessage.FIND_USER_BOOKING_BY_SHOWTIME, {
         showtimeId,
@@ -97,7 +98,7 @@ export class BookingService {
 
   async adminFindAll(
     filters: AdminFindAllBookingsDto
-  ): Promise<{ data: BookingSummaryDto[]; total: number }> {
+  ): Promise<ServiceResult<BookingSummaryDto[]>> {
     return lastValueFrom(
       this.bookingClient.send(BookingMessage.ADMIN_FIND_ALL, filters)
     );
@@ -106,7 +107,7 @@ export class BookingService {
   async findByShowtime(
     showtimeId: string,
     status?: BookingStatus
-  ): Promise<BookingSummaryDto[]> {
+  ): Promise<ServiceResult<BookingSummaryDto[]>> {
     return lastValueFrom(
       this.bookingClient.send(BookingMessage.FIND_BY_SHOWTIME, {
         showtimeId,
@@ -117,7 +118,7 @@ export class BookingService {
 
   async findByDateRange(
     filters: FindBookingsByDateRangeDto
-  ): Promise<{ data: BookingSummaryDto[]; total: number }> {
+  ): Promise<ServiceResult<BookingSummaryDto[]>> {
     return lastValueFrom(
       this.bookingClient.send(BookingMessage.FIND_BY_DATE_RANGE, filters)
     );
@@ -127,7 +128,7 @@ export class BookingService {
     bookingId: string,
     status: BookingStatus,
     reason?: string
-  ): Promise<BookingDetailDto> {
+  ): Promise<ServiceResult<BookingDetailDto>> {
     return lastValueFrom(
       this.bookingClient.send(BookingMessage.UPDATE_STATUS, {
         bookingId,
@@ -137,19 +138,19 @@ export class BookingService {
     );
   }
 
-  async confirmBooking(bookingId: string): Promise<BookingDetailDto> {
+  async confirmBooking(bookingId: string): Promise<ServiceResult<BookingDetailDto>> {
     return lastValueFrom(
       this.bookingClient.send(BookingMessage.CONFIRM, { bookingId })
     );
   }
 
-  async completeBooking(bookingId: string): Promise<BookingDetailDto> {
+  async completeBooking(bookingId: string): Promise<ServiceResult<BookingDetailDto>> {
     return lastValueFrom(
       this.bookingClient.send(BookingMessage.COMPLETE, { bookingId })
     );
   }
 
-  async expireBooking(bookingId: string): Promise<BookingDetailDto> {
+  async expireBooking(bookingId: string): Promise<ServiceResult<BookingDetailDto>> {
     return lastValueFrom(
       this.bookingClient.send(BookingMessage.EXPIRE, { bookingId })
     );
@@ -157,7 +158,7 @@ export class BookingService {
 
   async getStatistics(
     filters: GetBookingStatisticsDto
-  ): Promise<BookingStatisticsDto> {
+  ): Promise<ServiceResult<unknown>> {
     return lastValueFrom(
       this.bookingClient.send(BookingMessage.GET_STATISTICS, filters)
     );
@@ -165,9 +166,60 @@ export class BookingService {
 
   async getRevenueReport(
     filters: GetRevenueReportDto
-  ): Promise<RevenueReportDto> {
+  ): Promise<ServiceResult<unknown>> {
     return lastValueFrom(
       this.bookingClient.send(BookingMessage.GET_REVENUE_REPORT, filters)
+    );
+  }
+
+  // ==================== BOOKING ACTIONS ====================
+
+  async updateBooking(
+    id: string,
+    userId: string,
+    dto: UpdateBookingDto
+  ): Promise<ServiceResult<BookingDetailDto>> {
+    return lastValueFrom(
+      this.bookingClient.send(BookingMessage.UPDATE, { id, userId, dto })
+    );
+  }
+
+  async rescheduleBooking(
+    id: string,
+    userId: string,
+    dto: RescheduleBookingDto
+  ): Promise<ServiceResult<BookingDetailDto>> {
+    return lastValueFrom(
+      this.bookingClient.send(BookingMessage.RESCHEDULE, { id, userId, dto })
+    );
+  }
+
+  async calculateRefund(
+    id: string,
+    userId: string
+  ): Promise<ServiceResult<RefundCalculationDto>> {
+    return lastValueFrom(
+      this.bookingClient.send(BookingMessage.CALCULATE_REFUND, { id, userId })
+    );
+  }
+
+  async cancelWithRefund(
+    id: string,
+    userId: string,
+    dto: CancelBookingWithRefundDto
+  ): Promise<ServiceResult<{ booking: BookingDetailDto; refund?: RefundCalculationDto }>> {
+    return lastValueFrom(
+      this.bookingClient.send(BookingMessage.CANCEL_WITH_REFUND, {
+        id,
+        userId,
+        dto,
+      })
+    );
+  }
+
+  async getCancellationPolicy(): Promise<ServiceResult<unknown>> {
+    return lastValueFrom(
+      this.bookingClient.send(BookingMessage.GET_CANCELLATION_POLICY, {})
     );
   }
 }

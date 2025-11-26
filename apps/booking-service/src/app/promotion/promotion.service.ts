@@ -7,6 +7,7 @@ import {
   ValidatePromotionResponseDto,
   CreatePromotionDto,
   UpdatePromotionDto,
+  ServiceResult,
 } from '@movie-hub/shared-types';
 
 @Injectable()
@@ -16,7 +17,7 @@ export class PromotionService {
   async findAll(
     active = true,
     type?: PromotionType
-  ): Promise<PromotionDto[]> {
+  ): Promise<ServiceResult<PromotionDto[]>> {
     const where: any = {};
     
     if (active !== undefined) {
@@ -34,36 +35,44 @@ export class PromotionService {
       orderBy: { created_at: 'desc' },
     });
 
-    return promotions.map((p) => this.mapToDto(p));
+    return {
+      data: promotions.map((p) => this.mapToDto(p)),
+    };
   }
 
   async validatePromotion(
     code: string,
     dto: ValidatePromotionDto
-  ): Promise<ValidatePromotionResponseDto> {
+  ): Promise<ServiceResult<ValidatePromotionResponseDto>> {
     const promotion = await this.prisma.promotions.findUnique({
       where: { code },
     });
 
     if (!promotion) {
       return {
-        valid: false,
-        message: 'Promotion code not found',
+        data: {
+          valid: false,
+          message: 'Promotion code not found',
+        },
       };
     }
 
     if (!promotion.active) {
       return {
-        valid: false,
-        message: 'Promotion code is not active',
+        data: {
+          valid: false,
+          message: 'Promotion code is not active',
+        },
       };
     }
 
     const now = new Date();
     if (promotion.valid_from > now || promotion.valid_to < now) {
       return {
-        valid: false,
-        message: 'Promotion code has expired',
+        data: {
+          valid: false,
+          message: 'Promotion code has expired',
+        },
       };
     }
 
@@ -72,8 +81,10 @@ export class PromotionService {
       promotion.current_usage >= promotion.usage_limit
     ) {
       return {
-        valid: false,
-        message: 'Promotion usage limit reached',
+        data: {
+          valid: false,
+          message: 'Promotion usage limit reached',
+        },
       };
     }
 
@@ -82,8 +93,10 @@ export class PromotionService {
       dto.bookingAmount < Number(promotion.min_purchase)
     ) {
       return {
-        valid: false,
-        message: `Minimum purchase amount is ${promotion.min_purchase}`,
+        data: {
+          valid: false,
+          message: `Minimum purchase amount is ${promotion.min_purchase}`,
+        },
       };
     }
 
@@ -104,15 +117,17 @@ export class PromotionService {
     const finalAmount = dto.bookingAmount - discountAmount;
 
     return {
-      valid: true,
-      promotion: this.mapToDto(promotion),
-      discountAmount,
-      finalAmount,
-      message: 'Promotion code is valid',
+      data: {
+        valid: true,
+        promotion: this.mapToDto(promotion),
+        discountAmount,
+        finalAmount,
+        message: 'Promotion code is valid',
+      },
     };
   }
 
-  async findOne(id: string): Promise<PromotionDto> {
+  async findOne(id: string): Promise<ServiceResult<PromotionDto>> {
     const promotion = await this.prisma.promotions.findUnique({
       where: { id },
     });
@@ -121,10 +136,12 @@ export class PromotionService {
       throw new NotFoundException('Promotion not found');
     }
 
-    return this.mapToDto(promotion);
+    return {
+      data: this.mapToDto(promotion),
+    };
   }
 
-  async findByCode(code: string): Promise<PromotionDto> {
+  async findByCode(code: string): Promise<ServiceResult<PromotionDto>> {
     const promotion = await this.prisma.promotions.findUnique({
       where: { code },
     });
@@ -133,10 +150,12 @@ export class PromotionService {
       throw new NotFoundException('Promotion not found');
     }
 
-    return this.mapToDto(promotion);
+    return {
+      data: this.mapToDto(promotion),
+    };
   }
 
-  async create(dto: CreatePromotionDto): Promise<PromotionDto> {
+  async create(dto: CreatePromotionDto): Promise<ServiceResult<PromotionDto>> {
     // Check if promotion code already exists
     const existing = await this.prisma.promotions.findUnique({
       where: { code: dto.code },
@@ -173,10 +192,13 @@ export class PromotionService {
       },
     });
 
-    return this.mapToDto(promotion);
+    return {
+      data: this.mapToDto(promotion),
+      message: 'Promotion created successfully',
+    };
   }
 
-  async update(id: string, dto: UpdatePromotionDto): Promise<PromotionDto> {
+  async update(id: string, dto: UpdatePromotionDto): Promise<ServiceResult<PromotionDto>> {
     // Check if promotion exists
     const existing = await this.prisma.promotions.findUnique({
       where: { id },
@@ -215,10 +237,13 @@ export class PromotionService {
       },
     });
 
-    return this.mapToDto(promotion);
+    return {
+      data: this.mapToDto(promotion),
+      message: 'Promotion updated successfully',
+    };
   }
 
-  async delete(id: string): Promise<{ message: string }> {
+  async delete(id: string): Promise<ServiceResult<{ message: string }>> {
     // Check if promotion exists
     const promotion = await this.prisma.promotions.findUnique({
       where: { id },
@@ -248,10 +273,12 @@ export class PromotionService {
       where: { id },
     });
 
-    return { message: 'Promotion deleted successfully' };
+    return {
+      data: { message: 'Promotion deleted successfully' },
+    };
   }
 
-  async toggleActive(id: string): Promise<PromotionDto> {
+  async toggleActive(id: string): Promise<ServiceResult<PromotionDto>> {
     const promotion = await this.prisma.promotions.findUnique({
       where: { id },
     });
@@ -267,7 +294,10 @@ export class PromotionService {
       },
     });
 
-    return this.mapToDto(updated);
+    return {
+      data: this.mapToDto(updated),
+      message: `Promotion ${updated.active ? 'activated' : 'deactivated'} successfully`,
+    };
   }
 
   private mapToDto(promotion: any): PromotionDto {

@@ -1,7 +1,14 @@
 import { Controller } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { TicketService } from './ticket.service';
-import { TicketDetailDto } from '@movie-hub/shared-types';
+import {
+  TicketDetailDto,
+  AdminFindAllTicketsDto,
+  FindTicketsByShowtimeDto,
+  FindTicketsByBookingDto,
+  BulkValidateTicketsDto,
+  CancelTicketDto,
+} from '@movie-hub/shared-types';
 
 @Controller()
 export class TicketController {
@@ -45,5 +52,49 @@ export class TicketController {
   @MessagePattern('ticket.generateQR')
   async generateQR(@Payload() data: { ticketId: string }): Promise<string> {
     return this.ticketService.generateQRCode(data.ticketId);
+  }
+
+  // ==================== ADMIN OPERATIONS ====================
+
+  @MessagePattern('ticket.admin.findAll')
+  async adminFindAll(
+    @Payload() filters: AdminFindAllTicketsDto
+  ): Promise<{ data: TicketDetailDto[]; total: number }> {
+    return this.ticketService.adminFindAllTickets(filters);
+  }
+
+  @MessagePattern('ticket.findByShowtime')
+  async findByShowtime(
+    @Payload() data: FindTicketsByShowtimeDto
+  ): Promise<TicketDetailDto[]> {
+    return this.ticketService.findTicketsByShowtime(
+      data.showtimeId,
+      data.status
+    );
+  }
+
+  @MessagePattern('ticket.findByBooking')
+  async findByBooking(
+    @Payload() data: FindTicketsByBookingDto
+  ): Promise<TicketDetailDto[]> {
+    return this.ticketService.findTicketsByBooking(data.bookingId);
+  }
+
+  @MessagePattern('ticket.bulkValidate')
+  async bulkValidate(
+    @Payload() data: BulkValidateTicketsDto
+  ): Promise<{
+    valid: string[];
+    invalid: { ticketId: string; reason: string }[];
+  }> {
+    return this.ticketService.bulkValidateTickets(
+      data.ticketIds,
+      data.cinemaId
+    );
+  }
+
+  @MessagePattern('ticket.cancel')
+  async cancel(@Payload() data: CancelTicketDto): Promise<TicketDetailDto> {
+    return this.ticketService.cancelTicket(data.ticketId, data.reason);
   }
 }

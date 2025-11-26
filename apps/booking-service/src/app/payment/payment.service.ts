@@ -1,7 +1,8 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma.service';
+import { NotificationService, TicketWithQRCode } from '../notification/notification.service';
+import { TicketService } from '../ticket/ticket.service';
 import {
   CreatePaymentDto,
   PaymentDetailDto,
@@ -9,7 +10,7 @@ import {
   PaymentMethod,
   BookingStatus,
   TicketStatus,
-  BookingDetailDto,
+  
 } from '@movie-hub/shared-types';
 import * as crypto from 'crypto';
 import moment from 'moment';
@@ -27,7 +28,9 @@ export class PaymentService {
   constructor(
     private prisma: PrismaService,
     private configService: ConfigService,
-    private bookingEventService: BookingEventService
+    private bookingEventService: BookingEventService,
+    private notificationService: NotificationService,
+    private ticketService: TicketService
   ) {
     this.vnp_TmnCode = this.configService.get('VNPAY_TMN_CODE') || 'EX6ATLAM';
     this.vnp_HashSecret = this.configService.get('VNPAY_HASH_SECRET') || 'ID4MX46WVEFNI39KLW9JUFHDR0I4U3IB';
@@ -184,7 +187,7 @@ export class PaymentService {
       return { RspCode: '04', Message: 'Amount invalid' };
     }
 
-    if (payment.status !== PaymentStatus.PENDING) {
+    if (payment.status !== PaymentStatus.PENDING || payment.booking.status !== BookingStatus.PENDING) {
       return { RspCode: '02', Message: 'This order has been updated to the payment status' };
     }
 
@@ -225,6 +228,12 @@ export class PaymentService {
           showtimeId: payment.booking.showtime_id,
           bookingId: payment.booking_id,
           seatIds: tickets.map((t) => t.seat_id),
+        });
+
+        // Send booking confirmation email ASYNCHRONOUSLY (fire-and-forget, don't block payment)
+        this.sendBookingConfirmationEmailAsync(payment.booking_id).catch(emailError => {
+          // Log but don't throw - email failure should not affect payment success
+          console.error('[Payment] Failed to send booking confirmation email (async):', emailError);
         });
 
         return { RspCode: '00', Message: 'Success' };
@@ -284,6 +293,15 @@ export class PaymentService {
     return this.mapToDto(payment);
   }
 
+  async findByBooking(bookingId: string): Promise<PaymentDetailDto[]> {
+    const payments = await this.prisma.payments.findMany({
+      where: { booking_id: bookingId },
+      orderBy: { created_at: 'desc' },
+    });
+
+    return payments.map((payment) => this.mapToDto(payment));
+  }
+
   private sortObject(obj: Record<string, string>): Record<string, string> {
     const sorted: Record<string, string> = {};
     const keys: string[] = [];
@@ -327,5 +345,328 @@ export class PaymentService {
       createdAt: payment.created_at,
       updatedAt: payment.updated_at,
     };
+  }
+
+  // ==================== ADMIN OPERATIONS ====================
+
+  /**
+   * Admin: Find all payments with comprehensive filters
+   */
+  async adminFindAllPayments(filters: {
+    bookingId?: string;
+    status?: PaymentStatus;
+    paymentMethod?: string;
+    startDate?: Date;
+    endDate?: Date;
+    page?: number;
+    limit?: number;
+    sortBy?: 'created_at' | 'amount' | 'paid_at';
+    sortOrder?: 'asc' | 'desc';
+  }): Promise<{ data: PaymentDetailDto[]; total: number }> {
+    const page = filters.page || 1;
+    const limit = filters.limit || 10;
+    const skip = (page - 1) * limit;
+
+    const where: any = {};
+
+    if (filters.bookingId) where.booking_id = filters.bookingId;
+    if (filters.status) where.status = filters.status;
+    if (filters.paymentMethod) where.payment_method = filters.paymentMethod;
+
+    if (filters.startDate || filters.endDate) {
+      where.created_at = {};
+      if (filters.startDate) where.created_at.gte = filters.startDate;
+      if (filters.endDate) where.created_at.lte = filters.endDate;
+    }
+
+    const orderBy: any = {};
+    const sortBy = filters.sortBy || 'created_at';
+    const sortOrder = filters.sortOrder || 'desc';
+    orderBy[sortBy] = sortOrder;
+
+    const [payments, total] = await Promise.all([
+      this.prisma.payments.findMany({
+        where,
+        orderBy,
+        skip,
+        take: limit,
+      }),
+      this.prisma.payments.count({ where }),
+    ]);
+
+    return {
+      data: payments.map((p) => this.mapToDto(p)),
+      total,
+    };
+  }
+
+  /**
+   * Find payments by status
+   */
+  async findPaymentsByStatus(
+    status: PaymentStatus,
+    page = 1,
+    limit = 10
+  ): Promise<{ data: PaymentDetailDto[]; total: number }> {
+    const skip = (page - 1) * limit;
+
+    const [payments, total] = await Promise.all([
+      this.prisma.payments.findMany({
+        where: { status },
+        orderBy: { created_at: 'desc' },
+        skip,
+        take: limit,
+      }),
+      this.prisma.payments.count({ where: { status } }),
+    ]);
+
+    return {
+      data: payments.map((p) => this.mapToDto(p)),
+      total,
+    };
+  }
+
+  /**
+   * Find payments by date range
+   */
+  async findPaymentsByDateRange(filters: {
+    startDate: Date;
+    endDate: Date;
+    status?: PaymentStatus;
+    page?: number;
+    limit?: number;
+  }): Promise<{ data: PaymentDetailDto[]; total: number }> {
+    const page = filters.page || 1;
+    const limit = filters.limit || 10;
+    const skip = (page - 1) * limit;
+
+    const where: any = {
+      created_at: {
+        gte: filters.startDate,
+        lte: filters.endDate,
+      },
+    };
+
+    if (filters.status) where.status = filters.status;
+
+    const [payments, total] = await Promise.all([
+      this.prisma.payments.findMany({
+        where,
+        orderBy: { created_at: 'desc' },
+        skip,
+        take: limit,
+      }),
+      this.prisma.payments.count({ where }),
+    ]);
+
+    return {
+      data: payments.map((p) => this.mapToDto(p)),
+      total,
+    };
+  }
+
+  /**
+   * Cancel a pending payment
+   */
+  async cancelPayment(paymentId: string): Promise<PaymentDetailDto> {
+    const payment = await this.prisma.payments.findUnique({
+      where: { id: paymentId },
+    });
+
+    if (!payment) {
+      throw new Error('Payment not found');
+    }
+
+    if (payment.status !== PaymentStatus.PENDING) {
+      throw new Error('Can only cancel pending payments');
+    }
+
+    const updated = await this.prisma.payments.update({
+      where: { id: paymentId },
+      data: { status: PaymentStatus.FAILED },
+    });
+
+    return this.mapToDto(updated);
+  }
+
+  /**
+   * Get payment statistics
+   */
+  async getPaymentStatistics(filters: {
+    startDate?: Date;
+    endDate?: Date;
+    paymentMethod?: string;
+  }): Promise<any> {
+    const where: any = {};
+
+    if (filters.startDate || filters.endDate) {
+      where.created_at = {};
+      if (filters.startDate) where.created_at.gte = filters.startDate;
+      if (filters.endDate) where.created_at.lte = filters.endDate;
+    }
+
+    if (filters.paymentMethod) where.payment_method = filters.paymentMethod;
+
+    const [totalPayments, successfulPayments, failedPayments, pendingPayments, payments] = await Promise.all([
+      this.prisma.payments.count({ where }),
+      this.prisma.payments.count({ where: { ...where, status: PaymentStatus.COMPLETED } }),
+      this.prisma.payments.count({ where: { ...where, status: PaymentStatus.FAILED } }),
+      this.prisma.payments.count({ where: { ...where, status: PaymentStatus.PENDING } }),
+      this.prisma.payments.findMany({ where }),
+    ]);
+
+    const totalAmount = payments.reduce((sum, p) => sum + Number(p.amount), 0);
+    const completedPayments = payments.filter((p) => p.status === PaymentStatus.COMPLETED);
+    const completedAmount = completedPayments.reduce((sum, p) => sum + Number(p.amount), 0);
+
+    // Group by payment method
+    const paymentsByMethod = payments.reduce((acc: any, p) => {
+      const method = p.payment_method;
+      if (!acc[method]) {
+        acc[method] = { method, count: 0, amount: 0 };
+      }
+      acc[method].count++;
+      acc[method].amount += Number(p.amount);
+      return acc;
+    }, {});
+
+    // Group by status
+    const paymentsByStatus = payments.reduce((acc: any, p) => {
+      const status = p.status;
+      if (!acc[status]) {
+        acc[status] = { status, count: 0, amount: 0 };
+      }
+      acc[status].count++;
+      acc[status].amount += Number(p.amount);
+      return acc;
+    }, {});
+
+    return {
+      totalPayments,
+      totalAmount,
+      successfulPayments,
+      failedPayments,
+      pendingPayments,
+      successRate: totalPayments > 0 ? (successfulPayments / totalPayments) * 100 : 0,
+      averagePaymentAmount: totalPayments > 0 ? totalAmount / totalPayments : 0,
+      paymentsByMethod: Object.values(paymentsByMethod),
+      paymentsByStatus: Object.values(paymentsByStatus),
+      period: filters.startDate && filters.endDate ? {
+        startDate: filters.startDate,
+        endDate: filters.endDate,
+      } : undefined,
+    };
+  }
+
+  /**
+   * Send booking confirmation email ASYNCHRONOUSLY with QR codes
+   * This runs in background and never blocks the payment flow
+   */
+  private async sendBookingConfirmationEmailAsync(bookingId: string): Promise<void> {
+    try {
+      const fullBooking = await this.prisma.bookings.findUnique({
+        where: { id: bookingId },
+        include: {
+          tickets: true,
+          booking_concessions: {
+            include: { concession: true },
+          },
+        },
+      });
+
+      if (!fullBooking) {
+        console.error('[Email] Booking not found:', bookingId);
+        return;
+      }
+
+      // Generate QR codes for all tickets IN PARALLEL
+      const ticketsWithQR = await Promise.all(
+        (fullBooking.tickets || []).map(async (ticket) => {
+          try {
+            const qrCode = await this.ticketService.generateQRCode(ticket.id);
+            return {
+              ticketCode: ticket.ticket_code,
+              seatNumber: `${ticket.seat_id}`, // TODO: Parse actual seat row/number
+              ticketType: ticket.ticket_type,
+              price: Number(ticket.price),
+              qrCode,
+            };
+          } catch (qrError) {
+            console.error(`[Email] Failed to generate QR for ticket ${ticket.id}:`, qrError);
+            // Return ticket without QR code
+            return {
+              ticketCode: ticket.ticket_code,
+              seatNumber: `${ticket.seat_id}`,
+              ticketType: ticket.ticket_type,
+              price: Number(ticket.price),
+              qrCode: '', // Empty if QR generation fails
+            };
+          }
+        })
+      );
+
+      // Map to BookingDetailDto format
+      const bookingForEmail = {
+        id: fullBooking.id,
+        bookingCode: fullBooking.booking_code,
+        showtimeId: fullBooking.showtime_id,
+        userId: fullBooking.user_id,
+        customerName: fullBooking.customer_name,
+        customerEmail: fullBooking.customer_email,
+        customerPhone: fullBooking.customer_phone,
+        movieTitle: 'Movie Title', // TODO: Fetch from cinema-service
+        cinemaName: 'Cinema Name', // TODO: Fetch from cinema-service
+        hallName: 'Hall Name', // TODO: Fetch from cinema-service
+        startTime: new Date(), // TODO: Fetch from cinema-service
+        seatCount: fullBooking.tickets?.length || 0,
+        seats: fullBooking.tickets?.map(t => ({
+          seatId: t.seat_id,
+          row: 'A', // TODO: Parse from seat_id
+          number: 1, // TODO: Parse from seat_id
+          seatType: t.ticket_type,
+          ticketType: t.ticket_type,
+          price: Number(t.price),
+        })) || [],
+        concessions: fullBooking.booking_concessions?.map(bc => ({
+          concessionId: bc.concession_id,
+          name: bc.concession?.name || 'Item',
+          quantity: bc.quantity,
+          unitPrice: Number(bc.unit_price),
+          totalPrice: Number(bc.total_price),
+        })) || [],
+        subtotal: Number(fullBooking.subtotal),
+        discount: Number(fullBooking.discount),
+        pointsUsed: fullBooking.points_used,
+        pointsDiscount: Number(fullBooking.points_discount),
+        finalAmount: Number(fullBooking.final_amount),
+        totalAmount: Number(fullBooking.final_amount),
+        promotionCode: fullBooking.promotion_code,
+        status: fullBooking.status as BookingStatus,
+        paymentStatus: fullBooking.payment_status as PaymentStatus,
+        expiresAt: fullBooking.expires_at,
+        cancelledAt: fullBooking.cancelled_at,
+        cancellationReason: fullBooking.cancellation_reason,
+        createdAt: fullBooking.created_at,
+        updatedAt: fullBooking.updated_at,
+      };
+
+      // Send email with tickets and QR codes
+      await this.notificationService.sendBookingConfirmation({
+        booking: bookingForEmail,
+        tickets: ticketsWithQR,
+      });
+
+      console.log(`[Email] Booking confirmation sent successfully to ${fullBooking.customer_email}`);
+
+      // Also send SMS if phone number available (fire-and-forget)
+      if (fullBooking.customer_phone) {
+        this.notificationService.sendBookingConfirmationSMS(bookingForEmail).catch(smsError => {
+          console.error('[SMS] Failed to send booking confirmation SMS:', smsError);
+        });
+      }
+    } catch (error) {
+      console.error('[Email] Failed to send booking confirmation:', error);
+      // Don't throw - this is already async and shouldn't affect payment
+    }
   }
 }

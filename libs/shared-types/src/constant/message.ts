@@ -1,6 +1,7 @@
 export const UserMessage = {
   GET_PERMISSIONS: 'user.getPermissions',
   GET_USERS: 'user.getAll',
+  GET_USER_DETAIL: 'user.getDetail',
 };
 
 export const MovieServiceMessage = {
@@ -76,6 +77,12 @@ export const BookingMessage = {
   CANCEL: 'booking.cancel',
   GET_SUMMARY: 'booking.getSummary',
   FIND_USER_BOOKING_BY_SHOWTIME: 'booking.findUserBookingByShowtime',
+  // Booking actions
+  UPDATE: 'booking.update',
+  RESCHEDULE: 'booking.reschedule',
+  CALCULATE_REFUND: 'booking.calculateRefund',
+  CANCEL_WITH_REFUND: 'booking.cancelWithRefund',
+  GET_CANCELLATION_POLICY: 'booking.getCancellationPolicy',
   // Admin operations
   ADMIN_FIND_ALL: 'booking.admin.findAll',
   FIND_BY_SHOWTIME: 'booking.findByShowtime',

@@ -32,7 +32,7 @@ export class PromotionController {
   async findAll(
     @Query('active') active?: string,
     @Query('type') type?: PromotionType
-  ): Promise<PromotionDto[]> {
+  ) {
     return this.promotionService.findAll(
       active === 'true' ? true : active === 'false' ? false : undefined,
       type
@@ -40,12 +40,12 @@ export class PromotionController {
   }
 
   @Get(':id')
-  async findOne(@Param('id') id: string): Promise<PromotionDto> {
+  async findOne(@Param('id') id: string) {
     return this.promotionService.findOne(id);
   }
 
   @Get('code/:code')
-  async findByCode(@Param('code') code: string): Promise<PromotionDto> {
+  async findByCode(@Param('code') code: string) {
     return this.promotionService.findByCode(code);
   }
 
@@ -53,15 +53,13 @@ export class PromotionController {
   async validate(
     @Param('code') code: string,
     @Body() validateDto: ValidatePromotionDto
-  ): Promise<ValidatePromotionResponseDto> {
+  ) {
     return this.promotionService.validate(code, validateDto);
   }
 
   @Post()
   @UseGuards(ClerkAuthGuard)
-  async create(
-    @Body() createPromotionDto: CreatePromotionDto
-  ): Promise<PromotionDto> {
+  async create(@Body() createPromotionDto: CreatePromotionDto) {
     return this.promotionService.create(createPromotionDto);
   }
 
@@ -70,19 +68,19 @@ export class PromotionController {
   async update(
     @Param('id') id: string,
     @Body() updatePromotionDto: UpdatePromotionDto
-  ): Promise<PromotionDto> {
+  ) {
     return this.promotionService.update(id, updatePromotionDto);
   }
 
   @Delete(':id')
   @UseGuards(ClerkAuthGuard)
-  async delete(@Param('id') id: string): Promise<{ message: string }> {
+  async delete(@Param('id') id: string) {
     return this.promotionService.delete(id);
   }
 
   @Patch(':id/toggle-active')
   @UseGuards(ClerkAuthGuard)
-  async toggleActive(@Param('id') id: string): Promise<PromotionDto> {
+  async toggleActive(@Param('id') id: string) {
     return this.promotionService.toggleActive(id);
   }
 }

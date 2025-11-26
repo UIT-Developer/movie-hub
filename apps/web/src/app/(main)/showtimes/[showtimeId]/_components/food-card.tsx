@@ -7,6 +7,7 @@ interface FoodCardProps {
   price: number;
   image: string;
   quantity: number;
+  inventory: number;
   onIncrement: (id: string) => void;
   onDecrement: (id: string) => void;
 }
@@ -17,22 +18,25 @@ export const FoodCard = ({
   price,
   image,
   quantity,
+  inventory,
   onIncrement,
   onDecrement,
 }: FoodCardProps) => {
   return (
-    <div className="bg-gray-900 text-white rounded-lg overflow-hidden shadow-lg flex flex-col justify-center">
+    <div className="bg-gray-900 text-white rounded-lg overflow-hidden  flex flex-col justify-center p-2">
       <div className="relative w-full h-40">
         <Image
           src={image}
           alt={name}
           fill
-          className="object-cover rounded-t-lg"
+          className="object-cover rounded-lg"
         />
       </div>
 
       <div className="p-3 flex flex-col gap-2 justify-center items-center">
-        <div className="font-semibold text-lg">{name}</div>
+        <div className="font-semibold text-lg w-full text-center truncate">
+          {name}
+        </div>
         <div className="text-gray-400">{price.toLocaleString()}₫</div>
 
         <div className="mt-2 flex justify-between items-center">
@@ -45,7 +49,7 @@ export const FoodCard = ({
               -
             </Button>
             <span>{quantity}</span>
-            <Button size="sm" onClick={() => onIncrement(id)}>
+            <Button disabled={quantity >= inventory} size="sm" onClick={() => onIncrement(id)}>
               +
             </Button>
           </div>

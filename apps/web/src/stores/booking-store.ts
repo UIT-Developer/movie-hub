@@ -1,4 +1,4 @@
-import { SeatEvent } from '@movie-hub/shared-types';
+import { SeatEvent, UpdateBookingDto } from '@movie-hub/shared-types';
 import { io, Socket } from 'socket.io-client';
 import { toast } from 'sonner';
 import { create } from 'zustand';
@@ -10,6 +10,12 @@ import {
 
 } from '../libs/types/showtime.type';
 import { updateLocalStorage } from '../app/utils/update-local-storage';
+
+type SeatItem = {
+  type: string;
+  quantity: number;
+  price: number;
+};
 
 type BookingState = {
   currentShowtimeId: string | null;
@@ -36,10 +42,38 @@ type BookingState = {
   resetBooking: () => void;
 
   totalTickets: number;
+  totalTicketPrice: number;
 
-  foodSelections: Record<string, number>; // key = foodId, value = quantity
-  setFoodSelection: (foodId: string, qty: number) => void;
-  totalPrice: number;
+  concessionSelections: Record<string, number>;
+  concessionMap: Record<string, { name: string; price: number }>;
+  totalConcessionPrice: number;
+
+  promotionCode: string | null;
+  discountAmount: number;
+
+
+
+  // Actions
+  setConcessionSelection: (
+    id: string,
+    qty: number,
+    meta?: { name: string; price: number }
+  ) => void;
+  setPromotionCode: (code: string | null, amount: number) => void;
+
+  // Build DTO for server
+  buildBookingPayload: () => UpdateBookingDto;
+
+  // Build preview UI
+  buildPreviewData: () => {
+    seats: SeatItem[];
+    concessions: Array<{ name: string; price: number; quantity: number }>;
+    discountCode: string | null;
+    discountAmount: number;
+    total: number;
+  };
+
+  getTotalFinal: () => number;
 };
 
 let socket: Socket | null = null;
@@ -53,9 +87,9 @@ export const useBookingStore = create<BookingState>((set, get) => ({
   tickets: [],
   ticketCounts: {} as Record<SeatTypeEnum, number>,
   maxTickets: 8,
-  totalPrice: 0,
+  totalTicketPrice: 0,
   totalTickets: 0,
-  holdTimeSeconds: 600,
+  holdTimeSeconds: 60,
   socketConnected: false,
   seatLabelToId: {},
   seatIdToLabel: {},
@@ -87,12 +121,12 @@ export const useBookingStore = create<BookingState>((set, get) => ({
         type.seatType === SeatTypeEnum.STANDARD
           ? 'Ghế thường'
           : type.seatType === SeatTypeEnum.PREMIUM
-          ? 'Vé cao cấp'
+          ? 'Ghế cao cấp'
           : type.seatType === SeatTypeEnum.VIP
-          ? 'Vé VIP'
+          ? 'Ghế VIP'
           : type.seatType === SeatTypeEnum.COUPLE
-          ? 'Vé đôi'
-          : 'Vé xe lăn';
+          ? 'Ghế đôi'
+          : 'Ghế xe lăn';
       return { key: type.seatType, label, price: pricing ?? 0 };
     });
 
@@ -135,7 +169,7 @@ export const useBookingStore = create<BookingState>((set, get) => ({
             selectedSeats: parsed.selectedSeats || [],
             ticketCounts: parsed.ticketCounts || ticketCounts,
             totalTickets: parsed.totalTickets || 0,
-            totalPrice: parsed.totalPrice || 0,
+            totalTicketPrice: parsed.totalTicketPrice || 0,
           });
         }
       } else {
@@ -187,7 +221,7 @@ export const useBookingStore = create<BookingState>((set, get) => ({
       // bỏ ghế
       newSeats = selectedSeats.filter((s) => s !== seatLabel);
     } else {
-      if (selectedSeats.length >= maxTickets) {
+      if (selectedSeats.length > maxTickets) {
         toast.error(`Chỉ được chọn tối đa ${maxTickets} ghế!`);
         return;
       }
@@ -219,12 +253,14 @@ export const useBookingStore = create<BookingState>((set, get) => ({
       (sum, t) => sum + t.price * (newTicketCounts[t.key] ?? 0),
       0
     );
+    if (newSeats.length === 0) 
+      set({ holdTimeSeconds: 60 });
 
     set({
       selectedSeats: newSeats,
       ticketCounts: newTicketCounts,
       totalTickets,
-      totalPrice: newTotalPrice,
+      totalTicketPrice: newTotalPrice,
     });
 
     // update localStorage
@@ -235,7 +271,7 @@ export const useBookingStore = create<BookingState>((set, get) => ({
         selectedSeats: newSeats,
         ticketCounts: newTicketCounts,
         totalTickets,
-        totalPrice: newTotalPrice,
+        totalTicketPrice: newTotalPrice,
       },
       storageKey
     );
@@ -251,36 +287,124 @@ export const useBookingStore = create<BookingState>((set, get) => ({
       }
     }
   },
-  foodSelections: {},
-  setFoodSelection: (foodId, qty) => {
-    // const newSelections = { ...get().foodSelections, [foodId]: qty };
+  concessionSelections: {},
+  concessionMap: {},
+  promotionCode: null,
+  discountAmount: 0,
+  totalConcessionPrice: 0,
+  setConcessionSelection: (id, qty, meta) => {
+    const state = get();
 
+    const newSelections = {
+      ...state.concessionSelections,
+      [id]: qty,
+    };
 
-    // const foodList = get().foodSelections; // hoặc lưu foodList vào store khi init
-    // let newTotalFoodPrice = 0;
-    // Object.entries(newSelections).forEach(([id, count]) => {
-    //   // bạn cần có map id -> price, ví dụ lưu trong store
-    //   const foodPrice = get().foodPriceMap?.[id] ?? 0;
-    //   newTotalFoodPrice += foodPrice * count;
-    // });
+    // Lưu thông tin name + price chỉ 1 lần (meta từ FoodSelector truyền vào)
+    const newMap = { ...state.concessionMap };
+    if (meta) {
+      newMap[id] = meta;
+    }
 
-    // set({
-    //   foodSelections: newSelections,
-    //   totalFoodPrice: newTotalFoodPrice,
-    // });
+    // Tính tổng tiền concession
+    let totalConcessionPrice = 0;
+    Object.entries(newSelections).forEach(([cid, quantity]) => {
+      const price = newMap[cid]?.price ?? 0;
+      totalConcessionPrice += price * quantity;
+    });
 
-    // // update localStorage
-    // const currentShowtimeId = get().currentShowtimeId;
-    // if (currentShowtimeId) {
-    //   const storageKey = `bookingState_${currentShowtimeId}`;
-    //   updateLocalStorage(
-    //     {
-    //       foodSelections: newSelections,
-    //       totalFoodPrice: newTotalFoodPrice,
-    //     },
-    //     storageKey
-    //   );
-    // }
+   
+
+    set({
+      concessionSelections: newSelections,
+      concessionMap: newMap,
+      totalConcessionPrice,
+    });
+  },
+
+  setPromotionCode: (code, amount) => {
+    
+    set({
+      promotionCode: code,
+      discountAmount: amount,
+    });
+  },
+
+  buildBookingPayload: () => {
+    const state = get();
+
+    return {
+      seats: state.selectedSeats.map((label) => {
+        const id = state.seatLabelToId[label];
+        return {
+        seatId: id ,
+        ticketType:
+          state.seatMap.flatMap((r) => r.seats).find((s) => s.id === id)
+            ?.seatType || '',
+      }}),
+
+      concessions: Object.entries(state.concessionSelections)
+        .filter(([_, qty]) => qty > 0)
+        .map(([id, qty]) => ({
+          concessionId: id,
+          quantity: qty,
+        })),
+
+      promotionCode: state.promotionCode || undefined,
+      usePoints: 0, // để sau nếu có loyalty
+    };
+  },
+
+  buildPreviewData: () => {
+    const state = get();
+
+    const seatGroups: Record<
+      string,
+      { type: string; quantity: number; price: number }
+    > = {};
+
+    state.selectedSeats.forEach((label) => {
+      const id = state.seatLabelToId[label];
+      const seat = state.seatMap
+        .flatMap((r) => r.seats)
+        .find((s) => s.id === id);
+      if (!seat) return;
+
+      const ticket = state.tickets.find((t) => t.key === seat.seatType);
+      if (!ticket) return;
+
+      if (!seatGroups[seat.seatType]) {
+        seatGroups[seat.seatType] = {
+          type: ticket.label, // Ghế thường / VIP / Premium...
+          quantity: 0,
+          price: ticket.price, // giá của 1 vé
+        };
+      }
+
+      seatGroups[seat.seatType].quantity += 1;
+    });
+
+    const seats: SeatItem[] = Object.values(seatGroups);
+
+    const concessions = Object.entries(state.concessionSelections)
+      .filter(([_, qty]) => qty > 0)
+      .map(([id, qty]) => ({
+        name: state.concessionMap[id]?.name ?? 'Món',
+        price: state.concessionMap[id]?.price ?? 0,
+        quantity: qty,
+      }));
+      const totalFinal = state.totalTicketPrice + state.totalConcessionPrice - state.discountAmount;
+    return {
+      seats,
+      concessions,
+      discountCode: state.promotionCode,
+      discountAmount: state.discountAmount,
+      total: totalFinal,
+    };
+  },
+  getTotalFinal: () => {
+    const state = get();
+    return state.totalTicketPrice + state.totalConcessionPrice - state.discountAmount;
   },
 
   updateHoldTimeSeconds: (seconds: number) => {

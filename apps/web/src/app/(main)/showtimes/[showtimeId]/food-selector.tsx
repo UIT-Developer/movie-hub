@@ -12,46 +12,56 @@ import {
   SelectValue,
 } from '@movie-hub/shacdn-ui/select';
 import { useGetConcessions } from 'apps/web/src/hooks/concession-hooks';
-import { ConcessionCategory, ConcessionDto } from 'apps/web/src/libs/types/concession.type';
+import {
+  ConcessionCategory,
+  ConcessionDto,
+} from 'apps/web/src/libs/types/concession.type';
 import { Loader } from 'apps/web/src/components/loader';
+import { toast } from 'sonner';
 
 export const FoodSelector = ({ cinemaId }: { cinemaId?: string }) => {
-  const { foodSelections, setFoodSelection } = useBookingStore();
+  const { concessionSelections, setConcessionSelection } = useBookingStore();
 
   const [category, setCategory] = useState<ConcessionCategory>(
     ConcessionCategory.FOOD
   );
 
-  // const { data, isLoading } = useGetConcessions({
-  //   category,
-  //   available: true,
-  // });
+  const { data, isLoading } = useGetConcessions({
+    category,
+    available: true,
+  });
 
-  const foodList: ConcessionDto[] = [];
+  const foodList = data || [];
 
   const handleIncrement = useCallback(
-    (id: string) => {
-      const current = foodSelections[id] || 0;
-      setFoodSelection(id, current + 1);
+    (food: ConcessionDto) => {
+      const current = concessionSelections[food.id] || 0;
+      if (current >= food.inventory) {
+        toast.error('Đã đat đến số lượng tối đa có thể mua cho món này.');
+        return;
+      }
+
+      setConcessionSelection(food.id, current + 1, {
+        name: food.name,
+        price: food.price,
+      });
     },
-    [foodSelections, setFoodSelection]
+    [concessionSelections, setConcessionSelection]
   );
 
   const handleDecrement = useCallback(
-    (id: string) => {
-      const current = foodSelections[id] || 0;
-      if (current > 0) setFoodSelection(id, current - 1);
-    },
-    [foodSelections, setFoodSelection]
-  );
+    (food: ConcessionDto) => {
+      const current = concessionSelections[food.id] || 0;
 
-  // if (isLoading) {
-  //   return (
-  //     <div className="flex-1 flex items-center justify-center">
-  //       <Loader size={40} />
-  //     </div>
-  //   );
-  // }
+      if (current > 0) {
+        setConcessionSelection(food.id, current - 1, {
+          name: food.name,
+          price: food.price,
+        });
+      }
+    },
+    [concessionSelections, setConcessionSelection]
+  );
 
   return (
     <div className="flex flex-col gap-4">
@@ -78,30 +88,38 @@ export const FoodSelector = ({ cinemaId }: { cinemaId?: string }) => {
         </SelectContent>
       </Select>
 
+      {/* Loading */}
+      {isLoading && (
+        <div className="col-span-full flex justify-center items-center py-10">
+          <Loader size={40} />
+        </div>
+      )}
+
       {/* Empty state */}
-      {foodList.length === 0 && (
+      {!isLoading && foodList.length === 0 && (
         <div className="flex flex-col items-center justify-center py-20 text-zinc-400">
           <div className="text-6xl mb-4">🧐</div>
-          <p className="text-lg">
-            Hiện tại không có món nào.
-          </p>
+          <p className="text-lg">Hiện tại không có món nào.</p>
         </div>
       )}
 
       {/* Food grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-5">
-        {foodList.map((food) => (
-          <FoodCard
-            key={food.id}
-            id={food.id}
-            name={food.name}
-            price={food.price}
-            image={food.imageUrl || '/images/placeholder-bg.png'}
-            quantity={foodSelections[food.id] || 0}
-            onIncrement={() => handleIncrement(food.id)}
-            onDecrement={() => handleDecrement(food.id)}
-          />
-        ))}
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-5">
+        {!isLoading &&
+          foodList.length > 0 &&
+          foodList.map((food) => (
+            <FoodCard
+              key={food.id}
+              id={food.id}
+              name={food.name}
+              price={food.price}
+              image={food.imageUrl || '/images/placeholder-bg.png'}
+              inventory={food.inventory}
+              quantity={concessionSelections[food.id] || 0}
+              onIncrement={() => handleIncrement(food)}
+              onDecrement={() => handleDecrement(food)}
+            />
+          ))}
       </div>
     </div>
   );

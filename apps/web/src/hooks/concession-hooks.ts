@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { findAllConcessions } from "../libs/actions/concession/concesstion-action";
-import { ConcessionCategory } from "@movie-hub/shared-types";
+import { ApiResponse, ConcessionCategory, ConcessionDto, ServiceResult } from "@movie-hub/shared-types";
 
 export const useGetConcessions = (query: {
   cinemaId?: string,
@@ -8,11 +8,10 @@ export const useGetConcessions = (query: {
   available?: boolean
 }) => {
   return useQuery({
-    queryKey: ['concessions'],
+    queryKey: ['concessions', query.category],
     queryFn: async () => {
-      return await findAllConcessions(
-        query
-      );
+      const response = await findAllConcessions(query);
+      return response.data;
     },
   });
 }

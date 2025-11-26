@@ -14,7 +14,7 @@ export interface ConcessionDto {
   price: number;
   imageUrl?: string;
   available: boolean;
-  inventory?: number;
+  inventory: number;
   cinemaId?: string;
   nutritionInfo?: Record<string, any>;
   allergens?: string[];

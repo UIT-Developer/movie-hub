@@ -1,23 +1,48 @@
-import { CreateBookingDto } from "@movie-hub/shared-types";
-import api from "../../api-client";
+import {
+  BookingCalculationDto,
+  BookingSummaryDto,
+  CreateBookingDto,
+  PaginationQuery,
+  ServiceResult,
+  UpdateBookingDto,
+} from '@movie-hub/shared-types';
+import api from '../../api-client';
+import { BookingStatus } from '../../types/booking.type';
 
-export const createBooking = async (dto: CreateBookingDto) => {
+export const createBooking = async (createBookingDto: CreateBookingDto) => {
   try {
-    const response = await api.post("/bookings", dto);
+    const response = await api.post('/bookings', createBookingDto);
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const updateBooking = async (
+  bookingId: string,
+  dto:UpdateBookingDto
+) => {
+  try {
+    const response = await api.put(`/bookings/${bookingId}`, dto);
     return response.data;
   } catch (error) {
     throw error;
   }
 }
 
-export const getUserBookings = async () => {
+export const getUserBookings = async (query: {
+  status?: BookingStatus;
+  pagination?: PaginationQuery;
+}) : Promise<ServiceResult<BookingSummaryDto[]>> => {
   try {
-    const response = await api.get("/bookings");
+    const response = await api.get('/bookings', {
+      params: query,
+    });
     return response.data;
   } catch (error) {
     throw error;
   }
-}
+};
 
 export const getBookingDetails = async (bookingId: string) => {
   try {
@@ -26,11 +51,26 @@ export const getBookingDetails = async (bookingId: string) => {
   } catch (error) {
     throw error;
   }
-}
+};
 
-export const cancelBooking = async (bookingId: string) => {
+export const cancelBooking = async (bookingId: string, reason?: string) => {
   try {
-    const response = await api.delete(`/bookings/${bookingId}`);
+    const response = await api.post(`/bookings/${bookingId}/cancel`, {
+      reason,
+    });
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const checkUserBookingAtShowtime = async (showtimeId: string, includeStatuses?: string) : Promise<ServiceResult<BookingCalculationDto | null>> => {
+  try {
+    const response = await api.get(`/bookings/showtime/${showtimeId}/check`, {
+      params: {
+        includeStatuses,
+      },
+    });
     return response.data;
   } catch (error) {
     throw error;

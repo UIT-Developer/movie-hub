@@ -1,5 +1,5 @@
 import { useAuth } from '@clerk/clerk-react';
-import { CreateBookingDto } from '@movie-hub/shared-types';
+import { CreateBookingDto, PaginationQuery } from '@movie-hub/shared-types';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
@@ -7,6 +7,7 @@ import {
   getUserBookings,
 } from '../libs/actions/booking/booking-action';
 import { getQueryClient } from '../libs/get-query-client';
+import { BookingStatus } from '../libs/types/booking.type';
 
 export const useCreateBooking = () => {
   const queryClient = getQueryClient();
@@ -28,11 +29,14 @@ export const useCreateBooking = () => {
   });
 };
 
-export const useGetBookings = () => {
+export const useGetBookings = (status?: BookingStatus, pagination?: PaginationQuery) => {
   return useQuery({
     queryKey: ['user-bookings'],
     queryFn: async () => {
-      return await getUserBookings();
+      return await getUserBookings({
+        status,
+        pagination
+      });
     },
   });
 };

@@ -1,34 +1,34 @@
 'use client';
-import { useAuth, useClerk, useUser } from '@clerk/nextjs';
+import { useAuth } from '@clerk/nextjs';
 import { Button } from '@movie-hub/shacdn-ui/button';
-import { BlurCircle } from 'apps/web/src/components/blur-circle';
+import { RequireSignIn } from 'apps/web/src/components/require-sign-in';
 import {
   useGetSessionTTL,
   useGetShowtimeSeats,
 } from 'apps/web/src/hooks/showtime-hooks';
 import { useBookingStore } from 'apps/web/src/stores/booking-store';
-import { Check, Film, LogIn } from 'lucide-react';
+import { Check } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { CinemaScreen } from './_components/cinema-screen';
-import { SeatGrid } from './_components/seat-grid';
-import { SeatLegend } from './_components/seat-legend';
-import { TicketTypeList } from './_components/ticket-list';
-import { RequireSignIn } from 'apps/web/src/components/require-sign-in';
-import BookingBar from './_components/booking-summary';
-import { LayoutTypeEnum } from 'apps/web/src/libs/types/showtime.type';
-import { useRouter } from 'next/navigation';
-import { SeatMap } from './seat-map';
-import { FoodSelector } from './food-selector';
-import { da } from 'zod/v4/locales';
 import { BookingCheckout } from './booking-checkout';
+import { FoodSelector } from './food-selector';
+import { SeatMap } from './seat-map';
+import { useCreateBooking } from 'apps/web/src/hooks/booking-hooks';
 
 const steps = ['Chọn ghế', 'Chọn đồ ăn', 'Thanh toán'];
 
 export const SeatBooking = ({ showtimeId }: { showtimeId: string }) => {
+   const {
+     initBookingData,
+     updateHoldTimeSeconds,
+     connectSocket,
+     disconnectSocket,
+     selectedSeats
+   } = useBookingStore();
   const { userId } = useAuth();
 
   const [currentStep, setCurrentStep] = useState(0);
   const nextStep = () => {
+  
     setCurrentStep((prev) => prev + 1);
   };
 
@@ -36,15 +36,12 @@ export const SeatBooking = ({ showtimeId }: { showtimeId: string }) => {
     setCurrentStep((prev) => prev - 1);
   };
 
+  const disableFirstStep = currentStep === 0 && selectedSeats.length === 0;
+
 
   const { data } = useGetShowtimeSeats(showtimeId);
   const { data: ttlResponse } = useGetSessionTTL(showtimeId);
-  const {
-    initBookingData,
-    updateHoldTimeSeconds,
-    connectSocket,
-    disconnectSocket,
-  } = useBookingStore();
+ 
   useEffect(() => {
     if (data) initBookingData(data);
   }, [data, initBookingData]);
@@ -69,6 +66,7 @@ export const SeatBooking = ({ showtimeId }: { showtimeId: string }) => {
     updateHoldTimeSeconds,
     userId,
   ]);
+  
   
 
   return (
@@ -125,7 +123,7 @@ export const SeatBooking = ({ showtimeId }: { showtimeId: string }) => {
             <div></div>
           )}
           {currentStep < steps.length - 1 && (
-            <Button onClick={nextStep}>Tiếp tục</Button>
+            <Button disabled={disableFirstStep}  onClick={nextStep}>Tiếp tục</Button>
           )}
         </div>
 
@@ -133,10 +131,10 @@ export const SeatBooking = ({ showtimeId }: { showtimeId: string }) => {
         <div className="flex-1 w-full p-4">
           {currentStep === 0 && <SeatMap data={data} />}
           {currentStep === 1 && <FoodSelector cinemaId={data?.cinemaId} />}
-          {currentStep === 2 && <BookingCheckout  />}
+          {currentStep === 2 && <BookingCheckout data={data}  />}
         </div>
       </div>
-      <BookingBar />
+
     </RequireSignIn>
   );
 };

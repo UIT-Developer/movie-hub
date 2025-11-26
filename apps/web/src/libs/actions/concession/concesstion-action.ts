@@ -1,11 +1,12 @@
-import { ConcessionCategory, ConcessionDto } from "@movie-hub/shared-types";
+import { ConcessionCategory, ServiceResult } from "@movie-hub/shared-types";
 import api from "../../api-client";
+import { ConcessionDto } from "../../types/concession.type";
 
 export const findAllConcessions = async ( query : {
   cinemaId?: string,
   category?: ConcessionCategory,
   available?: boolean
-}): Promise<ConcessionDto[]> => {
+}): Promise<ServiceResult<ConcessionDto[]>> => {
   try {
     const response = await api.get('/concessions', {
       params: {

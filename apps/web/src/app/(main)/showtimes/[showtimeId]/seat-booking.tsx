@@ -17,17 +17,18 @@ import { RequireSignIn } from 'apps/web/src/components/require-sign-in';
 import BookingBar from './_components/booking-summary';
 import { LayoutTypeEnum } from 'apps/web/src/libs/types/showtime.type';
 import { useRouter } from 'next/navigation';
+import { SeatMap } from './seat-map';
+import { FoodSelector } from './food-selector';
+import { da } from 'zod/v4/locales';
+import { BookingCheckout } from './booking-checkout';
 
 const steps = ['Chọn ghế', 'Chọn đồ ăn', 'Thanh toán'];
 
 export const SeatBooking = ({ showtimeId }: { showtimeId: string }) => {
-  const { user } = useUser();
+  const { userId } = useAuth();
 
- 
   const [currentStep, setCurrentStep] = useState(0);
-  const router = useRouter();
   const nextStep = () => {
-   
     setCurrentStep((prev) => prev + 1);
   };
 
@@ -35,16 +36,44 @@ export const SeatBooking = ({ showtimeId }: { showtimeId: string }) => {
     setCurrentStep((prev) => prev - 1);
   };
 
-  // Redirect sau khi thanh toán thành công
-  const handlePaymentSuccess = (bookingId: string) => {
-    router.push(`/showtimes/${showtimeId}/tickets?bookingId=${bookingId}`);
-  };
+
+  const { data } = useGetShowtimeSeats(showtimeId);
+  const { data: ttlResponse } = useGetSessionTTL(showtimeId);
+  const {
+    initBookingData,
+    updateHoldTimeSeconds,
+    connectSocket,
+    disconnectSocket,
+  } = useBookingStore();
+  useEffect(() => {
+    if (data) initBookingData(data);
+  }, [data, initBookingData]);
+
+  useEffect(() => {
+    if (!userId) return;
+
+    connectSocket(showtimeId, userId);
+
+    if (ttlResponse?.ttl && ttlResponse?.ttl > 0) {
+      updateHoldTimeSeconds(ttlResponse.ttl);
+    }
+    return () => {
+      disconnectSocket();
+    };
+  }, [
+    data,
+    connectSocket,
+    disconnectSocket,
+    showtimeId,
+    ttlResponse,
+    updateHoldTimeSeconds,
+    userId,
+  ]);
+  
 
   return (
     <RequireSignIn>
-      <div className="flex flex-col  w-full justify-center items-center px-4 md:px-12">
-       
-
+      <div className="flex flex-col  w-full h-full justify-center items-center px-4 md:px-12">
         {/* Stepper */}
         <div className="flex justify-center items-center w-full mb-6 ">
           {steps.map((label, index) => (
@@ -101,10 +130,10 @@ export const SeatBooking = ({ showtimeId }: { showtimeId: string }) => {
         </div>
 
         {/* Step content */}
-        <div className="flex-1">
-          {currentStep === 0 && <div></div>}
-          {currentStep === 1 && <div></div>}
-          {currentStep === 2 && <div></div>}
+        <div className="flex-1 w-full p-4">
+          {currentStep === 0 && <SeatMap data={data} />}
+          {currentStep === 1 && <FoodSelector cinemaId={data?.cinemaId} />}
+          {currentStep === 2 && <BookingCheckout  />}
         </div>
       </div>
       <BookingBar />

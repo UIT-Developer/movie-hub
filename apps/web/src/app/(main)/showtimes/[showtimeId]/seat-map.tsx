@@ -1,59 +1,39 @@
 'use client';
-import { useAuth } from "@clerk/nextjs";
-import { BlurCircle } from "apps/web/src/components/blur-circle";
-import { useGetSessionTTL, useGetShowtimeSeats } from "apps/web/src/hooks/showtime-hooks";
-import { LayoutTypeEnum } from "apps/web/src/libs/types/showtime.type";
-import { useBookingStore } from "apps/web/src/stores/booking-store";
-import { useEffect } from "react";
-import { CinemaScreen } from "./_components/cinema-screen";
-import { SeatGrid } from "./_components/seat-grid";
-import { SeatLegend } from "./_components/seat-legend";
-import { TicketTypeList } from "./_components/ticket-list";
+import { BlurCircle } from 'apps/web/src/components/blur-circle';
+import { ShowtimeSeatResponse } from 'apps/web/src/libs/types/showtime.type';
+import { useBookingStore } from 'apps/web/src/stores/booking-store';
+import { CinemaScreen } from './_components/cinema-screen';
+import { SeatGrid } from './_components/seat-grid';
+import { SeatLegend } from './_components/seat-legend';
+import { TicketTypeList } from './_components/ticket-list';
+import { Loader } from 'apps/web/src/components/loader';
 
-export const SeatMap = ({showtimeId} : {showtimeId: string}) => {
-  const {userId} = useAuth()
-   const { data } = useGetShowtimeSeats(showtimeId);
-    const { data: ttlResponse } = useGetSessionTTL(showtimeId);
-    console.log('TTL Response:', ttlResponse);
-    const {
-      hallName,
-      seatMap,
-      seatReservationStatus,
-      seatHeldByUser,
-      selectedSeats,
-      ticketCounts,
-      tickets,
-      initBookingData,
-      toggleSeat,
-      updateHoldTimeSeconds,
-      connectSocket,
-      disconnectSocket,
-    } = useBookingStore();
-  
-    useEffect(() => {
-      if (data) initBookingData(data);
-    }, [data, initBookingData]);
-  
-    useEffect(() => {
-      if (!userId) return;
-  
-      connectSocket(showtimeId, userId);
-  
-      if (ttlResponse?.ttl && ttlResponse?.ttl > 0) {
-        updateHoldTimeSeconds(ttlResponse.ttl);
-      }
-      return () => {
-        disconnectSocket();
-      };
-    }, [data, connectSocket, disconnectSocket, showtimeId, ttlResponse, updateHoldTimeSeconds, userId]);
+export const SeatMap = ({ data }: { data?: ShowtimeSeatResponse }) => {
+  const {
+    seatMap,
+    seatReservationStatus,
+    seatHeldByUser,
+    selectedSeats,
+    tickets,
+    toggleSeat,
+  } = useBookingStore();
+
+  if (!data) {
+    return (
+      <div className="flex items-center justify-center">
+        <Loader size={40} />
+      </div>
+    );
+  }
+
   return (
     <div className="relative flex-1 flex flex-col items-center max-md:mt-10 gap-4">
       <BlurCircle top="-100px" left="-100px" />
       <BlurCircle bottom="0" right="0" />
-      <h1 className="text-2xl font-bold text-white">{hallName}</h1>
+      <h1 className="text-2xl font-bold text-white">{data.hallName}</h1>
       <CinemaScreen />
       <SeatGrid
-        layoutType={LayoutTypeEnum.STANDARD}
+        layoutType={data.layoutType}
         seatMap={seatMap}
         selectedSeats={selectedSeats}
         seatHeldByUser={seatHeldByUser}
@@ -64,4 +44,4 @@ export const SeatMap = ({showtimeId} : {showtimeId: string}) => {
       <TicketTypeList tickets={tickets} />
     </div>
   );
-}
+};

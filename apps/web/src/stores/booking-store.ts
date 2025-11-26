@@ -12,8 +12,6 @@ import {
 import { updateLocalStorage } from '../app/utils/update-local-storage';
 
 type BookingState = {
-  cinemaId?: string;
-  hallName: string;
   currentShowtimeId: string | null;
   selectedSeats: string[]; // row+number
   seatReservationStatus: Record<string, ReservationStatusEnum>;
@@ -38,17 +36,15 @@ type BookingState = {
   resetBooking: () => void;
 
   totalTickets: number;
-  totalPrice: number;
+
   foodSelections: Record<string, number>; // key = foodId, value = quantity
   setFoodSelection: (foodId: string, qty: number) => void;
-  totalFoodPrice: number;
+  totalPrice: number;
 };
 
 let socket: Socket | null = null;
 
 export const useBookingStore = create<BookingState>((set, get) => ({
-  cinemaId: undefined,
-  hallName: '',
   currentShowtimeId: null,
   selectedSeats: [],
   seatReservationStatus: {},
@@ -105,7 +101,6 @@ export const useBookingStore = create<BookingState>((set, get) => ({
     ) as Record<SeatTypeEnum, number>;
 
     set({
-      hallName: data.hallName,
       currentShowtimeId: data.showtime.id,
       seatMap,
       seatReservationStatus,
@@ -130,7 +125,6 @@ export const useBookingStore = create<BookingState>((set, get) => ({
         ticketCounts,
         totalTickets: 0,
         totalPrice: 0,
-        totalPriceFood: 0,
       };
       localStorage.setItem(storageKey, JSON.stringify(newState));
     } else {
@@ -142,7 +136,6 @@ export const useBookingStore = create<BookingState>((set, get) => ({
             ticketCounts: parsed.ticketCounts || ticketCounts,
             totalTickets: parsed.totalTickets || 0,
             totalPrice: parsed.totalPrice || 0,
-            // totalFoodPrice: parsed.totalFoodPrice || 0
           });
         }
       } else {
@@ -154,8 +147,6 @@ export const useBookingStore = create<BookingState>((set, get) => ({
             selectedSeats,
             ticketCounts,
             totalTickets: 0,
-            totalPrice: 0,
-            totalFoodPrice: 0,
           })
         );
       }
@@ -260,9 +251,7 @@ export const useBookingStore = create<BookingState>((set, get) => ({
       }
     }
   },
-  foodPriceMap: {},
   foodSelections: {},
-  totalFoodPrice: 0,
   setFoodSelection: (foodId, qty) => {
     // const newSelections = { ...get().foodSelections, [foodId]: qty };
 

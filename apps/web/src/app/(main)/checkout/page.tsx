@@ -1,9 +1,9 @@
 
 import Link from 'next/link';
-import { PaymentSection } from './_components/payment';
+import { PaymentSection } from '../showtimes/[showtimeId]/_components/payment';
 import { redirect } from 'next/navigation';
 import { Button } from '@movie-hub/shacdn-ui/button';
-import TicketPreview from './_components/ticket-preview';
+import TicketPreview from '../showtimes/[showtimeId]/_components/ticket-preview';
 
 // Lưu ý: Đây là Server Component
 export default async function CheckoutPage({
@@ -47,7 +47,7 @@ export default async function CheckoutPage({
         </h1>
         <div className="flex items-center justify-center gap-4">
           <Button>
-            <Link href={`/showtimes/${showtimeId}/checkout`}>
+            <Link href={`/showtimes/${showtimeId}`}>
               Thử thanh toán lại
             </Link>
           </Button>

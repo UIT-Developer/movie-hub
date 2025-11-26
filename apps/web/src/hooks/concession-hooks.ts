@@ -14,6 +14,5 @@ export const useGetConcessions = (query: {
         query
       );
     },
-    enabled: !!query.cinemaId,
   });
 }

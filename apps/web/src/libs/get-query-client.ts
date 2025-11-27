@@ -1,7 +1,9 @@
 import {
   isServer,
+  MutationCache,
   QueryClient
 } from '@tanstack/react-query';
+import { toast } from 'sonner';
 
 function makeQueryClient() {
   return new QueryClient({
@@ -18,6 +20,16 @@ function makeQueryClient() {
         retry: 1,
       },
     },
+    mutationCache: new MutationCache({
+      onError: (error, _mutation) => {
+        if (isServer) {
+          console.error('Mutation error:', error);
+        }
+        toast.error(
+          error?.message || 'Đã có lỗi xảy ra. Vui lòng thử lại.'
+        );
+      }
+    })
   });
 }
 

@@ -102,7 +102,7 @@ export default function MovieSlider({ href, title, status }: Props) {
                 <CarouselItem
                   key={movie.id}
                   ref={isLast ? lastItemRef : undefined}
-                  className="md:basis-1/2 lg:basis-1/3"
+                  className="basis-1/2 md:basis-1/3 lg:basis-1/6"
                 >
                   <MovieCard {...movie} />
                 </CarouselItem>

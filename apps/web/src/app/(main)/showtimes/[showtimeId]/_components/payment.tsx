@@ -5,32 +5,41 @@ import { Input } from '@movie-hub/shacdn-ui/input';
 import { cn } from '@movie-hub/shacdn-utils';
 import { useCreateBooking } from 'apps/web/src/hooks/booking-hooks';
 import { useCreatePayment } from 'apps/web/src/hooks/payment-hooks';
+import { useValidationPromotion } from 'apps/web/src/hooks/promotion-hook';
 import {
   PaymentMethod,
   paymentMethods,
   PaymentMethodUI,
-} from 'apps/web/src/libs/types/payment-method';
+} from 'apps/web/src/libs/types/payment.type';
+import { useBookingStore } from 'apps/web/src/stores/booking-store';
 import Image from 'next/image';
+import { get } from 'node_modules/axios/index.cjs';
 import { useState } from 'react';
 import { toast } from 'sonner';
-
-const heldSeats = [
-  { seatId: 'A1', label: 'A1', price: 90000 },
-  { seatId: 'A2', label: 'A2', price: 90000 },
-];
-
-const concessions = [
-  { concessionId: 'popcorn-l', name: 'Popcorn L', price: 60000 },
-];
-
-const subtotal =
-  heldSeats.reduce((s, t) => s + t.price, 0) +
-  concessions.reduce((s, c) => s + c.price, 0);
+import { gt } from 'zod';
 
 export const PaymentSection = () => {
+  const { getTotalFinal } = useBookingStore();
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod | null>(
     null
   );
+  const [voucher, setVoucher] = useState('');
+
+  const { mutateAsync, isPending } = useValidationPromotion();
+
+  const handleValidatePromotion = async (code: string) => {
+    try {
+      await mutateAsync({
+        code,
+        validateDto: {
+          bookingAmount: getTotalFinal(),
+        },
+      });
+    } catch (err) {
+      console.error(err);
+      toast.error('Không thể xác thực mã khuyến mãi. Vui lòng thử lại.');
+    }
+  };
 
   const handleSelect = (payment: PaymentMethodUI) => {
     if (!payment.supported) {
@@ -49,22 +58,20 @@ export const PaymentSection = () => {
     }
 
     try {
-   
-
       const booking = await createBooking.mutateAsync({
         showtimeId: 'showtime-123',
         seats: [
           {
             seatId: 'A1',
             ticketType: 'ADULT',
-          }
+          },
         ],
         concessions: [
           {
             concessionId: 'popcorn-l',
             quantity: 1,
           },
-        ]
+        ],
       });
 
       const bookingId = booking.id;
@@ -73,7 +80,7 @@ export const PaymentSection = () => {
         bookingId,
         data: {
           paymentMethod: selectedMethod as PaymentMethod,
-          amount: subtotal,
+          amount: getTotalFinal(),
           returnUrl: `${window.location.origin}/checkout?success=true&bookingId=${bookingId}`,
           cancelUrl: `${window.location.origin}/checkout?success=false&bookingId=${bookingId}`,
         },
@@ -85,7 +92,6 @@ export const PaymentSection = () => {
       toast.error('Không thể tạo thanh toán. Vui lòng thử lại.');
     }
   };
-  const [voucher, setVoucher] = useState('');
 
   return (
     <div className="space-y-4 max-w-2xl">
@@ -120,11 +126,19 @@ export const PaymentSection = () => {
       {/* Nhập voucher */}
       <div className="space-y-2">
         <p className="font-semibold text-lg">Mã giảm giá</p>
-        <Input
-          placeholder="Nhập mã voucher"
-          value={voucher}
-          onChange={(e) => setVoucher(e.target.value)}
-        />
+        <div className="flex items-center gap-4">
+          <Input
+            placeholder="Nhập mã voucher"
+            value={voucher}
+            onChange={(e) => setVoucher(e.target.value)}
+          />
+          <Button
+            disabled={isPending || voucher.trim() === ''}
+            onClick={() => handleValidatePromotion(voucher)}
+          >
+            Áp dụng
+          </Button>
+        </div>
       </div>
 
       {/* Nút thanh toán */}

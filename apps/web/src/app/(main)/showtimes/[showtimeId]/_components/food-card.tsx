@@ -29,6 +29,7 @@ export const FoodCard = ({
           src={image}
           alt={name}
           fill
+        
           className="object-cover rounded-lg"
         />
       </div>
@@ -49,7 +50,11 @@ export const FoodCard = ({
               -
             </Button>
             <span>{quantity}</span>
-            <Button disabled={quantity >= inventory} size="sm" onClick={() => onIncrement(id)}>
+            <Button
+              disabled={quantity >= inventory}
+              size="sm"
+              onClick={() => onIncrement(id)}
+            >
               +
             </Button>
           </div>

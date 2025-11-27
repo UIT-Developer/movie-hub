@@ -12,11 +12,33 @@ import { useEffect, useState } from 'react';
 import { BookingCheckout } from './booking-checkout';
 import { FoodSelector } from './food-selector';
 import { SeatMap } from './seat-map';
-import { useCreateBooking } from 'apps/web/src/hooks/booking-hooks';
 
 const steps = ['Chọn ghế', 'Chọn đồ ăn', 'Thanh toán'];
 
 export const SeatBooking = ({ showtimeId }: { showtimeId: string }) => {
+
+// const { data: checking} = useCheckUserBookingAtShowtime(showtimeId);
+// console.log('Checking booking at showtime:', checking);
+// const { mutateAsync: createBookingMutate } = useCreateBooking();
+
+// useEffect(() => {
+//   const handleExistingBooking = async () => {
+//     if (checking?.data) {
+//       console.log('User has existing booking at this showtime.');
+//       return;
+//     }
+//     try {
+//       console.log('No existing booking found. Creating new booking...');
+//       await createBookingMutate({ showtimeId });
+//       console.log('Booking created successfully.');
+//     } catch (error) {
+//       console.error('Error creating booking:', error);
+//     }
+//   };
+  
+//   handleExistingBooking();
+// }, [checking, createBookingMutate, showtimeId]);
+
    const {
      initBookingData,
      updateHoldTimeSeconds,

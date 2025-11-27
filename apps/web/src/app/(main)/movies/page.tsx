@@ -1,4 +1,4 @@
-import { MovieList } from './_components/movie-list';
+import { MovieListSummary } from './_components/movie-list';
 
 const MoviesPage = () => {
   return (
@@ -6,11 +6,11 @@ const MoviesPage = () => {
       <h1 className="text-3xl font-bold text-gray-300 mb-6 text-center mt-10">
         🎬 PHIM ĐANG CHIẾU
       </h1>
-      <MovieList isShowing={true} />
+      <MovieListSummary isShowing={true} href='showing' />
       <h1 className="text-3xl font-bold text-gray-300 mb-6 text-center mt-10">
         🎬 PHIM SẮP CHIẾU
       </h1>
-      <MovieList isShowing={false} />
+      <MovieListSummary isShowing={false} href='upcoming' />
     </div>
   );
 };

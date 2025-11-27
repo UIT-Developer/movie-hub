@@ -77,7 +77,13 @@ export default function TicketPreview({
 
           <CardDescription className="text-sm text-neutral-400">
             {data?.showtime.start_time
-              ? new Date(data.showtime.start_time).toLocaleString()
+              ? new Date(data.showtime.start_time).toLocaleString( 'vi-VN', {
+                  day: '2-digit',
+                  month: '2-digit',
+                  year: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })
               : '—'}{' '}
             <br />
             {data?.cinemaName} - {data?.hallName}

@@ -18,17 +18,6 @@ export default async function SeatBookingPage({
 
   const queryClient = getQueryClient();
 
-  const bookings =await queryClient.prefetchQuery({
-    queryKey: ['my-booking'],
-    queryFn: () => getUserBookings({
-      status: BookingStatus.PENDING,
-      pagination: {
-        page: 1,
-        limit: 1
-      }
-      }),
-  });
-  console.log('Bookings:', bookings);
 
   // let isExistingBooking;
   // try {

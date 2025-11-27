@@ -90,14 +90,14 @@ export const MovieHeader = ({ movieId }: { movieId: string }) => {
                 </p>
               )}
 
-              <div className="flex items-center gap-2">
+              {/* <div className="flex items-center gap-2">
                 <StarIcon className="w-5 h-5 text-rose-600 fill-rose-500" />
-                <span>8 / 10</span>
-              </div>
+                <span>{mo</span>
+              </div> */}
 
               <div className="flex items-start gap-2 mt-3 text-gray-300">
-                <FileTextIcon className="w-5 h-5 text-rose-500 mt-0.5" />
-                <p className="text-sm leading-tight">{movieData.overview}</p>
+                <FileTextIcon className="w-4 h-4 flex-shrink-0 text-rose-500" />
+                <p className="text-sm">{movieData.overview}</p>
               </div>
 
               <div className="grid grid-cols-2 gap-2 mt-4 text-sm text-gray-300">
@@ -125,7 +125,7 @@ export const MovieHeader = ({ movieId }: { movieId: string }) => {
                 </div>
               </div>
 
-              <p className="text-sm text-gray-300 mt-3">
+              <p className="text-sm text-gray-300">
                 <Film className="inline w-4 h-4 text-rose-500 mr-1" />
                 {movieData.genre?.length
                   ? movieData.genre

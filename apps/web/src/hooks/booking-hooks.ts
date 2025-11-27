@@ -3,6 +3,7 @@ import { CreateBookingDto, PaginationQuery } from '@movie-hub/shared-types';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
+  checkUserBookingAtShowtime,
   createBooking,
   getUserBookings,
 } from '../libs/actions/booking/booking-action';
@@ -40,3 +41,12 @@ export const useGetBookings = (status?: BookingStatus, pagination?: PaginationQu
     },
   });
 };
+export const useCheckUserBookingAtShowtime = (showtimeId: string) => {
+  return useQuery({
+    queryKey: ['check-user-booking', showtimeId],
+    queryFn: async () => {
+      return await checkUserBookingAtShowtime(showtimeId);
+    },
+    enabled: !!showtimeId,
+  });
+}

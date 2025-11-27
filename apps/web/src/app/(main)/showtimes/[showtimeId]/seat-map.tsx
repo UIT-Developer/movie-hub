@@ -5,7 +5,7 @@ import { useBookingStore } from 'apps/web/src/stores/booking-store';
 import { CinemaScreen } from './_components/cinema-screen';
 import { SeatGrid } from './_components/seat-grid';
 import { SeatLegend } from './_components/seat-legend';
-import { TicketTypeList } from './_components/ticket-list';
+import { TicketTypeList } from './_components/ticket-price-list';
 import { Loader } from 'apps/web/src/components/loader';
 
 export const SeatMap = ({ data }: { data?: ShowtimeSeatResponse }) => {

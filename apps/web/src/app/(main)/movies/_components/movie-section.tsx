@@ -2,31 +2,26 @@
 import { useGetMovies } from 'apps/web/src/hooks/movie-hooks';
 import MovieCard from '../../_components/MovieCard';
 import { useInView } from 'react-intersection-observer';
-import { useCallback, useEffect } from 'react';
+import { useEffect } from 'react';
 import { ErrorFallback } from 'apps/web/src/components/error-fallback';
-import { useRouter } from 'next/navigation';
-import { Button } from '@movie-hub/shacdn-ui/button';
 
-interface MovieListProps {
+interface MovieSectionProps {
   isShowing: boolean;
-  href?: string;
 }
-export const MovieListSummary = ({ isShowing, href }: MovieListProps) => {
-  const router = useRouter();
-  const { data, isError, error, isLoading, hasNextPage } = useGetMovies({
-    status: isShowing ? 'now-showing' : 'upcoming',
-    limit: 12,
-  });
+export const MovieSection = ({ isShowing }: MovieSectionProps) => {
+  const { data, isError, error, isLoading, fetchNextPage, isFetchingNextPage } =
+    useGetMovies({
+      status: isShowing ? 'now-showing' : 'upcoming',
+      limit: 12,
+    });
   const movies = data?.pages ?? [];
+  const { ref, inView } = useInView();
 
-
-  const handleExpend = useCallback(() => {
-    if (href) {
-      router.push(`/movies/${href}`);
-      scrollTo(0, 0);
+  useEffect(() => {
+    if (inView) {
+      fetchNextPage();
     }
-  }, [href, router]);
-
+  }, [inView, fetchNextPage]);
 
   return (
     <div className="relative md:px-16 lg:px-40 overflow-hidden">
@@ -45,12 +40,11 @@ export const MovieListSummary = ({ isShowing, href }: MovieListProps) => {
           ) : (
             movies.map((movie) => <MovieCard key={movie.id} {...movie} />)
           )}
-          <div className="col-span-full flex justify-center w-full">
-            {hasNextPage && (
-              <Button onClick={handleExpend} variant="outline" size="lg" >
-                Xem thêm
-              </Button>
-            )}
+          <div ref={ref} className="col-span-full flex justify-center w-full">
+            {isFetchingNextPage &&
+              Array.from({ length: 3 }).map((_, idx) => (
+                <MovieCard.Skeleton key={idx} />
+              ))}
           </div>
         </div>
       )}

@@ -82,225 +82,36 @@ export class BookingService {
     });
 
     if (existingPendingBooking) {
-      throw new BadRequestException(
-        `You already have a pending booking (${existingPendingBooking.booking_code}) for this showtime. Please complete or cancel it first.`
-      );
+      // Return the existing booking instead of throwing error
+      return this.getBookingSummary(existingPendingBooking.id, userId);
     }
 
-    // ✅ STEP 1: Get seats currently held by user from Cinema Service (Redis)
-    // Returns SeatPricingWithTtlDto with seat details, pricing, and lock TTL
-    const heldSeatsData = await this.getSeatsHeldByUser(dto.showtimeId, userId);
-    const { seats: heldSeatsWithPricing, lockTtl: sessionTTL } = heldSeatsData;
-
-    if (heldSeatsWithPricing.length === 0) {
-      throw new BadRequestException(
-        'No seats are currently held by this user. Please hold seats via WebSocket first.'
-      );
-    }
-
-    // ✅ STEP 1.1: Validate seat lock TTL
-    // Ensure seats are still locked before creating booking
-    if (sessionTTL <= 0) {
-      throw new BadRequestException(
-        'Seat lock has expired. Please hold seats again via WebSocket.'
-      );
-    }
-
-    // ✅ STEP 1.5: Check if any of the held seats already have VALID tickets (usable tickets)
-    // Only check for VALID tickets to prevent duplicate usable tickets for the same seat
-    const seatIds = heldSeatsWithPricing.map((seat) => seat.id);
-    const existingValidTickets = await this.prisma.tickets.findMany({
-      where: {
-        seat_id: { in: seatIds },
-        booking: {
-          showtime_id: dto.showtimeId,
-        },
-        status: TicketStatus.VALID, // Only check VALID tickets
-      },
-      include: {
-        booking: {
-          select: {
-            id: true,
-            booking_code: true,
-            showtime_id: true,
-            status: true,
-            user_id: true,
-          },
-        },
-      },
-    });
-
-    if (existingValidTickets.length > 0) {
-      const bookedSeatIds = existingValidTickets.map((t) => t.seat_id);
-      throw new BadRequestException(
-        `Cannot create booking. The following seats already have valid tickets: ${bookedSeatIds.join(', ')}`
-      );
-    }
-
-    // ✅ STEP 2: Get showtime details with seat information from Cinema Service
-    const showtimeData = await this.getShowtimeDetails(dto.showtimeId, userId);
-    
-    if (!showtimeData) {
-      throw new BadRequestException('Showtime not found');
-    }
-
-    // ✅ STEP 3: Build seat details from held seats with pricing
-    // Convert SeatPricingDto to SeatDetail format
-    const heldSeatsDetails: SeatDetail[] = heldSeatsWithPricing.map((seat) => ({
-      id: seat.id,
-      row: seat.rowLetter,
-      number: seat.seatNumber,
-      type: seat.type,
-      seatType: seat.type,
-      seatStatus: SeatStatusEnum.ACTIVE,
-      reservationStatus: ReservationStatusEnum.HELD,
-      isHeldByCurrentUser: true,
-    }));
-
-    // ✅ STEP 4: Calculate pricing based on actual held seats
-    const ticketPrices = await this.calculateTicketPrices(
-      heldSeatsDetails,
-      heldSeatsWithPricing
-    );
-
-    // Create seat type map for ticket creation
-    const seatTypeMap = new Map(
-      heldSeatsDetails.map((s) => [s.id, s.type])
-    );
-    
-    const ticketsSubtotal = ticketPrices.reduce((sum, t) => sum + t.price, 0);
-
-    // ✅ STEP 5: Calculate concession prices
-    let concessionsSubtotal = 0;
-    const concessionDetails: Array<{
-      concessionId: string;
-      name: string;
-      quantity: number;
-      unitPrice: number;
-      totalPrice: number;
-    }> = [];
-
-    if (dto.concessions && dto.concessions.length > 0) {
-      const concessionData = await this.getConcessionDetails(
-        dto.concessions.map((c) => c.concessionId)
-      );
-
-      for (const item of dto.concessions) {
-        const concession = concessionData.find((c) => c.id === item.concessionId);
-        if (!concession) {
-          throw new BadRequestException(
-            `Concession ${item.concessionId} not found`
-          );
-        }
-        if (!concession.available) {
-          throw new BadRequestException(
-            `Concession ${concession.name} is not available`
-          );
-        }
-
-        const totalPrice = Number(concession.price) * item.quantity;
-        concessionsSubtotal += totalPrice;
-        
-        concessionDetails.push({
-          concessionId: concession.id,
-          name: concession.name,
-          quantity: item.quantity,
-          unitPrice: Number(concession.price),
-          totalPrice,
-        });
-      }
-    }
-
-    const subtotal = ticketsSubtotal + concessionsSubtotal;
-
-    // ✅ STEP 6: Apply promotions and loyalty points
-    let discount = 0;
-    let pointsDiscount = 0;
-
-    if (dto.promotionCode) {
-      discount = await this.calculatePromotion(dto.promotionCode, subtotal);
-    }
-
-    if (dto.usePoints && dto.usePoints > 0) {
-      pointsDiscount = await this.calculatePointsDiscount(dto.usePoints, userId);
-    }
-
-    const finalAmount = Math.max(0, subtotal - discount - pointsDiscount);
-
-    // ✅ STEP 7: Fetch user details from User Service
-    let customerName = '';
-    let customerEmail = '';
-    let customerPhone = '';
-
-    try {
-      const userDetails = await firstValueFrom(
-        this.userClient.send<UserDetailDto>(UserMessage.GET_USER_DETAIL, userId)
-      );
-      customerName = userDetails.fullName;
-      customerEmail = userDetails.email;
-      customerPhone = userDetails.phone;
-    } catch (_error) {
-      // Fallback to manual customer info if User Service is unavailable
-      if (dto.customerInfo) {
-        customerName = dto.customerInfo.name || '';
-        customerEmail = dto.customerInfo.email || '';
-        customerPhone = dto.customerInfo.phone || '';
-      }
-    }
-
-    // ✅ STEP 8: Generate unique codes
+    // ✅ STEP 1: Create BLANK booking for the showtime (no validation, minimal data)
+    // This gives the user a booking session to work with
     const bookingCode = this.generateBookingCode();
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes TTL
 
-    // ✅ STEP 9: Create booking with all tickets and concessions in a transaction
-    const booking = await this.prisma.bookings.create({
+    const blankBooking = await this.prisma.bookings.create({
       data: {
         booking_code: bookingCode,
         user_id: userId,
         showtime_id: dto.showtimeId,
-        customer_name: customerName,
-        customer_email: customerEmail,
-        customer_phone: customerPhone,
-        subtotal,
-        discount,
-        points_used: dto.usePoints || 0,
-        points_discount: pointsDiscount,
-        final_amount: finalAmount,
-        promotion_code: dto.promotionCode,
+        customer_name: '',
+        customer_email: '',
+        customer_phone: '',
+        subtotal: 0,
+        discount: 0,
+        points_used: 0,
+        points_discount: 0,
+        final_amount: 0,
         status: BookingStatus.PENDING,
         payment_status: PaymentStatus.PENDING,
-        expires_at: new Date(Date.now() + sessionTTL * 1000), // Use seat lock TTL from cinema-service
-        tickets: {
-          create: ticketPrices.map((ticket) => ({
-            seat_id: ticket.seatId,
-            ticket_code: this.generateTicketCode(),
-            ticket_type: seatTypeMap.get(ticket.seatId) || 'STANDARD', // Use seat type as ticket type
-            price: ticket.price,
-            status: TicketStatus.CANCELLED, // Tickets start as CANCELLED, become VALID after payment
-          })),
-        },
-        booking_concessions: concessionDetails.length > 0
-          ? {
-              create: concessionDetails.map((item) => ({
-                concession_id: item.concessionId,
-                quantity: item.quantity,
-                unit_price: item.unitPrice,
-                total_price: item.totalPrice,
-              })),
-            }
-          : undefined,
-      },
-      include: {
-        tickets: true,
-        booking_concessions: {
-          include: {
-            concession: true,
-          },
-        },
+        expires_at: expiresAt,
       },
     });
 
-    // ✅ STEP 10: Return booking calculation with payment info
-    return this.getBookingSummary(booking.id, userId);
+    // ✅ STEP 2: Return blank booking summary
+    return this.getBookingSummary(blankBooking.id, userId);
   }
 
   async findAllByUser(
@@ -1564,33 +1375,95 @@ export class BookingService {
       throw new BadRequestException('Booking has expired');
     }
 
-    // Update seats if provided
-    if (dto.seats && dto.seats.length > 0) {
+    // ✅ STEP 1: Handle seats update (the actual booking logic)
+   
+      // Get seats currently held by user from Cinema Service (Redis)
+      const heldSeatsData = await this.getSeatsHeldByUser(booking.showtime_id, userId);
+      const { seats: heldSeatsWithPricing, lockTtl: sessionTTL } = heldSeatsData;
+
+      if (heldSeatsWithPricing.length === 0) {
+        throw new BadRequestException(
+          'No seats are currently held by this user. Please hold seats via WebSocket first.'
+        );
+      }
+
+      // Validate seat lock TTL
+      if (sessionTTL <= 0) {
+        throw new BadRequestException(
+          'Seat lock has expired. Please hold seats again via WebSocket.'
+        );
+      }
+
+      // Check if any of the held seats already have VALID tickets
+      const seatIds = heldSeatsWithPricing.map((seat) => seat.id);
+      const existingValidTickets = await this.prisma.tickets.findMany({
+        where: {
+          seat_id: { in: seatIds },
+          booking: {
+            showtime_id: booking.showtime_id,
+          },
+          status: TicketStatus.VALID,
+        },
+      });
+
+      if (existingValidTickets.length > 0) {
+        const bookedSeatIds = existingValidTickets.map((t) => t.seat_id);
+        throw new BadRequestException(
+          `Cannot update booking. The following seats already have valid tickets: ${bookedSeatIds.join(', ')}`
+        );
+      }
+
+      // Build seat details from held seats
+      const heldSeatsDetails: SeatDetail[] = heldSeatsWithPricing.map((seat) => ({
+        id: seat.id,
+        row: seat.rowLetter,
+        number: seat.seatNumber,
+        type: seat.type,
+        seatType: seat.type,
+        seatStatus: SeatStatusEnum.ACTIVE,
+        reservationStatus: ReservationStatusEnum.HELD,
+        isHeldByCurrentUser: true,
+      }));
+
+      // Calculate pricing
+      const ticketPrices = await this.calculateTicketPrices(
+        heldSeatsDetails,
+        heldSeatsWithPricing
+      );
+
+      const seatTypeMap = new Map(
+        heldSeatsDetails.map((s) => [s.id, s.type])
+      );
+
       // Delete existing tickets
       await this.prisma.tickets.deleteMany({
         where: { booking_id: id },
       });
 
-      // Get new seat pricing (extract seats array from response)
-      const heldSeatsData = await this.getSeatsHeldByUser(booking.showtime_id, userId);
-      const seatPriceMap = new Map(heldSeatsData.seats.map(s => [s.id, s.price]));
-
-      // Create new tickets
-      const newTickets = dto.seats.map(seat => ({
+      // Create new tickets with pricing
+      const newTickets = ticketPrices.map((ticket) => ({
         booking_id: id,
-        seat_id: seat.seatId,
+        seat_id: ticket.seatId,
         ticket_code: this.generateTicketCode(),
-        ticket_type: seat.ticketType,
-        price: seatPriceMap.get(seat.seatId) || 0,
+        ticket_type: seatTypeMap.get(ticket.seatId) || 'STANDARD',
+        price: ticket.price,
         status: TicketStatus.CANCELLED, // Will become VALID after payment
       }));
 
       await this.prisma.tickets.createMany({
         data: newTickets,
       });
-    }
 
-    // Update concessions if provided
+      // Update booking expiration to match seat lock TTL
+      await this.prisma.bookings.update({
+        where: { id },
+        data: {
+          expires_at: new Date(Date.now() + sessionTTL * 1000),
+        },
+      });
+    
+
+    // ✅ STEP 2: Handle concessions update
     if (dto.concessions !== undefined) {
       // Delete existing concessions
       await this.prisma.bookingConcessions.deleteMany({
@@ -1606,6 +1479,9 @@ export class BookingService {
           const concession = concessionData.find(c => c.id === item.concessionId);
           if (!concession) {
             throw new BadRequestException(`Concession ${item.concessionId} not found`);
+          }
+          if (!concession.available) {
+            throw new BadRequestException(`Concession ${concession.name} is not available`);
           }
 
           const totalPrice = Number(concession.price) * item.quantity;
@@ -1624,7 +1500,7 @@ export class BookingService {
       }
     }
 
-    // Recalculate pricing
+    // ✅ STEP 3: Recalculate pricing
     const updatedBooking = await this.prisma.bookings.findFirst({
       where: { id },
       include: {
@@ -1649,7 +1525,7 @@ export class BookingService {
     ) || 0;
     const subtotal = ticketsSubtotal + concessionsSubtotal;
 
-    // Recalculate discounts
+    // ✅ STEP 4: Apply promotions and loyalty points
     let discount = 0;
     let pointsDiscount = 0;
 
@@ -1665,7 +1541,7 @@ export class BookingService {
 
     const finalAmount = Math.max(0, subtotal - discount - pointsDiscount);
 
-    // Update booking amounts
+    // ✅ STEP 5: Update booking amounts
     await this.prisma.bookings.update({
       where: { id },
       data: {

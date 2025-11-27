@@ -1,4 +1,8 @@
-import { SeatEvent, UpdateBookingDto } from '@movie-hub/shared-types';
+import {
+  SeatBookingEvent,
+  SeatEvent,
+  UpdateBookingDto,
+} from '@movie-hub/shared-types';
 import { io, Socket } from 'socket.io-client';
 import { toast } from 'sonner';
 import { create } from 'zustand';
@@ -7,7 +11,6 @@ import {
   SeatRowDto,
   SeatTypeEnum,
   ShowtimeSeatResponse,
-
 } from '../libs/types/showtime.type';
 import { updateLocalStorage } from '../app/utils/update-local-storage';
 
@@ -18,6 +21,7 @@ type SeatItem = {
 };
 
 type BookingState = {
+  bookingId?: string;
   currentShowtimeId: string | null;
   selectedSeats: string[]; // row+number
   seatReservationStatus: Record<string, ReservationStatusEnum>;
@@ -51,8 +55,6 @@ type BookingState = {
   promotionCode: string | null;
   discountAmount: number;
 
-
-
   // Actions
   setConcessionSelection: (
     id: string,
@@ -74,6 +76,8 @@ type BookingState = {
   };
 
   getTotalFinal: () => number;
+
+  setBookingId: (id: string) => void;
 };
 
 let socket: Socket | null = null;
@@ -93,6 +97,10 @@ export const useBookingStore = create<BookingState>((set, get) => ({
   socketConnected: false,
   seatLabelToId: {},
   seatIdToLabel: {},
+  bookingId: undefined,
+  setBookingId: (id: string) => {
+    set({ bookingId: id });
+  },
 
   // ---------------- initBookingData ----------------
   initBookingData: (data: ShowtimeSeatResponse) => {
@@ -253,8 +261,7 @@ export const useBookingStore = create<BookingState>((set, get) => ({
       (sum, t) => sum + t.price * (newTicketCounts[t.key] ?? 0),
       0
     );
-    if (newSeats.length === 0) 
-      set({ holdTimeSeconds: 60 });
+    if (newSeats.length === 0) set({ holdTimeSeconds: 60 });
 
     set({
       selectedSeats: newSeats,
@@ -313,8 +320,6 @@ export const useBookingStore = create<BookingState>((set, get) => ({
       totalConcessionPrice += price * quantity;
     });
 
-   
-
     set({
       concessionSelections: newSelections,
       concessionMap: newMap,
@@ -323,7 +328,6 @@ export const useBookingStore = create<BookingState>((set, get) => ({
   },
 
   setPromotionCode: (code, amount) => {
-    
     set({
       promotionCode: code,
       discountAmount: amount,
@@ -332,26 +336,17 @@ export const useBookingStore = create<BookingState>((set, get) => ({
 
   buildBookingPayload: () => {
     const state = get();
+    const concessions = Object.entries(state.concessionSelections)
+      .filter(([_, qty]) => qty > 0)
+      .map(([id, qty]) => ({
+        concessionId: id,
+        quantity: qty,
+      }));
 
     return {
-      seats: state.selectedSeats.map((label) => {
-        const id = state.seatLabelToId[label];
-        return {
-        seatId: id ,
-        ticketType:
-          state.seatMap.flatMap((r) => r.seats).find((s) => s.id === id)
-            ?.seatType || '',
-      }}),
-
-      concessions: Object.entries(state.concessionSelections)
-        .filter(([_, qty]) => qty > 0)
-        .map(([id, qty]) => ({
-          concessionId: id,
-          quantity: qty,
-        })),
+      concessions: concessions.length > 0 ? concessions : undefined,
 
       promotionCode: state.promotionCode || undefined,
-      usePoints: 0, // để sau nếu có loyalty
     };
   },
 
@@ -393,7 +388,10 @@ export const useBookingStore = create<BookingState>((set, get) => ({
         price: state.concessionMap[id]?.price ?? 0,
         quantity: qty,
       }));
-      const totalFinal = state.totalTicketPrice + state.totalConcessionPrice - state.discountAmount;
+    const totalFinal =
+      state.totalTicketPrice +
+      state.totalConcessionPrice -
+      state.discountAmount;
     return {
       seats,
       concessions,
@@ -404,7 +402,9 @@ export const useBookingStore = create<BookingState>((set, get) => ({
   },
   getTotalFinal: () => {
     const state = get();
-    return state.totalTicketPrice + state.totalConcessionPrice - state.discountAmount;
+    return (
+      state.totalTicketPrice + state.totalConcessionPrice - state.discountAmount
+    );
   },
 
   updateHoldTimeSeconds: (seconds: number) => {
@@ -452,16 +452,29 @@ export const useBookingStore = create<BookingState>((set, get) => ({
       }));
     });
 
-    socket.on('seat_booked', (data: SeatEvent) => {
-      const label = get().seatIdToLabel[data.seatId];
-      if (!label) return;
-      set((state) => ({
-        seatReservationStatus: {
-          ...state.seatReservationStatus,
-          [label]: ReservationStatusEnum.CONFIRMED,
-        },
-        selectedSeats: state.selectedSeats.filter((s) => s !== label),
-      }));
+    socket.on('seat_booked', (data: SeatBookingEvent) => {
+      const { seatIds } = data;
+
+      const labels = seatIds
+        .map((id) => get().seatIdToLabel[id])
+        .filter(Boolean);
+      if (labels.length === 0) return;
+      set((state) => {
+        const newStatus = { ...state.seatReservationStatus };
+        const newSelected = [...state.selectedSeats];
+
+        labels.forEach((label) => {
+          newStatus[label] = ReservationStatusEnum.CONFIRMED;
+          // xoá khỏi selectedSeats nếu có
+          const idx = newSelected.indexOf(label);
+          if (idx !== -1) newSelected.splice(idx, 1);
+        });
+
+        return {
+          seatReservationStatus: newStatus,
+          selectedSeats: newSelected,
+        };
+      });
     });
 
     socket.on('limit_reached', () =>
@@ -476,20 +489,39 @@ export const useBookingStore = create<BookingState>((set, get) => ({
   },
 
   resetBooking: () => {
-    const { currentShowtimeId } = get();
-    if (currentShowtimeId) {
-      localStorage.removeItem(`bookingState_${currentShowtimeId}`);
+    const state = get();
+    const showtimeId = state.currentShowtimeId;
+
+    // Xoá localStorage của showtime hiện tại
+    if (showtimeId) {
+      localStorage.removeItem(`bookingState_${showtimeId}`);
     }
+
+    // Reset toàn bộ state liên quan đến quá trình booking
     set({
+      bookingId: undefined,
+      currentShowtimeId: null,
       selectedSeats: [],
+      seatReservationStatus: {},
+      seatHeldByUser: {},
+      seatMap: [],
+      tickets: [],
       ticketCounts: {} as Record<SeatTypeEnum, number>,
+      maxTickets: 8,
+      totalTicketPrice: 0,
+      totalTickets: 0,
+      holdTimeSeconds: 60,
+      seatLabelToId: {},
+      seatIdToLabel: {},
+      concessionSelections: {},
+      concessionMap: {},
+      totalConcessionPrice: 0,
+      promotionCode: null,
+      discountAmount: 0,
     });
   },
 }));
 
 function getShowtimeId() {
-  return (
-    useBookingStore.getState().currentShowtimeId ??
-    '1743dad9-5b78-49a1-be56-5c7205d248b2'
-  );
+  return useBookingStore.getState().currentShowtimeId;
 }

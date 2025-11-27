@@ -3,7 +3,6 @@ import api from "../../api-client";
 import { PaymentDetailDto } from "../../types/payment.type";
 
 export const createPayment = async (
-  token: string,
   bookingId: string,
   createPaymentDto: CreatePaymentDto
 ) => {

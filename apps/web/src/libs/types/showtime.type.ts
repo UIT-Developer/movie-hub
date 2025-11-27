@@ -131,3 +131,13 @@ export interface ShowtimeSeatResponse {
     hold_time_seconds: number;
   };
 }
+
+
+export interface ShowtimeSummaryResponse {
+  id?: string;
+  hallId: string;
+  startTime: Date;
+  endTime: Date;
+  format: FormatEnum;
+  status: ShowtimeStatusEnum;
+}

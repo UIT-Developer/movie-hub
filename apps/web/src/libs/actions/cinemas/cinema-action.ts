@@ -6,7 +6,8 @@ import {
 import z from 'zod';
 import api from '../../api-client';
 import { CinemaListResponse, CinemaLocationResponse } from '../../types/cinema.type';
-import { ApiResponse } from '@movie-hub/shared-types/common';
+import { ApiResponse, PaginationQuery, ServiceResult } from '@movie-hub/shared-types/common';
+import { MovieWithCinemaAndShowtimeResponse, MovieWithShowtimeResponse } from '../../types/movie.type';
 
 export type GetShowtimesQuery = z.infer<typeof GetShowtimesQuerySchema>;
 export const getMovieShowtimesAtCinema = async (
@@ -25,6 +26,29 @@ export const getMovieShowtimesAtCinema = async (
   }
 };
 
+export const getMovieAtCinemas= async (
+  cinemaId: string,
+  query: PaginationQuery
+): Promise<ServiceResult<MovieWithShowtimeResponse[]>> => {
+  try {
+    const response = await api.get(`/cinemas/${cinemaId}/movies`, {
+      params: query,
+    });
+    return response.data as ServiceResult<MovieWithShowtimeResponse[]>;
+  } catch (error) {
+    throw error;
+  }
+
+}
+export const getAllMoviesWithShowtimes = async (): Promise<ServiceResult<MovieWithCinemaAndShowtimeResponse>>=> {
+  try {
+    const response = await api.get('/cinemas/movies/showtimes');
+    return response.data as ServiceResult<MovieWithCinemaAndShowtimeResponse>;
+  } catch (error) {
+    throw error;
+  }
+
+}
 
 export const GetCinemasNearby= async (
   lat: number,

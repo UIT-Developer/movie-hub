@@ -3,6 +3,10 @@ import { useAuth } from '@clerk/nextjs';
 import { Button } from '@movie-hub/shacdn-ui/button';
 import { RequireSignIn } from 'apps/web/src/components/require-sign-in';
 import {
+  useCheckUserBookingAtShowtime,
+  useCreateBooking
+} from 'apps/web/src/hooks/booking-hooks';
+import {
   useGetSessionTTL,
   useGetShowtimeSeats,
 } from 'apps/web/src/hooks/showtime-hooks';
@@ -16,41 +20,47 @@ import { SeatMap } from './seat-map';
 const steps = ['Chọn ghế', 'Chọn đồ ăn', 'Thanh toán'];
 
 export const SeatBooking = ({ showtimeId }: { showtimeId: string }) => {
+    const {
+      initBookingData,
+      updateHoldTimeSeconds,
+      connectSocket,
+      disconnectSocket,
+      selectedSeats,
+    
+    } = useBookingStore();
+    const {data: checking, isLoading} = useCheckUserBookingAtShowtime(showtimeId);
+    console.log('Checking booking at showtime:', checking);
+    const { mutateAsync: createBookingMutate } = useCreateBooking();
 
-// const { data: checking} = useCheckUserBookingAtShowtime(showtimeId);
-// console.log('Checking booking at showtime:', checking);
-// const { mutateAsync: createBookingMutate } = useCreateBooking();
+    useEffect(() => {
+      
+      if (isLoading) return;
 
-// useEffect(() => {
-//   const handleExistingBooking = async () => {
-//     if (checking?.data) {
-//       console.log('User has existing booking at this showtime.');
-//       return;
-//     }
-//     try {
-//       console.log('No existing booking found. Creating new booking...');
-//       await createBookingMutate({ showtimeId });
-//       console.log('Booking created successfully.');
-//     } catch (error) {
-//       console.error('Error creating booking:', error);
-//     }
-//   };
-  
-//   handleExistingBooking();
-// }, [checking, createBookingMutate, showtimeId]);
+      if (checking?.data) {
+        console.log('User has existing booking at this showtime.');
+        return;
+      }
 
-   const {
-     initBookingData,
-     updateHoldTimeSeconds,
-     connectSocket,
-     disconnectSocket,
-     selectedSeats
-   } = useBookingStore();
+
+      const create = async () => {
+        try {
+          console.log('No existing booking. Creating new booking...');
+          await createBookingMutate({ showtimeId });
+          console.log('Booking created successfully.');
+        } catch (err) {
+          console.error('Error creating booking:', err);
+        }
+      };
+
+      create();
+    }, [isLoading, checking, showtimeId, createBookingMutate]);
+
+
+
   const { userId } = useAuth();
 
   const [currentStep, setCurrentStep] = useState(0);
   const nextStep = () => {
-  
     setCurrentStep((prev) => prev + 1);
   };
 
@@ -60,10 +70,9 @@ export const SeatBooking = ({ showtimeId }: { showtimeId: string }) => {
 
   const disableFirstStep = currentStep === 0 && selectedSeats.length === 0;
 
-
   const { data } = useGetShowtimeSeats(showtimeId);
   const { data: ttlResponse } = useGetSessionTTL(showtimeId);
- 
+
   useEffect(() => {
     if (data) initBookingData(data);
   }, [data, initBookingData]);
@@ -88,8 +97,6 @@ export const SeatBooking = ({ showtimeId }: { showtimeId: string }) => {
     updateHoldTimeSeconds,
     userId,
   ]);
-  
-  
 
   return (
     <RequireSignIn>
@@ -145,7 +152,9 @@ export const SeatBooking = ({ showtimeId }: { showtimeId: string }) => {
             <div></div>
           )}
           {currentStep < steps.length - 1 && (
-            <Button disabled={disableFirstStep}  onClick={nextStep}>Tiếp tục</Button>
+            <Button disabled={disableFirstStep} onClick={nextStep}>
+              Tiếp tục
+            </Button>
           )}
         </div>
 
@@ -153,10 +162,9 @@ export const SeatBooking = ({ showtimeId }: { showtimeId: string }) => {
         <div className="flex-1 w-full p-4">
           {currentStep === 0 && <SeatMap data={data} />}
           {currentStep === 1 && <FoodSelector cinemaId={data?.cinemaId} />}
-          {currentStep === 2 && <BookingCheckout data={data}  />}
+          {currentStep === 2 && <BookingCheckout data={data} />}
         </div>
       </div>
-
     </RequireSignIn>
   );
 };

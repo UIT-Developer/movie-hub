@@ -9,7 +9,7 @@ import {
 import api from '../../api-client';
 import { BookingStatus } from '../../types/booking.type';
 
-export const createBooking = async (createBookingDto: CreateBookingDto) => {
+export const createBooking = async (createBookingDto: CreateBookingDto): Promise<ServiceResult<BookingCalculationDto>> => {
   try {
     const response = await api.post('/bookings', createBookingDto);
     return response.data;
@@ -20,7 +20,7 @@ export const createBooking = async (createBookingDto: CreateBookingDto) => {
 
 export const updateBooking = async (
   bookingId: string,
-  dto:UpdateBookingDto
+  dto: UpdateBookingDto
 ) => {
   try {
     const response = await api.put(`/bookings/${bookingId}`, dto);

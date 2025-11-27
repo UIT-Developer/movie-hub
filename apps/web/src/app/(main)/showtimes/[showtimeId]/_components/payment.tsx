@@ -3,9 +3,14 @@
 import { Button } from '@movie-hub/shacdn-ui/button';
 import { Input } from '@movie-hub/shacdn-ui/input';
 import { cn } from '@movie-hub/shacdn-utils';
-import { useCreateBooking } from 'apps/web/src/hooks/booking-hooks';
+import { ConsoleLogger } from '@nestjs/common';
+import {
+  useCreateBooking,
+  useUpdateBooking,
+} from 'apps/web/src/hooks/booking-hooks';
 import { useCreatePayment } from 'apps/web/src/hooks/payment-hooks';
 import { useValidationPromotion } from 'apps/web/src/hooks/promotion-hook';
+import { updateBooking } from 'apps/web/src/libs/actions/booking/booking-action';
 import {
   PaymentMethod,
   paymentMethods,
@@ -13,13 +18,11 @@ import {
 } from 'apps/web/src/libs/types/payment.type';
 import { useBookingStore } from 'apps/web/src/stores/booking-store';
 import Image from 'next/image';
-import { get } from 'node_modules/axios/index.cjs';
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { gt } from 'zod';
 
 export const PaymentSection = () => {
-  const { getTotalFinal } = useBookingStore();
+  const { getTotalFinal, buildBookingPayload, bookingId } = useBookingStore();
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod | null>(
     null
   );
@@ -28,17 +31,12 @@ export const PaymentSection = () => {
   const { mutateAsync, isPending } = useValidationPromotion();
 
   const handleValidatePromotion = async (code: string) => {
-    try {
       await mutateAsync({
         code,
         validateDto: {
           bookingAmount: getTotalFinal(),
         },
       });
-    } catch (err) {
-      console.error(err);
-      toast.error('Không thể xác thực mã khuyến mãi. Vui lòng thử lại.');
-    }
   };
 
   const handleSelect = (payment: PaymentMethodUI) => {
@@ -49,7 +47,7 @@ export const PaymentSection = () => {
     setSelectedMethod(payment.method);
   };
 
-  const createBooking = useCreateBooking();
+  const updateBooking = useUpdateBooking();
   const createPayment = useCreatePayment();
   const handlePay = async () => {
     if (!selectedMethod) {
@@ -57,24 +55,16 @@ export const PaymentSection = () => {
       return;
     }
 
+    if (!bookingId) {
+      toast.error('Đã có lỗi xảy ra. Vui lòng thử lại.');
+      return;
+    }
+    console.log('Starting payment process for bookingId:', bookingId);
     try {
-      const booking = await createBooking.mutateAsync({
-        showtimeId: 'showtime-123',
-        seats: [
-          {
-            seatId: 'A1',
-            ticketType: 'ADULT',
-          },
-        ],
-        concessions: [
-          {
-            concessionId: 'popcorn-l',
-            quantity: 1,
-          },
-        ],
+      await updateBooking.mutateAsync({
+        bookingId,
+        data: buildBookingPayload(),
       });
-
-      const bookingId = booking.id;
 
       const payment = await createPayment.mutateAsync({
         bookingId,

@@ -9,7 +9,7 @@ import {
   searchCinemas,
 } from '../libs/actions/cinemas/cinema-action';
 import { CinemaListResponse } from '../libs/types/cinema.type';
-import { ApiResponse } from '@movie-hub/shared-types/common';
+import { ApiResponse, PaginationQuery } from '@movie-hub/shared-types/common';
 import { ShowtimeSummaryResponse } from '@movie-hub/shared-types';
 
 export const useGetMovieShowtimesAtCinema = (
@@ -97,3 +97,29 @@ export const useGetCinemaDetail = (cinemaId: string) => {
     enabled: !!cinemaId,
   });
 };
+
+
+// export const useGetMoviesAtCinema = (cinemaId: string, query: PaginationQuery ) => {
+//   return useInfiniteQuery({
+//     queryKey: ['movies-at-cinema', cinemaId, query],
+//     queryFn: async ({ pageParam = 1 }) => {
+//       // gọi getMovies và merge query params
+//       return await getMovies({
+//         ...initialQuery,
+//         page: pageParam,
+//       } as MovieQuery);
+//     },
+//     getNextPageParam: (lastPage: ServiceResult<MovieSummary[]>) => {
+//       const meta = lastPage.meta;
+//       if (!meta) return undefined;
+//       return meta.page < meta.totalPages ? meta.page + 1 : undefined;
+//     },
+//     select: (data) => {
+//       return {
+//         pages: data.pages.flatMap((page) => page.data),
+//         pageParams: data.pageParams,
+//       };
+//     },
+//     initialPageParam: 1,
+//   });
+// };

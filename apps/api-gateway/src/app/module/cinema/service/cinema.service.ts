@@ -4,6 +4,7 @@ import {
   CreateCinemaRequest,
   GetShowtimesQuery,
   SERVICE_NAME,
+  ShowtimesFilterDTO,
   UpdateCinemaRequest,
 } from '@movie-hub/shared-types';
 import { PaginationQuery } from '@movie-hub/shared-types/common';
@@ -170,9 +171,12 @@ export class CinemaService {
     );
   }
 
-  async getAllMoviesWithShowtimes() {
+  async getAllMoviesWithShowtimes(query: ShowtimesFilterDTO) {
     return lastValueFrom(
-      this.cinemaClient.send(CinemaMessage.MOVIE.GET_ALL_MOVIES_AT_CINEMAS, {})
+      this.cinemaClient.send(
+        CinemaMessage.MOVIE.GET_ALL_MOVIES_AT_CINEMAS,
+        query
+      )
     );
   }
 }

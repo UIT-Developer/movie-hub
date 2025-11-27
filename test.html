@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>MovieHub Seat Realtime Test</title>
+  <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+  <style>
+    body { font-family: Arial; margin: 20px; }
+    input { padding: 8px; margin: 5px; }
+    button { padding: 8px 15px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 4px; }
+    #log { border: 1px solid #ccc; padding: 10px; height: 300px; overflow-y: auto; background: #f9f9f9; margin-top: 20px; }
+    p { margin: 5px 0; }
+  </style>
+</head>
+<body>
+  <h1>🎬 MovieHub Seat Realtime Test</h1>
+  
+  <div>
+    <input id="token" placeholder="JWT Token" value="test-token" style="width: 300px;" />
+    <input id="showtimeId" placeholder="Showtime ID" value="showtime-123" />
+    <button onclick="connect()">✅ Connect</button>
+  </div>
+  
+  <hr>
+  
+  <div>
+    <h3>Hold/Release Seats</h3>
+    <input id="seatId" placeholder="Seat ID" value="seat-A1" />
+    <button onclick="holdSeat()">🎯 Hold Seat</button>
+    <button onclick="releaseSeat()">🔓 Release Seat</button>
+  </div>
+
+  <div>
+    <h3>Test Scenarios</h3>
+    <button onclick="testHoldMultiple()">🔢 Hold 8 Seats (Limit Test)</button>
+    <button onclick="testHold9th()">⚠️ Try Hold 9th (Should Fail)</button>
+  </div>
+  
+  <div id="log"></div>
+  
+  <script>
+    let socket;
+    
+    function log(msg) {
+      const div = document.getElementById('log');
+      const time = new Date().toLocaleTimeString();
+      div.innerHTML += `<p><strong>${time}:</strong> ${msg}</p>`;
+      div.scrollTop = div.scrollHeight;
+    }
+    
+    function connect() {
+      const token = document.getElementById('token').value;
+      const showtimeId = document.getElementById('showtimeId').value;
+      
+      if (!token || !showtimeId) {
+        log('❌ Please fill in token and showtimeId');
+        return;
+      }
+      
+      socket = io('ws://localhost:4000', {
+        auth: { token },
+        query: { showtimeId }
+      });
+      
+      socket.on('connect', () => {
+        log('✅ Connected to WebSocket');
+      });
+      
+      socket.on('seat_held', (data) => {
+        log(`🎯 Seat held: ${JSON.stringify(data)}`);
+      });
+      
+      socket.on('seat_released', (data) => {
+        log(`🔓 Seat released: ${JSON.stringify(data)}`);
+      });
+      
+      socket.on('seat_expired', (data) => {
+        log(`⏰ Seats expired: ${JSON.stringify(data)}`);
+      });
+      
+      socket.on('limit_reached', (data) => {
+        log(`🚫 LIMIT REACHED: ${JSON.stringify(data)}`);
+      });
+      
+      socket.on('seat_booked', (data) => {
+        log(`💳 Seat booked: ${JSON.stringify(data)}`);
+      });
+      
+      socket.on('connect_error', (error) => {
+        log(`❌ Connection error: ${error.message}`);
+      });
+      
+      socket.on('disconnect', (reason) => {
+        log(`🔌 Disconnected: ${reason}`);
+      });
+    }
+    
+    function holdSeat() {
+      const showtimeId = document.getElementById('showtimeId').value;
+      const seatId = document.getElementById('seatId').value;
+      
+      if (!socket) {
+        log('❌ Not connected. Click Connect first.');
+        return;
+      }
+      
+      socket.emit('hold_seat', { showtimeId, seatId });
+      log(`📤 Emitted: hold_seat(${seatId})`);
+    }
+    
+    function releaseSeat() {
+      const showtimeId = document.getElementById('showtimeId').value;
+      const seatId = document.getElementById('seatId').value;
+      
+      if (!socket) {
+        log('❌ Not connected. Click Connect first.');
+        return;
+      }
+      
+      socket.emit('release_seat', { showtimeId, seatId });
+      log(`📤 Emitted: release_seat(${seatId})`);
+    }
+    
+    function testHoldMultiple() {
+      const showtimeId = document.getElementById('showtimeId').value;
+      
+      if (!socket) {
+        log('❌ Not connected.');
+        return;
+      }
+      
+      log('🔢 Holding 8 seats...');
+      for (let i = 1; i <= 8; i++) {
+        setTimeout(() => {
+          socket.emit('hold_seat', { showtimeId, seatId: `seat-A${i}` });
+        }, i * 200);
+      }
+    }
+    
+    function testHold9th() {
+      const showtimeId = document.getElementById('showtimeId').value;
+      
+      if (!socket) {
+        log('❌ Not connected.');
+        return;
+      }
+      
+      log('⚠️ Trying to hold 9th seat (should trigger limit_reached)...');
+      socket.emit('hold_seat', { showtimeId, seatId: 'seat-A9' });
+    }
+  </script>
+</body>
+</html>

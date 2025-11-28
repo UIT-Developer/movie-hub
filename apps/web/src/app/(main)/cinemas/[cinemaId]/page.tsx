@@ -1,5 +1,8 @@
 import { CinemaLocationResponse } from "apps/web/src/libs/types/cinema.type";
 import CinemaDetailCard from "./_components/cinema-detail-card";
+import { getQueryClient } from "apps/web/src/libs/get-query-client";
+import { getMovieAtCinemas } from "apps/web/src/libs/actions/cinemas/cinema-action";
+import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
 
 export const fakeCinema: CinemaLocationResponse = {
   id: 'cinestar-nguyen-trai',
@@ -61,10 +64,26 @@ export const fakeCinema: CinemaLocationResponse = {
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
 };
-export default function CinemaDetailPage() {
+
+
+export default async function CinemaDetailPage({
+  params
+} : {
+  params: Promise<{ cinemaId: string }>;
+}) {
+  const { cinemaId } = await params;
+  const queryClient = getQueryClient();
+  await queryClient.prefetchQuery({
+    queryKey: ['movies-at-cinema', cinemaId],
+    queryFn: async () => {
+      const response = await getMovieAtCinemas(cinemaId, { page: 1, limit: 20 });
+      return response.data;
+    }})
   return (
-    <div className="flex flex-col items-center justify-center gap-4">
-      <CinemaDetailCard cinema={ fakeCinema} />
-    </div>
-  )
+    <HydrationBoundary state={dehydrate(queryClient)}>
+      <div className="flex flex-col items-center justify-center gap-4">
+        <CinemaDetailCard cinema={fakeCinema} />
+      </div>
+    </HydrationBoundary>
+  );
 }

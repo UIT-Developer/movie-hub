@@ -10,7 +10,7 @@ import {
   CardTitle,
 } from '@movie-hub/shacdn-ui/card';
 
-import { CalendarDays, Loader, Popcorn, User2 } from 'lucide-react';
+import { CalendarDays, Popcorn, User2 } from 'lucide-react';
 import { formatPrice } from '../../../utils/format-price';
 import {
   BookingDetailDto,
@@ -23,6 +23,7 @@ import html2canvas from 'html2canvas';
 import { useRef } from 'react';
 import { Button } from '@movie-hub/shacdn-ui/button';
 import { QRCodeCanvas } from 'qrcode.react';
+import { Loader } from 'apps/web/src/components/loader';
 
 export function BookingCard({ bookingId }: { bookingId: string }) {
   const {
@@ -53,10 +54,11 @@ export function BookingCard({ bookingId }: { bookingId: string }) {
     pdf.save(`booking-${booking?.bookingCode}.pdf`);
   };
 
-  if (isLoading) return;
-  <div className="flex h-full items-center justify-center">
+  if (isLoading) return (
+     <div className="flex h-full items-center justify-center">
     <Loader size={32} />
-  </div>;
+  </div>
+  )
 
   if (isError) return <ErrorFallback message={error.message} />;
 
@@ -75,7 +77,7 @@ export function BookingCard({ bookingId }: { bookingId: string }) {
   );
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 w-full">
       <Card
         ref={cardRef}
         className="bg-rose-500/10 border border-rose-500/20 w-full "

@@ -103,6 +103,8 @@ export interface SeatRowDto {
 
 export interface ShowtimeInfoDto {
   id: string;
+  movieId: string;
+  movieTitle: string;
   start_time: Date;
   end_time: Date;
   dateType: DayTypeEnum;

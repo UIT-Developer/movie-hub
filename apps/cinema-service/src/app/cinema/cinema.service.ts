@@ -8,6 +8,7 @@ import {
   MovieWithCinemaAndShowtimeResponse,
   MovieWithShowtimeResponse,
   ResourceNotFoundException,
+  ShowtimesFilterDTO,
   UpdateCinemaRequest,
 } from '@movie-hub/shared-types';
 import { CinemaMapper } from './cinema.mapper';
@@ -182,13 +183,19 @@ export class CinemaService {
     };
   }
 
-  async getAllMoviesWithShowtimes(): Promise<
-    ServiceResult<MovieWithCinemaAndShowtimeResponse[]>
-  > {
-    // 1. Lấy tất cả showtime đang SELLING
+  async getAllMoviesWithShowtimes(
+    query: ShowtimesFilterDTO
+  ): Promise<ServiceResult<MovieWithCinemaAndShowtimeResponse[]>> {
+    const selectedDate = query.date ?? new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+
+    // 1. Lấy suất chiếu đang SELLING và đúng ngày
     const showtimes = await this.prisma.showtimes.findMany({
       where: {
         status: ShowtimeStatus.SELLING,
+        start_time: {
+          gte: new Date(selectedDate + 'T00:00:00'),
+          lt: new Date(selectedDate + 'T23:59:59'),
+        },
       },
       include: {
         cinema: {
@@ -207,7 +214,7 @@ export class CinemaService {
     if (!showtimes.length)
       return { data: [], message: 'Get movies successfully!' };
 
-    // 2. Gom nhóm theo movieId
+    // 2. Gom nhóm theo movie
     const mapByMovie = new Map<string, typeof showtimes>();
 
     for (const st of showtimes) {
@@ -232,26 +239,13 @@ export class CinemaService {
       throw new BadRequestException('Cannot fetch movies from movie-service');
     }
 
-    // 4. Merge thông tin + xử lý ngày gần nhất
+    // 4. Merge + nhóm theo rạp
     const result = movies.map((movie) => {
       const sts = mapByMovie.get(movie.id) ?? [];
 
-      // 4.1 Tìm ngày gần nhất có showtime
-      const dates = [
-        ...new Set(sts.map((s) => s.start_time.toISOString().slice(0, 10))),
-      ];
-      const nearestDate = dates.sort()[0]; // YYYY-MM-DD → sort OK
-
-      // 4.2 Filter showtime ở ngày gần nhất
-      const nearestDayShowtimes = sts.filter(
-        (s) => s.start_time.toISOString().slice(0, 10) === nearestDate
-      );
-
-      // 4.3 Gom nhóm theo cinema
-      // 4.3 Gom nhóm theo cinema
       const cinemaGroups: Record<string, any> = {};
 
-      for (const st of nearestDayShowtimes) {
+      for (const st of sts) {
         const cid = st.cinema_id;
 
         if (!cinemaGroups[cid]) {
@@ -263,7 +257,6 @@ export class CinemaService {
           };
         }
 
-        // Dùng mapper thay vì format thủ công
         cinemaGroups[cid].showtimes.push(
           ShowtimeMapper.toShowtimeSummaryResponse(st)
         );
@@ -271,7 +264,7 @@ export class CinemaService {
 
       return {
         ...movie,
-        cinemas: Object.values(cinemaGroups), // list cinema gồm nhiều showtimes
+        cinemas: Object.values(cinemaGroups),
       };
     });
 

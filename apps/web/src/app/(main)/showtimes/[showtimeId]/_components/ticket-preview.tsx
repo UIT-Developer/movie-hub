@@ -62,7 +62,7 @@ export default function TicketPreview({
         <CardHeader className="pb-4 border-b border-rose-500/20">
           <div className="flex items-center justify-between gap-4">
             <CardTitle className="text-lg text-rose-400 font-bold">
-              {data?.showtime.movieId || '—'}
+              {data?.showtime.movieTitle || '—'}
             </CardTitle>
             <div
               className={`text-center font-semibold p-2 rounded ${

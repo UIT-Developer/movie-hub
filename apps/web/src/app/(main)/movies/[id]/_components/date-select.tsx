@@ -32,7 +32,7 @@ export const DateSelect = ({
     new Date().toISOString().split('T')[0]
   );
   const [selectedLocation, setSelectedLocation] =
-    useState<string>('Hồ Chí Minh');
+    useState<string>('Ho Chi Minh City');
   const [selectedShowtime, setSelectedShowtime] = useState<string | null>();
 
   const next7Days = useMemo(() => {

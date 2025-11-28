@@ -93,7 +93,7 @@ export const useBookingStore = create<BookingState>((set, get) => ({
   maxTickets: 8,
   totalTicketPrice: 0,
   totalTickets: 0,
-  holdTimeSeconds: 60,
+  holdTimeSeconds: 600,
   socketConnected: false,
   seatLabelToId: {},
   seatIdToLabel: {},
@@ -261,7 +261,7 @@ export const useBookingStore = create<BookingState>((set, get) => ({
       (sum, t) => sum + t.price * (newTicketCounts[t.key] ?? 0),
       0
     );
-    if (newSeats.length === 0) set({ holdTimeSeconds: 60 });
+    if (newSeats.length === 0) set({ holdTimeSeconds: 600 });
 
     set({
       selectedSeats: newSeats,

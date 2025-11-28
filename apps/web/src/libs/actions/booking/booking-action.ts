@@ -7,7 +7,7 @@ import {
   UpdateBookingDto,
 } from '@movie-hub/shared-types';
 import api from '../../api-client';
-import { BookingStatus } from '../../types/booking.type';
+import { BookingDetailDto, BookingStatus } from '../../types/booking.type';
 
 export const createBooking = async (createBookingDto: CreateBookingDto): Promise<ServiceResult<BookingCalculationDto>> => {
   try {
@@ -30,13 +30,16 @@ export const updateBooking = async (
   }
 }
 
-export const getUserBookings = async (query: {
-  status?: BookingStatus;
-  pagination?: PaginationQuery;
-}) : Promise<ServiceResult<BookingSummaryDto[]>> => {
+export const getUserBookings = async (
+  status: BookingStatus,
+  pagination: PaginationQuery
+) : Promise<ServiceResult<BookingSummaryDto[]>> => {
   try {
     const response = await api.get('/bookings', {
-      params: query,
+      params: {
+        status,
+        ...pagination
+      },
     });
     return response.data;
   } catch (error) {
@@ -44,7 +47,7 @@ export const getUserBookings = async (query: {
   }
 };
 
-export const getBookingDetails = async (bookingId: string) => {
+export const getBookingDetails = async (bookingId: string): Promise<ServiceResult<BookingDetailDto>> => {
   try {
     const response = await api.get(`/bookings/${bookingId}`);
     return response.data;

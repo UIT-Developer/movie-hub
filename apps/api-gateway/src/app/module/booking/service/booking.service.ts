@@ -44,9 +44,7 @@ export class BookingService {
     return lastValueFrom(
       this.bookingClient.send(BookingMessage.FIND_ALL, {
         userId,
-        status,
-        page,
-        limit,
+        query: { status, page, limit },
       })
     );
   }

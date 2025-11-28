@@ -13,7 +13,7 @@ import { ResolveBookingService } from './resolve-booking.service';
 export class RealtimeService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(RealtimeService.name);
   private readonly HOLD_LIMIT = 8;
-  private readonly HOLD_TTL = 60; // 10 phút
+  private readonly HOLD_TTL = 600; // 10 phút
 
   constructor(
     @Inject('REDIS_CINEMA') private readonly redis: RedisPubSubService,

@@ -76,7 +76,12 @@ export const PaymentSection = () => {
         },
       });
 
-      window.location.href = payment.paymentUrl;
+   
+      if (payment && payment.data && payment.data.paymentUrl) {
+        window.location.href = payment.data.paymentUrl;
+      } else {
+        toast.error('Không thể tạo thanh toán. Vui lòng thử lại.');
+      }
     } catch (err) {
       console.error(err);
       toast.error('Không thể tạo thanh toán. Vui lòng thử lại.');

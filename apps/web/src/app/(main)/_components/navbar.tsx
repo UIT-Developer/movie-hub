@@ -1,22 +1,37 @@
 'use client';
-import { ClerkLoaded, ClerkLoading, SignedIn, SignedOut, SignInButton, useClerk, UserButton, useUser } from '@clerk/nextjs';
+import {
+  ClerkLoaded,
+  ClerkLoading,
+  SignedIn,
+  SignedOut,
+  SignInButton,
+  useClerk,
+  UserButton,
+  useUser,
+} from '@clerk/nextjs';
 import { Button } from '@movie-hub/shacdn-ui/button';
 import { Logo } from 'apps/web/src/components/logo';
-import { MenuIcon, XIcon } from 'lucide-react';
+import { MenuIcon, TicketPlus, XIcon } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
 import { Search } from './search';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@movie-hub/shacdn-ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@movie-hub/shacdn-ui/select';
 import { Skeleton } from '@movie-hub/shacdn-ui/skeleton';
+import { useRouter } from 'next/navigation';
 
 export const Navbar = () => {
   const [isOpen, setIsOpen] = useState<boolean>(false);
-  const { isSignedIn } = useUser();
-  const { openSignIn } = useClerk();
+  const router = useRouter();
 
-    const [rapChon, setRapChon] = useState<string>('');
+  const [rapChon, setRapChon] = useState<string>('');
 
-    const dsRap = ['Rạp A', 'Rạp B', 'Rạp C', 'Rạp D'];
+  const dsRap = ['Rạp A', 'Rạp B', 'Rạp C', 'Rạp D'];
 
   return (
     <nav className="fixed top-0 left-0 w-screen z-50 bg-black/10 backdrop-blur-lg shadow-lg">
@@ -93,7 +108,17 @@ export const Navbar = () => {
             </SignedOut>
 
             <SignedIn>
-              <UserButton />
+              <UserButton>
+                <UserButton.MenuItems>
+                  <UserButton.Action
+                    label="Vé của tôi"
+                    labelIcon={<TicketPlus size={15} />}
+                    onClick={() => {
+                      router.push('/my-booking');
+                    }}
+                  />
+                </UserButton.MenuItems>
+              </UserButton>
             </SignedIn>
           </ClerkLoaded>
         </div>

@@ -12,6 +12,7 @@ import { formatPrice } from 'apps/web/src/app/utils/format-price';
 import { ExpiredModal } from 'apps/web/src/components/modal/expire-modal';
 import { ShowtimeSeatResponse } from 'apps/web/src/libs/types/showtime.type';
 import { useBookingStore } from 'apps/web/src/stores/booking-store';
+import { CalendarDays } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
@@ -60,7 +61,7 @@ export default function TicketPreview({
         {/* Header */}
         <CardHeader className="pb-4 border-b border-rose-500/20">
           <div className="flex items-center justify-between gap-4">
-            <CardTitle className="text-lg text-white">
+            <CardTitle className="text-lg text-rose-400 font-bold">
               {data?.showtime.movieId || '—'}
             </CardTitle>
             <div
@@ -76,15 +77,23 @@ export default function TicketPreview({
           </div>
 
           <CardDescription className="text-sm text-neutral-400">
-            {data?.showtime.start_time
-              ? new Date(data.showtime.start_time).toLocaleString( 'vi-VN', {
-                  day: '2-digit',
-                  month: '2-digit',
-                  year: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })
-              : '—'}{' '}
+            <div className="flex items-center gap-2 text-neutral-300">
+              <CalendarDays className="w-4 h-4 text-rose-500" />
+              <span>
+                {data?.showtime.start_time
+                  ? new Date(data?.showtime.start_time).toLocaleString(
+                      'vi-VN',
+                      {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      }
+                    )
+                  : '—'}{' '}
+              </span>
+            </div>
             <br />
             {data?.cinemaName} - {data?.hallName}
           </CardDescription>
@@ -94,9 +103,16 @@ export default function TicketPreview({
           {/* Seats */}
           <div>
             <p className="font-semibold text-sm text-white">Ghế đã chọn:</p>
-            <p className="text-neutral-400">
-              {selectedSeats.length > 0 ? selectedSeats.join(', ') : '—'}
-            </p>
+            <div className="flex gap-2 flex-wrap">
+              {selectedSeats.map((s) => (
+                <span
+                  key={s}
+                  className="bg-rose-500/20 px-2 py-1 rounded text-neutral-300 text-sm"
+                >
+                  {s}
+                </span>
+              ))}
+            </div>
           </div>
 
           {/* Seat types */}

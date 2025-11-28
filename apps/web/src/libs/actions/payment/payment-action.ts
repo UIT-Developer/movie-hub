@@ -5,7 +5,7 @@ import { PaymentDetailDto } from "../../types/payment.type";
 export const createPayment = async (
   bookingId: string,
   createPaymentDto: CreatePaymentDto
-) => {
+): Promise<ServiceResult<PaymentDetailDto>> => {
   try {
     const response = await api.post(
       `/payments/bookings/${bookingId}`,

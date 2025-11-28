@@ -28,9 +28,9 @@ export const CinemaShowtime = ({
   const [selectedShowtime, setSelectedShowtime] = useState<string | null>(null);
   // Query showtimes theo ngày
   const { data: showtimes, isLoading } = useGetMovieShowtimesAtCinema(
-    '6499d9b3-dbb3-46f5-b922-3abf5631ee3a',
-    '2d63930f-8aea-4ebc-92c2-5a0518b509e9',
-    { date: '2025-11-24' }
+    cinema.id,
+    '2e1de571-2cce-420a-8060-49b404c12ac9',
+    { date: selectedDate }
   );
 
   const handleClick = (showtimeId: string) => {

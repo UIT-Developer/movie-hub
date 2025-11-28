@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import {
   checkUserBookingAtShowtime,
   createBooking,
+  getBookingDetails,
   getUserBookings,
   updateBooking,
 } from '../libs/actions/booking/booking-action';
@@ -25,7 +26,7 @@ export const useCreateBooking = () => {
       return await createBooking(data);
     },
     onSuccess: (result) => {
-      queryClient.invalidateQueries({ queryKey: ['user-bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['my-bookings'] });
       setBookingId(result.data.bookingId);
     },
     onError: (error) => {
@@ -36,20 +37,41 @@ export const useCreateBooking = () => {
   });
 };
 
-export const useGetBookings = (
-  status?: BookingStatus,
-  pagination?: PaginationQuery
-) => {
+interface UseGetBookingsProps {
+  status: BookingStatus;
+  page?: number;
+  limit?: number;
+}
+
+export const useGetBookings = ({
+  status,
+  page = 1
+}: UseGetBookingsProps) => {
   return useQuery({
-    queryKey: ['user-bookings'],
+    queryKey: ['my-bookings', status, page],
     queryFn: async () => {
-      return await getUserBookings({
+      const data = await getUserBookings(
         status,
-        pagination,
-      });
+        { page },
+      );
+      return data;
     },
+    staleTime: 1000 * 60,
   });
 };
+
+export const useGetBookingById = (bookingId: string) => {
+  return useQuery({
+    queryKey: ['booking-details', bookingId],
+    queryFn: async () => {
+      const response = await getBookingDetails(bookingId);
+      return response.data;
+    },
+    enabled: !!bookingId,
+    staleTime: 1000 * 60,
+  });
+}
+
 export const useCheckUserBookingAtShowtime = (showtimeId: string) => {
   const { setBookingId } = useBookingStore();
   return useQuery({
@@ -76,7 +98,7 @@ export const useUpdateBooking = () => {
     },
     onSuccess: () => {
       const queryClient = getQueryClient();
-      queryClient.invalidateQueries({ queryKey: ['user-bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['my-bookings'] });
     },
     onError: (error) => {
       toast.error(

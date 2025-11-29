@@ -31,7 +31,7 @@ export const getMovieAtCinemas= async (
   query: PaginationQuery
 ): Promise<ServiceResult<MovieWithShowtimeResponse[]>> => {
   try {
-    const response = await api.get(`/cinemas/${cinemaId}/movies`, {
+    const response = await api.get(`/cinemas/cinema/${cinemaId}/movies`, {
       params: query,
     });
     return response.data as ServiceResult<MovieWithShowtimeResponse[]>;

@@ -12,8 +12,8 @@ interface MovieListProps {
   href?: string;
 }
 export const MovieListSummary = ({ isShowing, href }: MovieListProps) => {
-  const router = useRouter();
-  const { data, isError, error, isLoading, hasNextPage } = useGetMovies({
+ 
+  const { data, isError, error, isLoading, hasNextPage, fetchNextPage } = useGetMovies({
     status: isShowing ? 'now-showing' : 'upcoming',
     limit: 12,
   });
@@ -21,11 +21,11 @@ export const MovieListSummary = ({ isShowing, href }: MovieListProps) => {
 
 
   const handleExpend = useCallback(() => {
-    if (href) {
-      router.push(`/movies/${href}`);
-      scrollTo(0, 0);
+    if (hasNextPage) {
+      // Load more movies
+      fetchNextPage();
     }
-  }, [href, router]);
+  }, [fetchNextPage, hasNextPage]);
 
 
   return (

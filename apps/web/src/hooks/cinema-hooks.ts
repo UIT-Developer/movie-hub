@@ -4,13 +4,15 @@ import {
   getCinemaDetail,
   GetCinemasNearby,
   getCinemasWithFilters,
+  getMovieAtCinemas,
   getMovieShowtimesAtCinema,
   GetShowtimesQuery,
   searchCinemas,
 } from '../libs/actions/cinemas/cinema-action';
 import { CinemaListResponse } from '../libs/types/cinema.type';
-import { ApiResponse, PaginationQuery } from '@movie-hub/shared-types/common';
+import { ApiResponse, PaginationQuery, ServiceResult } from '@movie-hub/shared-types/common';
 import { ShowtimeSummaryResponse } from '@movie-hub/shared-types';
+import { MovieWithShowtimeResponse } from '../libs/types/movie.type';
 
 export const useGetMovieShowtimesAtCinema = (
   cinemaId: string,
@@ -99,27 +101,29 @@ export const useGetCinemaDetail = (cinemaId: string) => {
 };
 
 
-// export const useGetMoviesAtCinema = (cinemaId: string, query: PaginationQuery ) => {
-//   return useInfiniteQuery({
-//     queryKey: ['movies-at-cinema', cinemaId, query],
-//     queryFn: async ({ pageParam = 1 }) => {
-//       // gọi getMovies và merge query params
-//       return await getMovies({
-//         ...initialQuery,
-//         page: pageParam,
-//       } as MovieQuery);
-//     },
-//     getNextPageParam: (lastPage: ServiceResult<MovieSummary[]>) => {
-//       const meta = lastPage.meta;
-//       if (!meta) return undefined;
-//       return meta.page < meta.totalPages ? meta.page + 1 : undefined;
-//     },
-//     select: (data) => {
-//       return {
-//         pages: data.pages.flatMap((page) => page.data),
-//         pageParams: data.pageParams,
-//       };
-//     },
-//     initialPageParam: 1,
-//   });
-// };
+export const useGetMoviesAtCinema = (cinemaId: string, query: PaginationQuery ) => {
+  return useInfiniteQuery({
+    queryKey: ['movies-at-cinema', cinemaId, query],
+    queryFn: async ({ pageParam = 1 }) => {
+      // gọi getMovies và merge query params
+      return await getMovieAtCinemas(cinemaId, {
+        ...query,
+        page: pageParam,
+      } as PaginationQuery);
+    },
+    getNextPageParam: (
+      lastPage: ServiceResult<MovieWithShowtimeResponse[]>
+    ) => {
+      const meta = lastPage.meta;
+      if (!meta) return undefined;
+      return meta.page < meta.totalPages ? meta.page + 1 : undefined;
+    },
+    select: (data) => {
+      return {
+        pages: data.pages.flatMap((page) => page.data),
+        pageParams: data.pageParams,
+      };
+    },
+    initialPageParam: 1,
+  });
+};

@@ -4,6 +4,7 @@ import { Button } from '@movie-hub/shacdn-ui/button';
 import { Input } from '@movie-hub/shacdn-ui/input';
 import { cn } from '@movie-hub/shacdn-utils';
 import { ConsoleLogger } from '@nestjs/common';
+import Loading from 'apps/web/src/components/loading';
 import {
   useCreateBooking,
   useUpdateBooking,
@@ -27,6 +28,7 @@ export const PaymentSection = () => {
     null
   );
   const [voucher, setVoucher] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   const { mutateAsync, isPending } = useValidationPromotion();
 
@@ -61,6 +63,7 @@ export const PaymentSection = () => {
     }
     console.log('Starting payment process for bookingId:', bookingId);
     try {
+      setIsLoading(true);
       await updateBooking.mutateAsync({
         bookingId,
         data: buildBookingPayload(),
@@ -85,8 +88,13 @@ export const PaymentSection = () => {
     } catch (err) {
       console.error(err);
       toast.error('Không thể tạo thanh toán. Vui lòng thử lại.');
+    } finally {
+      setIsLoading(false);
     }
   };
+  if (isLoading) {
+    return <Loading />
+  }
 
   return (
     <div className="space-y-4 max-w-2xl">

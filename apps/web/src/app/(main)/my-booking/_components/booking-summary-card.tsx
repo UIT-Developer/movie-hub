@@ -18,7 +18,7 @@ export default function BookingCard({ booking }: BookingCardProps) {
           {booking.cinemaName} - {booking.hallName}
         </p>
         <p className="text-gray-500 dark:text-gray-300">
-          {format(new Date(booking.startTime), 'dd/MM/yyyy HH:mm')} | Ghế:{' '}
+          {format(new Date(booking.createdAt), 'dd/MM/yyyy HH:mm')} | Ghế:{' '}
           {booking.seatCount}
         </p>
       </div>

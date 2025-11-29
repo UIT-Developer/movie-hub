@@ -3,6 +3,7 @@ import CinemaDetailCard from "./_components/cinema-detail-card";
 import { getQueryClient } from "apps/web/src/libs/get-query-client";
 import { getMovieAtCinemas } from "apps/web/src/libs/actions/cinemas/cinema-action";
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
+import { MoviesAtCinema } from "./_components/movies-list-cinema";
 
 export const fakeCinema: CinemaLocationResponse = {
   id: 'cinestar-nguyen-trai',
@@ -83,6 +84,7 @@ export default async function CinemaDetailPage({
     <HydrationBoundary state={dehydrate(queryClient)}>
       <div className="flex flex-col items-center justify-center gap-4">
         <CinemaDetailCard cinema={fakeCinema} />
+        <MoviesAtCinema cinemaId={cinemaId} />
       </div>
     </HydrationBoundary>
   );

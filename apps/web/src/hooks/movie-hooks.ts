@@ -1,11 +1,17 @@
+import { useAuth } from '@clerk/nextjs';
 import {
-  InfiniteData,
+  MovieDetailResponse,
+  MovieQuery,
+  MovieSummary,
+} from '@movie-hub/shared-types';
+import { ServiceResult } from '@movie-hub/shared-types/common';
+import {
   useInfiniteQuery,
   useMutation,
   useQuery,
-  useQueryClient,
-  useSuspenseQuery,
+  useQueryClient
 } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import {
   createMovie,
   CreateMovieRequest,
@@ -15,14 +21,6 @@ import {
   updateMovie,
   UpdateMovieRequest,
 } from '../libs/actions/movies/movie-action';
-import { useAuth } from '@clerk/nextjs';
-import {
-  MovieDetailResponse,
-  MovieQuery,
-  MovieSummary,
-} from '@movie-hub/shared-types';
-import { toast } from 'sonner';
-import { ServiceResult } from '@movie-hub/shared-types/common';
 export const useGetMovies = (initialQuery?: Omit<MovieQuery, 'page'>) => {
   return useInfiniteQuery({
     queryKey: ['movies', initialQuery],

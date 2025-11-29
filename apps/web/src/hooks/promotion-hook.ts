@@ -40,8 +40,10 @@ export const useFindPromotionByTypes = (type?: PromotionType) => {
   return useQuery({
     queryKey: ['promotions', type],
     queryFn: async () => {
-      const response = await findAllPromotions(type);
+      const response = await findAllPromotions('true', type);
       return response.data;
     },
   });
 };
+
+

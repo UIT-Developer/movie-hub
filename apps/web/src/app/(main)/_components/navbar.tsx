@@ -69,8 +69,8 @@ export const Navbar = () => {
             {[
               { href: '/movies', label: 'Phim' },
               { href: '/showtimes', label: 'Lịch chiếu' },
-              { href: '/promotion', label: 'Ưu đãi' },
-              { href: '/service', label: 'Dịch vụ' },
+              { href: '/promotions', label: 'Ưu đãi' },
+              { href: '/services', label: 'Dịch vụ' },
             ].map((item) => (
               <Link
                 key={item.href}

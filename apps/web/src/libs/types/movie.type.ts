@@ -1,4 +1,4 @@
-import { ShowtimeSummaryResponse } from "./showtime.type";
+import { ShowtimeSummaryResponse } from './showtime.type';
 
 export enum AgeRatingEnum {
   P = 'P', // Phù hợp mọi lứa tuổi
@@ -15,7 +15,6 @@ export enum LanguageOptionEnum {
   DUBBED = 'DUBBED', // Lồng tiếng / Thuyết minh
 }
 
-
 export interface MovieSummary {
   id: string;
   title: string;
@@ -30,7 +29,6 @@ export interface GenreResponse {
   id: string;
   name: string;
 }
-
 
 export interface MovieDetailResponse extends MovieSummary {
   originalTitle: string;
@@ -48,7 +46,6 @@ export interface MovieWithShowtimeResponse extends MovieDetailResponse {
   showtimes: ShowtimeSummaryResponse[];
 }
 
-
 export interface CinemaShowtimeGroup {
   cinemaId: string;
   name: string;
@@ -60,6 +57,3 @@ export interface MovieWithCinemaAndShowtimeResponse
   extends MovieDetailResponse {
   cinemas: CinemaShowtimeGroup[];
 }
-
-
-

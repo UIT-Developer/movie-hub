@@ -1,5 +1,8 @@
 import { Decimal } from '@prisma/client/runtime/library';
 
+/**
+ * Utility class for calculating distances between geographical coordinates
+ */
 export class DistanceCalculator {
   /**
    * Convert Prisma Decimal to number
@@ -7,11 +10,12 @@ export class DistanceCalculator {
   private static toNumber(value: number | Decimal | null | undefined): number {
     if (value === null || value === undefined) return 0;
     if (typeof value === 'number') return value;
-    return value.toNumber(); // Convert Decimal to number
+    return value.toNumber();
   }
 
   /**
-   * Calculate distance using Haversine formula
+   * Calculate distance between two points using Haversine formula
+   * @returns distance in kilometers, rounded to 1 decimal place
    */
   static calculateDistance(
     lat1: number | Decimal,
@@ -19,13 +23,12 @@ export class DistanceCalculator {
     lat2: number | Decimal,
     lon2: number | Decimal
   ): number {
-    // Convert all to numbers
     const lat1Num = this.toNumber(lat1);
     const lon1Num = this.toNumber(lon1);
     const lat2Num = this.toNumber(lat2);
     const lon2Num = this.toNumber(lon2);
 
-    const R = 6371; // Earth radius in km
+    const R = 6371; // Earth radius in kilometers
     const dLat = this.toRadians(lat2Num - lat1Num);
     const dLon = this.toRadians(lon2Num - lon1Num);
 
@@ -37,15 +40,19 @@ export class DistanceCalculator {
         Math.sin(dLon / 2);
 
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return Math.round(R * c * 10) / 10; // Round to 1 decimal
+    return Math.round(R * c * 10) / 10;
   }
 
+  /**
+   * Convert degrees to radians
+   */
   private static toRadians(degrees: number): number {
     return (degrees * Math.PI) / 180;
   }
 
   /**
-   * Format distance for display
+   * Format distance for user-friendly display
+   * @returns formatted distance string (e.g., "2.5km" or "500m")
    */
   static formatDistance(distanceKm: number): string {
     if (distanceKm < 1) {
@@ -72,7 +79,16 @@ export class DistanceCalculator {
   }
 
   /**
-   * Check if within radius
+   * Generate Google Maps location URL
+   */
+  static getMapUrl(lat: number | Decimal, lon: number | Decimal): string {
+    const latNum = this.toNumber(lat);
+    const lonNum = this.toNumber(lon);
+    return `https://www.google.com/maps/search/?api=1&query=${latNum},${lonNum}`;
+  }
+
+  /**
+   * Check if a location is within a specified radius
    */
   static isWithinRadius(
     lat1: number | Decimal,
@@ -83,5 +99,30 @@ export class DistanceCalculator {
   ): boolean {
     const distance = this.calculateDistance(lat1, lon1, lat2, lon2);
     return distance <= radiusKm;
+  }
+
+  /**
+   * Calculate bounding box for efficient database queries
+   * @returns {minLat, maxLat, minLon, maxLon}
+   */
+  static getBoundingBox(
+    centerLat: number,
+    centerLon: number,
+    radiusKm: number
+  ): {
+    minLat: number;
+    maxLat: number;
+    minLon: number;
+    maxLon: number;
+  } {
+    const latDelta = radiusKm / 111; // 1 degree latitude ≈ 111 km
+    const lonDelta = radiusKm / (111 * Math.cos(centerLat * (Math.PI / 180)));
+
+    return {
+      minLat: centerLat - latDelta,
+      maxLat: centerLat + latDelta,
+      minLon: centerLon - lonDelta,
+      maxLon: centerLon + lonDelta,
+    };
   }
 }

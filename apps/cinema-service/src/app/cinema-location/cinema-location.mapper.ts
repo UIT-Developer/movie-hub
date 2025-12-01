@@ -1,33 +1,27 @@
 import { Injectable } from '@nestjs/common';
 import { Cinemas, Halls } from '../../../generated/prisma/client';
-import { Decimal } from '@prisma/client/runtime/library';
-import { CinemaLocationResponse } from './dto/cinema-location.dto';
-import { DistanceCalculator } from './utils/distance-calculator';
-import { OperatingHoursUtil } from './utils/operating-hours.util';
+import {
+  CinemaLocationResponse,
+  OperatingHours,
+} from '@movie-hub/shared-types';
+import { DistanceCalculator } from '../../utils/distance-calculator.util';
+import { OperatingHoursUtil } from '../../utils/operating-hours.util';
+import { DecimalUtil } from '../../utils/decimal.util';
 
 @Injectable()
 export class CinemaLocationMapper {
-  /**
-   * Convert Decimal to number safely
-   */
-  private toNumber(value: number | Decimal | null | undefined): number {
-    if (value === null || value === undefined) return 0;
-    if (typeof value === 'number') return value;
-    return value.toNumber();
-  }
-
   toCinemaLocationResponse(
     cinema: Cinemas & { halls?: Halls[] },
     userLatitude?: number,
     userLongitude?: number
   ): CinemaLocationResponse {
-    // Calculate distance
+    const cinemaLat = DecimalUtil.toNumber(cinema.latitude);
+    const cinemaLon = DecimalUtil.toNumber(cinema.longitude);
+
+    // Calculate distance and generate URLs
     let distance: number | undefined;
     let distanceText: string | undefined;
     let directionsUrl: string | undefined;
-
-    const cinemaLat = this.toNumber(cinema.latitude);
-    const cinemaLon = this.toNumber(cinema.longitude);
 
     if (userLatitude && userLongitude && cinemaLat && cinemaLon) {
       distance = DistanceCalculator.calculateDistance(
@@ -56,15 +50,15 @@ export class CinemaLocationMapper {
       ? Array.from(new Set(cinema.halls.map((h) => String(h.type))))
       : [];
 
-    // Check if open
+    // Check if cinema is currently open
     const isOpen = cinema.operating_hours
-      ? OperatingHoursUtil.isOpen(cinema.operating_hours as any)
+      ? OperatingHoursUtil.isOpen(cinema.operating_hours as OperatingHours)
       : undefined;
 
-    // Generate map URL
+    // Generate Google Maps URL
     const mapUrl =
       cinemaLat && cinemaLon
-        ? `https://www.google.com/maps/search/?api=1&query=${cinemaLat},${cinemaLon}`
+        ? DistanceCalculator.getMapUrl(cinemaLat, cinemaLon)
         : undefined;
 
     return {
@@ -85,9 +79,9 @@ export class CinemaLocationMapper {
       description: cinema.description || undefined,
       amenities,
       images,
-      rating: this.toNumber(cinema.rating),
+      rating: DecimalUtil.toNumberOrNull(cinema.rating) ?? undefined,
       totalReviews: cinema.total_reviews,
-      operatingHours: cinema.operating_hours || undefined,
+      operatingHours: (cinema.operating_hours as OperatingHours) || undefined,
       isOpen,
       availableHallTypes,
       totalHalls: cinema.halls?.length || 0,

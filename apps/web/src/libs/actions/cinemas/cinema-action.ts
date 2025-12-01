@@ -1,6 +1,7 @@
 /* eslint-disable no-useless-catch */
 import {
   GetShowtimesQuerySchema,
+  ShowtimesFilterSchema,
   ShowtimeSummaryResponse
 } from '@movie-hub/shared-types';
 import z from 'zod';
@@ -40,10 +41,13 @@ export const getMovieAtCinemas= async (
   }
 
 }
-export const getAllMoviesWithShowtimes = async (): Promise<ServiceResult<MovieWithCinemaAndShowtimeResponse>>=> {
+export type ShowtimesFilterDTO = z.infer<typeof ShowtimesFilterSchema>;
+export const getAllMoviesWithShowtimes = async (query: ShowtimesFilterDTO): Promise<ServiceResult<MovieWithCinemaAndShowtimeResponse[]>>=> {
   try {
-    const response = await api.get('/cinemas/movies/showtimes');
-    return response.data as ServiceResult<MovieWithCinemaAndShowtimeResponse>;
+    const response = await api.get('/cinemas/movies/showtimes', {
+      params: query,
+    });
+    return response.data as ServiceResult<MovieWithCinemaAndShowtimeResponse[]>;
   } catch (error) {
     throw error;
   }

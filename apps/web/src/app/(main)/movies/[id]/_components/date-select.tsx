@@ -18,8 +18,9 @@ import {
   useGetCinemasWithFilters,
 } from 'apps/web/src/hooks/cinema-hooks';
 import { useInView } from 'react-intersection-observer';
+import { DateSelect7Days } from 'apps/web/src/components/date-select-7days';
 
-type SelectedDateKey = string;
+
 export const DateSelect = ({
   movieId,
   cinemaId,
@@ -28,21 +29,14 @@ export const DateSelect = ({
   cinemaId?: string;
 }) => {
   const router = useRouter();
-  const [selected, setSelected] = useState<SelectedDateKey>(
+  const [selected, setSelected] = useState<string>(
     new Date().toISOString().split('T')[0]
   );
   const [selectedLocation, setSelectedLocation] =
     useState<string>('Ho Chi Minh City');
   const [selectedShowtime, setSelectedShowtime] = useState<string | null>();
 
-  const next7Days = useMemo(() => {
-    const today = new Date();
-    return Array.from({ length: 7 }, (_, i) => {
-      const d = new Date(today);
-      d.setDate(today.getDate() + i);
-      return d.toISOString().split('T')[0]; // format YYYY-MM-DD
-    });
-  }, []);
+
 
   const handleSelectShowtime = useCallback((showtimeId: string) => {
     setSelectedShowtime(showtimeId);
@@ -92,39 +86,17 @@ export const DateSelect = ({
         <BlurCircle top="-100px" left="-100px" />
         <BlurCircle top="100px" right="0px" />
         {/* Date select */}
-        <div className="flex flex-col md:flex-row items-center justify-between  gap-10 w-full">
-          <div>
-            <p className="text-lg font-semibold text-white max-sm:text-center">
-              Chọn ngày
-            </p>
-            <div className="flex items-center gap-6 text-sm mt-5">
-              <span className="grid grid-cols-3 md:flex flex-wrap md:max-w-lg gap-4">
-                {next7Days.map((date) => (
-                  <button
-                    onClick={() => {
-                      setSelected(date);
-                    }}
-                    key={date}
-                    className={`flex flex-col items-center justify-center h-14 w-14 aspect-square rounded-lg cursor-pointer ${
-                      selected === date
-                        ? 'bg-rose-500 text-white'
-                        : 'border border-rose-500/70'
-                    }`}
-                  >
-                    <span className="font-bold text-white">
-                      {new Date(date).getDate()}
-                    </span>
-                    <span className="font-semibold text-neutral-400">
-                      {getVietnameseDay(date)}
-                    </span>
-                  </button>
-                ))}
-              </span>
-            </div>
-          </div>
+        <div className="flex w-full flex-col items-center justify-between gap-10 md:flex-row">
+          <DateSelect7Days
+            selected={selected}
+            onSelect={setSelected}
+  
+          />
+
           <Button
+          disabled={!selectedShowtime}
             onClick={onBookHandler}
-            className=" px-8 py-2 mt-6 ml-auto hover:bg-rose-500/90 transition-all cursor-pointer max-sm:mx-auto"
+            className="mt-6 ml-auto cursor-pointer px-8 py-2 transition-all hover:bg-rose-500/90 max-sm:mx-auto"
           >
             Đặt ngay
           </Button>

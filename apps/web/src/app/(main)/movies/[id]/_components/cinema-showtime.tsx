@@ -29,7 +29,7 @@ export const CinemaShowtime = ({
   // Query showtimes theo ngày
   const { data: showtimes, isLoading } = useGetMovieShowtimesAtCinema(
     cinema.id,
-    '2e1de571-2cce-420a-8060-49b404c12ac9',
+     movieId,
     { date: selectedDate }
   );
 

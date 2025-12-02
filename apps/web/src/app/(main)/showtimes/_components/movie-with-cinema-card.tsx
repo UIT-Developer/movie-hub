@@ -11,6 +11,9 @@ import type {
 } from 'apps/web/src/libs/types/movie.type';
 import { Skeleton } from '@movie-hub/shacdn-ui/skeleton';
 
+// ICONS
+import { Theater, Timer, Globe2, Languages, ShieldAlert } from 'lucide-react';
+
 interface MovieWithCinemaCardProps {
   movie: MovieWithCinemaAndShowtimeResponse;
 }
@@ -33,7 +36,7 @@ export const MovieWithCinemaCard = ({ movie }: MovieWithCinemaCardProps) => {
   const now = useMemo(() => new Date(), []);
 
   return (
-    <Card className="w-full rounded-2xl bg-gradient-to-b from-[#10144a] to-[#151b60] text-white shadow-xl">
+    <Card className="w-full rounded-2xl bg-rose-500/20 border border-rose-500 text-gray-200 shadow-xl">
       <CardContent className="grid grid-cols-1 gap-8 p-4 md:grid-cols-[260px,1fr] md:p-6">
         {/* LEFT: Poster + movie info */}
         <div className="flex flex-col gap-4">
@@ -47,62 +50,78 @@ export const MovieWithCinemaCard = ({ movie }: MovieWithCinemaCardProps) => {
               alt={movie.title}
               width={260}
               height={380}
-              className="h-auto w-full max-w-[260px] object-cover"
+              className="h-auto w-full max-w-[260px] object-cover rounded-xl"
             />
           </button>
 
-          <div className="space-y-2 text-sm text-gray-200">
-            <p className="text-base font-semibold uppercase text-yellow-300">
+          {/* Movie Info */}
+          <div className="space-y-3 text-sm text-gray-200">
+            <p className="text-lg font-semibold uppercase tracking-wide text-rose-300">
               {movie.title}
             </p>
 
-            <p>🎭 {movie.genre.map((g) => g.name).join(', ')}</p>
-            <p>⏱ {movie.runtime} phút</p>
-            <p>🌍 {movie.productionCountry}</p>
-            <p>🔊 Ngôn ngữ: {movie.languageType}</p>
-            <p>🔞 {movie.ageRating}</p>
+            <div className="flex gap-2 flex-col text-gray-300 text-sm">
+              <span className="flex items-center gap-1">
+                <Theater className="w-4 h-4 text-rose-400" />
+                {movie.genre.map((g) => g.name).join(', ')}
+              </span>
 
-            <p className="mt-2 text-xs text-gray-300 line-clamp-3">
+              <span className="flex items-center gap-1">
+                <Timer className="w-4 h-4 text-rose-400" />
+                {movie.runtime} phút
+              </span>
+
+              <span className="flex items-center gap-1">
+                <Globe2 className="w-4 h-4 text-rose-400" />
+                {movie.productionCountry}
+              </span>
+
+              <span className="flex items-center gap-1">
+                <Languages className="w-4 h-4 text-rose-400" />
+                Ngôn ngữ: {movie.languageType}
+              </span>
+
+              <span className="flex items-center gap-1">
+                <ShieldAlert className="w-4 h-4 text-rose-400" />
+                {movie.ageRating}
+              </span>
+            </div>
+
+            <p className="mt-1 text-xs text-gray-300 line-clamp-3">
               {movie.overview}
             </p>
           </div>
         </div>
 
-        {/* RIGHT: Cinema list + showtimes */}
-        <div className="flex flex-col gap-4">
+        {/* RIGHT: Cinema list */}
+        <div className="flex flex-col gap-6">
           {movie.cinemas.map((cinema: CinemaShowtimeGroup, index) => {
-            // Lọc showtime hợp lệ (có id + chưa chiếu)
-            const validShowtimes = cinema.showtimes.filter((s) => {
+            const validTimes = cinema.showtimes.filter((s) => {
               const start = new Date(s.startTime);
               return !!s.id && start >= now;
             });
 
-            // Group theo format (STANDARD, DELUXE,...)
-            const groupedByFormat = validShowtimes.reduce((acc, s) => {
-              const key = s.format; // enum -> string
-              if (!acc[key]) acc[key] = [];
-              acc[key].push(s);
+            const groupedByFormat = validTimes.reduce((acc, s) => {
+              const f = s.format;
+              if (!acc[f]) acc[f] = [];
+              acc[f].push(s);
               return acc;
-            }, {} as Record<string, typeof validShowtimes>);
-
-            // Nếu không còn suất chiếu thì vẫn render rạp + text, tuỳ bạn:
-            // if (!validShowtimes.length) return null; // => ẩn luôn rạp
+            }, {} as Record<string, typeof validTimes>);
 
             return (
               <div
                 key={cinema.cinemaId}
-                className={`flex flex-col gap-2 border-t border-white/10 pt-4 ${
+                className={`flex flex-col gap-2 border-t border-rose-500/20 pt-4 ${
                   index === 0 ? 'border-t-0 pt-0' : ''
                 }`}
               >
-                {/* Cinema header */}
-                <div className="flex flex-col gap-1">
-                
-                  <h3 className="text-base font-semibold">{cinema.name}</h3>
+                <div>
+                  <h3 className="text-base font-semibold text-rose-300">
+                    {cinema.name}
+                  </h3>
                   <p className="text-xs text-gray-300">{cinema.address}</p>
                 </div>
 
-                {/* Showtime groups by format */}
                 <div className="mt-2 flex flex-col gap-4 text-xs">
                   {Object.keys(groupedByFormat).length === 0 ? (
                     <p className="text-neutral-400">
@@ -112,7 +131,7 @@ export const MovieWithCinemaCard = ({ movie }: MovieWithCinemaCardProps) => {
                     Object.entries(groupedByFormat).map(([format, times]) => (
                       <div key={format} className="space-y-2">
                         <div className="flex items-center justify-between">
-                          <span className="font-semibold text-gray-200">
+                          <span className="font-semibold uppercase text-rose-400">
                             {format}
                           </span>
                         </div>
@@ -120,33 +139,29 @@ export const MovieWithCinemaCard = ({ movie }: MovieWithCinemaCardProps) => {
                         <div className="flex flex-wrap gap-3">
                           {times.map((s) => {
                             const start = new Date(s.startTime);
-                            const timeLabel = start.toLocaleTimeString(
-                              'vi-VN',
-                              {
-                                hour: '2-digit',
-                                minute: '2-digit',
-                              }
-                            );
+                            const label = start.toLocaleTimeString('vi-VN', {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            });
 
                             const disabled = !s.id || start < now;
 
                             return (
                               <Button
-                                key={s.id ?? `${cinema.cinemaId}-${timeLabel}`}
-                                type="button"
+                                key={s.id ?? `${cinema.cinemaId}-${label}`}
                                 size="sm"
                                 disabled={disabled}
-                                className={[
-                                  'rounded-xl border px-4 py-2 text-xs font-semibold',
-                                  disabled
-                                    ? 'border-gray-500 text-gray-500 cursor-not-allowed'
-                                    : 'border-yellow-400 bg-transparent text-yellow-300 hover:bg-yellow-400 hover:text-black',
-                                ].join(' ')}
                                 onClick={() =>
                                   !disabled && goToShowtimeDetail(s.id)
                                 }
+                                className={[
+                                  'rounded-xl border px-4 py-2 text-xs font-semibold',
+                                  disabled
+                                    ? 'border-rose-800 text-rose-800 cursor-not-allowed'
+                                    : 'border-rose-400 bg-transparent text-rose-300 hover:bg-rose-400 hover:text-black',
+                                ].join(' ')}
                               >
-                                {timeLabel}
+                                {label}
                               </Button>
                             );
                           })}
@@ -166,39 +181,48 @@ export const MovieWithCinemaCard = ({ movie }: MovieWithCinemaCardProps) => {
 
 MovieWithCinemaCard.Skeleton = function MovieWithCinemaCardSkeleton() {
   return (
-    <Card className="w-full rounded-2xl bg-gradient-to-b from-[#10144a] to-[#151b60] text-white shadow-xl">
+    <Card className="w-full rounded-2xl bg-rose-500/20 border border-rose-500 text-gray-200 shadow-xl">
       <CardContent className="grid grid-cols-1 gap-8 p-4 md:grid-cols-[260px,1fr] md:p-6">
         {/* LEFT skeleton */}
         <div className="flex flex-col gap-4">
-          <Skeleton className="h-[380px] w-full max-w-[260px] rounded-2xl bg-rose-500/20" />
+          {/* Poster */}
+          <Skeleton className="h-[380px] w-full max-w-[260px] rounded-2xl bg-rose-500/20 border border-rose-500/40" />
 
-          <div className="space-y-2">
-            <Skeleton className="h-4 w-40 bg-rose-500/20" />
-            <Skeleton className="h-3 w-32 bg-rose-500/15" />
-            <Skeleton className="h-3 w-24 bg-rose-500/15" />
-            <Skeleton className="h-3 w-28 bg-rose-500/15" />
-            <Skeleton className="h-3 w-20 bg-rose-500/15" />
-            <Skeleton className="mt-2 h-10 w-full bg-rose-500/10" />
+          <div className="space-y-3">
+            {/* Title */}
+            <Skeleton className="h-5 w-48 rounded-md bg-rose-500/20" />
+
+            {/* linha info */}
+            <Skeleton className="h-3 w-36 rounded bg-rose-500/15" />
+            <Skeleton className="h-3 w-28 rounded bg-rose-500/15" />
+            <Skeleton className="h-3 w-32 rounded bg-rose-500/15" />
+            <Skeleton className="h-3 w-20 rounded bg-rose-500/15" />
+            <Skeleton className="h-3 w-24 rounded bg-rose-500/15" />
+
+            {/* Overview */}
+            <Skeleton className="mt-2 h-12 w-full rounded bg-rose-500/10" />
           </div>
         </div>
 
-        {/* RIGHT skeleton (vài rạp + giờ chiếu) */}
-        <div className="flex flex-col gap-4">
+        {/* RIGHT skeleton (3 rạp + giờ chiếu) */}
+        <div className="flex flex-col gap-6">
           {Array.from({ length: 3 }).map((_, i) => (
             <div
               key={i}
-              className={`flex flex-col gap-2 border-t border-white/10 pt-4 ${
+              className={`flex flex-col gap-3 border-t border-rose-500/20 pt-4 ${
                 i === 0 ? 'border-t-0 pt-0' : ''
               }`}
             >
-              <Skeleton className="h-4 w-52 bg-rose-500/20" />
-              <Skeleton className="h-3 w-64 bg-rose-500/15" />
+              {/* Cinema name */}
+              <Skeleton className="h-4 w-56 rounded bg-rose-500/20" />
+              <Skeleton className="h-3 w-72 rounded bg-rose-500/15" />
 
-              <div className="mt-3 flex flex-wrap gap-3">
+              {/* Showtimes */}
+              <div className="mt-2 flex flex-wrap gap-3">
                 {Array.from({ length: 4 }).map((_, j) => (
                   <Skeleton
                     key={j}
-                    className="h-8 w-16 rounded-xl bg-rose-500/20"
+                    className="h-8 w-16 rounded-xl bg-rose-500/20 border border-rose-500/40"
                   />
                 ))}
               </div>

@@ -13,7 +13,7 @@ import { Button } from '@movie-hub/shacdn-ui/button';
 import { Logo } from 'apps/web/src/components/logo';
 import { MenuIcon, TicketPlus, XIcon } from 'lucide-react';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Search } from './search';
 import {
   Select,
@@ -25,27 +25,44 @@ import {
 import { Skeleton } from '@movie-hub/shacdn-ui/skeleton';
 import { useRouter } from 'next/navigation';
 
-export const Navbar = () => {
+export interface CinemaSelector {
+  id: string;
+  name: string;
+}
+interface NavbarProps {
+  cinemas: CinemaSelector[];
+}
+export const Navbar = ({ cinemas }: NavbarProps) => {
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const router = useRouter();
 
-  const [rapChon, setRapChon] = useState<string>('');
+  const [cinemaSelected, setCinemaSelected] = useState<string | undefined>();
 
-  const dsRap = ['Rạp A', 'Rạp B', 'Rạp C', 'Rạp D'];
+  const handleSelectCinema = (cinemaId: string) => {
+    setCinemaSelected(cinemaId);
+    router.push(`/cinemas/${cinemaId}`);
+  };
 
   return (
     <nav className="fixed top-0 left-0 w-screen z-50 bg-black/10 backdrop-blur-lg shadow-lg">
       <div className="px-6 lg:px-36 flex items-center h-20">
         <div className="flex items-center gap-4">
           <Logo />
-          <Select value={rapChon} onValueChange={(value) => setRapChon(value)}>
+          <Select value={cinemaSelected} onValueChange={handleSelectCinema}>
             <SelectTrigger className="w-40 text-white bg-black/20 border border-gray-300/20 rounded-full px-4 py-2">
               <SelectValue placeholder="Chọn rạp" />
             </SelectTrigger>
-            <SelectContent className="bg-black text-white rounded-lg">
-              {dsRap.map((rap) => (
-                <SelectItem key={rap} value={rap}>
-                  {rap}
+            <SelectContent
+              className="bg-black text-white rounded-lg max-h-64 overflow-y-auto"
+              position="popper"
+            >
+              {cinemas.map((cinema) => (
+                <SelectItem
+                  key={cinema.id}
+                  value={cinema.id}
+                  className="cursor-pointer"
+                >
+                  {cinema.name}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -81,7 +98,7 @@ export const Navbar = () => {
                 }}
                 className="relative group"
               >
-                <span className="px-4 py-2 rounded-full font-semibold uppercase tracking-wide transition-all duration-300 bg-transparent group-hover:bg-gradient-to-r from-red-500 via-yellow-400 to-red-500 group-hover:text-black">
+                <span className="px-4 py-2 rounded-full font-semibold uppercase tracking-wide transition-all duration-300 bg-transparent group-hover:bg-rose-500 group-hover:text-neutral-100">
                   {item.label}
                 </span>
                 {/* Optional underline effect */}

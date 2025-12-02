@@ -4,7 +4,7 @@ import { DateSelect } from './_components/date-select';
 import { MovieCast } from './_components/movie-cast';
 import { MovieHeader } from './_components/movie-header';
 import { getQueryClient } from 'apps/web/src/libs/get-query-client';
-import { getCinemaDetail } from 'apps/web/src/libs/actions/cinemas/cinema-action';
+import { getAvailableCities, getCinemaDetail } from 'apps/web/src/libs/actions/cinemas/cinema-action';
 import { TrailerModal } from 'apps/web/src/components/modal/trailer-modal';
 
 export default async function MovieDetailsPage({
@@ -16,11 +16,14 @@ export default async function MovieDetailsPage({
 }) {
   const { id } = await params; // ✅ await params trước
   const cinemaId = searchParams?.cinemaId;
-
   const queryClient = getQueryClient();
   await queryClient.prefetchQuery({
     queryKey: ['movie-detail', id],
     queryFn: () => getMovieDetail(id),
+  });
+  const availableCities = await queryClient.fetchQuery({
+    queryKey: ['movie-available-cities'],
+    queryFn: () => getAvailableCities(),
   });
   if (cinemaId) {
     await queryClient.prefetchQuery({
@@ -39,7 +42,7 @@ export default async function MovieDetailsPage({
           <MovieCast movieId={id} />
         </section>
 
-        <DateSelect movieId={id} cinemaId={cinemaId} />
+        <DateSelect movieId={id} cinemaId={cinemaId}  availableCities={availableCities}/>
         <TrailerModal/>
       </div>
     </HydrationBoundary>

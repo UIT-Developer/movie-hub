@@ -24,9 +24,11 @@ import { DateSelect7Days } from 'apps/web/src/components/date-select-7days';
 export const DateSelect = ({
   movieId,
   cinemaId,
+  availableCities,
 }: {
   movieId: string;
   cinemaId?: string;
+  availableCities: string[];
 }) => {
   const router = useRouter();
   const [selected, setSelected] = useState<string>(
@@ -34,6 +36,7 @@ export const DateSelect = ({
   );
   const [selectedLocation, setSelectedLocation] =
     useState<string>('Ho Chi Minh City');
+    // useState<string>(availableCities[0] || '');
   const [selectedShowtime, setSelectedShowtime] = useState<string | null>();
 
 
@@ -87,14 +90,10 @@ export const DateSelect = ({
         <BlurCircle top="100px" right="0px" />
         {/* Date select */}
         <div className="flex w-full flex-col items-center justify-between gap-10 md:flex-row">
-          <DateSelect7Days
-            selected={selected}
-            onSelect={setSelected}
-  
-          />
+          <DateSelect7Days selected={selected} onSelect={setSelected} />
 
           <Button
-          disabled={!selectedShowtime}
+            disabled={!selectedShowtime}
             onClick={onBookHandler}
             className="mt-6 ml-auto cursor-pointer px-8 py-2 transition-all hover:bg-rose-500/90 max-sm:mx-auto"
           >
@@ -118,6 +117,15 @@ export const DateSelect = ({
                 />
               </SelectTrigger>
               <SelectContent className="text-rose-400" position="popper">
+                {/* {availableCities?.map((city) => (
+                  <SelectItem
+                    key={city}
+                    value={city}
+                    className="data-[disabled]:text-gray-500 data-[highlighted]:bg-rose-500/20 data-[highlighted]:text-rose-300"
+                  >
+                    {city}
+                  </SelectItem>
+                ))} */}
                 <SelectItem value="Hồ Chí Minh">Hồ Chí Minh</SelectItem>
                 <SelectItem value="Đà Nẵng">Đà Nẵng</SelectItem>
                 <SelectItem value="Hà Nội">Hà Nội</SelectItem>

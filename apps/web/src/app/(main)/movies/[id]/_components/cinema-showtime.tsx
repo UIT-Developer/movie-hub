@@ -29,7 +29,7 @@ export const CinemaShowtime = ({
   // Query showtimes theo ngày
   const { data: showtimes, isLoading } = useGetMovieShowtimesAtCinema(
     cinema.id,
-     movieId,
+    movieId,
     { date: selectedDate }
   );
 
@@ -71,7 +71,7 @@ export const CinemaShowtime = ({
       {isOpen && (
         <div className="p-4 border-t border-rose-700/40 space-y-5">
           {isLoading ? (
-           <div className="flex flex-wrap gap-3">
+            <div className="flex flex-wrap gap-3">
               {Array.from({ length: 4 }).map((_, i) => (
                 <Skeleton
                   key={i}
@@ -84,9 +84,7 @@ export const CinemaShowtime = ({
           ) : (
             Object.entries(groupedShowtimes).map(([format, times]) => (
               <div key={format}>
-                <p className="font-semibold text-rose-200 mb-3">
-                  {format}
-                </p>
+                <p className="font-semibold text-rose-200 mb-3">{format}</p>
                 <div className="flex flex-wrap gap-3">
                   {times.map((s) => {
                     const start = new Date(s.startTime);
@@ -97,7 +95,7 @@ export const CinemaShowtime = ({
                       <button
                         key={s.id}
                         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-                        onClick={() => !disabled &&  s.id && handleClick(s.id)}
+                        onClick={() => !disabled && s.id && handleClick(s.id)}
                         disabled={disabled}
                         className={`border rounded-md px-3 py-1 transition-all ${
                           disabled
@@ -132,11 +130,9 @@ CinemaShowtime.Skeleton = function CinemaShowtimeSkeleton() {
       {/* Các nút giờ chiếu giả lập */}
       <div className="flex flex-wrap gap-3">
         {Array.from({ length: 4 }).map((_, i) => (
-          <Skeleton
-            key={i}
-            className="h-8 w-16 rounded-md bg-rose-500/30"
-          />
+          <Skeleton key={i} className="h-8 w-16 rounded-md bg-rose-500/30" />
         ))}
       </div>
     </div>
-  );}
+  );
+};

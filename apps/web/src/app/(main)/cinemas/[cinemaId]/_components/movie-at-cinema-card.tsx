@@ -4,6 +4,7 @@ import { Button } from '@movie-hub/shacdn-ui/button';
 import { Card, CardContent } from '@movie-hub/shacdn-ui/card';
 import { MovieWithShowtimeResponse } from 'apps/web/src/libs/types/movie.type';
 import { motion } from 'framer-motion';
+import { Globe2, Theater, Timer } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useCallback, useMemo } from 'react';
 
@@ -28,7 +29,7 @@ export const MovieAtCinemaCard = ({
 
   const now = useMemo(() => new Date(), []);
 
-  // Group showtimes by date string
+  // Group showtimes by date
   const showtimesByDate = useMemo(() => {
     return movie.showtimes.reduce((acc, s) => {
       const d = new Date(s.startTime);
@@ -43,10 +44,10 @@ export const MovieAtCinemaCard = ({
       acc[dateLabel].push(s);
       return acc;
     }, {} as Record<string, typeof movie.showtimes>);
-  }, [movie.showtimes]);
+  }, [movie]);
 
   return (
-    <Card className="w-full rounded-2xl bg-[#0f1335] text-white shadow-lg">
+    <Card className="w-full rounded-2xl bg-rose-500/20 border border-rose-500 text-gray-200 shadow-lg">
       <CardContent className="grid grid-cols-1 gap-6 p-4 md:grid-cols-[190px,1fr]">
         {/* Poster */}
         <button
@@ -68,16 +69,30 @@ export const MovieAtCinemaCard = ({
           {/* Movie info */}
           <div>
             <h2
-              className="mb-2 cursor-pointer text-2xl font-bold uppercase tracking-wide hover:text-yellow-400"
+              className="mb-2 cursor-pointer text-2xl font-bold uppercase tracking-wide text-rose-300 hover:text-rose-400"
               onClick={goToMovieDetail}
             >
               {movie.title}
             </h2>
 
-            <div className="flex flex-wrap items-center gap-3 text-sm text-gray-300">
-              <span>🎭 {movie.genre.map((g) => g.name).join(', ')}</span>
-              <span>⏱ {movie.runtime} phút</span>
-              <span>🌎 {movie.productionCountry}</span>
+            <div className="flex flex-wrap items-center gap-4 text-sm text-gray-300">
+              {/* Genre */}
+              <span className="flex items-center gap-1">
+                <Theater className="w-4 h-4 text-rose-400" />
+                {movie.genre.map((g) => g.name).join(', ')}
+              </span>
+
+              {/* Runtime */}
+              <span className="flex items-center gap-1">
+                <Timer className="w-4 h-4 text-rose-400" />
+                {movie.runtime} phút
+              </span>
+
+              {/* Country */}
+              <span className="flex items-center gap-1">
+                <Globe2 className="w-4 h-4 text-rose-400" />
+                {movie.productionCountry}
+              </span>
             </div>
 
             <p className="mt-2 line-clamp-3 text-sm text-gray-300">
@@ -85,18 +100,16 @@ export const MovieAtCinemaCard = ({
             </p>
           </div>
 
-          {/* Showtime groups by date */}
+          {/* Showtime groups */}
           <div className="flex flex-col gap-3">
             {Object.entries(showtimesByDate).map(([dateLabel, times]) => {
-              // lọc suất hợp lệ: có id & chưa chiếu
               const validTimes = times.filter((s) => {
                 const start = new Date(s.startTime);
                 return !!s.id && start >= now;
               });
 
-              // group tiếp theo format (STANDARD / DELUXE / 3D...)
               const byFormat = validTimes.reduce((acc, s) => {
-                const key = s.format; // FormatEnum -> string
+                const key = s.format;
                 if (!acc[key]) acc[key] = [];
                 acc[key].push(s);
                 return acc;
@@ -105,9 +118,9 @@ export const MovieAtCinemaCard = ({
               return (
                 <div
                   key={dateLabel}
-                  className="rounded-xl bg-[#1a1f47] p-4 shadow-md"
+                  className="rounded-xl bg-rose-500/10 border border-rose-500/30 p-4"
                 >
-                  <p className="mb-2 text-sm font-semibold text-gray-200">
+                  <p className="mb-2 text-sm font-semibold text-rose-300">
                     {dateLabel}
                   </p>
 
@@ -119,7 +132,7 @@ export const MovieAtCinemaCard = ({
                     Object.entries(byFormat).map(([format, showtimes]) => (
                       <div key={format} className="mb-3 last:mb-0">
                         <div className="mb-2 flex items-center justify-between text-xs">
-                          <span className="font-semibold uppercase tracking-wide text-gray-300">
+                          <span className="font-semibold uppercase tracking-wide text-rose-400">
                             {format}
                           </span>
                         </div>
@@ -148,8 +161,8 @@ export const MovieAtCinemaCard = ({
                                 className={[
                                   'rounded-xl border px-4 py-2 text-sm font-semibold',
                                   disabled
-                                    ? 'cursor-not-allowed border-gray-500 text-gray-500'
-                                    : 'border-yellow-400 bg-transparent text-yellow-300 hover:bg-yellow-400 hover:text-black',
+                                    ? 'cursor-not-allowed border-rose-800 text-rose-800'
+                                    : 'border-rose-400 bg-transparent text-rose-300 hover:bg-rose-400 hover:text-black',
                                 ].join(' ')}
                               >
                                 {timeLabel}
@@ -169,7 +182,7 @@ export const MovieAtCinemaCard = ({
           <button
             type="button"
             onClick={goToMovieDetail}
-            className="mt-1 w-fit text-sm font-bold text-yellow-400 underline hover:text-yellow-300"
+            className="mt-1 w-fit text-sm font-bold text-rose-300 underline hover:text-rose-400"
           >
             Xem thêm lịch chiếu
           </button>

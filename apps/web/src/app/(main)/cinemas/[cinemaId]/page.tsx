@@ -42,7 +42,7 @@ export default async function CinemaDetailPage({
   // });
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
-      <div className="flex flex-col items-center justify-center gap-4">
+      <div className="w-full flex flex-col items-center justify-center gap-4">
         <CinemaDetailCard cinema={cinema} />
         <MoviesAtCinema cinemaId={cinemaId} />
       </div>

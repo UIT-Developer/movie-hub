@@ -1,5 +1,6 @@
 /* eslint-disable no-useless-catch */
 import {
+  CinemaDetailResponse,
   GetShowtimesQuerySchema,
   ShowtimesFilterSchema,
   ShowtimeSummaryResponse
@@ -15,7 +16,7 @@ export const getMovieShowtimesAtCinema = async (
   cinemaId: string,
   movieId: string,
   query: GetShowtimesQuery
-): Promise<ApiResponse<ShowtimeSummaryResponse[]>> => {
+): Promise<ServiceResult<ShowtimeSummaryResponse[]>> => {
   try {
     
     const response = await api.get(`/cinemas/${cinemaId}/movies/${movieId}/showtimes`, {
@@ -80,7 +81,7 @@ export const searchCinemas= async (
   query: string,
   lon?: string,
   lat?: string,
-): Promise<CinemaLocationResponse> => {
+): Promise<CinemaLocationResponse[]> => {
   try {
 
     const response = await api.get('/cinemas/search', {
@@ -90,7 +91,7 @@ export const searchCinemas= async (
         lat,
       },
     });
-    return response.data as CinemaLocationResponse;
+    return response.data as CinemaLocationResponse[];
   }
     catch (error) {
     throw error;
@@ -148,6 +149,16 @@ export const getAvailableCities = async (): Promise<string[]> => {
   try {
     const response = await api.get('/cinemas/locations/cities');
     return response.data as string[];
+  } catch (error) {
+    throw error;
+  }
+
+}
+
+export const getAllCinemas = async (): Promise<ServiceResult<CinemaDetailResponse[]>> => {
+  try {
+    const response = await api.get('/cinemas');
+    return response.data as ServiceResult<CinemaDetailResponse[]>;
   } catch (error) {
     throw error;
   }

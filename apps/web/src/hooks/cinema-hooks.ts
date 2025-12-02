@@ -12,7 +12,11 @@ import {
   ShowtimesFilterDTO,
 } from '../libs/actions/cinemas/cinema-action';
 import { CinemaListResponse } from '../libs/types/cinema.type';
-import { ApiResponse, PaginationQuery, ServiceResult } from '@movie-hub/shared-types/common';
+import {
+  ApiResponse,
+  PaginationQuery,
+  ServiceResult,
+} from '@movie-hub/shared-types/common';
 import { ShowtimeSummaryResponse } from '@movie-hub/shared-types';
 import { MovieWithShowtimeResponse } from '../libs/types/movie.type';
 
@@ -22,16 +26,12 @@ export const useGetMovieShowtimesAtCinema = (
   query: GetShowtimesQuery
 ) => {
   return useQuery({
-    queryKey: ['cinemas', cinemaId, movieId, query.date],
+    queryKey: ['cinemas', cinemaId, movieId, query],
     queryFn: async () => {
-      const response: ApiResponse<ShowtimeSummaryResponse[]> =
+      const response: ServiceResult<ShowtimeSummaryResponse[]> =
         await getMovieShowtimesAtCinema(cinemaId, movieId, query);
 
-      if (response.success) {
-        return response.data; // chỉ trả về mảng showtimes
-      }
-
-      throw new Error(response.message ?? 'Failed to fetch showtimes');
+      return response.data;
     },
   });
 };
@@ -102,8 +102,10 @@ export const useGetCinemaDetail = (cinemaId: string) => {
   });
 };
 
-
-export const useGetMoviesAtCinema = (cinemaId: string, query: PaginationQuery ) => {
+export const useGetMoviesAtCinema = (
+  cinemaId: string,
+  query: PaginationQuery
+) => {
   return useInfiniteQuery({
     queryKey: ['movies-at-cinema', cinemaId, query],
     queryFn: async ({ pageParam = 1 }) => {
@@ -137,4 +139,4 @@ export const useGetAllMoviesWithShowtimes = (query: ShowtimesFilterDTO) => {
       return response.data;
     },
   });
-}
+};

@@ -24,11 +24,11 @@ export const MoviesAtCinema = ({ cinemaId }: { cinemaId: string }) => {
   }, [fetchNextPage, hasNextPage]);
 
    return (
-      <div className="relative md:px-16 lg:px-40 overflow-hidden">
+      <div className="w-full flex flex-col gap-6 my-8">
         {isError ? (
           <ErrorFallback message={error.message} />
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
             {isLoading ? (
               Array.from({ length: 9 }).map((_, idx) => (
                 <MovieCard.Skeleton key={idx} />

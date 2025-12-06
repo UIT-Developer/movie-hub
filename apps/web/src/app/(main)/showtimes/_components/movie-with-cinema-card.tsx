@@ -36,7 +36,7 @@ export const MovieWithCinemaCard = ({ movie }: MovieWithCinemaCardProps) => {
   const now = useMemo(() => new Date(), []);
 
   return (
-    <Card className="w-full rounded-2xl bg-rose-500/20 border border-rose-500 text-gray-200 shadow-xl">
+    <Card className="w-full rounded-2xl bg-rose-500/10 border border-rose-500/20 text-gray-200 shadow-xl">
       <CardContent className="grid grid-cols-1 gap-8 p-4 md:grid-cols-[260px,1fr] md:p-6">
         {/* LEFT: Poster + movie info */}
         <div className="flex flex-col gap-4">
@@ -155,10 +155,10 @@ export const MovieWithCinemaCard = ({ movie }: MovieWithCinemaCardProps) => {
                                   !disabled && goToShowtimeDetail(s.id)
                                 }
                                 className={[
-                                  'rounded-xl border px-4 py-2 text-xs font-semibold',
+                                  'rounded-md border px-4 py-2 text-xs font-semibold',
                                   disabled
                                     ? 'border-rose-800 text-rose-800 cursor-not-allowed'
-                                    : 'border-rose-400 bg-transparent text-rose-300 hover:bg-rose-400 hover:text-black',
+                                    : 'border-rose-400 bg-transparent text-rose-300 hover:bg-rose-500 hover:text-white',
                                 ].join(' ')}
                               >
                                 {label}

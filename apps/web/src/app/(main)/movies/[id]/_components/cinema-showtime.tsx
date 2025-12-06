@@ -16,6 +16,7 @@ interface CinemaShowtimeProps {
   cinema: CinemaLocationResponse;
   selectedDate: string; // YYYY-MM-DD
   onSelectShowtime: (showtimeId: string) => void;
+  selectedShowtime: string | null;
 }
 
 export const CinemaShowtime = ({
@@ -23,9 +24,10 @@ export const CinemaShowtime = ({
   cinema,
   selectedDate,
   onSelectShowtime,
+  selectedShowtime,
 }: CinemaShowtimeProps) => {
   const [isOpen, setIsOpen] = useState(true);
-  const [selectedShowtime, setSelectedShowtime] = useState<string | null>(null);
+
   // Query showtimes theo ngày
   const { data: showtimes, isLoading } = useGetMovieShowtimesAtCinema(
     cinema.id,
@@ -34,7 +36,7 @@ export const CinemaShowtime = ({
   );
 
   const handleClick = (showtimeId: string) => {
-    setSelectedShowtime(showtimeId);
+  
     onSelectShowtime(showtimeId);
   };
 
@@ -99,13 +101,13 @@ export const CinemaShowtime = ({
                         disabled={disabled}
                         className={`border rounded-md px-3 py-1 transition-all ${
                           disabled
-                            ? 'text-gray-500 border-gray-400 cursor-not-allowed'
+                            ? 'text-gray-100 bg-neutral-500 cursor-not-allowed'
                             : selectedShowtime === s.id
                             ? 'bg-rose-600 text-white border-rose-500'
                             : 'text-rose-400 border-rose-500/60 hover:bg-rose-600 hover:text-white hover:border-rose-500'
                         }`}
                       >
-                        {start.toLocaleTimeString([], {
+                        {start.toLocaleTimeString('vi-VN', {
                           hour: '2-digit',
                           minute: '2-digit',
                         })}

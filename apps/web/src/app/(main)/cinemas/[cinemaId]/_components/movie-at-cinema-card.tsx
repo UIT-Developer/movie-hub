@@ -5,6 +5,7 @@ import { Card, CardContent } from '@movie-hub/shacdn-ui/card';
 import { MovieWithShowtimeResponse } from 'apps/web/src/libs/types/movie.type';
 import { motion } from 'framer-motion';
 import { Globe2, Theater, Timer } from 'lucide-react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useCallback, useMemo } from 'react';
 
@@ -47,23 +48,22 @@ export const MovieAtCinemaCard = ({
   }, [movie]);
 
   return (
-    <Card className="w-full rounded-2xl bg-rose-500/20 border border-rose-500 text-gray-200 shadow-lg">
+    <Card className="w-full rounded-2xl bg-rose-500/10 border border-rose-500/20 text-gray-200 shadow-lg">
       <CardContent className="grid grid-cols-1 gap-6 p-4 md:grid-cols-[190px,1fr]">
         {/* Poster */}
         <button
           type="button"
           onClick={goToMovieDetail}
-          className="group h-full w-full overflow-hidden rounded-2xl focus:outline-none"
+          className="overflow-hidden rounded-2xl focus:outline-none flex items-center md:items-start justify-center"
         >
-          <motion.img
+          <Image
             src={movie.posterUrl}
             alt={movie.title}
-            className="h-full w-full max-h-[320px] object-cover md:max-h-[360px]"
-            initial={{ opacity: 0, scale: 0.97 }}
-            animate={{ opacity: 1, scale: 1 }}
+            width={260}
+            height={380}
+            className="h-auto w-full max-w-[260px] object-cover rounded-xl"
           />
         </button>
-
         {/* Right section */}
         <div className="flex flex-col gap-4">
           {/* Movie info */}
@@ -159,10 +159,10 @@ export const MovieAtCinemaCard = ({
                                   !disabled && goToShowtimeDetail(s.id)
                                 }
                                 className={[
-                                  'rounded-xl border px-4 py-2 text-sm font-semibold',
+                                  'rounded-lg border px-4 py-2 text-sm font-semibold',
                                   disabled
                                     ? 'cursor-not-allowed border-rose-800 text-rose-800'
-                                    : 'border-rose-400 bg-transparent text-rose-300 hover:bg-rose-400 hover:text-black',
+                                    : 'border-rose-400 bg-transparent text-rose-300 hover:bg-rose-500 hover:text-white',
                                 ].join(' ')}
                               >
                                 {timeLabel}

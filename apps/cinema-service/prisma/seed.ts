@@ -49,8 +49,8 @@ const cinemasData = [
     amenities: ['Parking', 'Food Court', 'IMAX', 'Premium Lounge'],
     facilities: { parking_slots: 300, wheelchair_accessible: true },
     images: [
-      'https://example.com/cgv-tanphu-1.jpg',
-      'https://example.com/cgv-tanphu-2.jpg',
+      'https://cdn.galaxycine.vn/media/2023/8/2/cgv-aeon-tan-phu-1_1690945376540.jpg',
+      'https://cdn.galaxycine.vn/media/2023/8/2/cgv-aeon-tan-phu-2_1690945376714.jpg',
     ],
     rating: 4.6,
     total_reviews: 2100,
@@ -76,7 +76,9 @@ const cinemasData = [
       'Modern cinema located inside Bitexco Financial Tower with premium services.',
     amenities: ['Parking', 'Snacks', 'VIP Zone'],
     facilities: { parking_slots: 100, wheelchair_accessible: true },
-    images: ['https://example.com/bhd-bitexco-1.jpg'],
+    images: [
+      'https://bhdstar.vn/wp-content/uploads/2023/04/BHD-Bitexco-3-scaled.jpg',
+    ],
     rating: 4.4,
     total_reviews: 1400,
     operating_hours: {
@@ -101,7 +103,9 @@ const cinemasData = [
       'Galaxy Nguyễn Du is one of the most popular cinemas for young audiences.',
     amenities: ['Parking', 'Food Court'],
     facilities: { parking_slots: 150, wheelchair_accessible: true },
-    images: ['https://example.com/galaxy-nguyendu.jpg'],
+    images: [
+      'https://cdn.galaxycine.vn/media/2022/12/13/nguyen-du-2_1670920067780.jpg',
+    ],
     rating: 4.3,
     total_reviews: 1750,
     operating_hours: {
@@ -125,7 +129,9 @@ const cinemasData = [
     description: 'Cinema with modern auditoriums and attractive ticket prices.',
     amenities: ['Parking'],
     facilities: { parking_slots: 80, wheelchair_accessible: true },
-    images: ['https://example.com/megags-caothang.jpg'],
+    images: [
+      'https://megagscinemas.vn/wp-content/uploads/2020/10/Slide-3-1.jpg',
+    ],
     rating: 4.1,
     total_reviews: 900,
     operating_hours: {
@@ -150,7 +156,9 @@ const cinemasData = [
       'Cinestar offers affordable prices with a modern and friendly environment.',
     amenities: ['Parking', 'Cafe'],
     facilities: { parking_slots: 120, wheelchair_accessible: true },
-    images: ['https://example.com/cinestar-hbt.jpg'],
+    images: [
+      'https://cinestar.com.vn/pic/galaxycns/quan1-3-min_1635137614.jpg',
+    ],
     rating: 4.2,
     total_reviews: 1100,
     operating_hours: {
@@ -174,7 +182,9 @@ const cinemasData = [
     description: 'Large Lotte branch with clean facilities and friendly staff.',
     amenities: ['Parking', 'Food Court', 'Shopping Mall'],
     facilities: { parking_slots: 250, wheelchair_accessible: true },
-    images: ['https://example.com/lotte-thuduc.jpg'],
+    images: [
+      'https://lottecinemavn.com/media/article/image/lottecine-thuduc.jpg',
+    ],
     rating: 4.5,
     total_reviews: 1650,
     operating_hours: {
@@ -199,7 +209,9 @@ const cinemasData = [
       'Located inside the tallest building in Vietnam, offering luxury IMAX theaters.',
     amenities: ['Parking', 'IMAX', 'Premium Lounge'],
     facilities: { parking_slots: 350, wheelchair_accessible: true },
-    images: ['https://example.com/cgv-landmark81.jpg'],
+    images: [
+      'https://cdn.galaxycine.vn/media/2023/8/2/cgv-landmark-81_1690946082438.jpg',
+    ],
     rating: 4.7,
     total_reviews: 2300,
     operating_hours: {
@@ -224,7 +236,9 @@ const cinemasData = [
       'Cinema located in Vincom Mega Mall Thảo Điền with modern screen and sound.',
     amenities: ['Parking', 'Food Court'],
     facilities: { parking_slots: 200, wheelchair_accessible: true },
-    images: ['https://example.com/bhd-thaodien.jpg'],
+    images: [
+      'https://bhdstar.vn/wp-content/uploads/2023/04/BHD-Thao-Dien-1-scaled.jpg',
+    ],
     rating: 4.4,
     total_reviews: 1280,
     operating_hours: {
@@ -235,6 +249,7 @@ const cinemasData = [
     status: CinemaStatus.ACTIVE,
   },
 ];
+
 
 
   const cinemas = [];

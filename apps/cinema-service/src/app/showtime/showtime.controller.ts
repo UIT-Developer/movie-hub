@@ -28,7 +28,7 @@ export class ShowtimeController {
       movieId: string;
       query: GetShowtimesQuery;
     }
-  ): Promise<ShowtimeSummaryResponse[]> {
+  ) {
     return this.showtimeService.getMovieShowtimesAtCinema(
       payload.cinemaId,
       payload.movieId,
@@ -44,7 +44,7 @@ export class ShowtimeController {
       movieId: string;
       query: AdminGetShowtimesQuery;
     }
-  ): Promise<ShowtimeSummaryResponse[]> {
+  ) {
     return this.showtimeService.adminGetMovieShowtimes(
       payload.cinemaId,
       payload.movieId,

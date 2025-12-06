@@ -7,19 +7,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@movie-hub/shacdn-ui/select';
-import { getVietnameseDay } from 'apps/web/src/app/utils/get-vietnamese-day';
-import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { toast } from 'sonner';
-import { BlurCircle } from '../../../../../components/blur-circle';
-import { CinemaShowtime } from './cinema-showtime';
+import { DateSelect7Days } from 'apps/web/src/components/date-select-7days';
 import {
   useGetCinemaDetail,
   useGetCinemasWithFilters,
 } from 'apps/web/src/hooks/cinema-hooks';
+import { useRouter } from 'next/navigation';
+import { useCallback, useEffect, useState } from 'react';
 import { useInView } from 'react-intersection-observer';
-import { DateSelect7Days } from 'apps/web/src/components/date-select-7days';
-
+import { toast } from 'sonner';
+import { BlurCircle } from '../../../../../components/blur-circle';
+import { CinemaShowtime } from './cinema-showtime';
 
 export const DateSelect = ({
   movieId,
@@ -36,10 +34,8 @@ export const DateSelect = ({
   );
   const [selectedLocation, setSelectedLocation] =
     useState<string>('Ho Chi Minh City');
-    // useState<string>(availableCities[0] || '');
-  const [selectedShowtime, setSelectedShowtime] = useState<string | null>();
-
-
+  // useState<string>(availableCities[0] || '');
+  const [selectedShowtime, setSelectedShowtime] = useState<string | null>(null);
 
   const handleSelectShowtime = useCallback((showtimeId: string) => {
     setSelectedShowtime(showtimeId);
@@ -49,19 +45,22 @@ export const DateSelect = ({
     if (!selected) return toast.error('Vui lòng chọn ngày');
     if (!selectedShowtime) return toast.error('Vui lòng chọn suất chiếu');
     router.push(`/showtimes/${selectedShowtime}`);
-    scrollTo(0, 0);
   }, [router, selected, selectedShowtime]);
 
   // Nếu có cinemaId => lấy chi tiết rạp
   const { data: cinemaDetail } = useGetCinemaDetail(cinemaId ?? '');
   // Nếu không có cinemaId => lấy danh sách theo city
 
-
-  const { data, fetchNextPage,hasNextPage, isFetchingNextPage, isLoading } =
-    useGetCinemasWithFilters({
-      city: selectedLocation,
-      limit: 10,
-    });
+  const {
+    data: cinemasFilter,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading,
+  } = useGetCinemasWithFilters({
+    city: selectedLocation,
+    limit: 10,
+  });
 
   const { ref, inView } = useInView();
 
@@ -80,8 +79,8 @@ export const DateSelect = ({
   const cinemas =
     cinemaId && cinemaDetail
       ? [cinemaDetail]
-      : data
-      ? data.pages.flatMap((page) => page.cinemas)
+      : cinemasFilter
+      ? cinemasFilter.pages.flatMap((page) => page.cinemas)
       : [];
   return (
     <div id="dateSelect" className="pt-30 relative">
@@ -95,7 +94,7 @@ export const DateSelect = ({
           <Button
             disabled={!selectedShowtime}
             onClick={onBookHandler}
-            className="mt-6 ml-auto cursor-pointer px-8 py-2 transition-all hover:bg-rose-500/90 max-sm:mx-auto"
+            className="cursor-pointer px-8 py-2 transition-all hover:bg-rose-500/90 max-sm:mx-auto"
           >
             Đặt ngay
           </Button>
@@ -126,7 +125,7 @@ export const DateSelect = ({
                     {city}
                   </SelectItem>
                 ))} */}
-                <SelectItem value="Hồ Chí Minh">Hồ Chí Minh</SelectItem>
+                <SelectItem value="Ho Chi Minh City">Hồ Chí Minh</SelectItem>
                 <SelectItem value="Đà Nẵng">Đà Nẵng</SelectItem>
                 <SelectItem value="Hà Nội">Hà Nội</SelectItem>
               </SelectContent>
@@ -150,6 +149,7 @@ export const DateSelect = ({
                 cinema={cinema}
                 selectedDate={selected}
                 onSelectShowtime={handleSelectShowtime}
+                selectedShowtime={selectedShowtime}
               />
             ))
           )}

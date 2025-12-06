@@ -2,6 +2,7 @@
 
 import { Button } from '@movie-hub/shacdn-ui/button';
 import { SeatTypeEnum } from 'apps/web/src/libs/types/showtime.type';
+import { Accessibility } from 'lucide-react';
 
 interface SeatProps {
   number: number; // số ghế đầu tiên
@@ -33,9 +34,21 @@ export const Seat = ({
     case SeatTypeEnum.STANDARD:
       typeClass = 'w-4 h-4 sm:w-6 sm:h-6 md:w-8 md:h-8 border-rose-500/90';
       break;
+
     case SeatTypeEnum.VIP:
       typeClass = 'w-4 h-4 sm:w-6 sm:h-6 md:w-8 md:h-8 border-yellow-500';
       break;
+
+    case SeatTypeEnum.PREMIUM:
+      typeClass =
+        'w-4 h-4 sm:w-6 sm:h-6 md:w-8 md:h-8 border-blue-400 shadow-[0_0_6px_#60a5fa]';
+      break;
+
+    case SeatTypeEnum.WHEELCHAIR:
+      typeClass =
+        'w-5 h-5 sm:w-7 sm:h-7 md:w-9 md:h-9 border-cyan-400 flex items-center justify-center text-[10px] md:text-xs';
+      break;
+
     case SeatTypeEnum.COUPLE:
       typeClass = 'w-8 h-4 sm:w-12 sm:h-6 md:w-16 md:h-8 border-purple-500';
       break;
@@ -61,6 +74,17 @@ export const Seat = ({
           {/* Hiển thị một số duy nhất ở giữa */}
           <span className="font-semibold">{number}</span>
         </div>
+      </Button>
+    );
+  }
+   if (type === SeatTypeEnum.WHEELCHAIR) {
+    return (
+      <Button
+        onClick={() => onClick(seatId)}
+        className={`${baseClass} ${typeClass} ${stateClass}`}
+        disabled={isDisabled || isHeld || isConfirmed}
+      >
+        <Accessibility className="w-3 h-3 md:w-4 md:h-4" />
       </Button>
     );
   }

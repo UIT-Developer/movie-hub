@@ -27,10 +27,12 @@ export const useGetShowtimeSeats = (showtimeId: string) => {
 
 export const useGetSessionTTL = (showtimeId: string) => {
   return useQuery({
-    queryKey: ['showtimes', showtimeId, 'ttl'],
+    queryKey: ['showtimes', showtimeId, 'ttl',],
     queryFn: async () => {
      return await getSessionTTL(showtimeId);
     },
     enabled: !!showtimeId,
+    staleTime: 3000,
+    gcTime: 5000,
   });
 };

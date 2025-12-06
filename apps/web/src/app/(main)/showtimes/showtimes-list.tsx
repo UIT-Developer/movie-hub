@@ -26,7 +26,7 @@ export const ShowtimesList = () => {
       <DateSelect7Days selected={selected} onSelect={setSelected} />
 
       {/* Nội dung danh sách phim + rạp */}
-      <div className="mt-4 flex flex-col gap-4">
+      <div className="mt-4 flex flex-col gap-6">
         {isLoading ? (
           // Skeleton khi load
           Array.from({ length: 3 }).map((_, i) => (

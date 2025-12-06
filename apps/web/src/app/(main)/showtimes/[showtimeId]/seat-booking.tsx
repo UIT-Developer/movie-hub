@@ -1,6 +1,7 @@
 'use client';
 import { useAuth } from '@clerk/nextjs';
 import { Button } from '@movie-hub/shacdn-ui/button';
+import { LeaveConfirmDialog } from 'apps/web/src/components/leave-confirm-modal';
 import { RequireSignIn } from 'apps/web/src/components/require-sign-in';
 import {
   useCheckUserBookingAtShowtime,
@@ -10,6 +11,8 @@ import {
   useGetSessionTTL,
   useGetShowtimeSeats,
 } from 'apps/web/src/hooks/showtime-hooks';
+
+import { useBookingLeaveProtection } from 'apps/web/src/hooks/use-route-leave-confirm';
 import { useBookingStore } from 'apps/web/src/stores/booking-store';
 import { Check } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -20,7 +23,8 @@ import { SeatMap } from './seat-map';
 const steps = ['Chọn ghế', 'Chọn đồ ăn', 'Thanh toán'];
 
 export const SeatBooking = ({ showtimeId }: { showtimeId: string }) => {
-    const {
+  const { open, confirmLeave, cancelLeave } = useBookingLeaveProtection();
+  const {
       initBookingData,
       updateHoldTimeSeconds,
       connectSocket,
@@ -100,19 +104,25 @@ export const SeatBooking = ({ showtimeId }: { showtimeId: string }) => {
 
   return (
     <RequireSignIn>
-      <div className="flex flex-col  w-full h-full justify-center items-center px-4 md:px-12">
-        {/* Stepper */}
-        <div className="flex justify-center items-center w-full mb-6 ">
-          {steps.map((label, index) => (
-            <div
-              key={index}
-              className={`flex items-center ${
-                index < steps.length - 1 ? 'flex-1' : ''
-              }`}
-            >
-              {/* Circle */}
+      <>
+        <LeaveConfirmDialog
+          open={open}
+          onConfirm={confirmLeave}
+          onCancel={cancelLeave}
+        />
+        <div className="flex flex-col  w-full h-full justify-center items-center px-4 md:px-12">
+          {/* Stepper */}
+          <div className="flex justify-center items-center w-full mb-6 ">
+            {steps.map((label, index) => (
               <div
-                className={`
+                key={index}
+                className={`flex items-center ${
+                  index < steps.length - 1 ? 'flex-1' : ''
+                }`}
+              >
+                {/* Circle */}
+                <div
+                  className={`
           w-10 h-10 rounded-full flex items-center justify-center font-bold text-white
           ${
             currentStep > index
@@ -122,49 +132,50 @@ export const SeatBooking = ({ showtimeId }: { showtimeId: string }) => {
               : 'bg-gray-600'
           }
         `}
-              >
-                {currentStep > index ? (
-                  <Check className="w-5 h-5" />
-                ) : (
-                  index + 1
+                >
+                  {currentStep > index ? (
+                    <Check className="w-5 h-5" />
+                  ) : (
+                    index + 1
+                  )}
+                </div>
+
+                {/* Line */}
+                {index < steps.length - 1 && (
+                  <div
+                    className={`flex-1 h-1 ${
+                      currentStep > index ? 'bg-rose-500' : 'bg-gray-600'
+                    } transition-all`}
+                  ></div>
                 )}
               </div>
+            ))}
+          </div>
 
-              {/* Line */}
-              {index < steps.length - 1 && (
-                <div
-                  className={`flex-1 h-1 ${
-                    currentStep > index ? 'bg-rose-500' : 'bg-gray-600'
-                  } transition-all`}
-                ></div>
-              )}
-            </div>
-          ))}
-        </div>
+          {/* Navigation buttons */}
+          <div className="flex w-full items-center justify-between gap-4 mt-6">
+            {currentStep > 0 ? (
+              <Button variant="outline" onClick={prevStep}>
+                Quay lại
+              </Button>
+            ) : (
+              <div></div>
+            )}
+            {currentStep < steps.length - 1 && (
+              <Button disabled={disableFirstStep} onClick={nextStep}>
+                Tiếp tục
+              </Button>
+            )}
+          </div>
 
-        {/* Navigation buttons */}
-        <div className="flex w-full items-center justify-between gap-4 mt-6">
-          {currentStep > 0 ? (
-            <Button variant="outline" onClick={prevStep}>
-              Quay lại
-            </Button>
-          ) : (
-            <div></div>
-          )}
-          {currentStep < steps.length - 1 && (
-            <Button disabled={disableFirstStep} onClick={nextStep}>
-              Tiếp tục
-            </Button>
-          )}
+          {/* Step content */}
+          <div className="flex-1 w-full p-4">
+            {currentStep === 0 && <SeatMap data={data} />}
+            {currentStep === 1 && <FoodSelector cinemaId={data?.cinemaId} />}
+            {currentStep === 2 && <BookingCheckout data={data} />}
+          </div>
         </div>
-
-        {/* Step content */}
-        <div className="flex-1 w-full p-4">
-          {currentStep === 0 && <SeatMap data={data} />}
-          {currentStep === 1 && <FoodSelector cinemaId={data?.cinemaId} />}
-          {currentStep === 2 && <BookingCheckout data={data} />}
-        </div>
-      </div>
+      </>
     </RequireSignIn>
   );
 };

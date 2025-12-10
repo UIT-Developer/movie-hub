@@ -1,3 +1,11 @@
+import CinemasFilter from "./ cinema-filter";
+
+
+
 export default function CinemaPage() {
-  return <div>Cinema Page</div>;
+  return (
+    <div>
+      <CinemasFilter />
+    </div>
+  )
 }

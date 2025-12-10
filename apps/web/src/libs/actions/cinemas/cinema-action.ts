@@ -3,13 +3,19 @@ import {
   CinemaDetailResponse,
   GetShowtimesQuerySchema,
   ShowtimesFilterSchema,
-  ShowtimeSummaryResponse
+  ShowtimeSummaryResponse,
 } from '@movie-hub/shared-types';
+import { PaginationQuery, ServiceResult } from '@movie-hub/shared-types/common';
 import z from 'zod';
 import api from '../../api-client';
-import { CinemaListResponse, CinemaLocationResponse } from '../../types/cinema.type';
-import { ApiResponse, PaginationQuery, ServiceResult } from '@movie-hub/shared-types/common';
-import { MovieWithCinemaAndShowtimeResponse, MovieWithShowtimeResponse } from '../../types/movie.type';
+import {
+  CinemaListResponse,
+  CinemaLocationResponse,
+} from '../../types/cinema.type';
+import {
+  MovieWithCinemaAndShowtimeResponse,
+  MovieWithShowtimeResponse,
+} from '../../types/movie.type';
 
 export type GetShowtimesQuery = z.infer<typeof GetShowtimesQuerySchema>;
 export const getMovieShowtimesAtCinema = async (
@@ -18,17 +24,19 @@ export const getMovieShowtimesAtCinema = async (
   query: GetShowtimesQuery
 ): Promise<ServiceResult<ShowtimeSummaryResponse[]>> => {
   try {
-    
-    const response = await api.get(`/cinemas/${cinemaId}/movies/${movieId}/showtimes`, {
-      params: query,
-    });
+    const response = await api.get(
+      `/cinemas/${cinemaId}/movies/${movieId}/showtimes`,
+      {
+        params: query,
+      }
+    );
     return response.data;
   } catch (error) {
     throw error;
   }
 };
 
-export const getMovieAtCinemas= async (
+export const getMovieAtCinemas = async (
   cinemaId: string,
   query: PaginationQuery
 ): Promise<ServiceResult<MovieWithShowtimeResponse[]>> => {
@@ -40,10 +48,11 @@ export const getMovieAtCinemas= async (
   } catch (error) {
     throw error;
   }
-
-}
+};
 export type ShowtimesFilterDTO = z.infer<typeof ShowtimesFilterSchema>;
-export const getAllMoviesWithShowtimes = async (query: ShowtimesFilterDTO): Promise<ServiceResult<MovieWithCinemaAndShowtimeResponse[]>>=> {
+export const getAllMoviesWithShowtimes = async (
+  query: ShowtimesFilterDTO
+): Promise<ServiceResult<MovieWithCinemaAndShowtimeResponse[]>> => {
   try {
     const response = await api.get('/cinemas/movies/showtimes', {
       params: query,
@@ -52,15 +61,14 @@ export const getAllMoviesWithShowtimes = async (query: ShowtimesFilterDTO): Prom
   } catch (error) {
     throw error;
   }
+};
 
-}
-
-export const GetCinemasNearby= async (
+export const GetCinemasNearby = async (
   lat: number,
   lon: number,
   radius?: number,
-  limit?: number,
-): Promise<CinemaListResponse> => {
+  limit?: number
+): Promise<ServiceResult<CinemaListResponse>> => {
   try {
     const response = await api.get('/cinemas/nearby', {
       params: {
@@ -70,20 +78,18 @@ export const GetCinemasNearby= async (
         limit,
       },
     });
-    return response.data as CinemaListResponse;
+    return response.data as ServiceResult<CinemaListResponse>;
   } catch (error) {
     throw error;
   }
-}
+};
 
-
-export const searchCinemas= async (
+export const searchCinemas = async (
   query: string,
   lon?: string,
-  lat?: string,
-): Promise<CinemaLocationResponse[]> => {
+  lat?: string
+): Promise<ServiceResult<CinemaLocationResponse[]>> => {
   try {
-
     const response = await api.get('/cinemas/search', {
       params: {
         query,
@@ -91,46 +97,41 @@ export const searchCinemas= async (
         lat,
       },
     });
-    return response.data as CinemaLocationResponse[];
-  }
-    catch (error) {
+    return response.data as ServiceResult<CinemaLocationResponse[]>;
+  } catch (error) {
     throw error;
   }
-}
+};
 
-export const getCinemasWithFilters= async (
-  params: {
-    lat?: string;
-    lon?: string;
-    radius?: string;
-    city?: string;
-    district?: string;
-    amenities?: string;
-    hallTypes?: string;
-    minRating?: string;
-    page?: number;
-    limit?: number;
-    sortBy?: 'distance' | 'rating' | 'name';
-    sortOrder?: 'asc' | 'desc';
-  }
-): Promise<CinemaListResponse> => {
+export const getCinemasWithFilters = async (params: {
+  lat?: string;
+  lon?: string;
+  radius?: string;
+  city?: string;
+  district?: string;
+  amenities?: string;
+  hallTypes?: string;
+  minRating?: string;
+  page?: number;
+  limit?: number;
+  sortBy?: string;
+  sortOrder?: string;
+}): Promise<ServiceResult<CinemaListResponse>> => {
   try {
-
     const response = await api.get('/cinemas/filters', {
       params,
     });
-    return response.data as CinemaListResponse;
-  }
-    catch (error) {
+    return response.data as ServiceResult<CinemaListResponse>;
+  } catch (error) {
     throw error;
   }
-}
+};
 
-export const getCinemaDetail= async (
+export const getCinemaDetail = async (
   cinemaId: string,
   userLatitude?: number,
-  userLongitude?: number,
-): Promise<CinemaLocationResponse> => {
+  userLongitude?: number
+): Promise<ServiceResult<CinemaLocationResponse>> => {
   try {
     const response = await api.get(`/cinemas/${cinemaId}`, {
       params: {
@@ -138,29 +139,30 @@ export const getCinemaDetail= async (
         userLongitude,
       },
     });
-    return response.data as CinemaLocationResponse;
-  }
-    catch (error) {
-    throw error;
-  }
-}
-
-export const getAvailableCities = async (): Promise<string[]> => {
-  try {
-    const response = await api.get('/cinemas/locations/cities');
-    return response.data as string[];
+    return response.data;
   } catch (error) {
     throw error;
   }
+};
 
-}
+export const getAvailableCities = async (): Promise<
+  ServiceResult<string[]>
+> => {
+  try {
+    const response = await api.get('/cinemas/locations/cities');
+    return response.data as ServiceResult<string[]>;
+  } catch (error) {
+    throw error;
+  }
+};
 
-export const getAllCinemas = async (): Promise<ServiceResult<CinemaDetailResponse[]>> => {
+export const getAllCinemas = async (): Promise<
+  ServiceResult<CinemaDetailResponse[]>
+> => {
   try {
     const response = await api.get('/cinemas');
     return response.data as ServiceResult<CinemaDetailResponse[]>;
   } catch (error) {
     throw error;
   }
-
-}
+};

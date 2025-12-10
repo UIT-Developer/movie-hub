@@ -11,7 +11,10 @@ import {
   searchCinemas,
   ShowtimesFilterDTO,
 } from '../libs/actions/cinemas/cinema-action';
-import { CinemaListResponse } from '../libs/types/cinema.type';
+import {
+  CinemaListResponse,
+  CinemaLocationResponse,
+} from '../libs/types/cinema.type';
 import {
   ApiResponse,
   PaginationQuery,
@@ -45,8 +48,11 @@ export const useGetCinemasNearby = (
   return useQuery({
     queryKey: ['cinemas', 'nearby', langtitude, longtitude, radius, limit],
     queryFn: async () => {
-      return await GetCinemasNearby(langtitude, longtitude, radius, limit);
+      const response: ServiceResult<CinemaListResponse> =
+        await GetCinemasNearby(langtitude, longtitude, radius, limit);
+      return response.data;
     },
+    enabled: !!langtitude && !!longtitude,
   });
 };
 
@@ -61,13 +67,19 @@ export const useGetCinemasWithFilters = (params: {
   minRating?: string;
   page?: number;
   limit?: number;
-  sortBy?: 'distance' | 'rating' | 'name';
-  sortOrder?: 'asc' | 'desc';
+  sortBy?: string;
+  sortOrder?: string;
 }) => {
   return useInfiniteQuery<CinemaListResponse>({
     queryKey: ['cinemas', params],
-    queryFn: ({ pageParam = 1 }) =>
-      getCinemasWithFilters({ ...params, page: pageParam as number }),
+    queryFn: async ({ pageParam = 1 }) => {
+      const response: ServiceResult<CinemaListResponse> =
+        await getCinemasWithFilters({
+          ...params,
+          page: pageParam as number,
+        });
+      return response.data;
+    },
     getNextPageParam: (lastPage) => {
       if (lastPage.hasMore) {
         return lastPage.page + 1;
@@ -87,8 +99,11 @@ export const useSearchCinemas = (
   return useQuery({
     queryKey: ['cinemas', 'search', query, longitude, latitude],
     queryFn: async () => {
-      return await searchCinemas(query, longitude, latitude);
+      const response: ServiceResult<CinemaLocationResponse[]> =
+        await searchCinemas(query, longitude, latitude);
+      return response.data;
     },
+    enabled: query.trim().length > 0,
   });
 };
 
@@ -96,7 +111,9 @@ export const useGetCinemaDetail = (cinemaId: string) => {
   return useQuery({
     queryKey: ['cinemas', 'detail', cinemaId],
     queryFn: async () => {
-      return await getCinemaDetail(cinemaId);
+      const response: ServiceResult<CinemaLocationResponse> =
+        await getCinemaDetail(cinemaId);
+      return response.data;
     },
     enabled: !!cinemaId,
   });

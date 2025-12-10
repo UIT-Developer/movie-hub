@@ -1,44 +1,72 @@
-import { Button } from "@movie-hub/shacdn-ui/button";
-import { Card, CardContent } from "@movie-hub/shacdn-ui/card";
-import { CinemaLocationResponse } from "apps/web/src/libs/types/cinema.type";
-import { MapPin, Star } from "lucide-react";
-import Image from "next/image";
+import { Button } from '@movie-hub/shacdn-ui/button';
+import { Card, CardContent } from '@movie-hub/shacdn-ui/card';
+import { CinemaLocationResponse } from 'apps/web/src/libs/types/cinema.type';
+import { MapPin, Star } from 'lucide-react';
+import Image from 'next/image';
 
-export function CinemaLocationCard({ cinema, onSelect }: {
-  cinema: CinemaLocationResponse,
-  onSelect: (cinemaId: string) => void,
+export function CinemaLocationCard({
+  cinema,
+  onSelect,
+}: {
+  cinema: CinemaLocationResponse;
+  onSelect: (cinemaId: string) => void;
 }) {
   return (
     <Card
-      className="w-full rounded-2xl shadow-md hover:shadow-lg transition-all p-4 cursor-pointer bg-gray-900 border-none"
+      className="
+        w-full cursor-pointer
+        rounded-2xl border border-rose-500/20
+        bg-black/70
+        shadow-md shadow-rose-500/10
+        transition-all
+        hover:-translate-y-1
+        hover:border-rose-400/60
+        hover:shadow-lg hover:shadow-rose-500/30
+        p-4
+      "
       onClick={() => onSelect(cinema.id)}
     >
       <CardContent className="p-0 flex flex-col gap-3">
-        <div className="relative w-full h-40 rounded-xl overflow-hidden border ">
+        <div className="relative w-full h-40 rounded-xl overflow-hidden border border-rose-500/20 bg-rose-950/40">
           <Image
             src={cinema.images?.[0] || '/images/placeholder-bg.png'}
             alt={cinema.name}
             fill
-            className="object-cover"
+            className="object-cover transition-transform duration-500 group-hover:scale-105"
           />
         </div>
 
         <div className="flex flex-col gap-1">
-          <h3 className="text-white text-lg font-semibold truncate overflow-hidden whitespace-nowrap">
+          <h3 className="text-white text-base font-semibold truncate">
             {cinema.name}
           </h3>
-          <div className="flex items-center text-sm text-gray-500">
-            <MapPin className="w-4 h-4 mr-1" />
-            {cinema.location?.distanceText || '—'}
+
+          <div className="flex items-center text-xs text-rose-200/80">
+            <MapPin className="w-4 h-4 mr-1 text-rose-400" />
+            {cinema.location?.distanceText || 'Khoảng cách chưa xác định'}
           </div>
 
-          <div className="flex items-center gap-1 text-yellow-500 text-sm">
-            <Star className="w-4 h-4" /> {cinema.rating || '—'}
-            <span className="text-gray-500 ml-1">({cinema.totalReviews})</span>
+          <div className="flex items-center gap-1 text-sm">
+            <Star className="w-4 h-4 text-amber-300 fill-amber-300" />
+            <span className="text-amber-200">
+              {cinema.rating ? cinema.rating.toFixed(1) : '—'}
+            </span>
+            <span className="text-[11px] text-gray-400 ml-1">
+              ({cinema.totalReviews})
+            </span>
           </div>
         </div>
 
-        <Button  className="w-full mt-2 rounded-xl">Xem chi tiết</Button>
+        <Button
+          className="
+            w-full mt-2 rounded-xl
+            bg-rose-500 hover:bg-rose-600
+            text-white
+            border-none
+          "
+        >
+          Xem chi tiết
+        </Button>
       </CardContent>
     </Card>
   );
@@ -46,17 +74,26 @@ export function CinemaLocationCard({ cinema, onSelect }: {
 
 CinemaLocationCard.Skeleton = function CinemaLocationCardSkeleton() {
   return (
-    <Card className="w-full rounded-2xl shadow-md p-4 animate-pulse">
+    <Card
+      className="
+        w-full rounded-2xl p-4
+        bg-black/70
+        border border-rose-500/20
+        shadow-md shadow-rose-500/10
+        animate-pulse
+      "
+    >
       <CardContent className="p-0 flex flex-col gap-3">
-        <div className="w-full h-40 rounded-xl bg-gray-700" />
+        <div className="w-full h-40 rounded-xl bg-rose-500/10" />
 
         <div className="flex flex-col gap-2">
-          <div className="h-6 w-3/4 bg-gray-700 rounded" />
-          <div className="h-4 w-1/2 bg-gray-700 rounded" />
-          <div className="h-4 w-1/3 bg-gray-700 rounded" />
+          <div className="h-5 w-3/4 bg-rose-500/15 rounded" />
+          <div className="h-4 w-1/2 bg-rose-500/10 rounded" />
+          <div className="h-4 w-1/3 bg-rose-500/10 rounded" />
         </div>
-        <div className="h-10 w-full bg-gray-700 rounded-xl mt-2" />
+
+        <div className="h-10 w-full bg-rose-500/15 rounded-xl mt-2" />
       </CardContent>
     </Card>
   );
-}
+};

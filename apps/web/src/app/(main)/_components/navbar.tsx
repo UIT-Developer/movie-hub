@@ -85,9 +85,9 @@ export const Navbar = ({ cinemas }: NavbarProps) => {
 
             {[
               { href: '/movies', label: 'Phim' },
+              { href: '/cinemas', label: 'Rạp' },
               { href: '/showtimes', label: 'Lịch chiếu' },
               { href: '/promotions', label: 'Ưu đãi' },
-              { href: '/services', label: 'Dịch vụ' },
             ].map((item) => (
               <Link
                 key={item.href}

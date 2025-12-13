@@ -1,6 +1,6 @@
 'use client';
 
-import { useBookingStore } from 'apps/web/src/stores/booking-store';
+import { useBookingStore } from '@/stores/booking-store';
 import { useCallback, useState } from 'react';
 import { FoodCard } from './_components/food-card';
 
@@ -11,12 +11,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@movie-hub/shacdn-ui/select';
-import { useGetConcessions } from 'apps/web/src/hooks/concession-hooks';
+import { useGetConcessions } from '@/hooks/concession-hooks';
 import {
   ConcessionCategory,
   ConcessionDto,
-} from 'apps/web/src/libs/types/concession.type';
-import { Loader } from 'apps/web/src/components/loader';
+} from '@/libs/types/concession.type';
+import { Loader } from '@/components/loader';
 import { toast } from 'sonner';
 
 export const FoodSelector = ({ cinemaId }: { cinemaId?: string }) => {

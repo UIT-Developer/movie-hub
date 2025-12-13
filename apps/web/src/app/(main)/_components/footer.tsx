@@ -1,4 +1,4 @@
-import { Logo } from "apps/web/src/components/logo";
+import { Logo } from "@/components/logo";
 import Image from "next/image";
 
 export const Footer = () =>  {

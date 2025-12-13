@@ -8,7 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@movie-hub/shacdn-ui/card';
-import { formatPrice } from 'apps/web/src/app/utils/format-price';
+import { formatPrice } from '@/app/utils/format-price';
 
 interface TicketProps {
   movie: { title: string; date: string; time: string; cinema: string };

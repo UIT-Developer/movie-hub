@@ -2,7 +2,7 @@
 
 import { Button } from '@movie-hub/shacdn-ui/button';
 import { Card, CardContent } from '@movie-hub/shacdn-ui/card';
-import { MovieWithShowtimeResponse } from 'apps/web/src/libs/types/movie.type';
+import { MovieWithShowtimeResponse } from '@/libs/types/movie.type';
 import { motion } from 'framer-motion';
 import { Globe2, Theater, Timer } from 'lucide-react';
 import Image from 'next/image';

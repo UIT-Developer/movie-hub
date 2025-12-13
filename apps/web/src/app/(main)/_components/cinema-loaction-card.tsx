@@ -1,6 +1,6 @@
 import { Button } from "@movie-hub/shacdn-ui/button";
 import { Card, CardContent } from "@movie-hub/shacdn-ui/card";
-import { CinemaLocationResponse } from "apps/web/src/libs/types/cinema.type";
+import { CinemaLocationResponse } from "@/libs/types/cinema.type";
 import { MapPin, Star } from "lucide-react";
 import Image from "next/image";
 

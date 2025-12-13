@@ -1,7 +1,7 @@
 'use client';
 import { Button } from '@movie-hub/shacdn-ui/button';
 import { Input } from '@movie-hub/shacdn-ui/input';
-import { CinemaLocationResponse } from 'apps/web/src/libs/types/cinema.type';
+import { CinemaLocationResponse } from '@/libs/types/cinema.type';
 import { SearchIcon, XIcon } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';

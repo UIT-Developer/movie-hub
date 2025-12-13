@@ -1,12 +1,12 @@
 'use client';
-import { BlurCircle } from 'apps/web/src/components/blur-circle';
-import { ShowtimeSeatResponse } from 'apps/web/src/libs/types/showtime.type';
-import { useBookingStore } from 'apps/web/src/stores/booking-store';
+import { BlurCircle } from '@/components/blur-circle';
+import { ShowtimeSeatResponse } from '@/libs/types/showtime.type';
+import { useBookingStore } from '@/stores/booking-store';
 import { CinemaScreen } from './_components/cinema-screen';
 import { SeatGrid } from './_components/seat-grid';
 import { SeatLegend } from './_components/seat-legend';
 import { TicketTypeList } from './_components/ticket-price-list';
-import { Loader } from 'apps/web/src/components/loader';
+import { Loader } from '@/components/loader';
 
 export const SeatMap = ({ data }: { data?: ShowtimeSeatResponse }) => {
   const {

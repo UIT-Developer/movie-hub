@@ -1,0 +1,457 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { Building2, DoorOpen, DollarSign, Calendar, Sparkles, Edit2, Check, X } from 'lucide-react';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@movie-hub/shacdn-ui/card';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@movie-hub/shacdn-ui/select';
+import { Badge } from '@movie-hub/shacdn-ui/badge';
+import { Button } from '@movie-hub/shacdn-ui/button';
+import { Input } from '@movie-hub/shacdn-ui/input';
+import { useToast } from '../_libs/use-toast';
+import type { Cinema, Hall, SeatType, DayType } from '../_libs/types';
+import { mockCinemas, mockHalls } from '../_libs/mockData';
+
+interface TicketPricing {
+  id: string;
+  hallId: string;
+  seatType: SeatType;
+  dayType: DayType;
+  price: number;
+}
+
+export default function TicketPricingPage() {
+  const [cinemas, setCinemas] = useState<Cinema[]>([]);
+  const [halls, setHalls] = useState<Hall[]>([]);
+  const [selectedCinemaId, setSelectedCinemaId] = useState('');
+  const [selectedHallId, setSelectedHallId] = useState('');
+  const [pricings, setPricings] = useState<TicketPricing[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editPrice, setEditPrice] = useState('');
+  const { toast } = useToast();
+
+  useEffect(() => {
+    fetchCinemas();
+  }, []);
+
+  const fetchCinemas = async () => {
+    try {
+      setCinemas(mockCinemas);
+      setHalls(mockHalls);
+    } catch {
+      toast({
+        title: 'Error',
+        description: 'Failed to fetch cinemas',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const fetchPricings = async (hallId: string) => {
+    try {
+      setLoading(true);
+      // Mock data
+      const seatTypes: SeatType[] = ['STANDARD', 'VIP', 'COUPLE', 'PREMIUM', 'WHEELCHAIR'];
+      const dayTypes: DayType[] = ['WEEKDAY', 'WEEKEND', 'HOLIDAY'];
+      
+      // Each combination has its own price
+      const mockPrices: Record<string, number> = {
+        // STANDARD
+        'STANDARD_WEEKDAY': 75000,
+        'STANDARD_WEEKEND': 90000,
+        'STANDARD_HOLIDAY': 110000,
+        // VIP
+        'VIP_WEEKDAY': 120000,
+        'VIP_WEEKEND': 150000,
+        'VIP_HOLIDAY': 180000,
+        // COUPLE
+        'COUPLE_WEEKDAY': 200000,
+        'COUPLE_WEEKEND': 250000,
+        'COUPLE_HOLIDAY': 300000,
+        // PREMIUM
+        'PREMIUM_WEEKDAY': 150000,
+        'PREMIUM_WEEKEND': 180000,
+        'PREMIUM_HOLIDAY': 220000,
+        // WHEELCHAIR
+        'WHEELCHAIR_WEEKDAY': 75000,
+        'WHEELCHAIR_WEEKEND': 90000,
+        'WHEELCHAIR_HOLIDAY': 110000,
+      };
+
+      const mockPricings: TicketPricing[] = [];
+      let idCounter = 1;
+
+      seatTypes.forEach(seatType => {
+        dayTypes.forEach(dayType => {
+          const key = `${seatType}_${dayType}`;
+          mockPricings.push({
+            id: `pricing_${idCounter++}`,
+            hallId: hallId,
+            seatType: seatType,
+            dayType: dayType,
+            price: mockPrices[key] || 75000,
+          });
+        });
+      });
+
+      setPricings(mockPricings);
+    } catch {
+      toast({
+        title: 'Error',
+        description: 'Failed to fetch ticket pricings',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleHallChange = (hallId: string) => {
+    setSelectedHallId(hallId);
+    fetchPricings(hallId);
+  };
+
+  const startEdit = (pricing: TicketPricing) => {
+    setEditingId(pricing.id);
+    setEditPrice(pricing.price.toString());
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditPrice('');
+  };
+
+  const saveEdit = async (pricingId: string) => {
+    try {
+      const newPrice = parseInt(editPrice);
+      if (isNaN(newPrice) || newPrice <= 0) {
+        toast({
+          title: 'Error',
+          description: 'Please enter a valid price',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      setPricings(prev =>
+        prev.map(p => (p.id === pricingId ? { ...p, price: newPrice } : p))
+      );
+
+      toast({
+        title: 'Success',
+        description: 'Ticket pricing updated successfully',
+      });
+
+      cancelEdit();
+    } catch {
+      toast({
+        title: 'Error',
+        description: 'Failed to update ticket pricing',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat('vi-VN', {
+      style: 'currency',
+      currency: 'VND',
+    }).format(price);
+  };
+
+  const getSeatTypeIcon = (type: SeatType) => {
+    switch (type) {
+      case 'VIP':
+        return '👑';
+      case 'COUPLE':
+        return '💑';
+      case 'PREMIUM':
+        return '⭐';
+      case 'WHEELCHAIR':
+        return '♿';
+      default:
+        return '🪑';
+    }
+  };
+
+  const getDayTypeColor = (type: DayType) => {
+    switch (type) {
+      case 'WEEKDAY':
+        return 'bg-blue-100 text-blue-700 border-blue-200';
+      case 'WEEKEND':
+        return 'bg-purple-100 text-purple-700 border-purple-200';
+      case 'HOLIDAY':
+        return 'bg-amber-100 text-amber-700 border-amber-200';
+    }
+  };
+
+  const getDayTypeIcon = (type: DayType) => {
+    switch (type) {
+      case 'WEEKDAY':
+        return '📅';
+      case 'WEEKEND':
+        return '🎉';
+      case 'HOLIDAY':
+        return '✨';
+    }
+  };
+
+  const selectedCinema = cinemas.find(c => c.id === selectedCinemaId);
+  const selectedHall = halls.find(h => h.id === selectedHallId);
+
+  // Group pricings by seat type
+  const groupedPricings = pricings.reduce((acc, pricing) => {
+    if (!acc[pricing.seatType]) {
+      acc[pricing.seatType] = [];
+    }
+    acc[pricing.seatType].push(pricing);
+    return acc;
+  }, {} as Record<SeatType, TicketPricing[]>);
+
+  const seatTypeOrder: SeatType[] = ['STANDARD', 'VIP', 'COUPLE', 'PREMIUM', 'WHEELCHAIR'];
+  const dayTypeOrder: DayType[] = ['WEEKDAY', 'WEEKEND', 'HOLIDAY'];
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
+            <DollarSign className="h-8 w-8 text-emerald-600" />
+            Ticket Pricing Management
+          </h1>
+          <p className="text-gray-500 mt-1">Manage ticket prices by seat type and day type</p>
+        </div>
+      </div>
+
+      {/* Selectors */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Select Hall</CardTitle>
+          <CardDescription>Choose a cinema and hall to manage ticket pricing</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Cinema Selector */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Cinema</label>
+              <Select value={selectedCinemaId} onValueChange={setSelectedCinemaId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select cinema" />
+                </SelectTrigger>
+                <SelectContent>
+                  {cinemas.map((cinema) => (
+                    <SelectItem key={cinema.id} value={cinema.id}>
+                      <div className="flex items-center gap-2">
+                        <Building2 className="h-4 w-4" />
+                        {cinema.name}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Hall Selector */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Hall</label>
+              <Select
+                value={selectedHallId}
+                onValueChange={handleHallChange}
+                disabled={!selectedCinemaId}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select hall" />
+                </SelectTrigger>
+                <SelectContent>
+                  {halls
+                    .filter(h => h.cinemaId === selectedCinemaId)
+                    .map((hall) => (
+                      <SelectItem key={hall.id} value={hall.id}>
+                        <div className="flex items-center gap-2">
+                          <DoorOpen className="h-4 w-4" />
+                          {hall.name} - {hall.capacity} seats
+                        </div>
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {loading ? (
+        <div className="text-center py-12">
+          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-emerald-600 border-r-transparent"></div>
+          <p className="mt-4 text-gray-500">Loading pricing data...</p>
+        </div>
+      ) : selectedHallId && pricings.length > 0 ? (
+        <>
+          {/* Hall Info */}
+          <Card className="border-2 border-emerald-200 bg-gradient-to-r from-emerald-50 to-teal-50">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-emerald-100 rounded-xl">
+                    <DoorOpen className="h-6 w-6 text-emerald-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-lg">{selectedHall?.name}</h3>
+                    <p className="text-sm text-gray-600">
+                      {selectedCinema?.name} • {selectedHall?.capacity} seats • {selectedHall?.type}
+                    </p>
+                  </div>
+                </div>
+                <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200">
+                  {pricings.length} Pricing Rules
+                </Badge>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Pricing Grid */}
+          <div className="space-y-4">
+            {seatTypeOrder.map(seatType => {
+              const seatPricings = groupedPricings[seatType];
+              if (!seatPricings) return null;
+
+              // Sort by day type
+              const sortedPricings = [...seatPricings].sort((a, b) => 
+                dayTypeOrder.indexOf(a.dayType) - dayTypeOrder.indexOf(b.dayType)
+              );
+
+              return (
+                <Card key={seatType} className="overflow-hidden">
+                  <CardHeader className="bg-gradient-to-r from-slate-50 to-gray-50">
+                    <div className="flex items-center gap-3">
+                      <div className="text-3xl">{getSeatTypeIcon(seatType)}</div>
+                      <div>
+                        <CardTitle className="text-lg">{seatType}</CardTitle>
+                        <CardDescription>
+                          Pricing for {seatType.toLowerCase()} seats
+                        </CardDescription>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="p-6">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      {sortedPricings.map(pricing => (
+                        <Card key={pricing.id} className="border-2 hover:shadow-lg transition-all duration-200">
+                          <CardContent className="p-4">
+                            <div className="flex items-center justify-between mb-3">
+                              <Badge className={`${getDayTypeColor(pricing.dayType)} font-medium`}>
+                                {getDayTypeIcon(pricing.dayType)} {pricing.dayType}
+                              </Badge>
+                            </div>
+
+                            {editingId === pricing.id ? (
+                              <div className="space-y-3">
+                                <Input
+                                  type="number"
+                                  value={editPrice}
+                                  onChange={(e) => setEditPrice(e.target.value)}
+                                  placeholder="Enter price"
+                                  className="text-lg font-bold"
+                                  autoFocus
+                                />
+                                <div className="flex gap-2">
+                                  <Button
+                                    size="sm"
+                                    onClick={() => saveEdit(pricing.id)}
+                                    className="flex-1 bg-emerald-600 hover:bg-emerald-700"
+                                  >
+                                    <Check className="h-4 w-4 mr-1" />
+                                    Save
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={cancelEdit}
+                                    className="flex-1"
+                                  >
+                                    <X className="h-4 w-4 mr-1" />
+                                    Cancel
+                                  </Button>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="space-y-3">
+                                <p className="text-2xl font-bold text-emerald-600">
+                                  {formatPrice(pricing.price)}
+                                </p>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => startEdit(pricing)}
+                                  className="w-full"
+                                >
+                                  <Edit2 className="h-3 w-3 mr-1" />
+                                  Edit Price
+                                </Button>
+                              </div>
+                            )}
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+
+          {/* Legend */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Day Type Information</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                  <Calendar className="h-8 w-8 text-blue-600" />
+                  <div>
+                    <p className="font-semibold text-blue-900">📅 WEEKDAY</p>
+                    <p className="text-sm text-blue-700">Monday - Friday</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 p-4 bg-purple-50 rounded-lg border border-purple-200">
+                  <Calendar className="h-8 w-8 text-purple-600" />
+                  <div>
+                    <p className="font-semibold text-purple-900">🎉 WEEKEND</p>
+                    <p className="text-sm text-purple-700">Saturday - Sunday</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 p-4 bg-amber-50 rounded-lg border border-amber-200">
+                  <Sparkles className="h-8 w-8 text-amber-600" />
+                  <div>
+                    <p className="font-semibold text-amber-900">✨ HOLIDAY</p>
+                    <p className="text-sm text-amber-700">Public holidays</p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </>
+      ) : (
+        <Card>
+          <CardContent className="py-16 text-center">
+            <DollarSign className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+            <p className="text-gray-500">Select a cinema and hall to manage ticket pricing</p>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}

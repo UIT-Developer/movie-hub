@@ -1,12 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { DateSelect7Days } from 'apps/web/src/components/date-select-7days';
-import { useGetAllMoviesWithShowtimes } from 'apps/web/src/hooks/cinema-hooks';
+import { DateSelect7Days } from '@/components/date-select-7days';
+import { useGetAllMoviesWithShowtimes } from '@/hooks/cinema-hooks';
 
 import { AlertCircle } from 'lucide-react';
 import { MovieWithCinemaCard } from './_components/movie-with-cinema-card';
-import { ErrorFallback } from 'apps/web/src/components/error-fallback';
+import { ErrorFallback } from '@/components/error-fallback';
 
 export const ShowtimesList = () => {
   const [selected, setSelected] = useState<string>(

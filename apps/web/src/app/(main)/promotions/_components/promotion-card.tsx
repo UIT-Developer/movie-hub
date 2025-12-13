@@ -1,7 +1,7 @@
 import { Badge } from "@movie-hub/shacdn-ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@movie-hub/shacdn-ui/card";
 import { Skeleton } from "@movie-hub/shacdn-ui/skeleton";
-import { PromotionDto } from "apps/web/src/libs/types/promotion.type";
+import { PromotionDto } from "@/libs/types/promotion.type";
 
 import { CalendarDays, TicketPercent } from "lucide-react";
 

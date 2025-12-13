@@ -4,20 +4,20 @@ import { Button } from '@movie-hub/shacdn-ui/button';
 import { Input } from '@movie-hub/shacdn-ui/input';
 import { cn } from '@movie-hub/shacdn-utils';
 import { ConsoleLogger } from '@nestjs/common';
-import Loading from 'apps/web/src/components/loading';
+import Loading from '@/components/loading';
 import {
   useCreateBooking,
   useUpdateBooking,
-} from 'apps/web/src/hooks/booking-hooks';
-import { useCreatePayment } from 'apps/web/src/hooks/payment-hooks';
-import { useValidationPromotion } from 'apps/web/src/hooks/promotion-hook';
-import { updateBooking } from 'apps/web/src/libs/actions/booking/booking-action';
+} from '@/hooks/booking-hooks';
+import { useCreatePayment } from '@/hooks/payment-hooks';
+import { useValidationPromotion } from '@/hooks/promotion-hook';
+import { updateBooking } from '@/libs/actions/booking/booking-action';
 import {
   PaymentMethod,
   paymentMethods,
   PaymentMethodUI,
-} from 'apps/web/src/libs/types/payment.type';
-import { useBookingStore } from 'apps/web/src/stores/booking-store';
+} from '@/libs/types/payment.type';
+import { useBookingStore } from '@/stores/booking-store';
 import Image from 'next/image';
 import { useState } from 'react';
 import { toast } from 'sonner';

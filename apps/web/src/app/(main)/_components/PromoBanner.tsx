@@ -1,4 +1,4 @@
-import { BlurCircle } from "apps/web/src/components/blur-circle";
+import { BlurCircle } from "@/components/blur-circle";
 import { ArrowRight } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";

@@ -1,6 +1,6 @@
 'use client';
 
-import { SeatTypeEnum } from 'apps/web/src/libs/types/showtime.type';
+import { SeatTypeEnum } from '@/libs/types/showtime.type';
 import React from 'react';
 
 export type TicketType = {

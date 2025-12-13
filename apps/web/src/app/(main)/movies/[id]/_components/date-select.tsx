@@ -7,11 +7,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@movie-hub/shacdn-ui/select';
-import { DateSelect7Days } from 'apps/web/src/components/date-select-7days';
+import { DateSelect7Days } from '@/components/date-select-7days';
 import {
   useGetCinemaDetail,
   useGetCinemasWithFilters,
-} from 'apps/web/src/hooks/cinema-hooks';
+} from '@/hooks/cinema-hooks';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import { useInView } from 'react-intersection-observer';

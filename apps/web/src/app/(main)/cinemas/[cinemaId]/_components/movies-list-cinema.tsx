@@ -1,6 +1,6 @@
 'use client';
-import { ErrorFallback } from 'apps/web/src/components/error-fallback';
-import { useGetMoviesAtCinema } from 'apps/web/src/hooks/cinema-hooks';
+import { ErrorFallback } from '@/components/error-fallback';
+import { useGetMoviesAtCinema } from '@/hooks/cinema-hooks';
 import { useRouter } from 'next/navigation';
 import { useCallback } from 'react';
 import MovieCard from '../../../_components/MovieCard';

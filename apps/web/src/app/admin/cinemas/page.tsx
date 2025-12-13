@@ -1,0 +1,575 @@
+// src/app/(dashboard)/cinemas/page.tsx
+'use client';
+
+import { useState, useEffect } from 'react';
+import { Plus, Search, MoreVertical, Edit, Trash2, MapPin, Phone, Mail, Star, Clock, Users } from 'lucide-react';
+import { Button } from '@movie-hub/shacdn-ui/button';
+import { Input } from '@movie-hub/shacdn-ui/input';
+import {
+  Card,
+  CardContent,
+} from '@movie-hub/shacdn-ui/card';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@movie-hub/shacdn-ui/dropdown-menu';
+import { Badge } from '@movie-hub/shacdn-ui/badge';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@movie-hub/shacdn-ui/dialog';
+import { Label } from '@movie-hub/shacdn-ui/label';
+import { Textarea } from '@movie-hub/shacdn-ui/textarea';
+import { useToast } from '../_libs/use-toast';
+import { mockCinemas, mockHalls } from '../_libs/mockData';
+import type { Cinema, CinemaStatus, CreateCinemaRequest } from '../_libs/types';
+
+export default function CinemasPage() {
+  const [cinemas, setCinemas] = useState<Cinema[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [selectedCinema, setSelectedCinema] = useState<Cinema | null>(null);
+  const [formData, setFormData] = useState<Partial<CreateCinemaRequest>>({
+    name: '',
+    address: '',
+    city: '',
+    district: '',
+    phone: '',
+    email: '',
+    description: '',
+    timezone: 'Asia/Ho_Chi_Minh',
+    amenities: [],
+    images: [],
+  });
+  const { toast } = useToast();
+
+  const fetchCinemas = async () => {
+    try {
+      setLoading(true);
+      // ⭐️ PHẦN THAY THẾ: Dùng dữ liệu giả
+      await new Promise(resolve => setTimeout(resolve, 500));
+      setCinemas(mockCinemas);
+      // ⭐️ KẾT THÚC PHẦN THAY THẾ
+    } catch {
+      toast({
+        title: 'Error',
+        description: 'Failed to fetch cinemas',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCinemas();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Calculate halls count for each cinema
+  const getHallsCount = (cinemaId: string) => {
+    return mockHalls.filter((hall) => hall.cinemaId === cinemaId).length;
+  };
+
+  // Parse operating hours to display format
+  const getOperatingHoursDisplay = (cinema: Cinema) => {
+    if (!cinema.operatingHours) return '24/7';
+    
+    // Check if it's a GenericObject with common patterns
+    const hours = cinema.operatingHours as Record<string, string | undefined>;
+    
+    // Pattern 1: { mon_sun: "9:00 - 24:00" }
+    if (hours.mon_sun) {
+      // Check if it's 24/7
+      if (hours.mon_sun === '0:00 - 24:00' || hours.mon_sun === '00:00 - 24:00') {
+        return '24/7';
+      }
+      return hours.mon_sun;
+    }
+    
+    // Pattern 2: { open: "9:00", close: "24:00" }
+    if (hours.open && hours.close) {
+      return `${hours.open} - ${hours.close}`;
+    }
+    
+    // Pattern 3: { monday: "9:00-24:00", ... } - show first day
+    const firstDay = Object.values(hours)[0];
+    if (typeof firstDay === 'string') {
+      return firstDay;
+    }
+    
+    // Default fallback
+    return '24/7';
+  };
+
+  const handleSubmit = async () => {
+    try {
+      if (selectedCinema) {
+        // Mock update
+        toast({ title: 'Success', description: 'Cinema updated successfully' });
+      } else {
+        // Mock create
+        toast({ title: 'Success', description: 'Cinema created successfully' });
+      }
+      setDialogOpen(false);
+      fetchCinemas();
+      resetForm();
+    } catch {
+      toast({
+        title: 'Error',
+        description: 'Failed to save cinema',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!selectedCinema) return;
+    try {
+      // Mock delete
+      toast({ title: 'Success', description: 'Cinema deleted successfully' });
+      setDeleteDialogOpen(false);
+      fetchCinemas();
+    } catch {
+      toast({
+        title: 'Error',
+        description: 'Failed to delete cinema',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const resetForm = () => {
+    setFormData({
+      name: '',
+      address: '',
+      city: '',
+      district: '',
+      phone: '',
+      email: '',
+      description: '',
+      timezone: 'Asia/Ho_Chi_Minh',
+      amenities: [],
+      images: [],
+    });
+    setSelectedCinema(null);
+  };
+
+  const openEditDialog = (cinema: Cinema) => {
+    setSelectedCinema(cinema);
+    setFormData({
+      name: cinema.name,
+      address: cinema.address,
+      city: cinema.city,
+      district: cinema.district || '',
+      phone: cinema.phone || '',
+      email: cinema.email || '',
+      website: cinema.website || '',
+      latitude: cinema.latitude,
+      longitude: cinema.longitude,
+      description: cinema.description || '',
+      amenities: cinema.amenities || [],
+      facilities: cinema.facilities,
+      images: cinema.images || [],
+      virtualTour360Url: cinema.virtualTour360Url || '',
+      operatingHours: cinema.operatingHours,
+      socialMedia: cinema.socialMedia,
+      timezone: cinema.timezone,
+    });
+    setDialogOpen(true);
+  };
+
+  const filteredCinemas = cinemas.filter((cinema) =>
+    cinema.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    cinema.city.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const getStatusColor = (status: CinemaStatus) => {
+    switch (status) {
+      case 'ACTIVE':
+        return 'bg-green-100 text-green-700 hover:bg-green-200';
+      case 'MAINTENANCE':
+        return 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200';
+      case 'CLOSED':
+        return 'bg-red-100 text-red-700 hover:bg-red-200';
+      default:
+        return 'bg-gray-100 text-gray-700';
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header Actions */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+            Cinemas
+          </h1>
+          <p className="text-gray-500 mt-1">Manage your cinema locations across the system</p>
+        </div>
+        <Button
+          onClick={() => {
+            resetForm();
+            setDialogOpen(true);
+          }}
+          className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 shadow-lg"
+        >
+          <Plus className="mr-2 h-4 w-4" />
+          Add Cinema
+        </Button>
+      </div>
+
+      {/* Search Bar & Stats */}
+      <div className="grid gap-6 md:grid-cols-4">
+        <Card className="md:col-span-3 border-0 shadow-lg">
+          <CardContent className="pt-6">
+            <div className="relative">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="Search cinemas by name or city..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 border-purple-200 focus:border-purple-400"
+              />
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card className="border-0 shadow-lg bg-gradient-to-br from-purple-600 to-pink-600 text-white">
+          <CardContent className="pt-6 text-center">
+            <div className="text-3xl font-bold mb-1">{filteredCinemas.length}</div>
+            <p className="text-sm text-white/80">Total Cinemas</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Cinemas Grid */}
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {loading ? (
+          <Card className="col-span-full">
+            <CardContent className="py-12 text-center">
+              <div className="animate-pulse text-gray-400">Loading cinemas...</div>
+            </CardContent>
+          </Card>
+        ) : filteredCinemas.length === 0 ? (
+          <Card className="col-span-full">
+            <CardContent className="py-12 text-center text-gray-500">
+              No cinemas found
+            </CardContent>
+          </Card>
+        ) : (
+          filteredCinemas.map((cinema) => (
+            <Card 
+              key={cinema.id} 
+              className="group border-0 shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 overflow-hidden"
+            >
+              {/* Cinema Image/Header */}
+              <div className="relative h-48 bg-gradient-to-br from-purple-600 via-purple-700 to-pink-600 overflow-hidden">
+                <div className="absolute inset-0 bg-black/20" />
+                <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-32 translate-x-32" />
+                <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/10 rounded-full translate-y-24 -translate-x-24" />
+                
+                <div className="relative h-full p-6 flex flex-col justify-between">
+                  <div className="flex items-start justify-between">
+                    <Badge className={`${getStatusColor(cinema.status)} shadow-lg`}>
+                      {cinema.status}
+                    </Badge>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8 text-white hover:bg-white/20"
+                        >
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => openEditDialog(cinema)}>
+                          <Edit className="mr-2 h-4 w-4" />
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => {
+                            setSelectedCinema(cinema);
+                            setDeleteDialogOpen(true);
+                          }}
+                          className="text-red-600"
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+
+                  <div>
+                    <h3 className="text-2xl font-bold text-white mb-2 drop-shadow-lg">
+                      {cinema.name}
+                    </h3>
+                    <div className="flex items-center gap-2 text-white/90 text-sm">
+                      <MapPin className="h-4 w-4" />
+                      <span className="drop-shadow">{cinema.city}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Cinema Details */}
+              <CardContent className="p-6 space-y-4">
+                {/* Location */}
+                <div className="space-y-2">
+                  <div className="flex items-start gap-2 text-sm">
+                    <MapPin className="h-4 w-4 text-purple-600 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="font-medium text-gray-900">{cinema.address}</p>
+                      <p className="text-gray-500">{cinema.district}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Contact Info */}
+                <div className="space-y-2 pt-2 border-t">
+                  {cinema.phone && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <Phone className="h-4 w-4 text-purple-600" />
+                      <span className="text-gray-700">{cinema.phone}</span>
+                    </div>
+                  )}
+                  {cinema.email && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <Mail className="h-4 w-4 text-purple-600" />
+                      <span className="text-gray-700">{cinema.email}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Stats */}
+                <div className="grid grid-cols-3 gap-3 pt-2 border-t">
+                  <div className="text-center p-3 bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg">
+                    <div className="flex items-center justify-center gap-1 mb-1">
+                      <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
+                      <span className="font-bold text-lg text-purple-900">
+                        {cinema.rating?.toFixed(1) || 'N/A'}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-600">
+                      {cinema.totalReviews} reviews
+                    </p>
+                  </div>
+
+                  <div className="text-center p-3 bg-gradient-to-br from-blue-50 to-cyan-50 rounded-lg">
+                    <div className="flex items-center justify-center gap-1 mb-1">
+                      <Users className="h-4 w-4 text-blue-600" />
+                      <span className="font-bold text-lg text-blue-900">
+                        {getHallsCount(cinema.id)}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-600">Halls</p>
+                  </div>
+
+                  <div className="text-center p-3 bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg">
+                    <div className="flex items-center justify-center gap-1 mb-1">
+                      <Clock className="h-4 w-4 text-green-600" />
+                      <span className="font-bold text-sm text-green-900">
+                        {getOperatingHoursDisplay(cinema)}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-600">Open</p>
+                  </div>
+                </div>
+
+                {/* Description */}
+                {cinema.description && (
+                  <div className="pt-2 border-t">
+                    <p className="text-sm text-gray-600 line-clamp-2">
+                      {cinema.description}
+                    </p>
+                  </div>
+                )}
+
+                {/* Amenities */}
+                {cinema.amenities && cinema.amenities.length > 0 && (
+                  <div className="pt-2 border-t">
+                    <div className="flex flex-wrap gap-1">
+                      {cinema.amenities.slice(0, 3).map((amenity, idx) => (
+                        <Badge 
+                          key={idx} 
+                          variant="outline" 
+                          className="text-xs bg-purple-50 text-purple-700 border-purple-200"
+                        >
+                          {amenity}
+                        </Badge>
+                      ))}
+                      {cinema.amenities.length > 3 && (
+                        <Badge variant="outline" className="text-xs">
+                          +{cinema.amenities.length - 3} more
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ))
+        )}
+      </div>
+
+      {/* Add/Edit Dialog */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {selectedCinema ? 'Edit Cinema' : 'Add New Cinema'}
+            </DialogTitle>
+            <DialogDescription>
+              Fill in the cinema details below
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Cinema Name *</Label>
+                <Input
+                  id="name"
+                  value={formData.name}
+                  onChange={(e) =>
+                    setFormData({ ...formData, name: e.target.value })
+                  }
+                  placeholder="Cinestar Quốc Thanh"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="address">Address *</Label>
+              <Input
+                id="address"
+                value={formData.address}
+                onChange={(e) =>
+                  setFormData({ ...formData, address: e.target.value })
+                }
+                placeholder="271 Nguyễn Trãi"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="city">City *</Label>
+                <Input
+                  id="city"
+                  value={formData.city}
+                  onChange={(e) =>
+                    setFormData({ ...formData, city: e.target.value })
+                  }
+                  placeholder="Ho Chi Minh City"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="district">District</Label>
+                <Input
+                  id="district"
+                  value={formData.district}
+                  onChange={(e) =>
+                    setFormData({ ...formData, district: e.target.value })
+                  }
+                  placeholder="District 1"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="phone">Phone</Label>
+                <Input
+                  id="phone"
+                  value={formData.phone}
+                  onChange={(e) =>
+                    setFormData({ ...formData, phone: e.target.value })
+                  }
+                  placeholder="0283 933 3333"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) =>
+                    setFormData({ ...formData, email: e.target.value })
+                  }
+                  placeholder="cinema@example.com"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                value={formData.description}
+                onChange={(e) =>
+                  setFormData({ ...formData, description: e.target.value })
+                }
+                placeholder="Enter cinema description..."
+                rows={4}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setDialogOpen(false);
+                resetForm();
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSubmit}
+              className="bg-gradient-to-r from-purple-600 to-pink-600"
+            >
+              {selectedCinema ? 'Update' : 'Create'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Cinema</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete {selectedCinema?.name}? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+            >
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

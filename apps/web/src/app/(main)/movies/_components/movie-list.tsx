@@ -1,9 +1,9 @@
 'use client';
-import { useGetMovies } from 'apps/web/src/hooks/movie-hooks';
+import { useGetMovies } from '@/hooks/movie-hooks';
 import MovieCard from '../../_components/MovieCard';
 import { useInView } from 'react-intersection-observer';
 import { useCallback, useEffect } from 'react';
-import { ErrorFallback } from 'apps/web/src/components/error-fallback';
+import { ErrorFallback } from '@/components/error-fallback';
 import { useRouter } from 'next/navigation';
 import { Button } from '@movie-hub/shacdn-ui/button';
 

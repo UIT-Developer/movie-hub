@@ -1,6 +1,6 @@
-import { BookingStatus } from "apps/web/src/libs/types/booking.type";
+import { BookingStatus } from "@/libs/types/booking.type";
 import { MyBookingList } from "./my-booking-list";
-import { RequireSignIn } from "apps/web/src/components/require-sign-in";
+import { RequireSignIn } from "@/components/require-sign-in";
 
 export default function MyBookingPage() {
   return (

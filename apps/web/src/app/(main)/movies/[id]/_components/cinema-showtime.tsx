@@ -1,8 +1,8 @@
 'use client';
 import { useState, useMemo } from 'react';
 import { ChevronDownIcon, ChevronUpIcon } from 'lucide-react';
-import { CinemaLocationResponse } from 'apps/web/src/libs/types/cinema.type';
-import { useGetMovieShowtimesAtCinema } from 'apps/web/src/hooks/cinema-hooks';
+import { CinemaLocationResponse } from '@/libs/types/cinema.type';
+import { useGetMovieShowtimesAtCinema } from '@/hooks/cinema-hooks';
 import { Skeleton } from '@movie-hub/shacdn-ui/skeleton';
 
 interface Showtime {

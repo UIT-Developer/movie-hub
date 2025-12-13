@@ -1,17 +1,17 @@
 'use client';
-import { useAuth } from '@clerk/nextjs';
-import { Button } from '@movie-hub/shacdn-ui/button';
-import { RequireSignIn } from 'apps/web/src/components/require-sign-in';
+import { RequireSignIn } from '@/components/require-sign-in';
 import {
   useCheckUserBookingAtShowtime,
-  useCreateBooking,
-} from 'apps/web/src/hooks/booking-hooks';
+  useCreateBooking
+} from '@/hooks/booking-hooks';
 import {
   useGetSessionTTL,
   useGetShowtimeSeats,
-} from 'apps/web/src/hooks/showtime-hooks';
+} from '@/hooks/showtime-hooks';
+import { useAuth } from '@clerk/nextjs';
+import { Button } from '@movie-hub/shacdn-ui/button';
 
-import { useBookingStore } from 'apps/web/src/stores/booking-store';
+import { useBookingStore } from '@/stores/booking-store';
 import { Check } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { BookingCheckout } from './booking-checkout';

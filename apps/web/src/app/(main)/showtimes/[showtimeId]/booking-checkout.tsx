@@ -1,4 +1,4 @@
-import { ShowtimeSeatResponse } from 'apps/web/src/libs/types/showtime.type';
+import { ShowtimeSeatResponse } from '@/libs/types/showtime.type';
 import { PaymentSection } from './_components/payment';
 import TicketPreview from './_components/ticket-preview';
 

@@ -10,13 +10,13 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from '@movie-hub/shacdn-ui/carousel';
-import { BlurCircle } from 'apps/web/src/components/blur-circle';
-import { useGetMovies } from 'apps/web/src/hooks/movie-hooks';
+import { BlurCircle } from '@/components/blur-circle';
+import { useGetMovies } from '@/hooks/movie-hooks';
 import { ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useRef } from 'react';
 import MovieCard from './MovieCard';
-import { ErrorFallback } from 'apps/web/src/components/error-fallback';
+import { ErrorFallback } from '@/components/error-fallback';
 
 type Props = {
   href: string;

@@ -8,11 +8,11 @@ import {
   CardHeader,
   CardTitle,
 } from '@movie-hub/shacdn-ui/card';
-import { formatPrice } from 'apps/web/src/app/utils/format-price';
-import { ExpiredModal } from 'apps/web/src/components/modal/expire-modal';
-import { useGetSessionTTL } from 'apps/web/src/hooks/showtime-hooks';
-import { ShowtimeSeatResponse } from 'apps/web/src/libs/types/showtime.type';
-import { useBookingStore } from 'apps/web/src/stores/booking-store';
+import { formatPrice } from '@/app/utils/format-price';
+import { ExpiredModal } from '@/components/modal/expire-modal';
+import { useGetSessionTTL } from '@/hooks/showtime-hooks';
+import { ShowtimeSeatResponse } from '@/libs/types/showtime.type';
+import { useBookingStore } from '@/stores/booking-store';
 import { CalendarDays } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';

@@ -16,9 +16,9 @@ import {
 import Image from 'next/image';
 import Link from 'next/link';
 import { BlurCircle } from '../../../../../components/blur-circle';
-import { useGetMovieDetail } from 'apps/web/src/hooks/movie-hooks';
-import { ErrorFallback } from 'apps/web/src/components/error-fallback';
-import { useTrailerModal } from 'apps/web/src/stores/trailer-modal-store';
+import { useGetMovieDetail } from '@/hooks/movie-hooks';
+import { ErrorFallback } from '@/components/error-fallback';
+import { useTrailerModal } from '@/stores/trailer-modal-store';
 
 
 export const MovieHeader = ({ movieId }: { movieId: string }) => {

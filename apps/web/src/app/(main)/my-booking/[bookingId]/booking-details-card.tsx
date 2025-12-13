@@ -15,15 +15,15 @@ import { formatPrice } from '../../../utils/format-price';
 import {
   BookingDetailDto,
   BookingStatus,
-} from 'apps/web/src/libs/types/booking.type';
-import { useGetBookingById } from 'apps/web/src/hooks/booking-hooks';
-import { ErrorFallback } from 'apps/web/src/components/error-fallback';
+} from '@/libs/types/booking.type';
+import { useGetBookingById } from '@/hooks/booking-hooks';
+import { ErrorFallback } from '@/components/error-fallback';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { useRef } from 'react';
 import { Button } from '@movie-hub/shacdn-ui/button';
 import { QRCodeCanvas } from 'qrcode.react';
-import { Loader } from 'apps/web/src/components/loader';
+import { Loader } from '@/components/loader';
 
 export function BookingCard({ bookingId }: { bookingId: string }) {
   const {

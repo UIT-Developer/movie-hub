@@ -7,8 +7,8 @@ interface Actor {
   profileUrl: string | null;
 }
 import { Skeleton } from '@movie-hub/shacdn-ui/skeleton'; // hoặc tự tạo nếu bạn chưa có
-import { useGetMovieDetail } from 'apps/web/src/hooks/movie-hooks';
-import { ErrorFallback } from 'apps/web/src/components/error-fallback';
+import { useGetMovieDetail } from '@/hooks/movie-hooks';
+import { ErrorFallback } from '@/components/error-fallback';
 
 export const MovieCast = ({ movieId }: { movieId: string }) => {
   const { data, isLoading, isError, error } =

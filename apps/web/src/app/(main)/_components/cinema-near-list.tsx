@@ -1,11 +1,12 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { useGetCinemasNearby } from 'apps/web/src/hooks/cinema-hooks';
+import { useGetCinemasNearby } from '@/hooks/cinema-hooks';
 import { useRouter } from 'next/navigation';
 import { CinemaLocationCard } from './cinema-loaction-card';
-import { ErrorFallback } from 'apps/web/src/components/error-fallback';
-import { BlurCircle } from 'apps/web/src/components/blur-circle';
+import { ErrorFallback } from '@/components/error-fallback';
+import { BlurCircle } from '@/components/blur-circle';
+import type { CinemaLocationResponse } from '@/libs/types/cinema.type';
 import {
   Carousel,
   CarouselContent,
@@ -106,7 +107,7 @@ export const CinemaListNearby = () => {
               🎦Không có rạp nào gần cả.
             </div>
           ) : (
-            cinemas.map((cinema) => (
+            cinemas.map((cinema: CinemaLocationResponse) => (
               <CarouselItem
                 key={cinema.id}
                 className="md:basis-1/2 lg:basis-1/3"

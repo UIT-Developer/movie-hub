@@ -10,7 +10,7 @@ import {
   useUser,
 } from '@clerk/nextjs';
 import { Button } from '@movie-hub/shacdn-ui/button';
-import { Logo } from 'apps/web/src/components/logo';
+import { Logo } from '@/components/logo';
 import { MenuIcon, TicketPlus, XIcon } from 'lucide-react';
 import Link from 'next/link';
 import { useCallback, useState } from 'react';

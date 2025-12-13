@@ -9,15 +9,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@movie-hub/shacdn-ui/select';
-import { useGetConcessions } from 'apps/web/src/hooks/concession-hooks';
+import { useGetConcessions } from '@/hooks/concession-hooks';
 import {
   ConcessionCategory,
   ConcessionDto,
-} from 'apps/web/src/libs/types/concession.type';
-import { Loader } from 'apps/web/src/components/loader';
+} from '@/libs/types/concession.type';
+import { Loader } from '@/components/loader';
 import { toast } from 'sonner';
-import { useFindPromotionByTypes } from 'apps/web/src/hooks/promotion-hook';
-import { PromotionType } from 'apps/web/src/libs/types/promotion.type';
+import { useFindPromotionByTypes } from '@/hooks/promotion-hook';
+import { PromotionType } from '@/libs/types/promotion.type';
 import { useState } from 'react';
 import { PromotionCard } from './_components/promotion-card';
 

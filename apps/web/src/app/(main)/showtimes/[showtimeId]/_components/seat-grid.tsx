@@ -2,7 +2,7 @@ import {
   LayoutTypeEnum,
   ReservationStatusEnum,
   SeatRowDto
-} from 'apps/web/src/libs/types/showtime.type';
+} from '@/libs/types/showtime.type';
 import { seatLayouts } from './layout-render';
 
 

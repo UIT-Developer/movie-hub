@@ -1,8 +1,8 @@
 'use client';
-import { ErrorFallback } from "apps/web/src/components/error-fallback";
-import { Loader } from "apps/web/src/components/loader";
-import { useGetBookings } from "apps/web/src/hooks/booking-hooks";
-import { BookingStatus } from "apps/web/src/libs/types/booking.type";
+import { ErrorFallback } from "@/components/error-fallback";
+import { Loader } from "@/components/loader";
+import { useGetBookings } from "@/hooks/booking-hooks";
+import { BookingStatus } from "@/libs/types/booking.type";
 import { useState } from "react";
 import BookingCard from "./_components/booking-summary-card";
 import {

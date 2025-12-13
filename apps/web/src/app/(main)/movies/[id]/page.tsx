@@ -42,7 +42,7 @@ export default async function MovieDetailsPage({
           <MovieCast movieId={id} />
         </section>
 
-        <DateSelect movieId={id} cinemaId={cinemaId}  availableCities={availableCities}/>
+        <DateSelect movieId={id} cinemaId={cinemaId}  availableCities={availableCities.data}/>
         <TrailerModal/>
       </div>
     </HydrationBoundary>

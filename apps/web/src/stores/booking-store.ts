@@ -12,7 +12,6 @@ import {
   SeatTypeEnum,
   ShowtimeSeatResponse,
 } from '../libs/types/showtime.type';
-import { updateLocalStorage } from '../app/utils/update-local-storage';
 
 type SeatItem = {
   type: string;
@@ -154,45 +153,6 @@ export const useBookingStore = create<BookingState>((set, get) => ({
       seatLabelToId,
       seatIdToLabel,
     });
-
-    const hasHeldSeats = selectedSeats.length > 0;
-
-    // Hydrate localStorage
-    const storageKey = `bookingState_${data.showtime.id}`;
-    const saved = localStorage.getItem(storageKey);
-    if (!hasHeldSeats) {
-      const newState = {
-        showtimeId: data.showtime.id,
-        selectedSeats,
-        ticketCounts,
-        totalTickets: 0,
-        totalPrice: 0,
-      };
-      localStorage.setItem(storageKey, JSON.stringify(newState));
-    } else {
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed.showtimeId === data.showtime.id) {
-          set({
-            selectedSeats: parsed.selectedSeats || [],
-            ticketCounts: parsed.ticketCounts || ticketCounts,
-            totalTickets: parsed.totalTickets || 0,
-            totalTicketPrice: parsed.totalTicketPrice || 0,
-          });
-        }
-      } else {
-        // Lưu lần đầu
-        localStorage.setItem(
-          storageKey,
-          JSON.stringify({
-            showtimeId: data.showtime.id,
-            selectedSeats,
-            ticketCounts,
-            totalTickets: 0,
-          })
-        );
-      }
-    }
   },
 
   // ---------------- toggleSeat ----------------
@@ -269,19 +229,6 @@ export const useBookingStore = create<BookingState>((set, get) => ({
       totalTickets,
       totalTicketPrice: newTotalPrice,
     });
-
-    // update localStorage
-    const currentShowtimeId = get().currentShowtimeId;
-    const storageKey = `bookingState_${currentShowtimeId}`;
-    updateLocalStorage(
-      {
-        selectedSeats: newSeats,
-        ticketCounts: newTicketCounts,
-        totalTickets,
-        totalTicketPrice: newTotalPrice,
-      },
-      storageKey
-    );
 
     // emit socket
     if (socket) {
@@ -489,14 +436,6 @@ export const useBookingStore = create<BookingState>((set, get) => ({
   },
 
   resetBooking: () => {
-    const state = get();
-    const showtimeId = state.currentShowtimeId;
-
-    // Xoá localStorage của showtime hiện tại
-    if (showtimeId) {
-      localStorage.removeItem(`bookingState_${showtimeId}`);
-    }
-
     // Reset toàn bộ state liên quan đến quá trình booking
     set({
       bookingId: undefined,

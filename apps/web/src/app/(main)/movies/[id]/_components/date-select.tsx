@@ -32,9 +32,7 @@ export const DateSelect = ({
   const [selected, setSelected] = useState<string>(
     new Date().toISOString().split('T')[0]
   );
-  const [selectedLocation, setSelectedLocation] =
-    useState<string>('Ho Chi Minh City');
-  // useState<string>(availableCities[0] || '');
+  const [selectedLocation, setSelectedLocation] = useState<string>(availableCities[0] || '');
   const [selectedShowtime, setSelectedShowtime] = useState<string | null>(null);
 
   const handleSelectShowtime = useCallback((showtimeId: string) => {
@@ -116,18 +114,16 @@ export const DateSelect = ({
                 />
               </SelectTrigger>
               <SelectContent className="text-rose-400" position="popper">
-                {/* {availableCities?.map((city) => (
+                {availableCities?.map((city) => (
                   <SelectItem
                     key={city}
                     value={city}
-                    className="data-[disabled]:text-gray-500 data-[highlighted]:bg-rose-500/20 data-[highlighted]:text-rose-300"
+                    className="data-[disabled]:text-gray-500 data-[highlighted]:bg-rose-500/20 "
                   >
                     {city}
                   </SelectItem>
-                ))} */}
-                <SelectItem value="Ho Chi Minh City">Hồ Chí Minh</SelectItem>
-                <SelectItem value="Đà Nẵng">Đà Nẵng</SelectItem>
-                <SelectItem value="Hà Nội">Hà Nội</SelectItem>
+                ))}
+        
               </SelectContent>
             </Select>
           </div>

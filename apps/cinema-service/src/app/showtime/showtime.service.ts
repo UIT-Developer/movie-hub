@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { ShowtimeMapper } from './showtime.mapper';
 import {
   GetShowtimesQuery,
@@ -9,6 +9,8 @@ import {
   SeatPricingDto,
   SeatPricingWithTtlDto,
   SeatTypeEnum,
+  MovieServiceMessage,
+  ServiceResult,
 } from '@movie-hub/shared-types';
 import { PrismaService } from '../prisma.service';
 import { RealtimeService } from '../realtime/realtime.service';
@@ -20,13 +22,16 @@ import {
   SeatType,
   ShowtimeStatus,
 } from '../../../generated/prisma';
+import { ClientProxy } from '@nestjs/microservices';
+import { lastValueFrom } from 'rxjs';
 
 @Injectable()
 export class ShowtimeService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly showtimeSeatMapper: ShowtimeSeatMapper,
-    private readonly realtimeService: RealtimeService
+    private readonly realtimeService: RealtimeService,
+    @Inject('MOVIE_SERVICE') private readonly movieClient: ClientProxy
   ) {}
 
   /**
@@ -36,32 +41,41 @@ export class ShowtimeService {
     cinemaId: string,
     movieId: string,
     query: GetShowtimesQuery
-  ): Promise<ShowtimeSummaryResponse[]> {
+  ): Promise<ServiceResult<ShowtimeSummaryResponse[]>> {
     const cacheKey = `showtime:list:${cinemaId}:${movieId}:${query.date}`;
 
-    return this.realtimeService.getOrSetCache(cacheKey, 3600, async () => {
-      const showtimes = await this.prisma.showtimes.findMany({
-        where: {
-          cinema_id: cinemaId,
-          movie_id: movieId,
-          start_time: {
-            gte: new Date(`${query.date}T00:00:00.000Z`),
-            lt: new Date(`${query.date}T23:59:59.999Z`),
+    const data = await this.realtimeService.getOrSetCache(
+      cacheKey,
+      3600,
+      async () => {
+        const showtimes = await this.prisma.showtimes.findMany({
+          where: {
+            cinema_id: cinemaId,
+            movie_id: movieId,
+            start_time: {
+              gte: new Date(`${query.date}T00:00:00.000Z`),
+              lt: new Date(`${query.date}T23:59:59.999Z`),
+            },
+            status: ShowtimeStatus.SELLING,
           },
-          status: ShowtimeStatus.SELLING,
-        },
-        orderBy: { start_time: 'asc' },
-      });
+          orderBy: { start_time: 'asc' },
+        });
 
-      return ShowtimeMapper.toShowtimeSummaryList(showtimes);
-    });
+        return ShowtimeMapper.toShowtimeSummaryList(showtimes);
+      }
+    );
+
+    return {
+      data,
+      message: 'Fetch showtimes successfully',
+    };
   }
 
   async adminGetMovieShowtimes(
     cinemaId: string,
     movieId: string,
     query: AdminGetShowtimesQuery
-  ): Promise<ShowtimeSummaryResponse[]> {
+  ): Promise<ServiceResult<ShowtimeSummaryResponse[]>> {
     const { date, status, format, hallId, language } = query;
 
     // Tạo điều kiện where động cho Prisma
@@ -95,7 +109,10 @@ export class ShowtimeService {
       orderBy: { start_time: 'asc' },
     });
 
-    return ShowtimeMapper.toShowtimeSummaryList(showtimes);
+    return {
+      data: ShowtimeMapper.toShowtimeSummaryList(showtimes),
+      message: 'Fetch showtimes successfully',
+    };
   }
 
   /**
@@ -189,9 +206,17 @@ export class ShowtimeService {
     const hallName = hall?.name ?? '';
     const layoutType = hall?.layout_type ?? LayoutType.STANDARD;
 
+    const movie = await lastValueFrom(
+      this.movieClient.send(
+        MovieServiceMessage.MOVIE.GET_DETAIL,
+        showtime.movie_id
+      )
+    );
+
     // 🧠 Mapping response cuối cùng
     return this.showtimeSeatMapper.toShowtimeSeatResponse({
       showtime,
+      movieTitle: movie?.data?.title ?? '',
       cinemaName,
       hallName,
       layoutType,
@@ -218,10 +243,10 @@ export class ShowtimeService {
       showtimeId,
       userId
     );
-    
+
     // 2) Get TTL for the user's lock session
     const lockTtl = await this.realtimeService.getUserTTL(showtimeId, userId);
-    
+
     if (!seatIds || seatIds.length === 0) {
       return { seats: [], lockTtl };
     }

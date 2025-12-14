@@ -15,6 +15,8 @@ import {
 import { DistanceCalculator } from '../../utils/distance-calculator.util';
 import { DecimalUtil } from '../../utils/decimal.util';
 import { Prisma } from '../../../generated/prisma/client';
+import { HallType } from '../../../generated/prisma/client';
+import { ServiceResult } from '@movie-hub/shared-types/common';
 
 @Injectable()
 export class CinemaLocationService {
@@ -28,7 +30,7 @@ export class CinemaLocationService {
    */
   async getCinemasNearby(
     dto: GetCinemasNearbyDto
-  ): Promise<CinemaListResponse> {
+  ): Promise<ServiceResult<CinemaListResponse>> {
     const { latitude, longitude, radiusKm = 10, limit = 20 } = dto;
 
     if (!latitude || !longitude) {
@@ -74,8 +76,8 @@ export class CinemaLocationService {
         calculatedDistance: DistanceCalculator.calculateDistance(
           latitude,
           longitude,
-          cinema.latitude!,
-          cinema.longitude!
+          cinema.latitude as Prisma.Decimal,
+          cinema.longitude as Prisma.Decimal
         ),
       }))
       .sort((a, b) => a.calculatedDistance - b.calculatedDistance)
@@ -88,11 +90,14 @@ export class CinemaLocationService {
     );
 
     return {
-      cinemas: mapped,
-      total: mapped.length,
-      page: 1,
-      limit,
-      hasMore: false,
+      data: {
+        cinemas: mapped,
+        total: mapped.length,
+        page: 1,
+        limit,
+        hasMore: false,
+      },
+      message: 'Get nearby cinemas successfully!',
     };
   }
 
@@ -101,7 +106,7 @@ export class CinemaLocationService {
    */
   async getCinemasWithFilters(
     filter: GetCinemasWithFiltersDto
-  ): Promise<CinemaListResponse> {
+  ): Promise<ServiceResult<CinemaListResponse>> {
     const {
       latitude,
       longitude,
@@ -134,7 +139,7 @@ export class CinemaLocationService {
       where.rating = { gte: DecimalUtil.toDecimal(minRating) };
     }
 
-    // Filter by amenities (String[] in your schema - use array_contains)
+    // Filter by amenities 
     if (amenities && amenities.length > 0) {
       where.amenities = {
         hasEvery: amenities, // PostgreSQL array contains all
@@ -144,7 +149,7 @@ export class CinemaLocationService {
     if (hallTypes && hallTypes.length > 0) {
       where.halls = {
         some: {
-          type: { in: hallTypes as any },
+          type: { in: hallTypes as HallType[] },
         },
       };
     }
@@ -203,11 +208,14 @@ export class CinemaLocationService {
     const paginatedCinemas = mapped.slice(skip, skip + limit);
 
     return {
-      cinemas: paginatedCinemas,
-      total: mapped.length,
-      page,
-      limit,
-      hasMore: skip + limit < mapped.length,
+      data: {
+        cinemas: paginatedCinemas,
+        total: mapped.length,
+        page,
+        limit,
+        hasMore: skip + limit < mapped.length,
+      },
+      message: 'Get cinemas with filters successfully!',
     };
   }
 
@@ -216,7 +224,7 @@ export class CinemaLocationService {
    */
   async getCinemaDetail(
     dto: GetCinemaDetailDto
-  ): Promise<CinemaLocationResponse> {
+  ): Promise<ServiceResult<CinemaLocationResponse>> {
     const { cinemaId, userLatitude, userLongitude } = dto;
 
     const cinema = await this.prisma.cinemas.findUnique({
@@ -228,11 +236,14 @@ export class CinemaLocationService {
       throw new NotFoundException(`Cinema with ID ${cinemaId} not found`);
     }
 
-    return this.mapper.toCinemaLocationResponse(
-      cinema,
-      userLatitude,
-      userLongitude
-    );
+    return {
+      data: this.mapper.toCinemaLocationResponse(
+        cinema,
+        userLatitude,
+        userLongitude
+      ),
+      message: 'Get cinema detail successfully!',
+    };
   }
 
   /**
@@ -242,7 +253,7 @@ export class CinemaLocationService {
     query: string,
     userLatitude?: number,
     userLongitude?: number
-  ): Promise<CinemaLocationResponse[]> {
+  ): Promise<ServiceResult<CinemaLocationResponse[]>> {
     const cinemas = await this.prisma.cinemas.findMany({
       where: {
         status: 'ACTIVE',
@@ -256,17 +267,20 @@ export class CinemaLocationService {
       take: 20,
     });
 
-    return this.mapper.toCinemaLocationList(
-      cinemas,
-      userLatitude,
-      userLongitude
-    );
+    return {
+      data: this.mapper.toCinemaLocationList(
+        cinemas,
+        userLatitude,
+        userLongitude
+      ),
+      message: 'Search cinemas successfully!',
+    };
   }
 
   /**
    * Get available cities
    */
-  async getAvailableCities(): Promise<string[]> {
+  async getAvailableCities(): Promise<ServiceResult<string[]>> {
     const cinemas = await this.prisma.cinemas.findMany({
       where: { status: 'ACTIVE' },
       select: { city: true },
@@ -274,13 +288,16 @@ export class CinemaLocationService {
       orderBy: { city: 'asc' },
     });
 
-    return cinemas.map((c) => c.city);
+    return {
+      data: cinemas.map((c) => c.city),
+      message: 'Get available cities successfully!',
+    };
   }
 
   /**
    * Get available districts by city
    */
-  async getAvailableDistricts(city: string): Promise<string[]> {
+  async getAvailableDistricts(city: string): Promise<ServiceResult<string[]>> {
     const cinemas = await this.prisma.cinemas.findMany({
       where: {
         city: { contains: city, mode: 'insensitive' },
@@ -292,8 +309,11 @@ export class CinemaLocationService {
       orderBy: { district: 'asc' },
     });
 
-    return cinemas
-      .map((c) => c.district)
-      .filter((d): d is string => d !== null);
+    return {
+      data: cinemas
+        .map((c) => c.district)
+        .filter((d): d is string => d !== null),
+      message: 'Get available districts successfully!',
+    };
   }
 }

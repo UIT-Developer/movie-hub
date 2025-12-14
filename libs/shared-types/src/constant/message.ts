@@ -1,6 +1,7 @@
 export const UserMessage = {
   GET_PERMISSIONS: 'user.getPermissions',
   GET_USERS: 'user.getAll',
+  GET_USER_DETAIL: 'user.getDetail',
 };
 
 export const MovieServiceMessage = {

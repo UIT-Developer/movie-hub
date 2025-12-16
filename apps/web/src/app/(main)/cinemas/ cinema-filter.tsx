@@ -14,6 +14,7 @@ import { MapPin, SlidersHorizontal } from 'lucide-react';
 import { CinemaLocationCard } from '../_components/cinema-loaction-card';
 import { useGetCinemasWithFilters } from '@/hooks/cinema-hooks';
 import { CinemaLocationResponse } from '@/libs/types/cinema.type';
+import { Loader } from '@/components/loader';
 
 type SortBy = 'distance' | 'rating' | 'name';
 type SortOrder = 'asc' | 'desc';

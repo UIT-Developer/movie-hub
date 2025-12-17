@@ -26,7 +26,7 @@ export default function RootLayout({
     <html>
       <body className={inter.className}>
         <QueryClientProviders>
-          <ClerkProvider
+          {/* <ClerkProvider
             appearance={{
               theme: 'simple',
               variables: {
@@ -34,14 +34,14 @@ export default function RootLayout({
               },
             }}
             afterSignOutUrl="/"
-          >
+          > */}
             <PageWrapper>
             
               <Toaster theme="light" richColors closeButton />
               
               {children}
             </PageWrapper>
-          </ClerkProvider>
+          {/* </ClerkProvider> */}
         </QueryClientProviders>
       </body>
     </html>

@@ -26,7 +26,7 @@ import {
 import { Button } from '@movie-hub/shacdn-ui/button';
 import { ScrollArea } from '@movie-hub/shacdn-ui/scroll-area';
 import { cn } from '@movie-hub/shacdn-utils';
-import { useClerk, useUser } from '@clerk/nextjs';
+// import { useClerk, useUser } from '@clerk/nextjs';
 
 const menuItems = [
   { icon: LayoutDashboard, label: 'Dashboard', href: '/admin', disabled: false },
@@ -54,11 +54,14 @@ export default function AdminLayout({
 }) {
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const { signOut } = useClerk();
-  const { user } = useUser();
+  // const { signOut } = useClerk();
+  // const { user } = useUser();
+  // When Clerk is disabled locally we still need a `user` variable
+  // Define a harmless placeholder so `user?.` references don't throw.
+  const user: any = undefined;
 
   const handleLogout = async () => {
-    await signOut();
+    // await signOut();
     window.location.href = '/';
   };
 

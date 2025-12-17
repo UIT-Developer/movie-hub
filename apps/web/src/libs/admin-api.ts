@@ -1,5 +1,5 @@
 import api from './api-client';
-import { useAuth } from '@clerk/nextjs';
+// import { useAuth } from '@clerk/nextjs';
 
 // Types based on api-gateway responses and @movie-hub/shared-types
 export interface ApiResponse<T> {

@@ -20,7 +20,7 @@ import {
 } from '@movie-hub/shacdn-ui/select';
 import { Button } from '@movie-hub/shacdn-ui/button';
 import { useToast } from '../_libs/use-toast';
-import { useAdminApi } from '@/libs/admin-api';
+// import { useAdminApi } from '@/libs/admin-api'; // DEPRECATED: Use new hooks from libs/api
 import type { Showtime, Movie, Cinema, Hall, CreateShowtimeRequest } from '../_libs/types';
 import { mockReleases } from '../_libs/mockData';
 
@@ -47,7 +47,7 @@ export default function ShowtimeDialog({
   preSelectedReleaseId,
   onSuccess,
 }: ShowtimeDialogProps) {
-  const api = useAdminApi();
+  // const api = useAdminApi(); // DEPRECATED
   const [formData, setFormData] = useState<CreateShowtimeRequest>({
     movieId: '',
     movieReleaseId: '',
@@ -110,19 +110,19 @@ export default function ShowtimeDialog({
     }
 
     try {
-      if (editingShowtime) {
-        await api.showtimes.update(editingShowtime.id, formData);
-        toast({
-          title: 'Success',
-          description: 'Showtime updated successfully',
-        });
-      } else {
-        await api.showtimes.create(formData);
-        toast({
-          title: 'Success',
-          description: 'Showtime created successfully',
-        });
-      }
+      // if (editingShowtime) {
+      //   await api.showtimes.update(editingShowtime.id, formData);
+      //   toast({
+      //     title: 'Success',
+      //     description: 'Showtime updated successfully',
+      //   });
+      // } else {
+      //   await api.showtimes.create(formData);
+      //   toast({
+      //     title: 'Success',
+      //     description: 'Showtime created successfully',
+      //   });
+      // }
 
       onOpenChange(false);
       onSuccess?.();

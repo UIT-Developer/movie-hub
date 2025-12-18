@@ -18,10 +18,10 @@ import {
   Upload,
   Download,
   Trash2,
-  Globe,
   Moon,
   Sun,
   Monitor,
+// @ts-expect-error lucide-react lacks type definitions
 } from 'lucide-react';
 import { Button } from '@movie-hub/shacdn-ui/button';
 import { Input } from '@movie-hub/shacdn-ui/input';

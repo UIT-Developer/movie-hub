@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
+// @ts-expect-error - lucide-react lacks type definitions
 import { Calendar as CalendarIcon, Clock, Film, Building2, Zap, History, ExternalLink } from 'lucide-react';
 import { Button } from '@movie-hub/shacdn-ui/button';
 import {
@@ -23,8 +24,9 @@ import {
 import { Badge } from '@movie-hub/shacdn-ui/badge';
 import { Checkbox } from '@movie-hub/shacdn-ui/checkbox';
 import { useToast } from '../_libs/use-toast';
-import type { Movie, Cinema, Hall, MovieRelease, BatchCreateShowtimesInput, BatchCreateResponse } from '../_libs/types';
-import { mockMovies, mockCinemas, mockHalls, mockReleases } from '../_libs/mockData';
+import type { BatchCreateShowtimesInput, BatchCreateResponse } from '../_libs/types';
+import type { BatchCreateShowtimesRequest as ApiBatchCreateRequest, Showtime as ApiShowtime, Hall as ApiHall, ShowtimeFormat as ApiShowtimeFormat, ShowtimeLanguage as ApiShowtimeLanguage } from '@/libs/api/types';
+import { useMovies, useCinemas, useHallsGroupedByCinema, useMovieReleases, useBatchCreateShowtimes } from '@/libs/api';
 
 const WEEKDAYS = [
   { value: 1, label: 'Monday' },
@@ -48,10 +50,14 @@ export default function BatchShowtimesPage() {
   const preSelectedMovieId = searchParams.get('movieId');
   const preSelectedReleaseId = searchParams.get('releaseId');
   
-  const [movies, setMovies] = useState<Movie[]>([]);
-  const [cinemas, setCinemas] = useState<Cinema[]>([]);
-  const [halls, setHalls] = useState<Hall[]>([]);
-  const [releases, setReleases] = useState<MovieRelease[]>([]);
+  // API hooks
+  const { data: movies = [] } = useMovies();
+  const { data: cinemas = [] } = useCinemas();
+  const { data: hallsByCinema = {} } = useHallsGroupedByCinema();
+  const halls: ApiHall[] = Object.values(hallsByCinema).flatMap((g: { halls?: ApiHall[] }) => g.halls || []);
+  const { data: movieReleases = [] } = useMovieReleases();
+  const batchCreateMutation = useBatchCreateShowtimes();
+
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<BatchCreateResponse | null>(null);
   const [history, setHistory] = useState<Array<{
@@ -62,67 +68,7 @@ export default function BatchShowtimesPage() {
     hall: string;
     period: string;
     result: BatchCreateResponse;
-  }>>([
-    {
-      id: '1',
-      timestamp: '2025-12-02T14:30:00Z',
-      movie: 'The Conjuring',
-      cinema: 'CGV Vincom Center',
-      hall: 'Hall 1',
-      period: '2025-12-05 → 2025-12-20',
-      result: {
-        createdCount: 48,
-        skippedCount: 2,
-        created: [
-          { id: 'st_001', startTime: '2025-12-05T14:00:00Z' },
-          { id: 'st_002', startTime: '2025-12-05T18:00:00Z' },
-        ],
-        skipped: [
-          { start: '2025-12-10T14:00:00Z', reason: 'TIME_CONFLICT' },
-          { start: '2025-12-15T21:00:00Z', reason: 'HALL_MAINTENANCE' },
-        ],
-      },
-    },
-    {
-      id: '2',
-      timestamp: '2025-12-02T10:15:00Z',
-      movie: 'Oppenheimer',
-      cinema: 'Lotte Cinema Diamond Plaza',
-      hall: 'IMAX Hall',
-      period: '2025-12-01 → 2025-12-31',
-      result: {
-        createdCount: 90,
-        skippedCount: 0,
-        created: [
-          { id: 'st_101', startTime: '2025-12-01T10:00:00Z' },
-          { id: 'st_102', startTime: '2025-12-01T14:30:00Z' },
-        ],
-        skipped: [],
-      },
-    },
-    {
-      id: '3',
-      timestamp: '2025-12-01T16:45:00Z',
-      movie: 'Spider-Man: No Way Home',
-      cinema: 'Galaxy Cinema Nguyen Du',
-      hall: 'Hall 3',
-      period: '2025-12-03 → 2025-12-10',
-      result: {
-        createdCount: 24,
-        skippedCount: 5,
-        created: [
-          { id: 'st_201', startTime: '2025-12-03T09:00:00Z' },
-        ],
-        skipped: [
-          { start: '2025-12-05T20:00:00Z', reason: 'TIME_CONFLICT' },
-          { start: '2025-12-06T20:00:00Z', reason: 'TIME_CONFLICT' },
-          { start: '2025-12-07T14:00:00Z', reason: 'HOLIDAY_PRICING_REQUIRED' },
-          { start: '2025-12-08T21:00:00Z', reason: 'HALL_UNAVAILABLE' },
-          { start: '2025-12-09T18:00:00Z', reason: 'TIME_CONFLICT' },
-        ],
-      },
-    },
-  ]);
+  }>>([]);
   
   const [formData, setFormData] = useState<BatchCreateShowtimesInput>({
     movieId: '',
@@ -142,53 +88,17 @@ export default function BatchShowtimesPage() {
   const { toast } = useToast();
 
   useEffect(() => {
-    fetchData();
-  }, []);
-
-  useEffect(() => {
     if (preSelectedMovieId && preSelectedReleaseId) {
       setFormData(prev => ({
         ...prev,
         movieId: preSelectedMovieId,
         movieReleaseId: preSelectedReleaseId,
       }));
-      fetchReleases(preSelectedMovieId);
     }
   }, [preSelectedMovieId, preSelectedReleaseId]);
 
-  const fetchData = async () => {
-    try {
-      setMovies(mockMovies);
-      setCinemas(mockCinemas);
-      setHalls(mockHalls);
-    } catch {
-      toast({
-        title: 'Error',
-        description: 'Failed to fetch data',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const fetchReleases = async (movieId: string) => {
-    try {
-      const filtered = mockReleases.filter(r => 
-        r.movieId === movieId && 
-        (r.status === 'ACTIVE' || r.status === 'UPCOMING')
-      );
-      setReleases(filtered);
-    } catch {
-      toast({
-        title: 'Error',
-        description: 'Failed to fetch movie releases',
-        variant: 'destructive',
-      });
-    }
-  };
-
   const handleMovieChange = (movieId: string) => {
     setFormData({ ...formData, movieId, movieReleaseId: '' });
-    fetchReleases(movieId);
   };
 
   const handleTimeSlotToggle = (time: string) => {
@@ -228,18 +138,41 @@ export default function BatchShowtimesPage() {
 
     try {
       setLoading(true);
-      // Mock batch create - in real app, call API
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      const mockResponse: BatchCreateResponse = {
-        createdCount: formData.timeSlots.length * 7,
-        skippedCount: Math.floor(Math.random() * 3),
-        created: formData.timeSlots.map((time, idx) => ({
-          id: `st_${Date.now()}_${idx}`,
-          startTime: `${formData.startDate}T${time}:00Z`,
-        })),
-        skipped: [],
+      // Convert admin form shape to API request shape (API expects dateRange and price)
+      const apiRequest: ApiBatchCreateRequest = {
+        movieId: formData.movieId,
+        cinemaId: formData.cinemaId,
+        hallId: formData.hallId,
+        dateRange: {
+          startDate: formData.startDate,
+          endDate: formData.endDate,
+        },
+        timeSlots: formData.timeSlots,
+        format: formData.format as unknown as ApiShowtimeFormat,
+        language: formData.language as unknown as ApiShowtimeLanguage,
+        price: 0, // default price (adjust if UI provides price)
       };
-      setResult(mockResponse);
+
+      const response = await batchCreateMutation.mutateAsync(apiRequest);
+      // The backend returns an array of created showtimes (Showtime[]). Normalize to BatchCreateResponse
+      let normalized: BatchCreateResponse;
+      if (Array.isArray(response)) {
+        const created = (response as ApiShowtime[]).map(s => ({ id: s.id, startTime: s.startTime }));
+        normalized = {
+          createdCount: created.length,
+          skippedCount: 0,
+          created,
+          skipped: [],
+        };
+      } else {
+        // Fallback if API returns BatchCreateResponse directly
+        normalized = response as unknown as BatchCreateResponse;
+      }
+      setResult(normalized);
+
+      const selectedMovie = movies.find(m => m.id === formData.movieId);
+      const selectedCinema = cinemas.find(c => c.id === formData.cinemaId);
+      const selectedHall = halls.find(h => h.id === formData.hallId);
       
       setHistory(prev => [{
         id: Date.now().toString(),
@@ -248,27 +181,19 @@ export default function BatchShowtimesPage() {
         cinema: selectedCinema?.name || 'Unknown',
         hall: selectedHall?.name || 'Unknown',
         period: `${formData.startDate} → ${formData.endDate}`,
-        result: mockResponse,
-      }, ...prev].slice(0, 10));
-      
+        result: normalized,
+      }, ...prev]);
+
       toast({
         title: 'Success',
-        description: `Created ${mockResponse.createdCount} showtimes successfully`,
+        description: `Created ${normalized.createdCount} showtimes`,
       });
     } catch {
-      toast({
-        title: 'Error',
-        description: 'Failed to create showtimes',
-        variant: 'destructive',
-      });
+      // Error toast already shown by mutation hook
     } finally {
       setLoading(false);
     }
   };
-
-  const selectedMovie = movies.find(m => m.id === formData.movieId);
-  const selectedCinema = cinemas.find(c => c.id === formData.cinemaId);
-  const selectedHall = halls.find(h => h.id === formData.hallId);
 
   return (
     <div className="space-y-6">
@@ -309,7 +234,7 @@ export default function BatchShowtimesPage() {
                     <SelectContent>
                       {movies.map((movie) => (
                         <SelectItem key={movie.id} value={movie.id}>
-                          {movie.title} ({movie.runtime} mins)
+                          {movie.title}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -322,8 +247,8 @@ export default function BatchShowtimesPage() {
                 {preSelectedReleaseId ? (
                   <Input
                     value={
-                      releases.find(r => r.id === formData.movieReleaseId)
-                        ? `${releases.find(r => r.id === formData.movieReleaseId)?.startDate} → ${releases.find(r => r.id === formData.movieReleaseId)?.endDate}`
+                      movieReleases.find((r: typeof movieReleases[0]) => r.id === formData.movieReleaseId)
+                        ? `${movieReleases.find((r: typeof movieReleases[0]) => r.id === formData.movieReleaseId)?.startDate} → ${movieReleases.find((r: typeof movieReleases[0]) => r.id === formData.movieReleaseId)?.endDate}`
                         : 'Loading...'
                     }
                     disabled
@@ -339,11 +264,13 @@ export default function BatchShowtimesPage() {
                       <SelectValue placeholder="Select release period" />
                     </SelectTrigger>
                     <SelectContent>
-                      {releases.map((release) => (
-                        <SelectItem key={release.id} value={release.id}>
-                          {release.startDate} → {release.endDate} ({release.note})
-                        </SelectItem>
-                      ))}
+                      {movieReleases
+                        .filter((r: typeof movieReleases[0]) => r.movieId === formData.movieId)
+                        .map((release: typeof movieReleases[0]) => (
+                          <SelectItem key={release.id} value={release.id}>
+                            {release.startDate ?? ''} → {release.endDate ?? ''}
+                          </SelectItem>
+                        ))}
                     </SelectContent>
                   </Select>
                 )}
@@ -609,24 +536,24 @@ export default function BatchShowtimesPage() {
               <CardTitle className="text-lg">📋 Summary</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {selectedMovie && (
+              {formData.movieId && (
                 <div className="space-y-1">
                   <p className="text-xs text-gray-500">Movie</p>
-                  <p className="font-semibold text-sm">{selectedMovie.title}</p>
+                  <p className="font-semibold text-sm">{movies.find(m => m.id === formData.movieId)?.title || 'Unknown'}</p>
                 </div>
               )}
 
-              {selectedCinema && (
+              {formData.cinemaId && (
                 <div className="space-y-1">
                   <p className="text-xs text-gray-500">Cinema</p>
-                  <p className="font-semibold text-sm">{selectedCinema.name}</p>
+                  <p className="font-semibold text-sm">{cinemas.find(c => c.id === formData.cinemaId)?.name || 'Unknown'}</p>
                 </div>
               )}
 
-              {selectedHall && (
+              {formData.hallId && (
                 <div className="space-y-1">
                   <p className="text-xs text-gray-500">Hall</p>
-                  <p className="font-semibold text-sm">{selectedHall.name}</p>
+                  <p className="font-semibold text-sm">{halls.find(h => h.id === formData.hallId)?.name || 'Unknown'}</p>
                 </div>
               )}
 

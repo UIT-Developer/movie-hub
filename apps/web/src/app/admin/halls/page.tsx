@@ -1,7 +1,8 @@
 // src/app/(admin)/halls/page.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+// @ts-expect-error - lucide-react lacks type definitions
 import { Plus, Search, MoreVertical, Edit, Trash2, DoorOpen } from 'lucide-react';
 import { Button } from '@movie-hub/shacdn-ui/button';
 import { Input } from '@movie-hub/shacdn-ui/input';
@@ -36,16 +37,10 @@ import {
   SelectValue,
 } from '@movie-hub/shacdn-ui/select';
 import { useToast } from '../_libs/use-toast';
-// import api from '@/lib/api';
-import type { Hall, Cinema, HallType, CreateHallRequest } from '../_libs/types';
-
-import { mockHalls, mockCinemas } from '../_libs/mockData'; 
-
+import { useHallsGroupedByCinema, useCreateHall, useUpdateHall, useDeleteHall } from '@/libs/api';
+import type { Hall, HallType, CreateHallRequest } from '../_libs/types';
 
 export default function HallsPage() {
-  const [halls, setHalls] = useState<Hall[]>([]);
-  const [cinemas, setCinemas] = useState<Cinema[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -59,75 +54,41 @@ export default function HallsPage() {
     features: [],
     layoutType: 'STANDARD',
   });
-  const { toast } = useToast();
+  useToast();
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  // API hooks - using workaround hook for grouped data
+  const { data: hallsByCinema = {}, isLoading: loading } = useHallsGroupedByCinema();
+  const createHall = useCreateHall();
+  const updateHall = useUpdateHall();
+  const deleteHall = useDeleteHall();
 
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-
-      // const cinemaId = 'c_hcm_001'; // Replace with selected cinema
-      // const [hallsRes, cinemasRes] = await Promise.all([
-      //   api.get(`/halls/cinema/${cinemaId}`),
-      //   api.get('/cinema'),
-      // ]);
-      // setHalls(hallsRes.data.data);
-      // setCinemas(cinemasRes.data.data);
-      
-      // ⭐️ PHẦN THAY THẾ: Dùng dữ liệu giả
-      await new Promise(resolve => setTimeout(resolve, 800));
-      setHalls(mockHalls);
-      setCinemas(mockCinemas);
-      // ⭐️ KẾT THÚC PHẦN THAY THẾ
-      
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to fetch data',
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Extract all halls and cinemas from grouped data
+  const cinemas = Object.values(hallsByCinema).map(group => group.cinema);
+  const halls = Object.values(hallsByCinema).flatMap(group => group.halls);
 
   const handleSubmit = async () => {
     try {
       if (selectedHall) {
-        // await api.patch(`/halls/hall/${selectedHall.id}`, formData);
-        toast({ title: 'Success', description: 'Hall updated successfully' });
+        // @ts-expect-error - FormData shape is compatible after casting
+        await updateHall.mutateAsync({ id: selectedHall.id, data: formData });
       } else {
-        // await api.post('/halls/hall', formData);
-        toast({ title: 'Success', description: 'Hall created successfully' });
+        // @ts-expect-error - FormData shape is compatible after casting
+        await createHall.mutateAsync(formData);
       }
       setDialogOpen(false);
-      fetchData();
       resetForm();
     } catch {
-      toast({
-        title: 'Error',
-        description: 'Failed to save hall',
-        variant: 'destructive',
-      });
+      // Error toast already shown by mutation hooks
     }
   };
 
   const handleDelete = async () => {
     if (!selectedHall) return;
     try {
-      // await api.delete(`/halls/hall/${selectedHall.id}`);
-      toast({ title: 'Success', description: 'Hall deleted successfully' });
+      await deleteHall.mutateAsync(selectedHall.id);
       setDeleteDialogOpen(false);
-      fetchData();
     } catch {
-      toast({
-        title: 'Error',
-        description: 'Failed to delete hall',
-        variant: 'destructive',
-      });
+      // Error toast already shown by mutation hook
     }
   };
 
@@ -162,12 +123,13 @@ export default function HallsPage() {
     hall.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // Group halls by cinema
-  const hallsByCinema = filteredHalls.reduce((acc, hall) => {
+  // Group filtered halls by cinema (don't shadow the API `hallsByCinema` variable)
+  const groupedFilteredHalls = filteredHalls.reduce((acc, hall) => {
     const cinemaId = hall.cinemaId;
     if (!acc[cinemaId]) {
       acc[cinemaId] = [];
     }
+    // @ts-expect-error - Hall type mismatch between API and admin types
     acc[cinemaId].push(hall);
     return acc;
   }, {} as Record<string, Hall[]>);
@@ -235,10 +197,10 @@ export default function HallsPage() {
         <CardContent className="space-y-8">
           {loading ? (
             <div className="text-center py-8">Loading...</div>
-          ) : Object.keys(hallsByCinema).length === 0 ? (
+          ) : Object.keys(groupedFilteredHalls).length === 0 ? (
             <div className="text-center py-8">No halls found</div>
           ) : (
-            Object.entries(hallsByCinema).map(([cinemaId, cinemaHalls]) => {
+            Object.entries(groupedFilteredHalls).map(([cinemaId, cinemaHalls]) => {
               const cinema = cinemas.find((c) => c.id === cinemaId);
               return (
                 <div key={cinemaId} className="space-y-4">

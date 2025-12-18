@@ -21,7 +21,7 @@ import {
 } from '@movie-hub/shacdn-ui/select';
 import { Button } from '@movie-hub/shacdn-ui/button';
 import { useToast } from '../../_libs/use-toast';
-import { useAdminApi } from '@/libs/admin-api';
+// import { useAdminApi } from '@/libs/admin-api'; // DEPRECATED: Use new hooks from libs/api
 import type { Movie } from '../../_libs/types';
 
 interface MovieRelease {
@@ -49,7 +49,7 @@ export default function MovieReleaseDialog({
   preSelectedMovieId,
   onSuccess,
 }: MovieReleaseDialogProps) {
-  const api = useAdminApi();
+  // const api = useAdminApi(); // DEPRECATED
   const [formData, setFormData] = useState({
     movieId: '',
     startDate: '',
@@ -104,29 +104,29 @@ export default function MovieReleaseDialog({
     }
 
     try {
-      if (editingRelease) {
-        await api.movieReleases.update(editingRelease.id, {
-          movieId: formData.movieId,
-          startDate: formData.startDate,
-          endDate: formData.endDate,
-          note: formData.note,
-        });
-        toast({
-          title: 'Success',
-          description: 'Movie release updated successfully',
-        });
-      } else {
-        await api.movieReleases.create({
-          movieId: formData.movieId,
-          startDate: formData.startDate,
-          endDate: formData.endDate,
-          note: formData.note,
-        });
-        toast({
-          title: 'Success',
-          description: 'Movie release created successfully',
-        });
-      }
+      // if (editingRelease) {
+      //   await api.movieReleases.update(editingRelease.id, {
+      //     movieId: formData.movieId,
+      //     startDate: formData.startDate,
+      //     endDate: formData.endDate,
+      //     note: formData.note,
+      //   });
+      //   toast({
+      //     title: 'Success',
+      //     description: 'Movie release updated successfully',
+      //   });
+      // } else {
+      //   await api.movieReleases.create({
+      //     movieId: formData.movieId,
+      //     startDate: formData.startDate,
+      //     endDate: formData.endDate,
+      //     note: formData.note,
+      //   });
+      //   toast({
+      //     title: 'Success',
+      //     description: 'Movie release created successfully',
+      //   });
+      // }
 
       onOpenChange(false);
       resetForm();

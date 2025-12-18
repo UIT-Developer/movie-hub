@@ -13,6 +13,9 @@ export const MovieServiceMessage = {
     DELETED: 'movie.deleted',
     GET_LIST_RELEASE: 'movie.release.list',
     GET_LIST_BY_ID: 'movie.list.by-id',
+    CREATED_REVIEW: 'movie.review.created',
+    UPDATED_REVIEW: 'movie.review.updated',
+    GET_REVIEWS: 'movie.review.list',
   },
   MOVIE_RELEASE: {
     CREATED: 'movie.release.created',
@@ -25,6 +28,10 @@ export const MovieServiceMessage = {
     CREATED: 'genre.created',
     UPDATED: 'genre.updated',
     DELETED: 'genre.deleted',
+  },
+  REVIEW: {
+    GET_LIST: 'review.list',
+    DELETED: 'review.deleted',
   },
 };
 

@@ -1,7 +1,10 @@
 import {
   CreateMovieRequest,
+  CreateReviewRequest,
   MovieQuery,
+  ReviewQuery,
   UpdateMovieRequest,
+  UpdateReviewRequest,
 } from '@movie-hub/shared-types';
 import {
   Body,
@@ -54,5 +57,25 @@ export class MovieController {
   async remove(@Param('id') id: string) {
     await this.movieService.deleteMovie(id);
     return null;
+  }
+
+  // reviews
+  @Get(':id/reviews')
+  async getReviews(@Param('id') id: string, @Query() query: ReviewQuery) {
+    query.movieId = id;
+    return this.movieService.getReviews(query);
+  }
+
+  @Post(':id/reviews')
+  async createReview(@Body() request: CreateReviewRequest) {
+    return this.movieService.createReviews(request);
+  }
+
+  @Put(':id/reviews/:reviewId')
+  async updateReview(
+    @Param('reviewId') reviewId: string,
+    @Body() request: UpdateReviewRequest
+  ) {
+    return this.movieService.updateReview(reviewId, request);
   }
 }

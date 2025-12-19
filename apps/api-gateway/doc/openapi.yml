@@ -1347,6 +1347,10 @@ components:
         languageType:
           type: string
           enum: ['ORIGINAL', 'SUBTITLE', 'DUBBED']
+        averageRating:
+          type: number
+        reviewCount:
+          type: number
 
     MovieDetail:
       allOf:

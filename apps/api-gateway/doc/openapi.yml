@@ -19,6 +19,8 @@ servers:
 
 tags:
   - name: Movies
+  - name: Staffs
+  - name: Config
   - name: Reviews
   - name: Movie Releases
   - name: Genres
@@ -298,7 +300,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiErrorResponse'
 
-
   /movies/{movieId}/releases:
     get:
       tags: [Movies]
@@ -460,6 +461,287 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiErrorResponse'
+
+  /staffs:
+    get:
+      tags: [Staffs]
+      summary: Lấy danh sách nhân viên
+      parameters:
+        # Pagination
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            default: 10
+
+        # Sorting
+        - in: query
+          name: sortBy
+          schema:
+            type: string
+            example: createdAt
+
+        - in: query
+          name: sortOrder
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: asc
+
+        # Filters
+        - in: query
+          name: cinemaId
+          schema:
+            type: string
+            format: uuid
+
+        - in: query
+          name: fullName
+          schema:
+            type: string
+
+        - in: query
+          name: gender
+          schema:
+            type: string
+            enum: [MALE, FEMALE, OTHER]
+
+        - in: query
+          name: dob
+          schema:
+            type: string
+            format: date
+
+        - in: query
+          name: position
+          schema:
+            type: string
+            enum:
+              - CINEMA_MANAGER
+              - ASSISTANT_MANAGER
+              - TICKET_CLERK
+              - CONCESSION_STAFF
+              - USHER
+              - PROJECTIONIST
+              - CLEANER
+              - SECURITY
+
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [ACTIVE, INACTIVE]
+
+        - in: query
+          name: workType
+          schema:
+            type: string
+            enum: [FULL_TIME, PART_TIME, CONTRACT]
+
+        - in: query
+          name: shiftType
+          schema:
+            type: string
+            enum: [MORNING, AFTERNOON, NIGHT]
+
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/StaffResponse'
+                  meta:
+                    $ref: '#/components/schemas/PaginationMeta'
+                  message:
+                    type: string
+    post:
+      tags: [Staffs]
+      summary: Create staff
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateStaffDto'
+      responses:
+        201:
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/StaffResponse'
+                  message:
+                    type: string
+
+  /staffs/{id}:
+    get:
+      tags: [Staffs]
+      summary: Lấy chi tiết nhân viên
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/StaffResponse'
+                  message:
+                    type: string
+    put:
+      tags: [Staffs]
+      summary: Update staff
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateStaffDto'
+      responses:
+        200:
+          description: Updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/StaffResponse'
+                  message:
+                    type: string
+
+  /config:
+    get:
+      tags: [Config]
+      summary: Lấy tất cả cấu hình hệ thống
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        key:
+                          type: string
+                          example: theme
+                        value:
+                          type: object
+                          example:
+                            mode: dark
+                            primaryColor: "#0ea5e9"
+                        description:
+                          type: string
+                          example: Theme configuration
+                        updatedAt:
+                          type: string
+                          format: date-time
+                  message:
+                    type: string
+                    example: Get configs successfully
+
+  /config/{key}:
+    put:
+      tags: [Config]
+      summary: Cập nhật giá trị cấu hình
+      description: |
+        Update system config by key.
+        - Key must exist
+        - Cannot delete
+        - Cannot create new key
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - key
+                - value
+              properties:
+                key:
+                  type: string
+                  example: theme
+                value:
+                  type: object
+                  example:
+                    mode: light
+                    primaryColor: "#22c55e"
+                description:
+                  type: string
+                  example: Theme config for admin & user
+      responses:
+        200:
+          description: Updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      key:
+                        type: string
+                        example: theme
+                      value:
+                        type: object
+                        example:
+                          mode: light
+                          primaryColor: "#22c55e"
+                      description:
+                        type: string
+                        example: Theme config for admin & user
+                      updatedAt:
+                        type: string
+                        format: date-time
+                  message:
+                    type: string
+                    example: Update config successfully
 
   /genres:
     get:
@@ -1660,6 +1942,197 @@ components:
           format: date
         note:
           type: string
+
+    # ----------------------
+    # Staff
+    # ----------------------
+    CreateStaffDto:
+      type: object
+      required:
+        - cinemaId
+        - fullName
+        - email
+        - phone
+        - gender
+        - dob
+        - position
+        - status
+        - workType
+        - shiftType
+        - salary
+        - hireDate
+      properties:
+        cinemaId:
+          type: string
+          format: uuid
+
+        fullName:
+          type: string
+          minLength: 1
+          example: 'Nguyễn Văn A'
+
+        email:
+          type: string
+          format: email
+          example: 'nguyenvana@example.com'
+
+        phone:
+          type: string
+          minLength: 9
+          example: '0987654321'
+
+        gender:
+          type: string
+          enum: [MALE, FEMALE, OTHER]
+
+        dob:
+          type: string
+          format: date
+          example: '1998-06-15'
+
+        position:
+          type: string
+          enum:
+            - CINEMA_MANAGER
+            - ASSISTANT_MANAGER
+            - TICKET_CLERK
+            - CONCESSION_STAFF
+            - USHER
+            - PROJECTIONIST
+            - CLEANER
+            - SECURITY
+
+        status:
+          type: string
+          enum: [ACTIVE, INACTIVE]
+
+        workType:
+          type: string
+          enum: [FULL_TIME, PART_TIME, CONTRACT]
+
+        shiftType:
+          type: string
+          enum: [MORNING, AFTERNOON, NIGHT]
+
+        salary:
+          type: number
+          format: double
+          example: 8000000
+
+        hireDate:
+          type: string
+          format: date
+          example: '2024-01-10'
+    UpdateStaffDto:
+      type: object
+      properties:
+        fullName:
+          type: string
+          minLength: 1
+
+        phone:
+          type: string
+          minLength: 9
+
+        gender:
+          type: string
+          enum: [MALE, FEMALE, OTHER]
+
+        dob:
+          type: string
+          format: date
+
+        position:
+          type: string
+          enum:
+            - CINEMA_MANAGER
+            - ASSISTANT_MANAGER
+            - TICKET_CLERK
+            - CONCESSION_STAFF
+            - USHER
+            - PROJECTIONIST
+            - CLEANER
+            - SECURITY
+
+        status:
+          type: string
+          enum: [ACTIVE, INACTIVE]
+
+        workType:
+          type: string
+          enum: [FULL_TIME, PART_TIME, CONTRACT]
+
+        shiftType:
+          type: string
+          enum: [MORNING, AFTERNOON, NIGHT]
+
+        salary:
+          type: number
+          format: double
+
+        hireDate:
+          type: string
+          format: date
+    StaffResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+
+        cinemaId:
+          type: string
+          format: uuid
+
+        fullName:
+          type: string
+
+        email:
+          type: string
+          format: email
+
+        phone:
+          type: string
+
+        gender:
+          type: string
+          enum: [MALE, FEMALE, OTHER]
+
+        dob:
+          type: string
+          format: date
+
+        position:
+          type: string
+          enum:
+            - CINEMA_MANAGER
+            - ASSISTANT_MANAGER
+            - TICKET_CLERK
+            - CONCESSION_STAFF
+            - USHER
+            - PROJECTIONIST
+            - CLEANER
+            - SECURITY
+
+        status:
+          type: string
+          enum: [ACTIVE, INACTIVE]
+
+        workType:
+          type: string
+          enum: [FULL_TIME, PART_TIME, CONTRACT]
+
+        shiftType:
+          type: string
+          enum: [MORNING, AFTERNOON, NIGHT]
+
+        salary:
+          type: number
+          format: double
+
+        hireDate:
+          type: string
+          format: date
 
     # ----------------------
     # CINEMA

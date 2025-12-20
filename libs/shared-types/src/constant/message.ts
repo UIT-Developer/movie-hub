@@ -2,6 +2,16 @@ export const UserMessage = {
   GET_PERMISSIONS: 'user.getPermissions',
   GET_USERS: 'user.getAll',
   GET_USER_DETAIL: 'user.getDetail',
+  STAFF: {
+    GET_LIST: 'movie.list',
+    CREATED: 'movie.created',
+    UPDATED: 'movie.updated',
+    GET_DETAIL: 'movie.detail',
+  },
+  CONFIG: {
+    GET_LIST: "config.list",
+    UPDATED: 'config.updated'
+  }
 };
 
 export const MovieServiceMessage = {

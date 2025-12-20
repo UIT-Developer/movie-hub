@@ -1,25 +1,29 @@
 datasource db {
-  provider  = "postgresql"
-  url  	    = env("DATABASE_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 generator client {
-  provider = "prisma-client-js"
-  output   = "../generated/prisma"
+  provider        = "prisma-client-js"
+  output          = "../generated/prisma"
   previewFeatures = []
 }
 
 model Role {
-  id              String          @id @default(cuid())
-  name            String          @unique
+  id              String           @id @default(cuid())
+  name            String           @unique
   rolePermissions RolePermission[]
   userRoles       UserRole[]
+
+  @@map("roles")
 }
 
 model Permission {
-  id              String          @id @default(cuid())
-  name            String          @unique
+  id              String           @id @default(cuid())
+  name            String           @unique
   rolePermissions RolePermission[]
+
+  @@map("permissions")
 }
 
 model UserRole {
@@ -27,6 +31,8 @@ model UserRole {
   userId String
   roleId String
   role   Role   @relation(fields: [roleId], references: [id])
+
+  @@map("user_roles")
 }
 
 model RolePermission {
@@ -35,6 +41,87 @@ model RolePermission {
   permissionId String
   role         Role       @relation(fields: [roleId], references: [id])
   permission   Permission @relation(fields: [permissionId], references: [id])
+
+  @@map("role_permissions")
 }
 
+// staff
 
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum StaffStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum WorkType {
+  FULL_TIME
+  PART_TIME
+  CONTRACT
+}
+
+enum StaffPosition {
+  /// Quản lý rạp phim
+  CINEMA_MANAGER
+
+  /// Phó / trợ lý quản lý rạp
+  ASSISTANT_MANAGER
+
+  /// Nhân viên bán vé
+  TICKET_CLERK
+
+  /// Nhân viên quầy bắp nước / đồ ăn
+  CONCESSION_STAFF
+
+  /// Nhân viên soát vé, hướng dẫn khách vào phòng chiếu
+  USHER
+
+  /// Nhân viên vận hành máy chiếu
+  PROJECTIONIST
+
+  /// Nhân viên vệ sinh
+  CLEANER
+
+  /// Nhân viên bảo vệ
+  SECURITY
+}
+
+enum ShiftType {
+  MORNING
+  AFTERNOON
+  NIGHT
+}
+
+model Staff {
+  id       String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cinemaId String @db.Uuid
+
+  fullName  String        @map("full_name")
+  email     String        @unique
+  phone     String
+  gender    Gender        @default(MALE)
+  dob       DateTime
+  position  StaffPosition @default(TICKET_CLERK)
+  status    StaffStatus   @default(ACTIVE)
+  workType  WorkType      @default(FULL_TIME)
+  shiftType ShiftType     @default(MORNING)
+  salary    Decimal
+  hireDate  DateTime      @map("hire_date")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("staffs")
+}
+
+model Setting {
+  key         String  @id
+  value       Json    @db.JsonB
+  description String?
+
+  @@map("settings")
+}

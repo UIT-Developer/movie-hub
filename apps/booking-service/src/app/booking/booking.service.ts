@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, Inject } from '@nestjs/common';
+import { Injectable, BadRequestException, Inject, Logger } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
 import { PrismaService } from '../prisma.service';
@@ -32,6 +32,7 @@ import {
   SERVICE_NAME,
 } from '@movie-hub/shared-types';
 import { Prisma, Concessions, Tickets, PromotionType } from '../../../generated/prisma';
+import { th } from 'zod/v4/locales';
 
 // Type for booking with full relations using Prisma's generated types
 type BookingWithRelations = Prisma.BookingsGetPayload<{
@@ -57,6 +58,8 @@ export class BookingService {
   private readonly CANCELLATION_HOURS_BEFORE = 2; // Must cancel 2 hours before showtime
   private readonly REFUND_PERCENTAGE = 70; // 70% refund on tickets
   private readonly MAX_RESCHEDULES = 1; // Max 1 reschedule per booking
+
+  private readonly logger = new Logger(BookingService.name);
 
   constructor(
     private prisma: PrismaService,
@@ -1355,6 +1358,7 @@ export class BookingService {
     userId: string,
     dto: UpdateBookingDto
   ): Promise<ServiceResult<BookingDetailDto>> {
+    this.logger.log(`Updating booking ${id} for user ${userId}`);
     const booking = await this.prisma.bookings.findFirst({
       where: { id, user_id: userId },
       include: {
@@ -1362,24 +1366,25 @@ export class BookingService {
         booking_concessions: true,
       },
     });
+    this.logger.log(`Booking retrieved: ${booking ? 'found' : 'not found'}`);
 
     if (!booking) {
       throw new BadRequestException('Booking not found');
     }
 
+    this.logger.log(`Booking status: ${booking.status}, expires at: ${booking.expires_at}`);
     if (booking.status !== BookingStatus.PENDING) {
       throw new BadRequestException('Can only update pending bookings');
     }
 
-    if (booking.expires_at && new Date() > booking.expires_at) {
-      throw new BadRequestException('Booking has expired');
-    }
 
     // ✅ STEP 1: Handle seats update (the actual booking logic)
    
       // Get seats currently held by user from Cinema Service (Redis)
+      
       const heldSeatsData = await this.getSeatsHeldByUser(booking.showtime_id, userId);
       const { seats: heldSeatsWithPricing, lockTtl: sessionTTL } = heldSeatsData;
+      this.logger.log(`Held seats retrieved: ${heldSeatsWithPricing.length} seats, TTL: ${sessionTTL}s`);
 
       if (heldSeatsWithPricing.length === 0) {
         throw new BadRequestException(

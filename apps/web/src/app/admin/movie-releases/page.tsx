@@ -56,11 +56,12 @@ export default function MovieReleasesPage() {
   const { toast } = useToast();
 
   // API hooks
-  const { data: releases = [], isLoading: loading, refetch: refetchReleases } = useMovieReleases();
+  const { data: releasesData = [], isLoading: loading, refetch: refetchReleases } = useMovieReleases();
+  const releases = Array.isArray(releasesData) ? releasesData : (releasesData?.data || []) as MovieRelease[];
   const { data: moviesData = [] } = useMovies();
-  const movies = moviesData as unknown as Movie[];
+  const movies = Array.isArray(moviesData) ? moviesData : (moviesData?.data || []) as Movie[];
   const { data: cinemasData = [] } = useCinemas();
-  const cinemas = cinemasData as Cinema[];
+  const cinemas = Array.isArray(cinemasData) ? cinemasData : (cinemasData?.data || []) as Cinema[];
   const deleteRelease = useDeleteMovieRelease();
 
   // Halls: derive a flat halls list from grouped halls by cinema

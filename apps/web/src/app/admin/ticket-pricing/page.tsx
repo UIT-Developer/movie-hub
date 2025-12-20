@@ -41,10 +41,12 @@ export default function TicketPricingPage() {
   const { toast } = useToast();
 
   // API hooks
-  const { data: cinemas = [] } = useCinemas();
-  const { data: halls = [] } = useHallsByCinema(selectedCinemaId);
-  const { data: pricings = [], isLoading: loading } = useTicketPricing(selectedHallId ? { hallId: selectedHallId } as TicketPricingFiltersParams & { hallId: string } : undefined);
-  const pricingsAdmin = pricings as unknown as TicketPricing[];
+  const { data: cinemasData = [] } = useCinemas();
+  const cinemas = Array.isArray(cinemasData) ? cinemasData : (cinemasData?.data || []) as Cinema[];
+  const { data: hallsData = [] } = useHallsByCinema(selectedCinemaId);
+  const halls = Array.isArray(hallsData) ? hallsData : (hallsData?.data || []) as Hall[];
+  const { data: pricingsData = [], isLoading: loading } = useTicketPricing(selectedHallId ? { hallId: selectedHallId } as TicketPricingFiltersParams & { hallId: string } : undefined);
+  const pricings = Array.isArray(pricingsData) ? pricingsData : (pricingsData?.data || []) as TicketPricing[];
   const updatePricing = useUpdateTicketPricing();
 
   const handleHallChange = (hallId: string) => {
@@ -74,7 +76,7 @@ export default function TicketPricingPage() {
         return;
       }
 
-      await updatePricing.mutateAsync({ id: pricingId, data: { basePrice: newPrice } });
+      await updatePricing.mutateAsync({ id: pricingId, data: { price: newPrice } });
 
       toast({
         title: 'Success',
@@ -139,7 +141,7 @@ export default function TicketPricingPage() {
   const selectedHall = halls.find(h => h.id === selectedHallId);
 
   // Group pricings by seat type
-  const groupedPricings = pricingsAdmin.reduce((acc, pricing) => {
+  const groupedPricings = pricings.reduce((acc, pricing) => {
     if (!acc[pricing.seatType]) {
       acc[pricing.seatType] = [];
     }

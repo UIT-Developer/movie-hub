@@ -27,8 +27,10 @@ export default function ShowtimeSeatsPage() {
   useToast();
 
   // API hooks
-  const { data: showtimes = [] } = useShowtimes();
-  const { data: seats = [], isLoading: loading } = useShowtimeSeats(selectedShowtimeId);
+  const { data: showtimesData = [] } = useShowtimes();
+  const showtimes = Array.isArray(showtimesData) ? showtimesData : (showtimesData?.data || []) as typeof showtimesData;
+  const { data: seatsData = [], isLoading: loading } = useShowtimeSeats(selectedShowtimeId);
+  const seats = Array.isArray(seatsData) ? seatsData : (seatsData?.data || []) as typeof seatsData;
 
   const handleShowtimeChange = async (showtimeId: string) => {
     setSelectedShowtimeId(showtimeId);

@@ -71,8 +71,9 @@ export default function MoviesPage() {
 
   // API hooks
   const { data: moviesData = [] } = useMovies();
-  const movies = moviesData as unknown as Movie[];
-  const { data: genres = [] } = useGenres();
+  const movies = Array.isArray(moviesData) ? moviesData : (moviesData?.data || []) as Movie[];
+  const { data: genresData = [] } = useGenres();
+  const genres = Array.isArray(genresData) ? genresData : (genresData?.data || []) as typeof genresData;
   const createMovie = useCreateMovie();
   const updateMovie = useUpdateMovie();
   const deleteMovie = useDeleteMovie();
@@ -287,7 +288,7 @@ export default function MoviesPage() {
                     </div>
                   )}
                   <div className="flex flex-wrap gap-1 mt-2">
-                    {movie.genre.slice(0, 3).map((g) => (
+                    {Array.isArray(movie.genre) && movie.genre.slice(0, 3).map((g) => (
                       <Badge key={g.id} variant="secondary" className="text-xs">
                         {g.name}
                       </Badge>

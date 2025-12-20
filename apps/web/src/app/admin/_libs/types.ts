@@ -9,7 +9,7 @@ export type ShowtimeStatus = 'SELLING' | 'STOPPED' | 'CANCELLED';
 export type ShowtimeFormat = 'TWO_D' | 'THREE_D' | 'IMAX' | 'FOUR_DX';
 export type DayType = 'WEEKDAY' | 'WEEKEND' | 'HOLIDAY';
 export type AgeRating = 'P' | 'K' | 'T13' | 'T16' | 'T18' | 'C';
-export type LanguageType = 'ORIGINAL' | 'SUBTITLE' | 'DUBBED';
+export type LanguageType = 'ORIGINAL' | 'DUBBED'; // Backend only has these two
 export type MovieStatus = 'now_showing' | 'upcoming';
 
 // Generic object type to replace any
@@ -215,10 +215,10 @@ export interface Staff {
 export interface MovieRelease {
   id: string;
   movieId: string;
-  startDate: string;
-  endDate: string;
+  startDate: string | Date; // Match API types
+  endDate: string | Date; // Match API types
   status: 'UPCOMING' | 'ACTIVE' | 'ENDED';
-  note: string;
+  note?: string; // Make optional to match API
 }
 
 // API Response wrapper

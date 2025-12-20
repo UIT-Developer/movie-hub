@@ -51,11 +51,14 @@ export default function BatchShowtimesPage() {
   const preSelectedReleaseId = searchParams.get('releaseId');
   
   // API hooks
-  const { data: movies = [] } = useMovies();
-  const { data: cinemas = [] } = useCinemas();
+  const { data: moviesData = [] } = useMovies();
+  const movies = Array.isArray(moviesData) ? moviesData : (moviesData?.data || []) as typeof moviesData;
+  const { data: cinemasData = [] } = useCinemas();
+  const cinemas = Array.isArray(cinemasData) ? cinemasData : (cinemasData?.data || []) as typeof cinemasData;
   const { data: hallsByCinema = {} } = useHallsGroupedByCinema();
   const halls: ApiHall[] = Object.values(hallsByCinema).flatMap((g: { halls?: ApiHall[] }) => g.halls || []);
-  const { data: movieReleases = [] } = useMovieReleases();
+  const { data: movieReleasesData = [] } = useMovieReleases();
+  const movieReleases = Array.isArray(movieReleasesData) ? movieReleasesData : (movieReleasesData?.data || []) as typeof movieReleasesData;
   const batchCreateMutation = useBatchCreateShowtimes();
 
   const [loading, setLoading] = useState(false);

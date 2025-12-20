@@ -53,7 +53,7 @@ export default function CinemasPage() {
 
   // API hooks
   const { data: cinemasData = [], isLoading: loading } = useCinemas();
-  const cinemas = cinemasData as Cinema[];
+  const cinemas = Array.isArray(cinemasData) ? cinemasData : (cinemasData?.data || []) as Cinema[];
   const createCinema = useCreateCinema();
   const updateCinema = useUpdateCinema();
   const deleteCinema = useDeleteCinema();

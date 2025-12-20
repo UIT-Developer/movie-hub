@@ -36,15 +36,18 @@ export default function ShowtimesPage() {
   const [selectedMovieId, setSelectedMovieId] = useState('all');
 
   // API hooks with flexible filtering
-  const { data: showtimes = [], isLoading: loading, refetch: refetchShowtimes } = useShowtimes({
+  const { data: showtimesData = [], isLoading: loading, refetch: refetchShowtimes } = useShowtimes({
     cinemaId: selectedCinemaId !== 'all' ? selectedCinemaId : undefined,
     movieId: selectedMovieId !== 'all' ? selectedMovieId : undefined,
     date: selectedDate.toISOString().split('T')[0],
   });
-  const { data: movies = [] } = useMovies();
-  const moviesAdmin = movies as unknown as Movie[];
-  const { data: cinemas = [] } = useCinemas();
-  const cinemasAdmin = cinemas as unknown as Cinema[];
+  const showtimes = Array.isArray(showtimesData) ? showtimesData : (showtimesData?.data || []) as Showtime[];
+  const { data: moviesData = [] } = useMovies();
+  const movies = Array.isArray(moviesData) ? moviesData : (moviesData?.data || []) as Movie[];
+  const moviesAdmin = movies;
+  const { data: cinemasData = [] } = useCinemas();
+  const cinemas = Array.isArray(cinemasData) ? cinemasData : (cinemasData?.data || []) as Cinema[];
+  const cinemasAdmin = cinemas;
   const deleteShowtime = useDeleteShowtime();
 
   // Halls: derive a flat halls list from grouped halls by cinema

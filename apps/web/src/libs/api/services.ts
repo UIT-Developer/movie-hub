@@ -75,8 +75,13 @@ export const genresApi = {
 // ============================================================================
 
 export const cinemasApi = {
-  getAll: (params?: CinemaFiltersParams) =>
-    api.get<Cinema[]>('/api/v1/cinemas/filters', { params }),
+  getAll: async (params?: CinemaFiltersParams): Promise<Cinema[]> => {
+    const response = await api.get<{ cinemas: Cinema[]; total: number; page: number; limit: number; hasMore: boolean }>(
+      '/api/v1/cinemas/filters',
+      { params }
+    );
+    return response.cinemas;
+  },
 
   getById: (id: string) =>
     api.get<Cinema>(`/api/v1/cinemas/${id}`),
@@ -182,18 +187,23 @@ export const showtimesApi = {
   getById: (id: string) =>
     api.get<Showtime>(`/api/v1/showtimes/${id}`),
 
+  // Backend endpoint: POST /api/v1/showtimes/showtime
   create: (data: CreateShowtimeRequest) =>
     api.post<Showtime>('/api/v1/showtimes/showtime', data),
 
+  // Backend endpoint: PATCH /api/v1/showtimes/showtime/:id
   update: (id: string, data: UpdateShowtimeRequest) =>
     api.patch<Showtime>(`/api/v1/showtimes/showtime/${id}`, data),
 
+  // Backend endpoint: DELETE /api/v1/showtimes/showtime/:id
   delete: (id: string) =>
     api.delete(`/api/v1/showtimes/showtime/${id}`),
 
+  // Backend endpoint: POST /api/v1/showtimes/batch
   batchCreate: (data: BatchCreateShowtimesRequest) =>
     api.post<Showtime[]>('/api/v1/showtimes/batch', data),
 
+  // Backend endpoint: GET /api/v1/showtimes/:id/seats
   getSeats: (showtimeId: string) =>
     api.get<ShowtimeSeat[]>(`/api/v1/showtimes/${showtimeId}/seats`),
 
@@ -215,8 +225,9 @@ export const movieReleasesApi = {
   create: (data: CreateMovieReleaseRequest) =>
     api.post<MovieRelease>('/api/v1/movie-releases', data),
 
+  // Backend uses PUT not PATCH
   update: (id: string, data: UpdateMovieReleaseRequest) =>
-    api.patch<MovieRelease>(`/api/v1/movie-releases/${id}`, data),
+    api.put<MovieRelease>(`/api/v1/movie-releases/${id}`, data),
 
   delete: (id: string) =>
     api.delete(`/api/v1/movie-releases/${id}`),
@@ -227,12 +238,19 @@ export const movieReleasesApi = {
 // ============================================================================
 
 export const ticketPricingApi = {
-  getAll: (params?: TicketPricingFiltersParams) =>
-    api.get<TicketPricing[]>('/api/v1/ticket-pricing', { params }),
+  // Backend endpoint: GET /api/v1/ticket-pricings/hall/:hallId
+  getAll: (params?: TicketPricingFiltersParams) => {
+    if (params?.hallId) {
+      return api.get<TicketPricing[]>(`/api/v1/ticket-pricings/hall/${params.hallId}`);
+    }
+    // If no hallId, we need to fetch for all halls - this might require a different approach
+    return Promise.resolve([]);
+  },
 
-  getById: (id: string) =>
-    api.get<TicketPricing>(`/api/v1/ticket-pricing/${id}`),
+  getByHall: (hallId: string) =>
+    api.get<TicketPricing[]>(`/api/v1/ticket-pricings/hall/${hallId}`),
 
-  update: (id: string, data: UpdateTicketPricingRequest) =>
-    api.patch<TicketPricing>(`/api/v1/ticket-pricing/${id}`, data),
+  // Backend endpoint: PATCH /api/v1/ticket-pricings/pricing/:pricingId
+  update: (pricingId: string, data: UpdateTicketPricingRequest) =>
+    api.patch<TicketPricing>(`/api/v1/ticket-pricings/pricing/${pricingId}`, data),
 };

@@ -34,7 +34,8 @@ export default function GenresPage() {
   const { toast } = useToast();
 
   // API hooks
-  const { data: genres = [], isLoading: loading, error } = useGenres();
+  const { data: genresData = [], isLoading: loading, error } = useGenres();
+  const genres = Array.isArray(genresData) ? genresData : (genresData?.data || []) as Genre[];
   const createGenre = useCreateGenre();
   const updateGenre = useUpdateGenre();
   const deleteGenre = useDeleteGenre();

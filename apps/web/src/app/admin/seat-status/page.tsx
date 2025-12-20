@@ -3,7 +3,7 @@
 import { useState } from 'react';
 // @ts-expect-error - lucide-react lacks type definitions
 import { Building2, DoorOpen, Wrench, CheckCircle2, XCircle } from 'lucide-react';
-import {  } from '@movie-hub/shacdn-ui/button';
+import { Button } from '@movie-hub/shacdn-ui/button';
 import {
   Card,
   CardContent,
@@ -32,7 +32,8 @@ export default function SeatStatusPage() {
   const { toast } = useToast();
 
   // API hooks
-  const { data: cinemas = [] } = useCinemas();
+  const { data: cinemasData = [] } = useCinemas();
+  const cinemas = Array.isArray(cinemasData) ? cinemasData : (cinemasData?.data || []) as typeof cinemasData;
   const { data: hallsByCinema = {} } = useHallsGroupedByCinema();
   // @ts-expect-error - Hall type mismatch between API and admin types
   const halls: Hall[] = Object.values(hallsByCinema).flatMap((g) => g.halls || []);

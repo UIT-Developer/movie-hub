@@ -19,44 +19,56 @@ export interface PaginatedResponse<T> {
 // MOVIE TYPES (API 1.x)
 // ============================================================================
 
+export type AgeRating = 'P' | 'K' | 'T13' | 'T16' | 'T18' | 'C';
+export type LanguageType = 'ORIGINAL' | 'DUBBED';
+
+export interface MovieCast {
+  name: string;
+  profileUrl?: string;
+  character?: string;
+}
+
 export interface Movie {
   id: string;
   title: string;
   originalTitle?: string;
-  description?: string;
-  duration: number; // minutes
-  releaseDate: string; // ISO date
-  posterUrl?: string;
-  trailerUrl?: string;
-  language: string;
-  rating?: number; // 0-10
-  status: 'COMING_SOON' | 'NOW_SHOWING' | 'ENDED';
+  overview?: string; // Backend uses 'overview' not 'description'
+  runtime: number; // Backend uses 'runtime' not 'duration' (minutes)
+  releaseDate: string | Date; // ISO date
+  posterUrl: string;
+  backdropUrl?: string;
+  trailerUrl: string;
+  originalLanguage: string;
+  spokenLanguages?: string[];
+  languageType?: LanguageType;
+  productionCountry?: string;
+  ageRating: AgeRating;
   director?: string;
-  cast?: string[];
+  cast?: MovieCast[]; // Backend uses array of objects with name, profileUrl
   genreIds?: string[];
-  genres?: Genre[];
-  ageRating?: string; // P, C13, C16, C18
-  country?: string;
-  createdAt?: string;
-  updatedAt?: string;
+  genre?: Genre[]; // Backend returns 'genre' not 'genres'
+  status?: 'COMING_SOON' | 'NOW_SHOWING' | 'ENDED';
+  createdAt?: string | Date;
+  updatedAt?: string | Date;
 }
 
 export interface CreateMovieRequest {
   title: string;
-  originalTitle?: string;
-  description?: string;
-  duration: number;
-  releaseDate: string;
-  posterUrl?: string;
-  trailerUrl?: string;
-  language: string;
-  rating?: number;
-  status: 'COMING_SOON' | 'NOW_SHOWING' | 'ENDED';
-  director?: string;
-  cast?: string[];
-  genreIds?: string[];
-  ageRating?: string;
-  country?: string;
+  originalTitle: string;
+  overview: string; // Backend uses 'overview'
+  runtime: number; // Backend uses 'runtime'
+  releaseDate: string | Date;
+  posterUrl: string;
+  backdropUrl: string;
+  trailerUrl: string;
+  originalLanguage: string;
+  spokenLanguages: string[];
+  languageType: LanguageType;
+  productionCountry: string;
+  ageRating: AgeRating;
+  director: string;
+  cast: MovieCast[]; // Backend expects array of objects
+  genreIds: string[];
 }
 
 export type UpdateMovieRequest = Partial<CreateMovieRequest>;
@@ -89,32 +101,45 @@ export interface Cinema {
   name: string;
   address: string;
   city: string;
-  district: string;
+  district?: string;
   phone?: string;
   email?: string;
+  website?: string;
+  latitude?: number; // Backend uses flat structure, not nested
+  longitude?: number; // Backend uses flat structure, not nested
   description?: string;
   amenities?: string[];
-  coordinates?: {
-    latitude: number;
-    longitude: number;
-  };
-  createdAt?: string;
-  updatedAt?: string;
+  facilities?: Record<string, any>;
+  images?: string[];
+  virtualTour360Url?: string;
+  operatingHours?: Record<string, any>;
+  socialMedia?: Record<string, any>;
+  timezone?: string;
+  status?: string;
+  rating?: number;
+  totalReviews?: number;
+  createdAt?: string | Date;
+  updatedAt?: string | Date;
 }
 
 export interface CreateCinemaRequest {
   name: string;
   address: string;
   city: string;
-  district: string;
+  district?: string;
   phone?: string;
   email?: string;
+  website?: string;
+  latitude?: number; // Flat structure to match backend
+  longitude?: number; // Flat structure to match backend
   description?: string;
   amenities?: string[];
-  coordinates?: {
-    latitude: number;
-    longitude: number;
-  };
+  facilities?: Record<string, any>;
+  images?: string[];
+  virtualTour360Url?: string;
+  operatingHours?: Record<string, any>;
+  socialMedia?: Record<string, any>;
+  timezone?: string;
 }
 
 export type UpdateCinemaRequest = Partial<CreateCinemaRequest>;
@@ -131,20 +156,22 @@ export interface CinemaFiltersParams {
 // HALL TYPES (API 4.x & 5.x)
 // ============================================================================
 
-export type HallType = '2D' | '3D' | 'IMAX' | '4DX' | 'SCREEN_X' | 'DOLBY_ATMOS';
-export type SeatType = 'STANDARD' | 'VIP' | 'COUPLE' | 'WHEELCHAIR';
-export type SeatStatus = 'AVAILABLE' | 'BROKEN' | 'MAINTENANCE' | 'RESERVED';
+export type HallType = 'STANDARD' | 'VIP' | 'IMAX' | 'FOUR_DX' | 'PREMIUM';
+export type LayoutType = 'STANDARD' | 'CUSTOM';
+export type SeatType = 'STANDARD' | 'VIP' | 'COUPLE' | 'PREMIUM' | 'WHEELCHAIR';
+export type SeatStatus = 'ACTIVE' | 'BROKEN' | 'MAINTENANCE'; // Backend uses these statuses
 
 export interface Seat {
   id: string;
-  rowLabel: string; // A, B, C...
-  seatNumber: number; // 1, 2, 3...
+  rowLetter: string; // Backend uses rowLetter not rowLabel
+  seatNumber: number;
   type: SeatType;
   status: SeatStatus;
-  position?: {
-    x: number;
-    y: number;
-  };
+}
+
+export interface PhysicalSeatRow {
+  row: string;
+  seats: Seat[];
 }
 
 export interface Hall {
@@ -153,32 +180,26 @@ export interface Hall {
   cinema?: Cinema;
   name: string;
   type: HallType;
-  capacity: number;
-  rows: number;
-  seatsPerRow: number;
-  layout?: {
-    rows: number;
-    columns: number;
-    seatMap: Seat[];
-  };
-  hallCode?: string;
-  createdAt?: string;
-  updatedAt?: string;
+  capacity: number; // Calculated from seatMap
+  rows: number; // Calculated from seatMap
+  screenType?: string;
+  soundSystem?: string;
+  features?: string[];
+  layoutType?: LayoutType;
+  status?: string;
+  seatMap?: PhysicalSeatRow[]; // Backend returns seatMap as array of rows
+  createdAt?: string | Date;
+  updatedAt?: string | Date;
 }
 
 export interface CreateHallRequest {
   cinemaId: string;
   name: string;
   type: HallType;
-  capacity: number;
-  rows: number;
-  seatsPerRow: number;
-  layout?: {
-    rows: number;
-    columns: number;
-    seatMap: Seat[];
-  };
-  hallCode?: string;
+  screenType?: string;
+  soundSystem?: string;
+  features?: string[];
+  layoutType?: LayoutType;
 }
 
 export type UpdateHallRequest = Partial<Omit<CreateHallRequest, 'cinemaId'>>;
@@ -191,35 +212,37 @@ export interface UpdateSeatStatusRequest {
 // SHOWTIME TYPES (API 5.x)
 // ============================================================================
 
-export type ShowtimeFormat = '2D' | '3D' | 'IMAX' | '4DX';
-export type ShowtimeLanguage = 'Vietnamese' | 'English' | 'Korean' | 'Japanese';
+export type ShowtimeFormat = 'TWO_D' | 'THREE_D' | 'IMAX' | 'FOUR_DX'; // Backend uses these formats
 
 export interface Showtime {
   id: string;
   movieId: string;
   movie?: Movie;
+  movieReleaseId: string; // Backend requires this
   cinemaId: string;
   cinema?: Cinema;
   hallId: string;
   hall?: Hall;
-  startTime: string; // ISO datetime
+  startTime: string; // ISO datetime or 'yyyy-MM-dd HH:mm:ss'
   endTime?: string;
   format: ShowtimeFormat;
-  language: ShowtimeLanguage;
-  price: number;
+  language: string; // Backend uses string, not enum
+  subtitles?: string[]; // Backend has subtitles field
   availableSeats?: number;
-  createdAt?: string;
-  updatedAt?: string;
+  status?: string;
+  createdAt?: string | Date;
+  updatedAt?: string | Date;
 }
 
 export interface CreateShowtimeRequest {
   movieId: string;
+  movieReleaseId: string; // Backend requires this
   cinemaId: string;
   hallId: string;
-  startTime: string;
+  startTime: string; // Format: 'yyyy-MM-dd HH:mm:ss'
   format: ShowtimeFormat;
-  language: ShowtimeLanguage;
-  price: number;
+  language: string;
+  subtitles?: string[];
 }
 
 export type UpdateShowtimeRequest = Partial<CreateShowtimeRequest>;
@@ -233,6 +256,7 @@ export interface ShowtimeFiltersParams {
 
 export interface BatchCreateShowtimesRequest {
   movieId: string;
+  movieReleaseId: string; // Backend requires this
   cinemaId: string;
   hallId: string;
   dateRange: {
@@ -241,8 +265,8 @@ export interface BatchCreateShowtimesRequest {
   };
   timeSlots: string[]; // ["10:00", "14:30", "19:00"]
   format: ShowtimeFormat;
-  language: ShowtimeLanguage;
-  price: number;
+  language: string;
+  subtitles?: string[];
   excludeDates?: string[]; // Skip specific dates
 }
 
@@ -265,21 +289,21 @@ export interface MovieRelease {
   id: string;
   movieId: string;
   movie?: Movie;
-  cinemaId: string;
+  cinemaId?: string; // Backend might not always return this
   cinema?: Cinema;
-  startDate: string;
-  endDate: string;
-  status: 'UPCOMING' | 'ACTIVE' | 'ENDED';
-  note: string;
-  createdAt?: string;
-  updatedAt?: string;
+  startDate: string | Date;
+  endDate: string | Date;
+  status?: 'UPCOMING' | 'ACTIVE' | 'ENDED'; // Calculated field, not in request
+  note?: string;
+  createdAt?: string | Date;
+  updatedAt?: string | Date;
 }
 
 export interface CreateMovieReleaseRequest {
-  movieId: string;
-  cinemaId: string;
-  startDate: string;
-  endDate: string;
+  movieId?: string; // Optional in backend
+  cinemaId?: string; // Note: Backend schema doesn't have cinemaId, only movieId
+  startDate: string | Date;
+  endDate: string | Date;
   note?: string;
 }
 
@@ -289,30 +313,27 @@ export type UpdateMovieReleaseRequest = Partial<CreateMovieReleaseRequest>;
 // TICKET PRICING TYPES (API 7.x)
 // ============================================================================
 
-export type DayOfWeek = 'MONDAY' | 'TUESDAY' | 'WEDNESDAY' | 'THURSDAY' | 'FRIDAY' | 'SATURDAY' | 'SUNDAY';
+export type DayType = 'WEEKDAY' | 'WEEKEND' | 'HOLIDAY';
 
 export interface TicketPricing {
   id: string;
-  cinemaId: string;
-  cinema?: Cinema;
-  hallType: HallType;
+  hallId: string;
+  hall?: Hall;
   seatType: SeatType;
-  dayOfWeek: DayOfWeek;
-  timeSlot: 'MORNING' | 'AFTERNOON' | 'EVENING' | 'LATE_NIGHT';
-  basePrice: number;
-  createdAt?: string;
-  updatedAt?: string;
+  dayType: DayType; // Backend uses dayType (WEEKDAY/WEEKEND/HOLIDAY)
+  price: number;
+  createdAt?: string | Date;
+  updatedAt?: string | Date;
 }
 
 export interface UpdateTicketPricingRequest {
-  basePrice: number;
+  price: number; // Backend only allows updating price
 }
 
 export interface TicketPricingFiltersParams {
-  cinemaId?: string;
-  hallType?: HallType;
+  hallId?: string;
   seatType?: SeatType;
-  dayOfWeek?: DayOfWeek;
+  dayType?: DayType;
 }
 
 // ============================================================================

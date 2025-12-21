@@ -21,7 +21,7 @@ import { Badge } from '@movie-hub/shacdn-ui/badge';
 import { useToast } from '../_libs/use-toast';
 import type { Cinema, Hall, SeatStatus, SeatDetail, HallDetail } from '../_libs/types';
 import { mockCinemas, mockHalls } from '../_libs/mockData';
-import api from "../../../libs/api-client"
+
 export default function SeatStatusPage() {
   const [cinemas, setCinemas] = useState<Cinema[]>([]);
   const [halls, setHalls] = useState<Hall[]>([]);

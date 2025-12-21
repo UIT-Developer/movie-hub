@@ -167,9 +167,9 @@ export default function ShowtimeSeatsPage() {
         return 'bg-emerald-500 hover:bg-emerald-600';
       case 'HELD':
         return 'bg-amber-400 cursor-not-allowed';
-      case 'RESERVED':
+      case 'CONFIRMED':
         return 'bg-gray-400 cursor-not-allowed';
-      case 'SOLD':
+      case 'CANCELLED':
         return 'bg-red-400 cursor-not-allowed';
       default:
         return 'bg-gray-300';
@@ -208,7 +208,7 @@ export default function ShowtimeSeatsPage() {
   const statusCounts = seatsData ? {
     available: seatsData.seat_map.flatMap(r => r.seats).filter(s => s.reservationStatus === 'AVAILABLE' && s.seatStatus === 'ACTIVE').length,
     held: seatsData.seat_map.flatMap(r => r.seats).filter(s => s.reservationStatus === 'HELD').length,
-    confirmed: seatsData.seat_map.flatMap(r => r.seats).filter(s => s.reservationStatus === 'RESERVED').length,
+    confirmed: seatsData.seat_map.flatMap(r => r.seats).filter(s => s.reservationStatus === 'CONFIRMED').length,
     unavailable: seatsData.seat_map.flatMap(r => r.seats).filter(s => s.seatStatus !== 'ACTIVE').length,
   } : null;
 

@@ -19,8 +19,8 @@ export interface PaginatedResponse<T> {
 // MOVIE TYPES (API 1.x)
 // ============================================================================
 
-export type AgeRating = 'P' | 'K' | 'T13' | 'T16' | 'T18' | 'C';
-export type LanguageType = 'ORIGINAL' | 'DUBBED';
+export type AgeRating = 'P' | 'K' | 'T13' | 'T16' | 'T18' | 'C'; // Vietnam age ratings
+export type LanguageType = 'ORIGINAL' | 'SUBTITLE' | 'DUBBED';
 
 export interface MovieCast {
   name: string;
@@ -46,7 +46,9 @@ export interface Movie {
   director?: string;
   cast?: MovieCast[]; // Backend uses array of objects with name, profileUrl
   genreIds?: string[];
-  genre?: Genre[]; // Backend returns 'genre' not 'genres'
+  genre?: Genre; // Backend returns single 'genre' object, not array
+  averageRating?: number;
+  reviewCount?: number;
   status?: 'COMING_SOON' | 'NOW_SHOWING' | 'ENDED';
   createdAt?: string | Date;
   updatedAt?: string | Date;
@@ -157,9 +159,9 @@ export interface CinemaFiltersParams {
 // ============================================================================
 
 export type HallType = 'STANDARD' | 'VIP' | 'IMAX' | 'FOUR_DX' | 'PREMIUM';
-export type LayoutType = 'STANDARD' | 'CUSTOM';
+export type LayoutType = 'STANDARD' | 'DUAL_AISLE' | 'STADIUM';
 export type SeatType = 'STANDARD' | 'VIP' | 'COUPLE' | 'PREMIUM' | 'WHEELCHAIR';
-export type SeatStatus = 'ACTIVE' | 'BROKEN' | 'MAINTENANCE'; // Backend uses these statuses
+export type SeatStatus = 'ACTIVE' | 'BROKEN' | 'MAINTENANCE';
 
 export interface Seat {
   id: string;
@@ -239,7 +241,7 @@ export interface CreateShowtimeRequest {
   movieReleaseId: string; // Backend requires this
   cinemaId: string;
   hallId: string;
-  startTime: string; // Format: 'yyyy-MM-dd HH:mm:ss'
+  startTime: string; // ISO datetime format (per OpenAPI date-time)
   format: ShowtimeFormat;
   language: string;
   subtitles?: string[];
@@ -300,11 +302,11 @@ export interface MovieRelease {
 }
 
 export interface CreateMovieReleaseRequest {
-  movieId?: string; // Optional in backend
-  cinemaId?: string; // Note: Backend schema doesn't have cinemaId, only movieId
+  movieId?: string; // Optional per BE DTO
+  cinemaId?: string; // Backend schema doesn't have cinemaId in create request
   startDate: string | Date;
   endDate: string | Date;
-  note?: string;
+  note?: string; // Optional per BE DTO
 }
 
 export type UpdateMovieReleaseRequest = Partial<CreateMovieReleaseRequest>;

@@ -25,7 +25,7 @@ import { Badge } from '@movie-hub/shacdn-ui/badge';
 import { useToast } from '../_libs/use-toast';
 import { useMovieReleases, useDeleteMovieRelease, useMovies, useCinemas, useHallsGroupedByCinema } from '@/libs/api';
 import type { MovieRelease } from '@/libs/api';
-import type { Movie, Cinema, Hall } from '../_libs/types';
+import type { Movie, Cinema, Hall } from '@/libs/api/types';
 import { format } from 'date-fns';
 import MovieReleaseDialog from '../_components/forms/MovieReleaseDialog';
 import ShowtimeDialog from '../_components/forms/ShowtimeDialog';
@@ -57,11 +57,11 @@ export default function MovieReleasesPage() {
 
   // API hooks
   const { data: releasesData = [], isLoading: loading, refetch: refetchReleases } = useMovieReleases();
-  const releases = Array.isArray(releasesData) ? releasesData : (releasesData?.data || []) as MovieRelease[];
+  const releases = releasesData || [];
   const { data: moviesData = [] } = useMovies();
-  const movies = Array.isArray(moviesData) ? moviesData : (moviesData?.data || []) as Movie[];
+  const movies = moviesData || [];
   const { data: cinemasData = [] } = useCinemas();
-  const cinemas = Array.isArray(cinemasData) ? cinemasData : (cinemasData?.data || []) as Cinema[];
+  const cinemas = cinemasData || [];
   const deleteRelease = useDeleteMovieRelease();
 
   // Halls: derive a flat halls list from grouped halls by cinema

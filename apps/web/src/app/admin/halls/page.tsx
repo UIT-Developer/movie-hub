@@ -38,7 +38,7 @@ import {
 } from '@movie-hub/shacdn-ui/select';
 import { useToast } from '../_libs/use-toast';
 import { useHallsGroupedByCinema, useCreateHall, useUpdateHall, useDeleteHall } from '@/libs/api';
-import type { Hall, HallType, CreateHallRequest } from '../_libs/types';
+import type { Hall, HallType, CreateHallRequest } from '@/libs/api/types';
 
 export default function HallsPage() {
   const [searchQuery, setSearchQuery] = useState('');

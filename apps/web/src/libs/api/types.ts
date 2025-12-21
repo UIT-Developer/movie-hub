@@ -111,11 +111,11 @@ export interface Cinema {
   longitude?: number; // Backend uses flat structure, not nested
   description?: string;
   amenities?: string[];
-  facilities?: Record<string, any>;
+  facilities?: Record<string, unknown>;
   images?: string[];
   virtualTour360Url?: string;
-  operatingHours?: Record<string, any>;
-  socialMedia?: Record<string, any>;
+  operatingHours?: Record<string, unknown>;
+  socialMedia?: Record<string, unknown>;
   timezone?: string;
   status?: string;
   rating?: number;
@@ -136,11 +136,11 @@ export interface CreateCinemaRequest {
   longitude?: number; // Flat structure to match backend
   description?: string;
   amenities?: string[];
-  facilities?: Record<string, any>;
+  facilities?: Record<string, unknown>;
   images?: string[];
   virtualTour360Url?: string;
-  operatingHours?: Record<string, any>;
-  socialMedia?: Record<string, any>;
+  operatingHours?: Record<string, unknown>;
+  socialMedia?: Record<string, unknown>;
   timezone?: string;
 }
 
@@ -336,6 +336,243 @@ export interface TicketPricingFiltersParams {
   hallId?: string;
   seatType?: SeatType;
   dayType?: DayType;
+}
+
+// ============================================================================
+// STAFF TYPES (API 8.x)
+// ============================================================================
+
+export type Gender = 'MALE' | 'FEMALE';
+export type StaffStatus = 'ACTIVE' | 'INACTIVE';
+export type WorkType = 'FULL_TIME' | 'PART_TIME' | 'CONTRACT';
+export type ShiftType = 'MORNING' | 'AFTERNOON' | 'NIGHT';
+
+export type StaffPosition = 
+  | 'CINEMA_MANAGER' 
+  | 'ASSISTANT_MANAGER' 
+  | 'TICKET_CLERK' 
+  | 'CONCESSION_STAFF' 
+  | 'USHER' 
+  | 'PROJECTIONIST' 
+  | 'CLEANER' 
+  | 'SECURITY';
+
+export interface Staff {
+  id: string;
+  cinemaId: string;
+  fullName: string;
+  email: string;
+  phone: string;
+  gender: Gender;
+  dob: string | Date;
+  position: StaffPosition;
+  status: StaffStatus;
+  workType: WorkType;
+  shiftType: ShiftType;
+  salary: number;
+  hireDate: string | Date;
+}
+
+export interface CreateStaffRequest {
+  cinemaId: string;
+  fullName: string;
+  email: string;
+  phone: string;
+  gender: Gender;
+  dob: string | Date;
+  position: StaffPosition;
+  status: StaffStatus;
+  workType: WorkType;
+  shiftType: ShiftType;
+  salary: number;
+  hireDate: string | Date;
+}
+
+export interface CreateStaffResponse {
+  id: string;
+  cinemaId: string;
+  fullName: string;
+  email: string;
+  phone: string;
+  gender: Gender;
+  dob: string | Date;
+  position: StaffPosition;
+  status: StaffStatus;
+  workType: WorkType;
+  shiftType: ShiftType;
+  salary: number;
+  hireDate: string | Date;
+  createdAt: string | Date;
+}
+
+export interface UpdateStaffRequest {
+  fullName?: string;
+  phone?: string;
+  gender?: Gender;
+  dob?: string | Date;
+  position?: StaffPosition;
+  status?: StaffStatus;
+  workType?: WorkType;
+  shiftType?: ShiftType;
+  salary?: number;
+  hireDate?: string | Date;
+}
+
+export interface UpdateStaffResponse {
+  id: string;
+  cinemaId: string;
+  fullName: string;
+  email: string;
+  phone: string;
+  gender: Gender;
+  dob: string | Date;
+  position: StaffPosition;
+  status: StaffStatus;
+  workType: WorkType;
+  shiftType: ShiftType;
+  salary: number;
+  hireDate: string | Date;
+  updatedAt: string | Date;
+}
+
+export type GetStaffResponse = PaginatedResponse<Staff>;
+
+export interface DeleteStaffResponse {
+  success: boolean;
+  message?: string;
+}
+
+export interface StaffFiltersParams extends PaginationParams {
+  cinemaId?: string;
+  fullName?: string;
+  gender?: Gender;
+  position?: StaffPosition;
+  status?: StaffStatus;
+  workType?: WorkType;
+  shiftType?: ShiftType;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+}
+
+// ============================================================================
+// BOOKING/RESERVATION TYPES (API 9.x - Admin)
+// ============================================================================
+
+export type BookingStatus = 'PENDING' | 'CONFIRMED' | 'CANCELLED' | 'EXPIRED' | 'COMPLETED';
+export type PaymentStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED' | 'REFUNDED';
+
+export interface SeatInfo {
+  seatId: string;
+  row: string;
+  number: number;
+  seatType: string;
+  ticketType: string;
+  price: number;
+}
+
+export interface ConcessionInfo {
+  concessionId: string;
+  name: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+}
+
+export interface BookingSummary {
+  id: string;
+  bookingCode: string;
+  showtimeId: string;
+  movieTitle: string;
+  cinemaName: string;
+  hallName: string;
+  startTime: string | Date;
+  seatCount: number;
+  totalAmount: number;
+  status: BookingStatus;
+  createdAt: string | Date;
+}
+
+export interface BookingDetail extends BookingSummary {
+  userId: string;
+  customerName: string;
+  customerEmail: string;
+  customerPhone?: string;
+  seats: SeatInfo[];
+  concessions?: ConcessionInfo[];
+  subtotal: number;
+  discount: number;
+  pointsUsed: number;
+  pointsDiscount: number;
+  finalAmount: number;
+  promotionCode?: string;
+  paymentStatus: PaymentStatus;
+  expiresAt?: string | Date;
+  cancelledAt?: string | Date;
+  cancellationReason?: string;
+  updatedAt: string | Date;
+}
+
+export type GetBookingsResponse = PaginatedResponse<BookingSummary>;
+
+export type GetBookingDetailResponse = BookingDetail;
+
+export interface UpdateBookingStatusRequest {
+  status: BookingStatus;
+  reason?: string;
+}
+
+export interface UpdateBookingStatusResponse {
+  id: string;
+  status: BookingStatus;
+  paymentStatus: PaymentStatus;
+  updatedAt: string | Date;
+}
+
+export interface ConfirmBookingResponse {
+  id: string;
+  status: BookingStatus;
+  paymentStatus: PaymentStatus;
+  confirmedAt: string | Date;
+}
+
+export interface BookingFiltersParams extends PaginationParams {
+  userId?: string;
+  showtimeId?: string;
+  cinemaId?: string;
+  status?: BookingStatus;
+  paymentStatus?: PaymentStatus;
+  startDate?: string | Date;
+  endDate?: string | Date;
+  sortBy?: 'created_at' | 'final_amount' | 'expires_at';
+  sortOrder?: 'asc' | 'desc';
+}
+
+// ============================================================================
+// REVIEW TYPES (API 10.x)
+// ============================================================================
+
+export interface Review {
+  id: string;
+  movieId: string;
+  userId: string;
+  rating: number;
+  content: string;
+  createdAt: string | Date;
+}
+
+export type GetReviewsResponse = PaginatedResponse<Review>;
+
+export interface DeleteReviewResponse {
+  success: boolean;
+  message?: string;
+}
+
+export interface ReviewFiltersParams extends PaginationParams {
+  rating?: number;
+  userId?: string;
+  movieId?: string;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
 }
 
 // ============================================================================

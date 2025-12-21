@@ -40,9 +40,9 @@ const menuItems = [
   { icon: Eye, label: 'Showtime Seats', href: '/admin/showtime-seats', disabled: false },
   { icon: Zap, label: 'Batch Showtimes', href: '/admin/batch-showtimes', disabled: false },
   { icon: DollarSign, label: 'Ticket Pricing', href: '/admin/ticket-pricing', disabled: false },
-  { icon: Ticket, label: 'Reservations', href: '/admin/reservations', disabled: true },
-  { icon: MessageSquare, label: 'Reviews', href: '/admin/reviews', disabled: true },
-  { icon: Users, label: 'Staff', href: '/admin/staff', disabled: true },
+  { icon: Ticket, label: 'Reservations', href: '/admin/reservations', disabled: false },
+  { icon: MessageSquare, label: 'Reviews', href: '/admin/reviews', disabled: false },
+  { icon: Users, label: 'Staff', href: '/admin/staff', disabled: false },
   { icon: BarChart3, label: 'Reports', href: '/admin/reports', disabled: false },
   { icon: Settings, label: 'Settings', href: '/admin/settings', disabled: false },
 ];
@@ -58,7 +58,7 @@ export default function AdminLayout({
   // const { user } = useUser();
   // When Clerk is disabled locally we still need a `user` variable
   // Define a harmless placeholder so `user?.` references don't throw.
-  const user: any = undefined;
+  const user: unknown = undefined;
 
   const handleLogout = async () => {
     // await signOut();

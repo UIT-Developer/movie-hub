@@ -215,7 +215,7 @@ export default function ShowtimeDialog({
                     );
                     return releases.map((release) => (
                       <SelectItem key={release.id} value={release.id}>
-                        {release.startDate} → {release.endDate} ({release.status === 'ACTIVE' ? 'Now Showing' : 'Coming Soon'})
+                        {new Date(release.startDate).toLocaleDateString()} → {new Date(release.endDate).toLocaleDateString()} ({release.status === 'ACTIVE' ? 'Now Showing' : 'Coming Soon'})
                       </SelectItem>
                     ));
                   })()}

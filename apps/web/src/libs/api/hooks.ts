@@ -8,6 +8,9 @@ import {
   showtimesApi,
   movieReleasesApi,
   ticketPricingApi,
+  staffApi,
+  bookingsApi,
+  reviewsApi,
 } from './services';
 import type {
   CreateMovieRequest,
@@ -27,6 +30,12 @@ import type {
   UpdateTicketPricingRequest,
   UpdateSeatStatusRequest,
   TicketPricingFiltersParams,
+  CreateStaffRequest,
+  UpdateStaffRequest,
+  StaffFiltersParams,
+  BookingFiltersParams,
+  UpdateBookingStatusRequest,
+  ReviewFiltersParams,
 } from './types';
 
 // ============================================================================
@@ -83,6 +92,26 @@ export const queryKeys = {
     list: (params?: TicketPricingFiltersParams) => [...queryKeys.ticketPricing.lists(), params] as const,
     details: () => [...queryKeys.ticketPricing.all, 'detail'] as const,
     detail: (id: string) => [...queryKeys.ticketPricing.details(), id] as const,
+  },
+  staff: {
+    all: ['staff'] as const,
+    lists: () => [...queryKeys.staff.all, 'list'] as const,
+    list: (params?: StaffFiltersParams) => [...queryKeys.staff.lists(), params] as const,
+    details: () => [...queryKeys.staff.all, 'detail'] as const,
+    detail: (id: string) => [...queryKeys.staff.details(), id] as const,
+  },
+  bookings: {
+    all: ['bookings'] as const,
+    lists: () => [...queryKeys.bookings.all, 'list'] as const,
+    list: (params?: BookingFiltersParams) => [...queryKeys.bookings.lists(), params] as const,
+    details: () => [...queryKeys.bookings.all, 'detail'] as const,
+    detail: (id: string) => [...queryKeys.bookings.details(), id] as const,
+    byShowtime: (showtimeId: string) => [...queryKeys.bookings.lists(), 'showtime', showtimeId] as const,
+  },
+  reviews: {
+    all: ['reviews'] as const,
+    lists: () => [...queryKeys.reviews.all, 'list'] as const,
+    list: (params?: ReviewFiltersParams) => [...queryKeys.reviews.lists(), params] as const,
   },
 };
 
@@ -499,6 +528,156 @@ export const useUpdateSeatStatus = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.showtimes.all });
       toast.success('Seat status updated successfully');
+    },
+  });
+};
+
+// ============================================================================
+// STAFF HOOKS
+// ============================================================================
+
+export const useStaff = (params?: StaffFiltersParams) => {
+  return useQuery({
+    queryKey: queryKeys.staff.list(params),
+    queryFn: () => staffApi.getAll(params),
+  });
+};
+
+export const useStaffById = (id: string) => {
+  return useQuery({
+    queryKey: queryKeys.staff.detail(id),
+    queryFn: () => staffApi.getById(id),
+    enabled: !!id,
+  });
+};
+
+export const useCreateStaff = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: CreateStaffRequest) => staffApi.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.staff.lists() });
+      toast.success('Staff member created successfully');
+    },
+    onError: (error: unknown) => {
+      toast.error((error as Error)?.message || 'Failed to create staff member');
+    },
+  });
+};
+
+export const useUpdateStaff = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: UpdateStaffRequest }) =>
+      staffApi.update(id, data),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.staff.lists() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.staff.detail(variables.id) });
+      toast.success('Staff member updated successfully');
+    },
+    onError: (error: unknown) => {
+      toast.error((error as Error)?.message || 'Failed to update staff member');
+    },
+  });
+};
+
+export const useDeleteStaff = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => staffApi.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.staff.lists() });
+      toast.success('Staff member deleted successfully');
+    },
+    onError: (error: unknown) => {
+      toast.error((error as Error)?.message || 'Failed to delete staff member');
+    },
+  });
+};
+
+// ============================================================================
+// BOOKINGS/RESERVATIONS HOOKS
+// ============================================================================
+
+export const useBookings = (params?: BookingFiltersParams) => {
+  return useQuery({
+    queryKey: queryKeys.bookings.list(params),
+    queryFn: () => bookingsApi.getAll(params),
+  });
+};
+
+export const useBookingById = (id: string) => {
+  return useQuery({
+    queryKey: queryKeys.bookings.detail(id),
+    queryFn: () => bookingsApi.getById(id),
+    enabled: !!id,
+  });
+};
+
+export const useBookingsByShowtime = (showtimeId: string) => {
+  return useQuery({
+    queryKey: queryKeys.bookings.byShowtime(showtimeId),
+    queryFn: () => bookingsApi.getByShowtime(showtimeId),
+    enabled: !!showtimeId,
+  });
+};
+
+export const useUpdateBookingStatus = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: UpdateBookingStatusRequest }) =>
+      bookingsApi.updateStatus(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.bookings.lists() });
+      toast.success('Booking status updated successfully');
+    },
+    onError: (error: unknown) => {
+      toast.error((error as Error)?.message || 'Failed to update booking status');
+    },
+  });
+};
+
+export const useConfirmBooking = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => bookingsApi.confirm(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.bookings.lists() });
+      toast.success('Booking confirmed successfully');
+    },
+    onError: (error: unknown) => {
+      toast.error((error as Error)?.message || 'Failed to confirm booking');
+    },
+  });
+};
+
+// ============================================================================
+// REVIEWS HOOKS
+// ============================================================================
+
+export const useReviews = (params?: ReviewFiltersParams) => {
+  return useQuery({
+    queryKey: queryKeys.reviews.list(params),
+    queryFn: () => reviewsApi.getAll(params),
+  });
+};
+
+export const useDeleteReview = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => reviewsApi.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.reviews.lists() });
+      toast.success('Review deleted successfully');
+    },
+    onError: (error: unknown) => {
+      toast.error((error as Error)?.message || 'Failed to delete review');
     },
   });
 };

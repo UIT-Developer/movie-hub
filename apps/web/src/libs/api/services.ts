@@ -1,5 +1,6 @@
 import { api } from './api-client';
 import type {
+  PaginationParams,
   Movie,
   CreateMovieRequest,
   UpdateMovieRequest,
@@ -26,6 +27,17 @@ import type {
   TicketPricing,
   UpdateTicketPricingRequest,
   TicketPricingFiltersParams,
+  Staff,
+  CreateStaffRequest,
+  UpdateStaffRequest,
+  StaffFiltersParams,
+  BookingSummary,
+  BookingDetail,
+  BookingStatus,
+  BookingFiltersParams,
+  UpdateBookingStatusRequest,
+  Review,
+  ReviewFiltersParams,
 } from './types';
 
 // ============================================================================
@@ -253,4 +265,72 @@ export const ticketPricingApi = {
   // Backend endpoint: PATCH /api/v1/ticket-pricings/pricing/:pricingId
   update: (pricingId: string, data: UpdateTicketPricingRequest) =>
     api.patch<TicketPricing>(`/api/v1/ticket-pricings/pricing/${pricingId}`, data),
+};
+
+// ============================================================================
+// STAFF API (8.x)
+// ============================================================================
+
+export const staffApi = {
+  getAll: (params?: StaffFiltersParams) =>
+    api.get<Staff[]>('/api/v1/staffs', { params }),
+
+  getById: (id: string) =>
+    api.get<Staff>(`/api/v1/staffs/${id}`),
+
+  create: (data: CreateStaffRequest) =>
+    api.post<Staff>('/api/v1/staffs', data),
+
+  update: (id: string, data: UpdateStaffRequest) =>
+    api.put<Staff>(`/api/v1/staffs/${id}`, data),
+
+  // Note: Backend might not have DELETE endpoint, adjust if needed
+  delete: (id: string) =>
+    api.delete(`/api/v1/staffs/${id}`),
+};
+
+// ============================================================================
+// BOOKING/RESERVATION API (9.x - Admin)
+// ============================================================================
+
+export const bookingsApi = {
+  // Admin: Get all bookings with filters
+  getAll: (params?: BookingFiltersParams) =>
+    api.get<BookingSummary[]>('/api/v1/bookings/admin/all', { params }),
+
+  // Get booking detail
+  getById: (id: string) =>
+    api.get<BookingDetail>(`/api/v1/bookings/${id}/summary`),
+
+  // Get bookings by showtime
+  getByShowtime: (showtimeId: string, status?: BookingStatus) =>
+    api.get<BookingSummary[]>(`/api/v1/bookings/admin/showtime/${showtimeId}`, {
+      params: status ? { status } : undefined,
+    }),
+
+  // Get bookings by date range
+  getByDateRange: (startDate: string | Date, endDate: string | Date, status?: BookingStatus) =>
+    api.get<BookingSummary[]>('/api/v1/bookings/admin/date-range', {
+      params: { startDate, endDate, status },
+    }),
+
+  // Update booking status
+  updateStatus: (bookingId: string, data: UpdateBookingStatusRequest) =>
+    api.put<BookingDetail>(`/api/v1/bookings/admin/${bookingId}/status`, data),
+
+  // Confirm booking
+  confirm: (bookingId: string) =>
+    api.post<BookingDetail>(`/api/v1/bookings/admin/${bookingId}/confirm`),
+};
+
+// ============================================================================
+// REVIEWS API (10.x)
+// ============================================================================
+
+export const reviewsApi = {
+  getAll: (params?: ReviewFiltersParams) =>
+    api.get<Review[]>('/api/v1/reviews', { params }),
+
+  delete: (id: string) =>
+    api.delete(`/api/v1/reviews/${id}`),
 };

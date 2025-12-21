@@ -23,7 +23,7 @@ import { Label } from '@movie-hub/shacdn-ui/label';
 import { Input } from '@movie-hub/shacdn-ui/input';
 import { useToast } from '../_libs/use-toast';
 import { useGenres, useCreateGenre, useUpdateGenre, useDeleteGenre } from '@/libs/api';
-import type { Genre } from '../_libs/types';
+import type { Genre } from '@/libs/api/types';
 
 export default function GenresPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -35,7 +35,7 @@ export default function GenresPage() {
 
   // API hooks
   const { data: genresData = [], isLoading: loading, error } = useGenres();
-  const genres = Array.isArray(genresData) ? genresData : (genresData?.data || []) as Genre[];
+  const genres = genresData || [];
   const createGenre = useCreateGenre();
   const updateGenre = useUpdateGenre();
   const deleteGenre = useDeleteGenre();

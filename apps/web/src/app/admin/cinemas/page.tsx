@@ -30,7 +30,7 @@ import { Textarea } from '@movie-hub/shacdn-ui/textarea';
 // removed unused toast import
 import { useCinemas, useCreateCinema, useUpdateCinema, useDeleteCinema } from '@/libs/api';
 import type { CreateCinemaRequest as ApiCreateCinemaRequest } from '@/libs/api';
-import type { Cinema, CinemaStatus, CreateCinemaRequest } from '../_libs/types';
+import type { Cinema, CreateCinemaRequest } from '@/libs/api/types';
 
 export default function CinemasPage() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -53,7 +53,7 @@ export default function CinemasPage() {
 
   // API hooks
   const { data: cinemasData = [], isLoading: loading } = useCinemas();
-  const cinemas = Array.isArray(cinemasData) ? cinemasData : (cinemasData?.data || []) as Cinema[];
+  const cinemas = cinemasData || [];
   const createCinema = useCreateCinema();
   const updateCinema = useUpdateCinema();
   const deleteCinema = useDeleteCinema();
@@ -166,7 +166,7 @@ export default function CinemasPage() {
     cinema.city.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const getStatusColor = (status: CinemaStatus) => {
+  const getStatusColor = (status: string) => {
     switch (status) {
       case 'ACTIVE':
         return 'bg-green-100 text-green-700 hover:bg-green-200';
@@ -336,7 +336,7 @@ export default function CinemasPage() {
                       </span>
                     </div>
                     <p className="text-xs text-gray-600">
-                      {cinema.totalReviews} reviews
+                      {cinema.totalReviews || 0} reviews
                     </p>
                   </div>
 

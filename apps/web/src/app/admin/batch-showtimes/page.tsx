@@ -24,8 +24,36 @@ import {
 import { Badge } from '@movie-hub/shacdn-ui/badge';
 import { Checkbox } from '@movie-hub/shacdn-ui/checkbox';
 import { useToast } from '../_libs/use-toast';
-import type { BatchCreateShowtimesInput, BatchCreateResponse } from '../_libs/types';
 import type { BatchCreateShowtimesRequest as ApiBatchCreateRequest, Showtime as ApiShowtime, Hall as ApiHall, ShowtimeFormat as ApiShowtimeFormat, ShowtimeLanguage as ApiShowtimeLanguage } from '@/libs/api/types';
+
+// Frontend-specific types for batch showtimes form
+interface BatchCreateShowtimesInput {
+  movieId: string;
+  movieReleaseId: string;
+  cinemaId: string;
+  hallId: string;
+  startDate: string;
+  endDate: string;
+  timeSlots: string[];
+  repeatType: 'DAILY' | 'WEEKLY' | 'CUSTOM_WEEKDAYS';
+  weekdays?: number[];
+  format: string;
+  language: string;
+  subtitles: string[];
+}
+
+interface BatchCreateResponse {
+  createdCount: number;
+  skippedCount: number;
+  created: Array<{
+    id: string;
+    startTime: string;
+  }>;
+  skipped: Array<{
+    start: string;
+    reason: string;
+  }>;
+}
 import { useMovies, useCinemas, useHallsGroupedByCinema, useMovieReleases, useBatchCreateShowtimes } from '@/libs/api';
 
 const WEEKDAYS = [
@@ -52,13 +80,13 @@ export default function BatchShowtimesPage() {
   
   // API hooks
   const { data: moviesData = [] } = useMovies();
-  const movies = Array.isArray(moviesData) ? moviesData : (moviesData?.data || []) as typeof moviesData;
+  const movies = moviesData || [];
   const { data: cinemasData = [] } = useCinemas();
-  const cinemas = Array.isArray(cinemasData) ? cinemasData : (cinemasData?.data || []) as typeof cinemasData;
+  const cinemas = cinemasData || [];
   const { data: hallsByCinema = {} } = useHallsGroupedByCinema();
   const halls: ApiHall[] = Object.values(hallsByCinema).flatMap((g: { halls?: ApiHall[] }) => g.halls || []);
   const { data: movieReleasesData = [] } = useMovieReleases();
-  const movieReleases = Array.isArray(movieReleasesData) ? movieReleasesData : (movieReleasesData?.data || []) as typeof movieReleasesData;
+  const movieReleases = movieReleasesData || [];
   const batchCreateMutation = useBatchCreateShowtimes();
 
   const [loading, setLoading] = useState(false);

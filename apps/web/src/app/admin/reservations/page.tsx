@@ -1,0 +1,668 @@
+'use client';
+
+import { useState } from 'react';
+import { Eye, Filter, CheckCircle, Clock, Calendar } from 'lucide-react';
+import { Button } from '@movie-hub/shacdn-ui/button';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@movie-hub/shacdn-ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@movie-hub/shacdn-ui/dialog';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@movie-hub/shacdn-ui/table';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@movie-hub/shacdn-ui/select';
+import { Label } from '@movie-hub/shacdn-ui/label';
+import { Input } from '@movie-hub/shacdn-ui/input';
+import { Badge } from '@movie-hub/shacdn-ui/badge';
+import { useToast } from '../_libs/use-toast';
+import {
+  useBookings,
+  useBookingById,
+  useUpdateBookingStatus,
+  useConfirmBooking,
+  useCinemas,
+} from '@/libs/api';
+import type {
+  BookingSummary,
+  BookingDetail,
+  BookingStatus,
+  PaymentStatus,
+} from '@/libs/api/types';
+
+export default function ReservationsPage() {
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
+  const [selectedBookingId, setSelectedBookingId] = useState<string>('');
+  const [statusDialogOpen, setStatusDialogOpen] = useState(false);
+  const [statusUpdate, setStatusUpdate] = useState({
+    bookingId: '',
+    status: 'CONFIRMED' as BookingStatus,
+    reason: '',
+  });
+  
+  // Filters
+  const [filterCinemaId, setFilterCinemaId] = useState<string>('all');
+  const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [filterPaymentStatus, setFilterPaymentStatus] = useState<string>('all');
+  const [filterStartDate, setFilterStartDate] = useState<string>('');
+  const [filterEndDate, setFilterEndDate] = useState<string>('');
+
+  const { toast } = useToast();
+
+  // API hooks
+  const { data: cinemasData = [] } = useCinemas();
+  const cinemas = Array.isArray(cinemasData) ? cinemasData : [];
+
+  const { data: bookingsData = [], isLoading: loading, error } = useBookings({
+    cinemaId: filterCinemaId !== 'all' ? filterCinemaId : undefined,
+    status: filterStatus !== 'all' ? (filterStatus as BookingStatus) : undefined,
+    paymentStatus: filterPaymentStatus !== 'all' ? (filterPaymentStatus as PaymentStatus) : undefined,
+    startDate: filterStartDate || undefined,
+    endDate: filterEndDate || undefined,
+  });
+  const bookings = bookingsData || [];
+
+  const { data: bookingDetail, isLoading: detailLoading } = useBookingById(selectedBookingId);
+  const updateStatus = useUpdateBookingStatus();
+  const confirmBooking = useConfirmBooking();
+
+  // Show error toast if query fails
+  if (error) {
+    toast({
+      title: 'Error',
+      description: 'Failed to fetch reservations',
+      variant: 'destructive',
+    });
+  }
+
+  const handleViewDetail = (bookingId: string) => {
+    setSelectedBookingId(bookingId);
+    setDetailDialogOpen(true);
+  };
+
+  const handleUpdateStatus = async () => {
+    if (!statusUpdate.bookingId) return;
+
+    try {
+      await updateStatus.mutateAsync({
+        id: statusUpdate.bookingId,
+        data: {
+          status: statusUpdate.status,
+          reason: statusUpdate.reason || undefined,
+        },
+      });
+      setStatusDialogOpen(false);
+      setDetailDialogOpen(false);
+      setStatusUpdate({ bookingId: '', status: 'CONFIRMED', reason: '' });
+    } catch {
+      // Error toast already shown by mutation hook
+    }
+  };
+
+  const handleConfirm = async (bookingId: string) => {
+    try {
+      await confirmBooking.mutateAsync(bookingId);
+      setDetailDialogOpen(false);
+    } catch {
+      // Error toast already shown by mutation hook
+    }
+  };
+
+  const openStatusDialog = (bookingId: string, currentStatus: BookingStatus) => {
+    setStatusUpdate({
+      bookingId,
+      status: currentStatus,
+      reason: '',
+    });
+    setStatusDialogOpen(true);
+  };
+
+  const getStatusBadgeColor = (status: BookingStatus) => {
+    switch (status) {
+      case 'CONFIRMED':
+        return 'bg-green-100 text-green-800';
+      case 'PENDING':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'CANCELLED':
+        return 'bg-red-100 text-red-800';
+      case 'EXPIRED':
+        return 'bg-gray-100 text-gray-800';
+      case 'COMPLETED':
+        return 'bg-blue-100 text-blue-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getPaymentStatusBadge = (status: PaymentStatus) => {
+    switch (status) {
+      case 'COMPLETED':
+        return 'bg-green-100 text-green-800';
+      case 'PENDING':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'PROCESSING':
+        return 'bg-blue-100 text-blue-800';
+      case 'FAILED':
+        return 'bg-red-100 text-red-800';
+      case 'REFUNDED':
+        return 'bg-purple-100 text-purple-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const formatDate = (date: string | Date) => {
+    return new Date(date).toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  // Calculate statistics
+  const stats = {
+    total: bookings.length,
+    confirmed: bookings.filter((b) => b.status === 'CONFIRMED').length,
+    pending: bookings.filter((b) => b.status === 'PENDING').length,
+    cancelled: bookings.filter((b) => b.status === 'CANCELLED').length,
+    totalRevenue: bookings.reduce((sum, b) => sum + (b.totalAmount || 0), 0),
+    avgBookingValue: bookings.length > 0 ? bookings.reduce((sum, b) => sum + (b.totalAmount || 0), 0) / bookings.length : 0,
+    totalSeats: bookings.reduce((sum, b) => sum + (b.seatCount || 0), 0),
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Reservations</h1>
+          <p className="text-gray-500 mt-1">Manage cinema bookings and reservations</p>
+        </div>
+      </div>
+
+      {/* Statistics Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600">Total Reservations</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.total}</div>
+            <p className="text-xs text-gray-500 mt-1">
+              {stats.confirmed} confirmed · {stats.pending} pending
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600">Total Revenue</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">${stats.totalRevenue.toFixed(2)}</div>
+            <p className="text-xs text-gray-500 mt-1">
+              Avg: ${stats.avgBookingValue.toFixed(2)} per booking
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600">Booking Status</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.confirmed}</div>
+            <p className="text-xs text-gray-500 mt-1">
+              {stats.cancelled} cancelled in period
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600">Seats Booked</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.totalSeats}</div>
+            <p className="text-xs text-gray-500 mt-1">
+              Avg: {(stats.totalSeats / stats.total || 0).toFixed(1)} seats per booking
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Filters */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <Filter className="mr-2 h-5 w-5" />
+            Filters
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+            <div>
+              <Label htmlFor="filter-cinema">Cinema</Label>
+              <Select value={filterCinemaId} onValueChange={setFilterCinemaId}>
+                <SelectTrigger id="filter-cinema">
+                  <SelectValue placeholder="All Cinemas" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Cinemas</SelectItem>
+                  {cinemas.map((cinema) => (
+                    <SelectItem key={cinema.id} value={cinema.id}>
+                      {cinema.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="filter-status">Booking Status</Label>
+              <Select value={filterStatus} onValueChange={setFilterStatus}>
+                <SelectTrigger id="filter-status">
+                  <SelectValue placeholder="All Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="PENDING">Pending</SelectItem>
+                  <SelectItem value="CONFIRMED">Confirmed</SelectItem>
+                  <SelectItem value="CANCELLED">Cancelled</SelectItem>
+                  <SelectItem value="EXPIRED">Expired</SelectItem>
+                  <SelectItem value="COMPLETED">Completed</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="filter-payment">Payment Status</Label>
+              <Select value={filterPaymentStatus} onValueChange={setFilterPaymentStatus}>
+                <SelectTrigger id="filter-payment">
+                  <SelectValue placeholder="All Payment" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Payment</SelectItem>
+                  <SelectItem value="PENDING">Pending</SelectItem>
+                  <SelectItem value="PROCESSING">Processing</SelectItem>
+                  <SelectItem value="COMPLETED">Completed</SelectItem>
+                  <SelectItem value="FAILED">Failed</SelectItem>
+                  <SelectItem value="REFUNDED">Refunded</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="filter-start-date">Start Date</Label>
+              <Input
+                id="filter-start-date"
+                type="date"
+                value={filterStartDate}
+                onChange={(e) => setFilterStartDate(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label htmlFor="filter-end-date">End Date</Label>
+              <Input
+                id="filter-end-date"
+                type="date"
+                value={filterEndDate}
+                onChange={(e) => setFilterEndDate(e.target.value)}
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Bookings Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Reservations</CardTitle>
+          <CardDescription>
+            {bookings.length} reservation{bookings.length !== 1 ? 's' : ''} found
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="text-center py-12">
+              <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-purple-600 border-r-transparent"></div>
+              <p className="mt-4 text-gray-500">Loading reservations...</p>
+            </div>
+          ) : bookings.length === 0 ? (
+            <div className="text-center py-16">
+              <Calendar className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+              <p className="text-gray-500">No reservations found with current filters.</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Booking Code</TableHead>
+                    <TableHead>Movie</TableHead>
+                    <TableHead>Cinema</TableHead>
+                    <TableHead>Showtime</TableHead>
+                    <TableHead>Seats</TableHead>
+                    <TableHead>Amount</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Created</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {bookings.map((booking) => (
+                    <TableRow key={booking.id}>
+                      <TableCell className="font-medium">{booking.bookingCode}</TableCell>
+                      <TableCell>{booking.movieTitle}</TableCell>
+                      <TableCell>{booking.cinemaName}</TableCell>
+                      <TableCell>{formatDate(booking.startTime)}</TableCell>
+                      <TableCell>{booking.seatCount}</TableCell>
+                      <TableCell>${booking.totalAmount.toFixed(2)}</TableCell>
+                      <TableCell>
+                        <Badge className={getStatusBadgeColor(booking.status)}>
+                          {booking.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{formatDate(booking.createdAt)}</TableCell>
+                      <TableCell>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleViewDetail(booking.id)}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          {booking.status === 'PENDING' && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleConfirm(booking.id)}
+                              className="text-green-600 hover:text-green-700"
+                            >
+                              <CheckCircle className="h-4 w-4" />
+                            </Button>
+                          )}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openStatusDialog(booking.id, booking.status)}
+                          >
+                            <Clock className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Detail Dialog */}
+      <Dialog open={detailDialogOpen} onOpenChange={setDetailDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Booking Details</DialogTitle>
+            <DialogDescription>View complete booking information</DialogDescription>
+          </DialogHeader>
+
+          {detailLoading ? (
+            <div className="text-center py-12">
+              <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-purple-600 border-r-transparent"></div>
+              <p className="mt-4 text-gray-500">Loading details...</p>
+            </div>
+          ) : bookingDetail ? (
+            <div className="space-y-4">
+              {/* Basic Info */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm text-gray-500">Booking Code</Label>
+                  <p className="font-medium">{bookingDetail.bookingCode}</p>
+                </div>
+                <div>
+                  <Label className="text-sm text-gray-500">Status</Label>
+                  <div>
+                    <Badge className={getStatusBadgeColor(bookingDetail.status)}>
+                      {bookingDetail.status}
+                    </Badge>
+                    <Badge className={`ml-2 ${getPaymentStatusBadge(bookingDetail.paymentStatus)}`}>
+                      {bookingDetail.paymentStatus}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+
+              {/* Movie & Cinema Info */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm text-gray-500">Movie</Label>
+                  <p className="font-medium">{bookingDetail.movieTitle}</p>
+                </div>
+                <div>
+                  <Label className="text-sm text-gray-500">Cinema</Label>
+                  <p className="font-medium">{bookingDetail.cinemaName}</p>
+                </div>
+                <div>
+                  <Label className="text-sm text-gray-500">Hall</Label>
+                  <p className="font-medium">{bookingDetail.hallName}</p>
+                </div>
+                <div>
+                  <Label className="text-sm text-gray-500">Showtime</Label>
+                  <p className="font-medium">{formatDate(bookingDetail.startTime)}</p>
+                </div>
+              </div>
+
+              {/* Customer Info */}
+              <div className="border-t pt-4">
+                <h3 className="font-semibold mb-2">Customer Information</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-sm text-gray-500">Name</Label>
+                    <p>{bookingDetail.customerName}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm text-gray-500">Email</Label>
+                    <p>{bookingDetail.customerEmail}</p>
+                  </div>
+                  {bookingDetail.customerPhone && (
+                    <div>
+                      <Label className="text-sm text-gray-500">Phone</Label>
+                      <p>{bookingDetail.customerPhone}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Seats */}
+              <div className="border-t pt-4">
+                <h3 className="font-semibold mb-2">Seats</h3>
+                <div className="grid grid-cols-3 gap-2">
+                  {bookingDetail.seats.map((seat, idx) => (
+                    <div key={idx} className="border p-2 rounded">
+                      <p className="font-medium">{seat.row}{seat.number}</p>
+                      <p className="text-sm text-gray-500">{seat.seatType}</p>
+                      <p className="text-sm">${seat.price.toFixed(2)}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Concessions */}
+              {bookingDetail.concessions && bookingDetail.concessions.length > 0 && (
+                <div className="border-t pt-4">
+                  <h3 className="font-semibold mb-2">Concessions</h3>
+                  {bookingDetail.concessions.map((item, idx) => (
+                    <div key={idx} className="flex justify-between py-1">
+                      <span>{item.name} x {item.quantity}</span>
+                      <span>${item.totalPrice.toFixed(2)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Pricing */}
+              <div className="border-t pt-4">
+                <h3 className="font-semibold mb-2">Pricing</h3>
+                <div className="space-y-1">
+                  <div className="flex justify-between">
+                    <span>Subtotal</span>
+                    <span>${bookingDetail.subtotal.toFixed(2)}</span>
+                  </div>
+                  {bookingDetail.discount > 0 && (
+                    <div className="flex justify-between text-green-600">
+                      <span>Discount</span>
+                      <span>-${bookingDetail.discount.toFixed(2)}</span>
+                    </div>
+                  )}
+                  {bookingDetail.pointsUsed > 0 && (
+                    <div className="flex justify-between text-blue-600">
+                      <span>Points Discount ({bookingDetail.pointsUsed} pts)</span>
+                      <span>-${bookingDetail.pointsDiscount.toFixed(2)}</span>
+                    </div>
+                  )}
+                  {bookingDetail.promotionCode && (
+                    <div className="flex justify-between text-purple-600">
+                      <span>Promo Code: {bookingDetail.promotionCode}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between font-bold text-lg border-t pt-2">
+                    <span>Total Amount</span>
+                    <span>${bookingDetail.finalAmount.toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Timestamps */}
+              <div className="border-t pt-4 text-sm text-gray-500">
+                <div className="flex justify-between">
+                  <span>Created:</span>
+                  <span>{formatDate(bookingDetail.createdAt)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Updated:</span>
+                  <span>{formatDate(bookingDetail.updatedAt)}</span>
+                </div>
+                {bookingDetail.expiresAt && (
+                  <div className="flex justify-between">
+                    <span>Expires:</span>
+                    <span>{formatDate(bookingDetail.expiresAt)}</span>
+                  </div>
+                )}
+                {bookingDetail.cancelledAt && (
+                  <div className="flex justify-between text-red-600">
+                    <span>Cancelled:</span>
+                    <span>{formatDate(bookingDetail.cancelledAt)}</span>
+                  </div>
+                )}
+                {bookingDetail.cancellationReason && (
+                  <div className="mt-2">
+                    <Label className="text-sm">Cancellation Reason:</Label>
+                    <p className="text-red-600">{bookingDetail.cancellationReason}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : null}
+
+          <DialogFooter>
+            {bookingDetail?.status === 'PENDING' && (
+              <Button
+                onClick={() => handleConfirm(bookingDetail.id)}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                Confirm Booking
+              </Button>
+            )}
+            <Button
+              variant="outline"
+              onClick={() => bookingDetail && openStatusDialog(bookingDetail.id, bookingDetail.status)}
+            >
+              Change Status
+            </Button>
+            <Button variant="outline" onClick={() => setDetailDialogOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Update Status Dialog */}
+      <Dialog open={statusDialogOpen} onOpenChange={setStatusDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Update Booking Status</DialogTitle>
+            <DialogDescription>Change the booking status and provide a reason</DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div>
+              <Label htmlFor="new-status">New Status</Label>
+              <Select
+                value={statusUpdate.status}
+                onValueChange={(value: BookingStatus) =>
+                  setStatusUpdate({ ...statusUpdate, status: value })
+                }
+              >
+                <SelectTrigger id="new-status">
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="PENDING">Pending</SelectItem>
+                  <SelectItem value="CONFIRMED">Confirmed</SelectItem>
+                  <SelectItem value="CANCELLED">Cancelled</SelectItem>
+                  <SelectItem value="EXPIRED">Expired</SelectItem>
+                  <SelectItem value="COMPLETED">Completed</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="reason">Reason (optional)</Label>
+              <Input
+                id="reason"
+                value={statusUpdate.reason}
+                onChange={(e) => setStatusUpdate({ ...statusUpdate, reason: e.target.value })}
+                placeholder="Enter reason for status change"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setStatusDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleUpdateStatus}
+              className="bg-gradient-to-r from-purple-600 to-pink-600"
+              disabled={updateStatus.isPending}
+            >
+              {updateStatus.isPending ? 'Updating...' : 'Update Status'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

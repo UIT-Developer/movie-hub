@@ -22,7 +22,7 @@ import { Button } from '@movie-hub/shacdn-ui/button';
 import { Input } from '@movie-hub/shacdn-ui/input';
 import { useToast } from '../_libs/use-toast';
 import { useCinemas, useHallsByCinema, useTicketPricing, useUpdateTicketPricing } from '@/libs/api';
-import type { SeatType, DayType } from '../_libs/types';
+import type { SeatType, DayType } from '@/libs/api/types';
 import type { TicketPricingFiltersParams } from '@/libs/api';
 
 interface TicketPricing {
@@ -42,11 +42,11 @@ export default function TicketPricingPage() {
 
   // API hooks
   const { data: cinemasData = [] } = useCinemas();
-  const cinemas = Array.isArray(cinemasData) ? cinemasData : (cinemasData?.data || []) as Cinema[];
+  const cinemas = cinemasData || [];
   const { data: hallsData = [] } = useHallsByCinema(selectedCinemaId);
-  const halls = Array.isArray(hallsData) ? hallsData : (hallsData?.data || []) as Hall[];
+  const halls = hallsData || [];
   const { data: pricingsData = [], isLoading: loading } = useTicketPricing(selectedHallId ? { hallId: selectedHallId } as TicketPricingFiltersParams & { hallId: string } : undefined);
-  const pricings = Array.isArray(pricingsData) ? pricingsData : (pricingsData?.data || []) as TicketPricing[];
+  const pricings = pricingsData || [];
   const updatePricing = useUpdateTicketPricing();
 
   const handleHallChange = (hallId: string) => {

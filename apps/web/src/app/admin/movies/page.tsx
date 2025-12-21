@@ -38,7 +38,7 @@ import {
   DropdownMenuTrigger,
 } from '@movie-hub/shacdn-ui/dropdown-menu';
 import { useMovies, useCreateMovie, useUpdateMovie, useDeleteMovie, useGenres } from '@/libs/api';
-import type { Movie, AgeRating, LanguageType, MovieCast, CreateMovieDto } from '../_libs/types';
+import type { Movie, AgeRating, LanguageType, MovieCast, CreateMovieRequest } from '@/libs/api/types';
 import type { CreateMovieRequest } from '@/libs/api';
 import Image from 'next/image';
 import MovieReleaseDialog from '../_components/forms/MovieReleaseDialog';
@@ -50,7 +50,7 @@ export default function MoviesPage() {
   const [addReleaseDialogOpen, setAddReleaseDialogOpen] = useState(false);
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
   const [selectedMovieIdForRelease, setSelectedMovieIdForRelease] = useState<string>('');
-  const [formData, setFormData] = useState<Partial<CreateMovieDto>>({
+  const [formData, setFormData] = useState<Partial<CreateMovieRequest>>({
     title: '',
     overview: '',
     originalTitle: '',
@@ -71,9 +71,9 @@ export default function MoviesPage() {
 
   // API hooks
   const { data: moviesData = [] } = useMovies();
-  const movies = Array.isArray(moviesData) ? moviesData : (moviesData?.data || []) as Movie[];
+  const movies = moviesData || [];
   const { data: genresData = [] } = useGenres();
-  const genres = Array.isArray(genresData) ? genresData : (genresData?.data || []) as typeof genresData;
+  const genres = genresData || [];
   const createMovie = useCreateMovie();
   const updateMovie = useUpdateMovie();
   const deleteMovie = useDeleteMovie();
@@ -151,7 +151,7 @@ export default function MoviesPage() {
       productionCountry: movie.productionCountry,
       director: movie.director || '',
       cast: movie.cast,
-      genreIds: movie.genre.map(g => g.id),
+      genreIds: movie.genre ? [movie.genre].map(g => g.id) : [],
     });
     setDialogOpen(true);
   };
@@ -288,15 +288,15 @@ export default function MoviesPage() {
                     </div>
                   )}
                   <div className="flex flex-wrap gap-1 mt-2">
-                    {Array.isArray(movie.genre) && movie.genre.slice(0, 3).map((g) => (
+                    {movie.genre && [movie.genre].slice(0, 3).map((g) => (
                       <Badge key={g.id} variant="secondary" className="text-xs">
                         {g.name}
                       </Badge>
                     ))}
                   </div>
                   <div className="pt-2">
-                    <Badge className={getStatusColor(movie.status || 'upcoming')}>
-                      {(movie.status || 'upcoming').replace('_', ' ')}
+                    <Badge className={getStatusColor(movie.status || 'COMING_SOON')}>
+                      {(movie.status || 'COMING_SOON').replace('_', ' ')}
                     </Badge>
                   </div>
                 </div>

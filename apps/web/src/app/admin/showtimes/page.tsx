@@ -24,7 +24,7 @@ import { Badge } from '@movie-hub/shacdn-ui/badge';
 import { Calendar } from '@movie-hub/shacdn-ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@movie-hub/shacdn-ui/popover';
 import { useShowtimes, useDeleteShowtime, useMovies, useCinemas, useHallsGroupedByCinema } from '@/libs/api';
-import type { Showtime, Movie, Cinema, Hall } from '../_libs/types';
+import type { Showtime, Movie, Cinema, Hall } from '@/libs/api/types';
 import { format } from 'date-fns';
 import ShowtimeDialog from '../_components/forms/ShowtimeDialog';
 
@@ -41,12 +41,12 @@ export default function ShowtimesPage() {
     movieId: selectedMovieId !== 'all' ? selectedMovieId : undefined,
     date: selectedDate.toISOString().split('T')[0],
   });
-  const showtimes = Array.isArray(showtimesData) ? showtimesData : (showtimesData?.data || []) as Showtime[];
+  const showtimes = showtimesData || [];
   const { data: moviesData = [] } = useMovies();
-  const movies = Array.isArray(moviesData) ? moviesData : (moviesData?.data || []) as Movie[];
+  const movies = moviesData || [];
   const moviesAdmin = movies;
   const { data: cinemasData = [] } = useCinemas();
-  const cinemas = Array.isArray(cinemasData) ? cinemasData : (cinemasData?.data || []) as Cinema[];
+  const cinemas = cinemasData || [];
   const cinemasAdmin = cinemas;
   const deleteShowtime = useDeleteShowtime();
 

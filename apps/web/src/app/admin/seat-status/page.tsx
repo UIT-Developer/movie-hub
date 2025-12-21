@@ -20,8 +20,27 @@ import {
 } from '@movie-hub/shacdn-ui/select';
 import { Badge } from '@movie-hub/shacdn-ui/badge';
 import { useToast } from '../_libs/use-toast';
-import type { Hall, SeatStatus, SeatDetail, HallDetail } from '../_libs/types';
 import { useCinemas, useHallsGroupedByCinema, useUpdateSeatStatus } from '@/libs/api';
+import type { Hall, SeatStatus, SeatType } from '@/libs/api/types';
+
+// Frontend-specific types for seat status management
+interface SeatDetail {
+  id: string;
+  row: number;
+  seatNumber: number;
+  type: SeatType;
+  status: SeatStatus;
+}
+
+interface HallDetail {
+  id: string;
+  name: string;
+  type: string;
+  capacity: number;
+  rows: number;
+  status: string;
+  seats: SeatDetail[];
+}
 
 export default function SeatStatusPage() {
   const [selectedCinemaId, setSelectedCinemaId] = useState('');
@@ -33,7 +52,7 @@ export default function SeatStatusPage() {
 
   // API hooks
   const { data: cinemasData = [] } = useCinemas();
-  const cinemas = Array.isArray(cinemasData) ? cinemasData : (cinemasData?.data || []) as typeof cinemasData;
+  const cinemas = cinemasData || [];
   const { data: hallsByCinema = {} } = useHallsGroupedByCinema();
   // @ts-expect-error - Hall type mismatch between API and admin types
   const halls: Hall[] = Object.values(hallsByCinema).flatMap((g) => g.halls || []);

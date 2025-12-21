@@ -5,11 +5,14 @@ FROM node:18-alpine AS deps
 
 WORKDIR /app
 
+# Install pnpm
+RUN npm install -g pnpm
+
 # Copy only package files for better caching
-COPY package*.json ./
+COPY package.json pnpm-lock.yaml* ./
 
 # Install ALL dependencies (needed for build)
-RUN npm ci
+RUN pnpm install --frozen-lockfile || pnpm install
 
 # ===========================================
 # BUILD STAGE - Build Next.js application
@@ -18,11 +21,14 @@ FROM node:18-alpine AS builder
 
 WORKDIR /app
 
+# Install pnpm
+RUN npm install -g pnpm
+
 # Copy dependencies from deps stage
 COPY --from=deps /app/node_modules ./node_modules
 
 # Copy source files needed for build
-COPY package*.json ./
+COPY package.json pnpm-lock.yaml* ./
 COPY nx.json ./
 COPY tsconfig.base.json ./
 COPY eslint.config.mjs ./

@@ -5,11 +5,14 @@ FROM node:18-alpine AS deps
 
 WORKDIR /app
 
+# Install pnpm
+RUN npm install -g pnpm
+
 # Copy only package files for better caching
-COPY package*.json ./
+COPY package.json pnpm-lock.yaml* ./
 
 # Install ALL dependencies (needed for build)
-RUN npm ci 
+RUN pnpm install --frozen-lockfile || pnpm install
 
 # ===========================================
 # BUILD STAGE - Build the application
@@ -18,11 +21,14 @@ FROM node:18-alpine AS builder
 
 WORKDIR /app
 
+# Install pnpm
+RUN npm install -g pnpm
+
 # Copy dependencies from deps stage
 COPY --from=deps /app/node_modules ./node_modules
 
 # Copy source files needed for build
-COPY package*.json ./
+COPY package.json pnpm-lock.yaml* ./
 COPY nx.json ./
 COPY tsconfig.base.json ./
 COPY eslint.config.mjs ./
@@ -37,8 +43,8 @@ RUN npx nx build api-gateway --prod
 # ===========================================
 FROM node:18-alpine AS production
 
-# Install wget for healthcheck
-RUN apk add --no-cache wget
+# Install wget for healthcheck and pnpm
+RUN apk add --no-cache wget && npm install -g pnpm
 
 # Create non-root user for security  
 RUN addgroup -g 1001 -S nodejs && \
@@ -50,7 +56,9 @@ WORKDIR /app
 COPY --chown=nestjs:nodejs --from=builder /app/dist/apps/api-gateway/package*.json ./
 
 # Install ONLY the minimal dependencies from Nx-generated package.json
-RUN npm ci --omit=dev --legacy-peer-deps && \
+# Also explicitly install tslib as it's required by TypeScript runtime
+RUN pnpm install --prod && \
+    pnpm add tslib && \
     npm cache clean --force
 
 # Copy ONLY the built application

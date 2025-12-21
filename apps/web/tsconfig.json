@@ -23,7 +23,17 @@
       {
         "name": "next"
       }
-    ]
+    ],
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@movie-hub/shacdn-ui": ["../../libs/shacdn-ui/src/index.ts"],
+      "@movie-hub/shacdn-ui/*": ["../../libs/shacdn-ui/src/*"],
+      "@movie-hub/shacdn-utils": ["../../libs/shacdn-utils/src/index.ts"],
+      "@movie-hub/shacdn-utils/*": ["../../libs/shacdn-utils/src/*"],
+      "@movie-hub/shared-types": ["../../libs/shared-types/src/index.ts"],
+      "@movie-hub/shared-types/*": ["../../libs/shared-types/src/*"]
+    }
   },
   "include": [
     "**/*.js",
@@ -39,6 +49,7 @@
     "node_modules",
     "jest.config.ts",
     "**/*.spec.ts",
-    "**/*.test.ts"
+    "**/*.test.ts",
+    "sample web admin/**"
   ]
 }

@@ -1,17 +1,24 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import {
+  AgeRatingEnum,
   CreateMovieReleaseRequest,
   CreateMovieRequest,
+  CreateReviewRequest,
+  LanguageOptionEnum,
   MovieDetailResponse,
   MovieQuery,
   MovieReleaseResponse,
   MovieSummary,
   ResourceNotFoundException,
+  ReviewQuery,
+  ReviewResponse,
   UpdateMovieReleaseRequest,
   UpdateMovieRequest,
+  UpdateReviewRequest,
 } from '@movie-hub/shared-types';
 import { ServiceResult } from '@movie-hub/shared-types/common';
 import { Injectable, Logger } from '@nestjs/common';
+import { Prisma } from '../../../generated/prisma';
 import { PrismaService } from '../prisma/prisma.service';
 import { MovieMapper } from './movie.mapper';
 
@@ -56,6 +63,11 @@ export class MovieService {
         ageRating: true,
         productionCountry: true,
         languageType: true,
+        reviews: {
+          select: {
+            rating: true,
+          },
+        },
       },
       orderBy: {
         [query.sortBy]: query.sortOrder,
@@ -77,8 +89,26 @@ export class MovieService {
       };
     }
 
+    const data = movies.map((movie) => {
+      const { ageRating, languageType, ...rest } = movie;
+      return {
+        ...rest,
+        ageRating: ageRating as unknown as AgeRatingEnum,
+        languageType: languageType as unknown as LanguageOptionEnum,
+        averageRating:
+          movie.reviews.length > 0
+            ? Number(
+                (
+                  movie.reviews.reduce((sum, r) => sum + r.rating, 0) /
+                  movie.reviews.length
+                ).toFixed(1)
+              )
+            : 5,
+        reviewCount: movie.reviews.length ?? 5,
+      };
+    });
     return {
-      data: movies as MovieSummary[],
+      data,
       meta,
     };
   }
@@ -97,8 +127,18 @@ export class MovieService {
       },
     });
 
+    const stats = await this.prismaService.review.aggregate({
+      where: { movieId: movie.id },
+      _avg: { rating: true },
+      _count: { rating: true },
+    });
+
     return {
-      data: MovieMapper.toResponse(movie),
+      data: MovieMapper.toResponse({
+        ...movie,
+        averageRating: stats._avg.rating ?? 0,
+        reviewCount: stats._count.rating ?? 0,
+      }),
     };
   }
 
@@ -118,8 +158,18 @@ export class MovieService {
       });
     });
 
+    const stats = await this.prismaService.review.aggregate({
+      where: { movieId: movie.id },
+      _avg: { rating: true },
+      _count: { rating: true },
+    });
+
     return {
-      data: MovieMapper.toResponse(movie),
+      data: MovieMapper.toResponse({
+        ...movie,
+        averageRating: stats._avg.rating ?? 0,
+        reviewCount: stats._count.rating ?? 0,
+      }),
       message: 'Create movie successfully!',
     };
   }
@@ -160,8 +210,18 @@ export class MovieService {
       });
     });
 
+    const stats = await this.prismaService.review.aggregate({
+      where: { movieId: updatedMovie.id },
+      _avg: { rating: true },
+      _count: { rating: true },
+    });
+
     return {
-      data: MovieMapper.toResponse(updatedMovie),
+      data: MovieMapper.toResponse({
+        ...updatedMovie,
+        averageRating: stats._avg.rating ?? 0,
+        reviewCount: stats._count.rating ?? 0,
+      }),
       message: 'Update movie successfully!',
     };
   }
@@ -261,11 +321,11 @@ export class MovieService {
   }
 
   // Function for internal microservice
-  async getMovieByListId(movieIs: string[]) {
+  async getMovieByListId(movieIds: string[]) {
     const movies = await this.prismaService.movie.findMany({
       where: {
         id: {
-          in: movieIs,
+          in: movieIds,
         },
       },
       include: {
@@ -277,7 +337,112 @@ export class MovieService {
         movieReleases: true,
       },
     });
+    // ⭐ Aggregate review theo movieId
+    const reviewStats = await this.prismaService.review.groupBy({
+      by: ['movieId'],
+      where: {
+        movieId: { in: movieIds },
+      },
+      _avg: { rating: true },
+      _count: { rating: true },
+    });
 
-    return movies.map((movie) => MovieMapper.toResponse(movie));
+    // Convert sang map để lookup nhanh O(1)
+    const statsMap = new Map<
+      string,
+      { averageRating: number; reviewCount: number }
+    >();
+
+    reviewStats.forEach((s) => {
+      statsMap.set(s.movieId, {
+        averageRating: s._avg.rating ? Number(s._avg.rating.toFixed(1)) : 0,
+        reviewCount: s._count.rating,
+      });
+    });
+
+    return movies.map((movie) =>
+      MovieMapper.toResponse({
+        ...movie,
+        averageRating: statsMap.get(movie.id)?.averageRating ?? 0,
+        reviewCount: statsMap.get(movie.id)?.reviewCount ?? 0,
+      })
+    );
+  }
+
+  //reviews
+  async getReviewsByMovie(
+    query: ReviewQuery
+  ): Promise<ServiceResult<ReviewResponse[]>> {
+    const page = query.page ? Number(query.page) : 1;
+    const limit = query.limit ? Number(query.limit) : 10;
+    const skip = (page - 1) * limit;
+
+    const where: Prisma.ReviewWhereInput = {
+      ...(query.movieId && { movieId: query.movieId }),
+      ...(query.userId && { userId: query.userId }),
+      ...(query.rating && { rating: Number(query.rating) }),
+    };
+
+    const orderBy: Prisma.ReviewOrderByWithRelationInput = query.sortBy
+      ? { [query.sortBy]: query.sortOrder ?? 'desc' }
+      : { createdAt: 'desc' };
+
+    const [data, totalRecords] = await Promise.all([
+      this.prismaService.review.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy,
+      }),
+      this.prismaService.review.count({ where }),
+    ]);
+
+    return {
+      data: data as unknown as ReviewResponse[],
+      message: 'Get reviews successfully',
+      meta: {
+        page,
+        limit,
+        totalRecords,
+        totalPages: Math.ceil(totalRecords / limit),
+        hasPrev: page > 1,
+        hasNext: page * limit < totalRecords,
+      },
+    };
+  }
+
+  async createReviewForMovie(
+    reviewDto: CreateReviewRequest
+  ): Promise<ServiceResult<ReviewResponse>> {
+    const review = await this.prismaService.review.create({
+      data: {
+        movieId: reviewDto.movieId,
+        userId: reviewDto.userId,
+        rating: reviewDto.rating,
+        content: reviewDto.content,
+      },
+    });
+
+    return {
+      data: review as unknown as ReviewResponse,
+      message: `Create review for movieId ${reviewDto.movieId} by userId ${reviewDto.userId} successfully!`,
+    };
+  }
+
+  async updateReview(
+    id: string,
+    reviewDto: UpdateReviewRequest
+  ): Promise<ServiceResult<ReviewResponse>> {
+    const review = await this.prismaService.review.update({
+      where: { id },
+      data: {
+        ...reviewDto,
+      },
+    });
+
+    return {
+      data: review as unknown as ReviewResponse,
+      message: `Update review for reviewId ${id} successfully!`,
+    };
   }
 }

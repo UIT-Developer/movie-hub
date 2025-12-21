@@ -1,4 +1,9 @@
 {
   "nxConsole.generateAiAgentRules": true,
-  "liveServer.settings.port": 5501
+  "liveServer.settings.port": 5501,
+  "cSpell.words": [
+    "Moviehub",
+    "shacdn"
+  ],
+  "prisma.pinToPrisma6": true
 }

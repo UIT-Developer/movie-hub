@@ -14,9 +14,10 @@ import {
 } from '@movie-hub/shared-types';
 import { DistanceCalculator } from '../../utils/distance-calculator.util';
 import { DecimalUtil } from '../../utils/decimal.util';
-import { Prisma } from '../../../generated/prisma/client';
-import { HallType } from '../../../generated/prisma/client';
+import { Prisma, HallType } from '../../../generated/prisma/client';
+import Decimal from 'decimal.js';
 import { ServiceResult } from '@movie-hub/shared-types/common';
+
 
 @Injectable()
 export class CinemaLocationService {

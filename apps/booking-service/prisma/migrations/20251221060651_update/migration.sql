@@ -29,7 +29,7 @@ CREATE TYPE "public"."LoyaltyTier" AS ENUM ('BRONZE', 'SILVER', 'GOLD', 'PLATINU
 CREATE TABLE "public"."Bookings" (
     "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "booking_code" VARCHAR(20) NOT NULL,
-    "user_id" UUID NOT NULL,
+    "user_id" VARCHAR(255) NOT NULL,
     "showtime_id" UUID NOT NULL,
     "customer_name" VARCHAR(255) NOT NULL,
     "customer_email" VARCHAR(255) NOT NULL,
@@ -159,7 +159,7 @@ CREATE TABLE "public"."Promotions" (
 -- CreateTable
 CREATE TABLE "public"."LoyaltyAccounts" (
     "id" UUID NOT NULL DEFAULT gen_random_uuid(),
-    "user_id" UUID NOT NULL,
+    "user_id" VARCHAR(255) NOT NULL,
     "current_points" INTEGER NOT NULL DEFAULT 0,
     "tier" "public"."LoyaltyTier" NOT NULL DEFAULT 'BRONZE',
     "total_spent" DECIMAL(12,2) NOT NULL DEFAULT 0,

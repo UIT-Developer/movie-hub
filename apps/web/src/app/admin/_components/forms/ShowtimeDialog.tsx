@@ -19,10 +19,10 @@ import {
   SelectValue,
 } from '@movie-hub/shacdn-ui/select';
 import { Button } from '@movie-hub/shacdn-ui/button';
-import { useToast } from '../_libs/use-toast';
+import { useToast } from '../../_libs/use-toast';
 // import { useAdminApi } from '@/libs/admin-api'; // DEPRECATED: Use new hooks from libs/api
-import type { Showtime, Movie, Cinema, Hall, CreateShowtimeRequest } from '../_libs/types';
-import { mockReleases } from '../_libs/mockData';
+import type { Showtime, Movie, Cinema, Hall, CreateShowtimeRequest } from '../../_libs/types';
+import { mockReleases } from '../../_libs/mockData';
 
 interface ShowtimeDialogProps {
   open: boolean;

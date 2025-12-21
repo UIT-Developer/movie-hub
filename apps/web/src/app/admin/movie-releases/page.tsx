@@ -28,7 +28,7 @@ import type { MovieRelease } from '@/libs/api';
 import type { Movie, Cinema, Hall } from '../_libs/types';
 import { format } from 'date-fns';
 import MovieReleaseDialog from '../_components/forms/MovieReleaseDialog';
-import ShowtimeDialog from '../_components/ShowtimeDialog';
+import ShowtimeDialog from '../_components/forms/ShowtimeDialog';
 import {
   DropdownMenu,
   DropdownMenuContent,

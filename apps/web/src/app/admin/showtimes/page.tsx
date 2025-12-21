@@ -26,7 +26,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@movie-hub/shacdn-ui/po
 import { useShowtimes, useDeleteShowtime, useMovies, useCinemas, useHallsGroupedByCinema } from '@/libs/api';
 import type { Showtime, Movie, Cinema, Hall } from '../_libs/types';
 import { format } from 'date-fns';
-import ShowtimeDialog from '../_components/ShowtimeDialog';
+import ShowtimeDialog from '../_components/forms/ShowtimeDialog';
 
 export default function ShowtimesPage() {
   const [dialogOpen, setDialogOpen] = useState(false);

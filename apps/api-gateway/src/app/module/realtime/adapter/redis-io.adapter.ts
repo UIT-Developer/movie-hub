@@ -7,7 +7,17 @@ export class RedisIoAdapter extends IoAdapter {
   private adapterConstructor: ReturnType<typeof createAdapter>;
 
   async connectToRedis(): Promise<void> {
-    const redisUrl = process.env.REDIS_ADAPTER_URL || 'redis://localhost:6379';
+    // Prefer explicit adapter env var, then fall back to REDIS_URL (set by infra), then localhost for dev
+    const redisUrl =
+      process.env.REDIS_ADAPTER_URL || process.env.REDIS_URL || 'redis://localhost:6379';
+
+    // Log resolved Redis host (avoid printing credentials)
+    try {
+      const u = new URL(redisUrl);
+      console.log(`🔎 Redis adapter connecting to ${u.hostname}:${u.port || '6379'}`);
+    } catch {
+      console.log('🔎 Redis adapter using raw URL (could not parse hostname)');
+    }
 
     // Tạo pub/sub client bằng ioredis
     const pubClient = new Redis(redisUrl, {

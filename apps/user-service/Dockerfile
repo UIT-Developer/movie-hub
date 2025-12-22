@@ -30,7 +30,7 @@ COPY apps/user-service ./apps/user-service
 
 # Generate Prisma Client for user-service
 WORKDIR /app/apps/user-service
-RUN npx prisma generate
+RUN npx --yes prisma@6.16.2 generate
 
 # Build the user-service using Nx
 WORKDIR /app

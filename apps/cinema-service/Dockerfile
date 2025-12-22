@@ -33,7 +33,7 @@ COPY apps/cinema-service ./apps/cinema-service
 
 # Generate Prisma Client for cinema-service
 WORKDIR /app/apps/cinema-service
-RUN npx prisma generate
+RUN npx --yes prisma@6.16.2 generate
 
 # Build the cinema-service using Nx
 WORKDIR /app

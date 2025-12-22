@@ -31,7 +31,7 @@ COPY apps/booking-service ./apps/booking-service
 
 # Generate Prisma Client for booking-service
 WORKDIR /app/apps/booking-service
-RUN npx prisma generate
+RUN npx --yes prisma@6.16.2 generate
 
 # Build the booking-service using Nx
 WORKDIR /app

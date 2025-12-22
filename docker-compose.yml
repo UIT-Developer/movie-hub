@@ -151,7 +151,7 @@ services:
       timeout: 5s
       retries: 3
       start_period: 10s
-    command: sh -c "npx prisma migrate deploy  && node main.js"
+    command: sh -c "npx --yes prisma@6.16.2 migrate deploy  && node main.js"
 
   movie-service:
     build:
@@ -178,7 +178,7 @@ services:
       timeout: 5s
       retries: 3
       start_period: 10s
-    command: sh -c "npx prisma migrate deploy && node main.js"
+    command: sh -c "npx --yes prisma@6.16.2 migrate deploy && node main.js"
   cinema-service:
     build:
       context: .
@@ -204,7 +204,7 @@ services:
       timeout: 5s
       retries: 3
       start_period: 10s
-    command: sh -c "npx prisma migrate deploy  && node main.js"
+    command: sh -c "npx --yes prisma@6.16.2 migrate deploy  && node main.js"
 
 
   booking-service:
@@ -232,7 +232,7 @@ services:
       timeout: 5s
       retries: 3
       start_period: 10s
-    command: sh -c "npx prisma migrate deploy  && node main.js"
+    command: sh -c "npx --yes prisma@6.16.2 migrate deploy  && node main.js"
 
   api-gateway:
     build:

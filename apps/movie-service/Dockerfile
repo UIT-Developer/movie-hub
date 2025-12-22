@@ -31,7 +31,7 @@ COPY apps/movie-service ./apps/movie-service
 
 # Generate Prisma Client for movie-service
 WORKDIR /app/apps/movie-service
-RUN npx prisma generate
+RUN npx --yes prisma@6.16.2 generate
 
 # Build the movie-service using Nx
 WORKDIR /app

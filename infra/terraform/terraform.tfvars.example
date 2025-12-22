@@ -1,0 +1,69 @@
+# ===========================================
+# TERRAFORM VARIABLES - EXAMPLE FILE
+# MovieHub Azure Infrastructure
+# ===========================================
+# COPY THIS FILE TO terraform.tfvars AND FILL IN YOUR VALUES
+# DO NOT COMMIT terraform.tfvars TO VERSION CONTROL
+# ===========================================
+
+# ===== AZURE SUBSCRIPTION =====
+subscription_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+
+# ===== RESOURCE NAMING =====
+resource_group_name          = "rg-moviehub"
+location                     = "eastus"
+environment                  = "dev"  # dev, staging, prod
+
+# ===== CONTAINER REGISTRY =====
+acr_name = "moviehubacr"  # Must be globally unique, alphanumeric only
+acr_sku  = "Basic"         # Basic, Standard, Premium
+
+# ===== CONTAINER APPS ENVIRONMENT =====
+aca_environment_name         = "moviehub-env"
+log_analytics_workspace_name = "moviehub-logs"
+
+# ===== EXTERNAL REDIS (OUTSOURCED) =====
+# Azure Cache for Redis connection details
+
+redis_connection_string = "your-redis.redis.cache.windows.net:6380,password=your-redis-key,ssl=True,abortConnect=False"
+
+# ===== DATABASE CONNECTION STRINGS (OUTSOURCED) =====
+# Azure Database for PostgreSQL Flexible Server
+database_urls = {
+  user_service    = "postgresql://username:password@your-postgres-server.postgres.database.azure.com:5432/movie_hub_user?sslmode=require"
+  movie_service   = "postgresql://username:password@your-postgres-server.postgres.database.azure.com:5432/movie_hub_movie?sslmode=require"
+  cinema_service  = "postgresql://username:password@your-postgres-server.postgres.database.azure.com:5432/movie_hub_cinema?sslmode=require"
+  booking_service = "postgresql://username:password@your-postgres-server.postgres.database.azure.com:5432/movie_hub_booking?sslmode=require"
+}
+
+# ===== CLERK AUTHENTICATION =====
+clerk_secret_key      = "sk_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+clerk_publishable_key = "pk_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+
+# ===== EMAIL CONFIGURATION (OPTIONAL) =====
+email_config = {
+  enabled  = false
+  host     = "smtp.gmail.com"
+  port     = 587
+  secure   = false
+  user     = "your-email@gmail.com"
+  password = "your-app-password"
+  from     = "MovieHub <noreply@moviehub.com>"
+}
+
+# ===== VNPAY CONFIGURATION (OPTIONAL) =====
+vnpay_config = {
+  tmn_code    = "0GEGLRAD"
+  hash_secret = "KB2XXMTTDUA1HTSW68JIG0U963AC7TOV"
+  url         = "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html"
+  return_url  = "https://your-api-gateway-url/api/bookings/vnpay_return"
+  api_url     = "https://sandbox.vnpayment.vn/merchant_webapi/merchant.html"
+}
+
+# ===== RESOURCE TAGS =====
+tags = {
+  Project     = "MovieHub"
+  ManagedBy   = "Terraform"
+  Environment = "dev"
+  Team        = "UIT-Developer"
+}

@@ -29,7 +29,7 @@ import {
 import { Label } from '@movie-hub/shacdn-ui/label';
 import { Textarea } from '@movie-hub/shacdn-ui/textarea';
 // removed unused toast import
-import { useCinemas, useCreateCinema, useUpdateCinema, useDeleteCinema } from '@/libs/api';
+import { useCinemas, useCreateCinema, useUpdateCinema, useDeleteCinema, useHallsGroupedByCinema } from '@/libs/api';
 import type { CreateCinemaRequest as ApiCreateCinemaRequest } from '@/libs/api';
 import type { Cinema, CreateCinemaRequest } from '@/libs/api/types';
 
@@ -45,24 +45,32 @@ export default function CinemasPage() {
     district: '',
     phone: '',
     email: '',
+    website: '',
+    latitude: undefined,
+    longitude: undefined,
     description: '',
-    timezone: 'Asia/Ho_Chi_Minh',
     amenities: [],
+    facilities: {},
     images: [],
+    virtualTour360Url: '',
+    operatingHours: {},
+    socialMedia: {},
+    timezone: 'Asia/Ho_Chi_Minh',
   });
   // toast not used in this page
 
   // API hooks
   const { data: cinemasData = [], isLoading: loading } = useCinemas();
   const cinemas = cinemasData || [];
+  const { data: hallsByCinema = {} } = useHallsGroupedByCinema();
   const createCinema = useCreateCinema();
   const updateCinema = useUpdateCinema();
   const deleteCinema = useDeleteCinema();
 
-  // Calculate halls count for each cinema
+  // Calculate halls count for each cinema - using actual API data
   const getHallsCount = (cinemaId: string) => {
-    // Note: This will need useHallsByCinema hook when implemented
-    return 0; // Placeholder
+    const hallsForCinema = hallsByCinema[cinemaId]?.halls || [];
+    return hallsForCinema.length;
   };
 
   // Parse operating hours to display format
@@ -130,10 +138,17 @@ export default function CinemasPage() {
       district: '',
       phone: '',
       email: '',
+      website: '',
+      latitude: undefined,
+      longitude: undefined,
       description: '',
-      timezone: 'Asia/Ho_Chi_Minh',
       amenities: [],
+      facilities: {},
       images: [],
+      virtualTour360Url: '',
+      operatingHours: {},
+      socialMedia: {},
+      timezone: 'Asia/Ho_Chi_Minh',
     });
     setSelectedCinema(null);
   };
@@ -152,12 +167,12 @@ export default function CinemasPage() {
       longitude: cinema.longitude,
       description: cinema.description || '',
       amenities: cinema.amenities || [],
-      facilities: cinema.facilities,
+      facilities: cinema.facilities || {},
       images: cinema.images || [],
       virtualTour360Url: cinema.virtualTour360Url || '',
-      operatingHours: cinema.operatingHours,
-      socialMedia: cinema.socialMedia,
-      timezone: cinema.timezone,
+      operatingHours: cinema.operatingHours || {},
+      socialMedia: cinema.socialMedia || {},
+      timezone: cinema.timezone || 'Asia/Ho_Chi_Minh',
     });
     setDialogOpen(true);
   };
@@ -488,6 +503,59 @@ export default function CinemasPage() {
             </div>
 
             <div className="space-y-2">
+              <Label htmlFor="website">Website</Label>
+              <Input
+                id="website"
+                value={formData.website}
+                onChange={(e) =>
+                  setFormData({ ...formData, website: e.target.value })
+                }
+                placeholder="https://cinema.example.com"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="latitude">Latitude</Label>
+                <Input
+                  id="latitude"
+                  type="number"
+                  step="any"
+                  value={formData.latitude || ''}
+                  onChange={(e) =>
+                    setFormData({ ...formData, latitude: e.target.value ? parseFloat(e.target.value) : undefined })
+                  }
+                  placeholder="10.762622"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="longitude">Longitude</Label>
+                <Input
+                  id="longitude"
+                  type="number"
+                  step="any"
+                  value={formData.longitude || ''}
+                  onChange={(e) =>
+                    setFormData({ ...formData, longitude: e.target.value ? parseFloat(e.target.value) : undefined })
+                  }
+                  placeholder="106.660172"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="timezone">Timezone</Label>
+              <Input
+                id="timezone"
+                value={formData.timezone}
+                onChange={(e) =>
+                  setFormData({ ...formData, timezone: e.target.value })
+                }
+                placeholder="Asia/Ho_Chi_Minh"
+              />
+            </div>
+
+            <div className="space-y-2">
               <Label htmlFor="description">Description</Label>
               <Textarea
                 id="description"
@@ -498,6 +566,97 @@ export default function CinemasPage() {
                 placeholder="Enter cinema description..."
                 rows={4}
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="virtualTour360Url">Virtual Tour 360 URL</Label>
+              <Input
+                id="virtualTour360Url"
+                value={formData.virtualTour360Url}
+                onChange={(e) =>
+                  setFormData({ ...formData, virtualTour360Url: e.target.value })
+                }
+                placeholder="https://example.com/virtual-tour"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="amenities">Amenities (comma-separated)</Label>
+                <Input
+                  id="amenities"
+                  value={formData.amenities?.join(', ') || ''}
+                  onChange={(e) =>
+                    setFormData({ ...formData, amenities: e.target.value.split(',').map(s => s.trim()).filter(Boolean) })
+                  }
+                  placeholder="WiFi, Parking, Food Court"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="images">Images (comma-separated URLs)</Label>
+                <Input
+                  id="images"
+                  value={formData.images?.join(', ') || ''}
+                  onChange={(e) =>
+                    setFormData({ ...formData, images: e.target.value.split(',').map(s => s.trim()).filter(Boolean) })
+                  }
+                  placeholder="https://example.com/image1.jpg, https://example.com/image2.jpg"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="facilities">Facilities (JSON)</Label>
+                <Textarea
+                  id="facilities"
+                  value={JSON.stringify(formData.facilities, null, 2)}
+                  onChange={(e) => {
+                    try {
+                      const parsed = JSON.parse(e.target.value);
+                      setFormData({ ...formData, facilities: parsed });
+                    } catch {
+                      // Invalid JSON, keep current value
+                    }
+                  }}
+                  placeholder='{"parking": true, "wheelchair": true}'
+                  rows={3}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="operatingHours">Operating Hours (JSON)</Label>
+                <Textarea
+                  id="operatingHours"
+                  value={JSON.stringify(formData.operatingHours, null, 2)}
+                  onChange={(e) => {
+                    try {
+                      const parsed = JSON.parse(e.target.value);
+                      setFormData({ ...formData, operatingHours: parsed });
+                    } catch {
+                      // Invalid JSON, keep current value
+                    }
+                  }}
+                  placeholder='{"open": "09:00", "close": "24:00"}'
+                  rows={3}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="socialMedia">Social Media (JSON)</Label>
+                <Textarea
+                  id="socialMedia"
+                  value={JSON.stringify(formData.socialMedia, null, 2)}
+                  onChange={(e) => {
+                    try {
+                      const parsed = JSON.parse(e.target.value);
+                      setFormData({ ...formData, socialMedia: parsed });
+                    } catch {
+                      // Invalid JSON, keep current value
+                    }
+                  }}
+                  placeholder='{"facebook": "url", "instagram": "url"}'
+                  rows={3}
+                />
+              </div>
             </div>
           </div>
           <DialogFooter>

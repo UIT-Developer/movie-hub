@@ -40,6 +40,7 @@ import {
 } from '@movie-hub/shacdn-ui/dropdown-menu';
 import { useMovies, useCreateMovie, useUpdateMovie, useDeleteMovie, useGenres } from '@/libs/api';
 import type { Movie, CreateMovieRequest, AgeRating, LanguageType, MovieCast } from '@/libs/api/types';
+import { AgeRatingEnum, LanguageOptionEnum } from '@movie-hub/shared-types/movie';
 import Image from 'next/image';
 import MovieReleaseDialog from '../_components/forms/MovieReleaseDialog';
 
@@ -59,10 +60,10 @@ export default function MoviesPage() {
     backdropUrl: '',
     runtime: 0,
     releaseDate: '',
-    ageRating: 'P' as AgeRating,
+    ageRating: AgeRatingEnum.P as AgeRating,
     originalLanguage: 'en',
     spokenLanguages: ['en'],
-    languageType: 'SUBTITLE' as LanguageType,
+    languageType: LanguageOptionEnum.SUBTITLE as LanguageType,
     productionCountry: 'US',
     director: '',
     cast: [] as MovieCast[],
@@ -80,8 +81,8 @@ export default function MoviesPage() {
 
   const loading = createMovie.isPending || updateMovie.isPending || deleteMovie.isPending;
 
-  const ageRatingOptions: AgeRating[] = ['P', 'K', 'T13', 'T16', 'T18', 'C'];
-  const languageTypeOptions: LanguageType[] = ['ORIGINAL', 'SUBTITLE', 'DUBBED'];
+  const ageRatingOptions: AgeRating[] = [AgeRatingEnum.P, AgeRatingEnum.K, AgeRatingEnum.T13, AgeRatingEnum.T16, AgeRatingEnum.T18, AgeRatingEnum.C];
+  const languageTypeOptions: LanguageType[] = [LanguageOptionEnum.ORIGINAL, LanguageOptionEnum.SUBTITLE, LanguageOptionEnum.DUBBED];
 
   const handleSubmit = async () => {
     try {
@@ -121,10 +122,10 @@ export default function MoviesPage() {
       backdropUrl: '',
       runtime: 0,
       releaseDate: '',
-      ageRating: 'P',
+      ageRating: AgeRatingEnum.P,
       originalLanguage: 'en',
       spokenLanguages: ['en'],
-      languageType: 'SUBTITLE',
+      languageType: LanguageOptionEnum.SUBTITLE,
       productionCountry: 'US',
       director: '',
       cast: [],
@@ -485,20 +486,36 @@ export default function MoviesPage() {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="director">Director</Label>
-              <Input
-                id="director"
-                value={formData.director}
-                onChange={(e) =>
-                  setFormData({ ...formData, director: e.target.value })
-                }
-                placeholder="Christopher Nolan"
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="director">Director *</Label>
+                <Input
+                  id="director"
+                  value={formData.director}
+                  onChange={(e) =>
+                    setFormData({ ...formData, director: e.target.value })
+                  }
+                  placeholder="Christopher Nolan"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="spokenLanguages">Spoken Languages * (comma-separated)</Label>
+                <Input
+                  id="spokenLanguages"
+                  value={formData.spokenLanguages?.join(', ') || 'en'}
+                  onChange={(e) =>
+                    setFormData({ 
+                      ...formData, 
+                      spokenLanguages: e.target.value.split(',').map(s => s.trim()).filter(Boolean) 
+                    })
+                  }
+                  placeholder="en, vi, zh"
+                />
+              </div>
             </div>
 
             <div className="space-y-2">
-              <Label>Cast (Diễn viên)</Label>
+              <Label>Cast (Diễn viên) *</Label>
               <div className="space-y-2">
                 {(formData.cast || []).map((actor, index) => (
                   <div key={index} className="flex gap-2">
@@ -513,13 +530,13 @@ export default function MoviesPage() {
                       className="flex-1"
                     />
                     <Input
-                      value={actor.profileUrl || ''}
+                      value={actor.character || ''}
                       onChange={(e) => {
                         const newCast = [...(formData.cast || [])];
-                        newCast[index] = { ...newCast[index], profileUrl: e.target.value };
+                        newCast[index] = { ...newCast[index], character: e.target.value };
                         setFormData({ ...formData, cast: newCast });
                       }}
-                      placeholder="Profile URL (optional)"
+                      placeholder="Character name (optional)"
                       className="flex-1"
                     />
                     <Button
@@ -542,7 +559,7 @@ export default function MoviesPage() {
                   onClick={() => {
                     setFormData({
                       ...formData,
-                      cast: [...(formData.cast || []), { name: '', profileUrl: '' }],
+                      cast: [...(formData.cast || []), { name: '', character: '' }],
                     });
                   }}
                   className="w-full"

@@ -1,6 +1,76 @@
 // ============================================================================
 // SHARED TYPES - Based on Backend API Responses
 // ============================================================================
+// Import enums from shared-types monorepo library
+import {
+  Gender,
+  StaffStatus,
+  WorkType,
+  StaffPosition,
+  ShiftType,
+} from '@movie-hub/shared-types/user';
+
+import {
+  AgeRatingEnum,
+  LanguageOptionEnum,
+} from '@movie-hub/shared-types/movie';
+
+import {
+  HallTypeEnum,
+  LayoutTypeEnum,
+  SeatTypeEnum,
+  DayTypeEnum,
+  SeatStatusEnum,
+  FormatEnum,
+  ShowtimeStatusEnum,
+} from '@movie-hub/shared-types/cinema';
+
+import {
+  BookingStatus,
+  PaymentStatus,
+  PaymentMethod,
+  RefundStatus,
+  TicketStatus,
+  ConcessionCategory,
+  PromotionType,
+  LoyaltyTransactionType,
+  LoyaltyTier,
+} from '@movie-hub/shared-types/booking';
+
+// Re-export with aliases for consistency
+export {
+  Gender,
+  StaffStatus,
+  WorkType,
+  StaffPosition,
+  ShiftType,
+};
+
+export type AgeRating = AgeRatingEnum;
+export type LanguageType = LanguageOptionEnum;
+export type HallType = HallTypeEnum;
+export type LayoutType = LayoutTypeEnum;
+export type SeatType = SeatTypeEnum;
+export type DayType = DayTypeEnum;
+export type SeatStatus = SeatStatusEnum;
+export type ShowtimeFormat = FormatEnum;
+export type ShowtimeStatus = ShowtimeStatusEnum;
+
+export type {
+  BookingStatus,
+  PaymentStatus,
+  PaymentMethod,
+  RefundStatus,
+  TicketStatus,
+  ConcessionCategory,
+  PromotionType,
+  LoyaltyTransactionType,
+  LoyaltyTier,
+};
+
+// ============================================================================
+// CUSTOM INTERFACES
+// ============================================================================
 
 export interface PaginationParams {
   page?: number;
@@ -8,19 +78,12 @@ export interface PaginationParams {
 }
 
 export interface PaginatedResponse<T> {
-  items: T[];
-  total: number;
+  data: T[];
   page: number;
   limit: number;
-  totalPages: number;
+  total: number;
+  hasMore: boolean;
 }
-
-// ============================================================================
-// MOVIE TYPES (API 1.x)
-// ============================================================================
-
-export type AgeRating = 'P' | 'K' | 'T13' | 'T16' | 'T18' | 'C'; // Vietnam age ratings
-export type LanguageType = 'ORIGINAL' | 'SUBTITLE' | 'DUBBED';
 
 export interface MovieCast {
   name: string;
@@ -73,7 +136,14 @@ export interface CreateMovieRequest {
   genreIds: string[];
 }
 
+// Alias for admin panel compatibility
+export type CreateMovieDto = CreateMovieRequest;
+
 export type UpdateMovieRequest = Partial<CreateMovieRequest>;
+
+export interface MoviesListParams extends PaginationParams {
+  search?: string;
+}
 
 // ============================================================================
 // GENRE TYPES (API 2.x)
@@ -146,22 +216,23 @@ export interface CreateCinemaRequest {
 
 export type UpdateCinemaRequest = Partial<CreateCinemaRequest>;
 
-export interface CinemaFiltersParams {
+export interface GetCinemasResponse {
+  cinemas: Cinema[];
+  total: number;
+  page: number;
+  limit: number;
+  hasMore: boolean;
+}
+
+export interface CinemaFiltersParams extends PaginationParams {
   city?: string;
   district?: string;
   amenities?: string[];
-  page?: number;
-  limit?: number;
 }
 
 // ============================================================================
 // HALL TYPES (API 4.x & 5.x)
 // ============================================================================
-
-export type HallType = 'STANDARD' | 'VIP' | 'IMAX' | 'FOUR_DX' | 'PREMIUM';
-export type LayoutType = 'STANDARD' | 'DUAL_AISLE' | 'STADIUM';
-export type SeatType = 'STANDARD' | 'VIP' | 'COUPLE' | 'PREMIUM' | 'WHEELCHAIR';
-export type SeatStatus = 'ACTIVE' | 'BROKEN' | 'MAINTENANCE';
 
 export interface Seat {
   id: string;
@@ -210,11 +281,13 @@ export interface UpdateSeatStatusRequest {
   status: SeatStatus;
 }
 
+export interface CinemasGroupedResponse {
+  [cinemaId: string]: { cinema: Cinema; halls: Hall[] };
+}
+
 // ============================================================================
 // SHOWTIME TYPES (API 5.x)
 // ============================================================================
-
-export type ShowtimeFormat = 'TWO_D' | 'THREE_D' | 'IMAX' | 'FOUR_DX'; // Backend uses these formats
 
 export interface Showtime {
   id: string;
@@ -311,11 +384,14 @@ export interface CreateMovieReleaseRequest {
 
 export type UpdateMovieReleaseRequest = Partial<CreateMovieReleaseRequest>;
 
+export interface MovieReleasesListParams {
+  cinemaId?: string;
+  movieId?: string;
+}
+
 // ============================================================================
 // TICKET PRICING TYPES (API 7.x)
 // ============================================================================
-
-export type DayType = 'WEEKDAY' | 'WEEKEND' | 'HOLIDAY';
 
 export interface TicketPricing {
   id: string;
@@ -341,21 +417,6 @@ export interface TicketPricingFiltersParams {
 // ============================================================================
 // STAFF TYPES (API 8.x)
 // ============================================================================
-
-export type Gender = 'MALE' | 'FEMALE';
-export type StaffStatus = 'ACTIVE' | 'INACTIVE';
-export type WorkType = 'FULL_TIME' | 'PART_TIME' | 'CONTRACT';
-export type ShiftType = 'MORNING' | 'AFTERNOON' | 'NIGHT';
-
-export type StaffPosition = 
-  | 'CINEMA_MANAGER' 
-  | 'ASSISTANT_MANAGER' 
-  | 'TICKET_CLERK' 
-  | 'CONCESSION_STAFF' 
-  | 'USHER' 
-  | 'PROJECTIONIST' 
-  | 'CLEANER' 
-  | 'SECURITY';
 
 export interface Staff {
   id: string;
@@ -455,11 +516,29 @@ export interface StaffFiltersParams extends PaginationParams {
 }
 
 // ============================================================================
-// BOOKING/RESERVATION TYPES (API 9.x - Admin)
+// ADMIN PANEL SPECIFIC TYPES
 // ============================================================================
 
-export type BookingStatus = 'PENDING' | 'CONFIRMED' | 'CANCELLED' | 'EXPIRED' | 'COMPLETED';
-export type PaymentStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED' | 'REFUNDED';
+export type CreateCinemaDto = CreateCinemaRequest;
+export type CreateHallDto = CreateHallRequest;
+export type CreateMovieDtoRequest = CreateMovieRequest;
+export type CreateShowtimeDto = CreateShowtimeRequest;
+export type CreateStaffDto = CreateStaffRequest;
+export type UpdateShowtimeDtoRequest = UpdateShowtimeRequest;
+export type UpdateStaffDtoRequest = UpdateStaffRequest;
+
+// Additional response DTOs for consistency
+export type MovieResponse = Movie;
+export type CinemaResponse = Cinema;
+export type HallResponse = Hall;
+export type ShowtimeResponse = Showtime;
+export type StaffResponse = Staff;
+export type MovieReleaseResponse = MovieRelease;
+export type TicketPricingResponse = TicketPricing;
+
+// ============================================================================
+// BOOKING/RESERVATION TYPES (API 9.x - Admin)
+// ============================================================================
 
 export interface SeatInfo {
   seatId: string;

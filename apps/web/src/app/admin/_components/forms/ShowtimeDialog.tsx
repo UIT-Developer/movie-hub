@@ -20,9 +20,9 @@ import {
 } from '@movie-hub/shacdn-ui/select';
 import { Button } from '@movie-hub/shacdn-ui/button';
 import { useToast } from '../../_libs/use-toast';
-// import { useAdminApi } from '@/libs/admin-api'; // DEPRECATED: Use new hooks from libs/api
+import { useCreateShowtime, useUpdateShowtime, useMovieReleases } from '@/libs/api';
 import type { Showtime, Movie, Cinema, Hall, CreateShowtimeRequest } from '@/libs/api/types';
-import { mockReleases } from '../../_libs/mockData';
+import { FormatEnum } from '@movie-hub/shared-types/cinema/enum';
 
 interface ShowtimeDialogProps {
   open: boolean;
@@ -47,14 +47,15 @@ export default function ShowtimeDialog({
   preSelectedReleaseId,
   onSuccess,
 }: ShowtimeDialogProps) {
-  // const api = useAdminApi(); // DEPRECATED
+  const createShowtime = useCreateShowtime();  const { data: movieReleasesData = [] } = useMovieReleases();
+  const movieReleases = movieReleasesData || [];  const updateShowtime = useUpdateShowtime();
   const [formData, setFormData] = useState<CreateShowtimeRequest>({
     movieId: '',
     movieReleaseId: '',
     cinemaId: '',
     hallId: '',
     startTime: '',
-    format: 'TWO_D',
+    format: FormatEnum.TWO_D,
     language: 'vi',
     subtitles: [],
   });
@@ -80,7 +81,7 @@ export default function ShowtimeDialog({
         cinemaId: '',
         hallId: '',
         startTime: '',
-        format: 'TWO_D',
+        format: FormatEnum.TWO_D,
         language: 'vi',
         subtitles: [],
       });
@@ -91,7 +92,7 @@ export default function ShowtimeDialog({
         cinemaId: '',
         hallId: '',
         startTime: '',
-        format: 'TWO_D',
+        format: FormatEnum.TWO_D,
         language: 'vi',
         subtitles: [],
       });
@@ -110,33 +111,28 @@ export default function ShowtimeDialog({
     }
 
     try {
-      // if (editingShowtime) {
-      //   await api.showtimes.update(editingShowtime.id, formData);
-      //   toast({
-      //     title: 'Success',
-      //     description: 'Showtime updated successfully',
-      //   });
-      // } else {
-      //   await api.showtimes.create(formData);
-      //   toast({
-      //     title: 'Success',
-      //     description: 'Showtime created successfully',
-      //   });
-      // }
+      // Convert datetime-local format (yyyy-MM-ddTHH:mm) to backend format (yyyy-MM-dd HH:mm:ss)
+      const startTimeFormatted = formData.startTime.replace('T', ' ') + ':00';
+      const payload = {
+        ...formData,
+        startTime: startTimeFormatted,
+      };
+
+      if (editingShowtime) {
+        await updateShowtime.mutateAsync({ id: editingShowtime.id, data: payload });
+      } else {
+        await createShowtime.mutateAsync(payload);
+      }
 
       onOpenChange(false);
       onSuccess?.();
     } catch {
-      toast({
-        title: 'Error',
-        description: `Failed to ${editingShowtime ? 'update' : 'create'} showtime`,
-        variant: 'destructive',
-      });
+      // Error toast already shown by mutation hooks
     }
   };
 
   const selectedMovie = movies.find(m => m.id === formData.movieId);
-  const selectedRelease = mockReleases.find(r => r.id === formData.movieReleaseId);
+  const selectedRelease = movieReleases.find(r => r.id === formData.movieReleaseId);
   const isMovieDisabled = !!preSelectedMovieId;
   const isReleaseDisabled = !!preSelectedReleaseId;
 
@@ -209,7 +205,7 @@ export default function ShowtimeDialog({
                 <SelectContent>
                   {formData.movieId && (() => {
                     // Lấy các releases ACTIVE hoặc UPCOMING của movie này
-                    const releases = mockReleases.filter(r => 
+                    const releases = movieReleases.filter(r => 
                       r.movieId === formData.movieId && 
                       (r.status === 'ACTIVE' || r.status === 'UPCOMING')
                     );
@@ -294,17 +290,17 @@ export default function ShowtimeDialog({
               <Select
                 value={formData.format}
                 onValueChange={(value) =>
-                  setFormData({ ...formData, format: value as 'TWO_D' | 'THREE_D' | 'IMAX' | 'FOUR_DX' })
+                  setFormData({ ...formData, format: value as FormatEnum })
                 }
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select format" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="TWO_D">2D</SelectItem>
-                  <SelectItem value="THREE_D">3D</SelectItem>
-                  <SelectItem value="IMAX">IMAX</SelectItem>
-                  <SelectItem value="FOUR_DX">4DX</SelectItem>
+                  <SelectItem value={FormatEnum.TWO_D}>2D</SelectItem>
+                  <SelectItem value={FormatEnum.THREE_D}>3D</SelectItem>
+                  <SelectItem value={FormatEnum.IMAX}>IMAX</SelectItem>
+                  <SelectItem value={FormatEnum.FOUR_DX}>4DX</SelectItem>
                 </SelectContent>
               </Select>
             </div>

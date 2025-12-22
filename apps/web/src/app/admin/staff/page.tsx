@@ -54,28 +54,29 @@ import type {
   ShiftType,
   StaffPosition,
 } from '@/libs/api/types';
+import { Gender as GenderEnum, StaffStatus as StaffStatusEnum, WorkType as WorkTypeEnum, ShiftType as ShiftTypeEnum, StaffPosition as StaffPositionEnum } from '@movie-hub/shared-types/user';
 
 const POSITIONS: { value: StaffPosition; label: string }[] = [
-  { value: 'CINEMA_MANAGER', label: 'Cinema Manager' },
-  { value: 'ASSISTANT_MANAGER', label: 'Assistant Manager' },
-  { value: 'TICKET_CLERK', label: 'Ticket Clerk' },
-  { value: 'CONCESSION_STAFF', label: 'Concession Staff' },
-  { value: 'USHER', label: 'Usher' },
-  { value: 'PROJECTIONIST', label: 'Projectionist' },
-  { value: 'CLEANER', label: 'Cleaner' },
-  { value: 'SECURITY', label: 'Security' },
+  { value: StaffPositionEnum.CINEMA_MANAGER, label: 'Cinema Manager' },
+  { value: StaffPositionEnum.ASSISTANT_MANAGER, label: 'Assistant Manager' },
+  { value: StaffPositionEnum.TICKET_CLERK, label: 'Ticket Clerk' },
+  { value: StaffPositionEnum.CONCESSION_STAFF, label: 'Concession Staff' },
+  { value: StaffPositionEnum.USHER, label: 'Usher' },
+  { value: StaffPositionEnum.PROJECTIONIST, label: 'Projectionist' },
+  { value: StaffPositionEnum.CLEANER, label: 'Cleaner' },
+  { value: StaffPositionEnum.SECURITY, label: 'Security' },
 ];
 
 const WORK_TYPES: { value: WorkType; label: string }[] = [
-  { value: 'FULL_TIME', label: 'Full Time' },
-  { value: 'PART_TIME', label: 'Part Time' },
-  { value: 'CONTRACT', label: 'Contract' },
+  { value: WorkTypeEnum.FULL_TIME, label: 'Full Time' },
+  { value: WorkTypeEnum.PART_TIME, label: 'Part Time' },
+  { value: WorkTypeEnum.CONTRACT, label: 'Contract' },
 ];
 
 const SHIFT_TYPES: { value: ShiftType; label: string }[] = [
-  { value: 'MORNING', label: 'Morning' },
-  { value: 'AFTERNOON', label: 'Afternoon' },
-  { value: 'NIGHT', label: 'Night' },
+  { value: ShiftTypeEnum.MORNING, label: 'Morning' },
+  { value: ShiftTypeEnum.AFTERNOON, label: 'Afternoon' },
+  { value: ShiftTypeEnum.NIGHT, label: 'Night' },
 ];
 
 export default function StaffPage() {
@@ -88,12 +89,12 @@ export default function StaffPage() {
     fullName: '',
     email: '',
     phone: '',
-    gender: 'MALE' as Gender,
+    gender: GenderEnum.MALE as Gender,
     dob: '',
-    position: 'TICKET_CLERK' as StaffPosition,
-    status: 'ACTIVE' as StaffStatus,
-    workType: 'FULL_TIME' as WorkType,
-    shiftType: 'MORNING' as ShiftType,
+    position: StaffPositionEnum.TICKET_CLERK as StaffPosition,
+    status: StaffStatusEnum.ACTIVE as StaffStatus,
+    workType: WorkTypeEnum.FULL_TIME as WorkType,
+    shiftType: ShiftTypeEnum.MORNING as ShiftType,
     salary: 0,
     hireDate: '',
   });
@@ -153,7 +154,7 @@ export default function StaffPage() {
     try {
       if (editingStaff) {
         // Update existing staff
-        const { cinemaId, email, ...updateData } = formData;
+        const { ...updateData } = formData;
         await updateStaff.mutateAsync({ id: editingStaff.id, data: updateData });
       } else {
         // Create new staff
@@ -204,12 +205,12 @@ export default function StaffPage() {
       fullName: '',
       email: '',
       phone: '',
-      gender: 'MALE',
+      gender: GenderEnum.MALE,
       dob: '',
-      position: 'TICKET_CLERK',
-      status: 'ACTIVE',
-      workType: 'FULL_TIME',
-      shiftType: 'MORNING',
+      position: StaffPositionEnum.TICKET_CLERK,
+      status: StaffStatusEnum.ACTIVE,
+      workType: WorkTypeEnum.FULL_TIME,
+      shiftType: ShiftTypeEnum.MORNING,
       salary: 0,
       hireDate: '',
     });
@@ -217,9 +218,9 @@ export default function StaffPage() {
 
   const getStatusBadgeColor = (status: StaffStatus) => {
     switch (status) {
-      case 'ACTIVE':
+      case StaffStatusEnum.ACTIVE:
         return 'bg-green-100 text-green-800';
-      case 'INACTIVE':
+      case StaffStatusEnum.INACTIVE:
         return 'bg-gray-100 text-gray-800';
       default:
         return 'bg-gray-100 text-gray-800';
@@ -229,14 +230,14 @@ export default function StaffPage() {
   // Calculate statistics
   const stats = {
     total: staff.length,
-    active: staff.filter((s) => s.status === 'ACTIVE').length,
-    inactive: staff.filter((s) => s.status === 'INACTIVE').length,
-    fullTime: staff.filter((s) => s.workType === 'FULL_TIME').length,
-    partTime: staff.filter((s) => s.workType === 'PART_TIME').length,
+    active: staff.filter((s) => s.status === StaffStatusEnum.ACTIVE).length,
+    inactive: staff.filter((s) => s.status === StaffStatusEnum.INACTIVE).length,
+    fullTime: staff.filter((s) => s.workType === WorkTypeEnum.FULL_TIME).length,
+    partTime: staff.filter((s) => s.workType === WorkTypeEnum.PART_TIME).length,
     positions: {
-      manager: staff.filter((s) => s.position === 'CINEMA_MANAGER').length,
-      assistantManager: staff.filter((s) => s.position === 'ASSISTANT_MANAGER').length,
-      ticketClerk: staff.filter((s) => s.position === 'TICKET_CLERK').length,
+      manager: staff.filter((s) => s.position === StaffPositionEnum.CINEMA_MANAGER).length,
+      assistantManager: staff.filter((s) => s.position === StaffPositionEnum.ASSISTANT_MANAGER).length,
+      ticketClerk: staff.filter((s) => s.position === StaffPositionEnum.TICKET_CLERK).length,
     },
     totalSalaryExpense: staff.reduce((sum, s) => sum + (s.salary || 0), 0),
     avgSalary: staff.length > 0 ? staff.reduce((sum, s) => sum + (s.salary || 0), 0) / staff.length : 0,
@@ -346,8 +347,8 @@ export default function StaffPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="ACTIVE">Active</SelectItem>
-                  <SelectItem value="INACTIVE">Inactive</SelectItem>
+                  <SelectItem value={StaffStatusEnum.ACTIVE}>Active</SelectItem>
+                  <SelectItem value={StaffStatusEnum.INACTIVE}>Inactive</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -538,8 +539,8 @@ export default function StaffPage() {
                     <SelectValue placeholder="Select gender" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="MALE">Male</SelectItem>
-                    <SelectItem value="FEMALE">Female</SelectItem>
+                    <SelectItem value={GenderEnum.MALE}>Male</SelectItem>
+                    <SelectItem value={GenderEnum.FEMALE}>Female</SelectItem>
                   </SelectContent>
                 </Select>
                 <Input
@@ -589,8 +590,8 @@ export default function StaffPage() {
                     <SelectValue placeholder="Select status" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="ACTIVE">Active</SelectItem>
-                    <SelectItem value="INACTIVE">Inactive</SelectItem>
+                    <SelectItem value={StaffStatusEnum.ACTIVE}>Active</SelectItem>
+                    <SelectItem value={StaffStatusEnum.INACTIVE}>Inactive</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

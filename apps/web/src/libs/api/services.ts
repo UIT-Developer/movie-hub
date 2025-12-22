@@ -3,6 +3,7 @@ import type {
   Movie,
   CreateMovieRequest,
   UpdateMovieRequest,
+  MoviesListParams,
   Genre,
   CreateGenreRequest,
   UpdateGenreRequest,
@@ -10,10 +11,12 @@ import type {
   CreateCinemaRequest,
   UpdateCinemaRequest,
   CinemaFiltersParams,
+  GetCinemasResponse,
   Hall,
   CreateHallRequest,
   UpdateHallRequest,
   UpdateSeatStatusRequest,
+  CinemasGroupedResponse,
   Showtime,
   CreateShowtimeRequest,
   UpdateShowtimeRequest,
@@ -23,6 +26,7 @@ import type {
   MovieRelease,
   CreateMovieReleaseRequest,
   UpdateMovieReleaseRequest,
+  MovieReleasesListParams,
   TicketPricing,
   UpdateTicketPricingRequest,
   TicketPricingFiltersParams,
@@ -44,7 +48,7 @@ import type {
 // ============================================================================
 
 export const moviesApi = {
-  getAll: (params?: { page?: number; limit?: number; search?: string }) =>
+  getAll: (params?: MoviesListParams) =>
     api.get<Movie[]>('/api/v1/movies', { params }),
 
   getById: (id: string) =>
@@ -87,7 +91,7 @@ export const genresApi = {
 
 export const cinemasApi = {
   getAll: async (params?: CinemaFiltersParams): Promise<Cinema[]> => {
-    const response = await api.get<{ cinemas: Cinema[]; total: number; page: number; limit: number; hasMore: boolean }>(
+    const response = await api.get<GetCinemasResponse>(
       '/api/v1/cinemas/filters',
       { params }
     );
@@ -119,9 +123,9 @@ export const hallsApi = {
     api.get<Hall[]>(`/api/v1/halls/cinema/${cinemaId}`),
 
   // Workaround for getting all halls grouped by cinema
-  getAllGroupedByCinema: async (): Promise<{ [cinemaId: string]: { cinema: Cinema; halls: Hall[] } }> => {
+  getAllGroupedByCinema: async (): Promise<CinemasGroupedResponse> => {
     const cinemas = await cinemasApi.getAll();
-    const result: { [cinemaId: string]: { cinema: Cinema; halls: Hall[] } } = {};
+    const result: CinemasGroupedResponse = {};
 
     await Promise.all(
       cinemas.map(async (cinema) => {
@@ -227,7 +231,7 @@ export const showtimesApi = {
 // ============================================================================
 
 export const movieReleasesApi = {
-  getAll: (params?: { cinemaId?: string; movieId?: string }) =>
+  getAll: (params?: MovieReleasesListParams) =>
     api.get<MovieRelease[]>('/api/v1/movie-releases', { params }),
 
   getById: (id: string) =>
@@ -250,12 +254,12 @@ export const movieReleasesApi = {
 
 export const ticketPricingApi = {
   // Backend endpoint: GET /api/v1/ticket-pricings/hall/:hallId
-  getAll: (params?: TicketPricingFiltersParams) => {
+  getAll: (params?: TicketPricingFiltersParams): Promise<TicketPricing[]> => {
     if (params?.hallId) {
       return api.get<TicketPricing[]>(`/api/v1/ticket-pricings/hall/${params.hallId}`);
     }
-    // If no hallId, we need to fetch for all halls - this might require a different approach
-    return Promise.resolve([]);
+    // If no hallId, return empty array (consider implementing fetch for all halls if needed)
+    return Promise.resolve([] as TicketPricing[]);
   },
 
   getByHall: (hallId: string) =>

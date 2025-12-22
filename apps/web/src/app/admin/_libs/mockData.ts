@@ -27,6 +27,9 @@ import {
   ShowtimeStatus,
 } from './types';
 
+import { Gender as GenderEnum, StaffStatus as StaffStatusEnum, WorkType as WorkTypeEnum, ShiftType as ShiftTypeEnum, StaffPosition as StaffPositionEnum } from '@movie-hub/shared-types/user';
+import { SeatStatusEnum, SeatTypeEnum, DayTypeEnum } from '@movie-hub/shared-types/cinema/enum';
+
 // ========== MOVIE RELEASES ==========
 export const mockReleases: MovieRelease[] = [
   {
@@ -792,12 +795,12 @@ export const mockStaff: Staff[] = [
     fullName: 'Nguyễn Văn A',
     email: 'anv@cinema.com',
     phone: '0901234567',
-    gender: 'MALE',
+    gender: GenderEnum.MALE,
     dob: '1990-05-15',
-    position: 'CINEMA_MANAGER' as const,
-    status: 'ACTIVE',
-    workType: 'FULL_TIME',
-    shiftType: 'MORNING',
+    position: StaffPositionEnum.CINEMA_MANAGER,
+    status: StaffStatusEnum.ACTIVE,
+    workType: WorkTypeEnum.FULL_TIME,
+    shiftType: ShiftTypeEnum.MORNING,
     salary: 5000000,
     hireDate: '2020-03-01',
   },
@@ -807,12 +810,12 @@ export const mockStaff: Staff[] = [
     fullName: 'Trần Thị B',
     email: 'btt@cinema.com',
     phone: '0907654321',
-    gender: 'FEMALE',
+    gender: GenderEnum.FEMALE,
     dob: '1995-08-20',
-    position: 'TICKET_CLERK' as const,
-    status: 'ACTIVE',
-    workType: 'FULL_TIME',
-    shiftType: 'AFTERNOON',
+    position: StaffPositionEnum.TICKET_CLERK,
+    status: StaffStatusEnum.ACTIVE,
+    workType: WorkTypeEnum.FULL_TIME,
+    shiftType: ShiftTypeEnum.AFTERNOON,
     salary: 3000000,
     hireDate: '2022-08-15',
   },
@@ -822,12 +825,12 @@ export const mockStaff: Staff[] = [
     fullName: 'Lê Văn C',
     email: 'clv@cinema.com',
     phone: '0912345678',
-    gender: 'MALE',
+    gender: GenderEnum.MALE,
     dob: '1988-12-10',
-    position: 'PROJECTIONIST' as const,
-    status: 'INACTIVE',
-    workType: 'PART_TIME',
-    shiftType: 'NIGHT',
+    position: StaffPositionEnum.PROJECTIONIST,
+    status: StaffStatusEnum.INACTIVE,
+    workType: WorkTypeEnum.PART_TIME,
+    shiftType: ShiftTypeEnum.NIGHT,
     salary: 2500000,
     hireDate: '2019-01-20',
   },
@@ -841,14 +844,14 @@ const generateSeats = (hallId: string, rows: number, seatsPerRow: number): Seat[
   for (let r = 0; r < rows && r < rowLabels.length; r++) {
     for (let s = 1; s <= seatsPerRow; s++) {
       const seatType: SeatType = 
-        r >= rows - 2 ? 'VIP' : 
-        r >= rows - 4 ? 'PREMIUM' : 
-        'STANDARD';
+        r >= rows - 2 ? SeatTypeEnum.VIP : 
+        r >= rows - 4 ? SeatTypeEnum.PREMIUM : 
+        SeatTypeEnum.STANDARD;
       
       const status: SeatStatus = 
-        Math.random() > 0.95 ? 'BROKEN' : 
-        Math.random() > 0.9 ? 'MAINTENANCE' : 
-        'ACTIVE';
+        Math.random() > 0.95 ? SeatStatusEnum.BROKEN : 
+        Math.random() > 0.9 ? SeatStatusEnum.MAINTENANCE : 
+        SeatStatusEnum.ACTIVE;
       
       seats.push({
         id: `seat_${hallId}_${rowLabels[r]}${s}`,
@@ -906,24 +909,24 @@ export const mockShowtimeSeats: ShowtimeSeat[] = [
 // ========== TICKET PRICING ==========
 export const mockTicketPricing: TicketPricing[] = [
   // IMAX Hall pricing
-  { id: 'tp_001', hallId: 'h_lm81_imax', seatType: 'STANDARD', dayType: 'WEEKDAY', price: 120000, createdAt: '2025-01-01T10:00:00Z', updatedAt: '2025-01-01T10:00:00Z' },
-  { id: 'tp_002', hallId: 'h_lm81_imax', seatType: 'STANDARD', dayType: 'WEEKEND', price: 140000, createdAt: '2025-01-01T10:00:00Z', updatedAt: '2025-01-01T10:00:00Z' },
-  { id: 'tp_003', hallId: 'h_lm81_imax', seatType: 'STANDARD', dayType: 'HOLIDAY', price: 160000, createdAt: '2025-01-01T10:00:00Z', updatedAt: '2025-01-01T10:00:00Z' },
-  { id: 'tp_004', hallId: 'h_lm81_imax', seatType: 'VIP', dayType: 'WEEKDAY', price: 180000, createdAt: '2025-01-01T10:00:00Z', updatedAt: '2025-01-01T10:00:00Z' },
-  { id: 'tp_005', hallId: 'h_lm81_imax', seatType: 'VIP', dayType: 'WEEKEND', price: 200000, createdAt: '2025-01-01T10:00:00Z', updatedAt: '2025-01-01T10:00:00Z' },
-  { id: 'tp_006', hallId: 'h_lm81_imax', seatType: 'VIP', dayType: 'HOLIDAY', price: 220000, createdAt: '2025-01-01T10:00:00Z', updatedAt: '2025-01-01T10:00:00Z' },
-  { id: 'tp_007', hallId: 'h_lm81_imax', seatType: 'PREMIUM', dayType: 'WEEKDAY', price: 150000, createdAt: '2025-01-01T10:00:00Z', updatedAt: '2025-01-01T10:00:00Z' },
-  { id: 'tp_008', hallId: 'h_lm81_imax', seatType: 'PREMIUM', dayType: 'WEEKEND', price: 170000, createdAt: '2025-01-01T10:00:00Z', updatedAt: '2025-01-01T10:00:00Z' },
+  { id: 'tp_001', hallId: 'h_lm81_imax', seatType: SeatTypeEnum.STANDARD, dayType: DayTypeEnum.WEEKDAY, price: 120000, createdAt: '2025-01-01T10:00:00Z', updatedAt: '2025-01-01T10:00:00Z' },
+  { id: 'tp_002', hallId: 'h_lm81_imax', seatType: SeatTypeEnum.STANDARD, dayType: DayTypeEnum.WEEKEND, price: 140000, createdAt: '2025-01-01T10:00:00Z', updatedAt: '2025-01-01T10:00:00Z' },
+  { id: 'tp_003', hallId: 'h_lm81_imax', seatType: SeatTypeEnum.STANDARD, dayType: DayTypeEnum.HOLIDAY, price: 160000, createdAt: '2025-01-01T10:00:00Z', updatedAt: '2025-01-01T10:00:00Z' },
+  { id: 'tp_004', hallId: 'h_lm81_imax', seatType: SeatTypeEnum.VIP, dayType: DayTypeEnum.WEEKDAY, price: 180000, createdAt: '2025-01-01T10:00:00Z', updatedAt: '2025-01-01T10:00:00Z' },
+  { id: 'tp_005', hallId: 'h_lm81_imax', seatType: SeatTypeEnum.VIP, dayType: DayTypeEnum.WEEKEND, price: 200000, createdAt: '2025-01-01T10:00:00Z', updatedAt: '2025-01-01T10:00:00Z' },
+  { id: 'tp_006', hallId: 'h_lm81_imax', seatType: SeatTypeEnum.VIP, dayType: DayTypeEnum.HOLIDAY, price: 220000, createdAt: '2025-01-01T10:00:00Z', updatedAt: '2025-01-01T10:00:00Z' },
+  { id: 'tp_007', hallId: 'h_lm81_imax', seatType: SeatTypeEnum.PREMIUM, dayType: DayTypeEnum.WEEKDAY, price: 150000, createdAt: '2025-01-01T10:00:00Z', updatedAt: '2025-01-01T10:00:00Z' },
+  { id: 'tp_008', hallId: 'h_lm81_imax', seatType: SeatTypeEnum.PREMIUM, dayType: DayTypeEnum.WEEKEND, price: 170000, createdAt: '2025-01-01T10:00:00Z', updatedAt: '2025-01-01T10:00:00Z' },
   // 4DX Hall pricing
-  { id: 'tp_009', hallId: 'h_lm81_4dx', seatType: 'STANDARD', dayType: 'WEEKDAY', price: 150000, createdAt: '2025-01-01T10:00:00Z', updatedAt: '2025-01-01T10:00:00Z' },
-  { id: 'tp_010', hallId: 'h_lm81_4dx', seatType: 'STANDARD', dayType: 'WEEKEND', price: 180000, createdAt: '2025-01-01T10:00:00Z', updatedAt: '2025-01-01T10:00:00Z' },
-  { id: 'tp_011', hallId: 'h_lm81_4dx', seatType: 'VIP', dayType: 'WEEKDAY', price: 200000, createdAt: '2025-01-01T10:00:00Z', updatedAt: '2025-01-01T10:00:00Z' },
-  { id: 'tp_012', hallId: 'h_lm81_4dx', seatType: 'VIP', dayType: 'WEEKEND', price: 230000, createdAt: '2025-01-01T10:00:00Z', updatedAt: '2025-01-01T10:00:00Z' },
+  { id: 'tp_009', hallId: 'h_lm81_4dx', seatType: SeatTypeEnum.STANDARD, dayType: DayTypeEnum.WEEKDAY, price: 150000, createdAt: '2025-01-01T10:00:00Z', updatedAt: '2025-01-01T10:00:00Z' },
+  { id: 'tp_010', hallId: 'h_lm81_4dx', seatType: SeatTypeEnum.STANDARD, dayType: DayTypeEnum.WEEKEND, price: 180000, createdAt: '2025-01-01T10:00:00Z', updatedAt: '2025-01-01T10:00:00Z' },
+  { id: 'tp_011', hallId: 'h_lm81_4dx', seatType: SeatTypeEnum.VIP, dayType: DayTypeEnum.WEEKDAY, price: 200000, createdAt: '2025-01-01T10:00:00Z', updatedAt: '2025-01-01T10:00:00Z' },
+  { id: 'tp_012', hallId: 'h_lm81_4dx', seatType: SeatTypeEnum.VIP, dayType: DayTypeEnum.WEEKEND, price: 230000, createdAt: '2025-01-01T10:00:00Z', updatedAt: '2025-01-01T10:00:00Z' },
   // Premium Hall pricing
-  { id: 'tp_013', hallId: 'h_lm81_premium', seatType: 'STANDARD', dayType: 'WEEKDAY', price: 100000, createdAt: '2025-01-01T10:00:00Z', updatedAt: '2025-01-01T10:00:00Z' },
-  { id: 'tp_014', hallId: 'h_lm81_premium', seatType: 'STANDARD', dayType: 'WEEKEND', price: 120000, createdAt: '2025-01-01T10:00:00Z', updatedAt: '2025-01-01T10:00:00Z' },
-  { id: 'tp_015', hallId: 'h_lm81_premium', seatType: 'VIP', dayType: 'WEEKDAY', price: 150000, createdAt: '2025-01-01T10:00:00Z', updatedAt: '2025-01-01T10:00:00Z' },
-  { id: 'tp_016', hallId: 'h_lm81_premium', seatType: 'VIP', dayType: 'WEEKEND', price: 180000, createdAt: '2025-01-01T10:00:00Z', updatedAt: '2025-01-01T10:00:00Z' },
+  { id: 'tp_013', hallId: 'h_lm81_premium', seatType: SeatTypeEnum.STANDARD, dayType: DayTypeEnum.WEEKDAY, price: 100000, createdAt: '2025-01-01T10:00:00Z', updatedAt: '2025-01-01T10:00:00Z' },
+  { id: 'tp_014', hallId: 'h_lm81_premium', seatType: SeatTypeEnum.STANDARD, dayType: DayTypeEnum.WEEKEND, price: 120000, createdAt: '2025-01-01T10:00:00Z', updatedAt: '2025-01-01T10:00:00Z' },
+  { id: 'tp_015', hallId: 'h_lm81_premium', seatType: SeatTypeEnum.VIP, dayType: DayTypeEnum.WEEKDAY, price: 150000, createdAt: '2025-01-01T10:00:00Z', updatedAt: '2025-01-01T10:00:00Z' },
+  { id: 'tp_016', hallId: 'h_lm81_premium', seatType: SeatTypeEnum.VIP, dayType: DayTypeEnum.WEEKEND, price: 180000, createdAt: '2025-01-01T10:00:00Z', updatedAt: '2025-01-01T10:00:00Z' },
 ];
 
 // ========== HELPER FUNCTIONS ==========

@@ -170,7 +170,7 @@ export default function BatchShowtimesPage() {
 
     try {
       setLoading(true);
-      // Convert admin form shape to API request shape (API expects dateRange and price)
+      // Convert admin form shape to API request shape
       const apiRequest: ApiBatchCreateRequest = {
         movieId: formData.movieId,
         movieReleaseId: formData.movieReleaseId,
@@ -183,6 +183,7 @@ export default function BatchShowtimesPage() {
         timeSlots: formData.timeSlots,
         format: formData.format as unknown as ApiShowtimeFormat,
         language: formData.language,
+        subtitles: formData.subtitles,
       };
 
       const response = await batchCreateMutation.mutateAsync(apiRequest);
@@ -539,8 +540,7 @@ export default function BatchShowtimesPage() {
                     </div>
                   ))}
                 </div>
-              </div>
-            </CardContent>
+              </div>            </CardContent>
           </Card>
 
           <Button

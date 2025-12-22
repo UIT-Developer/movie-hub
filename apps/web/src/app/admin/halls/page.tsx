@@ -40,6 +40,7 @@ import {
 import { useToast } from '../_libs/use-toast';
 import { useHallsGroupedByCinema, useCreateHall, useUpdateHall, useDeleteHall } from '@/libs/api';
 import type { Hall, HallType, CreateHallRequest } from '@/libs/api/types';
+import { HallTypeEnum, LayoutTypeEnum } from '@movie-hub/shared-types/cinema';
 
 export default function HallsPage() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -49,11 +50,11 @@ export default function HallsPage() {
   const [formData, setFormData] = useState<Partial<CreateHallRequest>>({
     cinemaId: '',
     name: '',
-    type: 'STANDARD' as HallType,
+    type: HallTypeEnum.STANDARD as HallType,
     screenType: '',
     soundSystem: '',
     features: [],
-    layoutType: 'STANDARD',
+    layoutType: LayoutTypeEnum.STANDARD,
   });
   useToast();
 
@@ -100,11 +101,11 @@ export default function HallsPage() {
     setFormData({
       cinemaId: '',
       name: '',
-      type: 'STANDARD',
+      type: HallTypeEnum.STANDARD,
       screenType: '',
       soundSystem: '',
       features: [],
-      layoutType: 'STANDARD',
+      layoutType: LayoutTypeEnum.STANDARD,
     });
     setSelectedHall(null);
   };
@@ -118,7 +119,7 @@ export default function HallsPage() {
       screenType: hall.screenType || '',
       soundSystem: hall.soundSystem || '',
       features: hall.features || [],
-      layoutType: hall.layoutType || 'STANDARD',
+      layoutType: hall.layoutType || LayoutTypeEnum.STANDARD,
     });
     setDialogOpen(true);
   };
@@ -361,10 +362,10 @@ export default function HallsPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="STANDARD">Standard</SelectItem>
-                    <SelectItem value="PREMIUM">Premium</SelectItem>
-                    <SelectItem value="IMAX">IMAX</SelectItem>
-                    <SelectItem value="FOUR_DX">4DX</SelectItem>
+                    <SelectItem value={HallTypeEnum.STANDARD}>Standard</SelectItem>
+                    <SelectItem value={HallTypeEnum.PREMIUM}>Premium</SelectItem>
+                    <SelectItem value={HallTypeEnum.IMAX}>IMAX</SelectItem>
+                    <SelectItem value={HallTypeEnum.FOUR_DX}>4DX</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -400,16 +401,16 @@ export default function HallsPage() {
               <Select
                 value={formData.layoutType}
                 onValueChange={(value) =>
-                  setFormData({ ...formData, layoutType: value as 'STANDARD' | 'DUAL_AISLE' | 'STADIUM' })
+                  setFormData({ ...formData, layoutType: value as LayoutTypeEnum })
                 }
               >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="STANDARD">Standard</SelectItem>
-                  <SelectItem value="DUAL_AISLE">Dual Aisle</SelectItem>
-                  <SelectItem value="STADIUM">Stadium</SelectItem>
+                  <SelectItem value={LayoutTypeEnum.STANDARD}>Standard</SelectItem>
+                  <SelectItem value={LayoutTypeEnum.DUAL_AISLE}>Dual Aisle</SelectItem>
+                  <SelectItem value={LayoutTypeEnum.STADIUM}>Stadium</SelectItem>
                 </SelectContent>
               </Select>
             </div>

@@ -50,6 +50,7 @@ import type {
   BookingStatus,
   PaymentStatus,
 } from '@/libs/api/types';
+import { BookingStatus as BookingStatusEnum, PaymentStatus as PaymentStatusEnum } from '@movie-hub/shared-types/booking/enum';
 
 export default function ReservationsPage() {
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
@@ -57,7 +58,7 @@ export default function ReservationsPage() {
   const [statusDialogOpen, setStatusDialogOpen] = useState(false);
   const [statusUpdate, setStatusUpdate] = useState({
     bookingId: '',
-    status: 'CONFIRMED' as BookingStatus,
+    status: BookingStatusEnum.CONFIRMED as BookingStatus,
     reason: '',
   });
   
@@ -114,7 +115,7 @@ export default function ReservationsPage() {
       });
       setStatusDialogOpen(false);
       setDetailDialogOpen(false);
-      setStatusUpdate({ bookingId: '', status: 'CONFIRMED', reason: '' });
+      setStatusUpdate({ bookingId: '', status: BookingStatusEnum.CONFIRMED, reason: '' });
     } catch {
       // Error toast already shown by mutation hook
     }
@@ -140,15 +141,15 @@ export default function ReservationsPage() {
 
   const getStatusBadgeColor = (status: BookingStatus) => {
     switch (status) {
-      case 'CONFIRMED':
+      case BookingStatusEnum.CONFIRMED:
         return 'bg-green-100 text-green-800';
-      case 'PENDING':
+      case BookingStatusEnum.PENDING:
         return 'bg-yellow-100 text-yellow-800';
-      case 'CANCELLED':
+      case BookingStatusEnum.CANCELLED:
         return 'bg-red-100 text-red-800';
-      case 'EXPIRED':
+      case BookingStatusEnum.EXPIRED:
         return 'bg-gray-100 text-gray-800';
-      case 'COMPLETED':
+      case BookingStatusEnum.COMPLETED:
         return 'bg-blue-100 text-blue-800';
       default:
         return 'bg-gray-100 text-gray-800';
@@ -157,15 +158,15 @@ export default function ReservationsPage() {
 
   const getPaymentStatusBadge = (status: PaymentStatus) => {
     switch (status) {
-      case 'COMPLETED':
+      case PaymentStatusEnum.COMPLETED:
         return 'bg-green-100 text-green-800';
-      case 'PENDING':
+      case PaymentStatusEnum.PENDING:
         return 'bg-yellow-100 text-yellow-800';
-      case 'PROCESSING':
+      case PaymentStatusEnum.PROCESSING:
         return 'bg-blue-100 text-blue-800';
-      case 'FAILED':
+      case PaymentStatusEnum.FAILED:
         return 'bg-red-100 text-red-800';
-      case 'REFUNDED':
+      case PaymentStatusEnum.REFUNDED:
         return 'bg-purple-100 text-purple-800';
       default:
         return 'bg-gray-100 text-gray-800';
@@ -185,9 +186,9 @@ export default function ReservationsPage() {
   // Calculate statistics
   const stats = {
     total: bookings.length,
-    confirmed: bookings.filter((b) => b.status === 'CONFIRMED').length,
-    pending: bookings.filter((b) => b.status === 'PENDING').length,
-    cancelled: bookings.filter((b) => b.status === 'CANCELLED').length,
+    confirmed: bookings.filter((b) => b.status === BookingStatusEnum.CONFIRMED).length,
+    pending: bookings.filter((b) => b.status === BookingStatusEnum.PENDING).length,
+    cancelled: bookings.filter((b) => b.status === BookingStatusEnum.CANCELLED).length,
     totalRevenue: bookings.reduce((sum, b) => sum + (b.totalAmount || 0), 0),
     avgBookingValue: bookings.length > 0 ? bookings.reduce((sum, b) => sum + (b.totalAmount || 0), 0) / bookings.length : 0,
     totalSeats: bookings.reduce((sum, b) => sum + (b.seatCount || 0), 0),

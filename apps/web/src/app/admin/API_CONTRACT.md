@@ -116,20 +116,20 @@ All API responses wrap data in a standard envelope:
 
 ### Movie Enums
 
-| Enum             | Values                             |
-| ---------------- | ---------------------------------- |
-| `AgeRating`      | `P`, `K`, `T13`, `T16`, `T18`, `C` |
-| `LanguageOption` | `ORIGINAL`, `SUBTITLE`, `DUBBED`   |
+| Enum             | Values                             | Backend Definition |
+| ---------------- | ---------------------------------- | -------- |
+| `AgeRating`      | `P`, `K`, `T13`, `T16`, `T18`, `C` | [BE/movie-hub/.../age-rating.enum.ts](BE/movie-hub/libs/shared-types/src/movie/enum/age-rating.enum.ts) |
+| `LanguageOption` | `ORIGINAL`, `SUBTITLE`, `DUBBED`   | [BE/movie-hub/.../language-option.enum.ts](BE/movie-hub/libs/shared-types/src/movie/enum/language-option.enum.ts) |
 
 ### User/Staff Enums
 
-| Enum            | Values                                                                                                                     |
-| --------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| `Gender`        | `MALE`, `FEMALE`, `OTHER`                                                                                                  |
-| `StaffStatus`   | `ACTIVE`, `INACTIVE`                                                                                                       |
-| `WorkType`      | `FULL_TIME`, `PART_TIME`, `CONTRACT`                                                                                       |
-| `StaffPosition` | `CINEMA_MANAGER`, `ASSISTANT_MANAGER`, `TICKET_CLERK`, `CONCESSION_STAFF`, `USHER`, `PROJECTIONIST`, `CLEANER`, `SECURITY` |
-| `ShiftType`     | `MORNING`, `AFTERNOON`, `NIGHT`                                                                                            |
+| Enum            | Values                                                                                                                     | Backend Definition |
+| --------------- | -------------------------------------------------------------------------------------------------------------------------- | -------- |
+| `Gender`        | `MALE`, `FEMALE` | [BE/movie-hub/.../enum.ts](BE/movie-hub/libs/shared-types/src/user/enum.ts#L1-L3) |
+| `StaffStatus`   | `ACTIVE`, `INACTIVE`                                                                                                       | [BE/movie-hub/.../enum.ts](BE/movie-hub/libs/shared-types/src/user/enum.ts#L5-L8) |
+| `WorkType`      | `FULL_TIME`, `PART_TIME`, `CONTRACT`                                                                                       | [BE/movie-hub/.../enum.ts](BE/movie-hub/libs/shared-types/src/user/enum.ts#L10-L14) |
+| `StaffPosition` | `CINEMA_MANAGER`, `ASSISTANT_MANAGER`, `TICKET_CLERK`, `CONCESSION_STAFF`, `USHER`, `PROJECTIONIST`, `CLEANER`, `SECURITY` | [BE/movie-hub/.../enum.ts](BE/movie-hub/libs/shared-types/src/user/enum.ts#L16-L32) |
+| `ShiftType`     | `MORNING`, `AFTERNOON`, `NIGHT`                                                                                            | [BE/movie-hub/.../enum.ts](BE/movie-hub/libs/shared-types/src/user/enum.ts#L34-L39) |
 
 ### Other Enums
 
@@ -197,7 +197,7 @@ Base Path: `/api/v1/staffs`
 | `fullName`  | string         | Yes      | Staff full name              |
 | `email`     | string (email) | Yes      | Staff email                  |
 | `phone`     | string         | Yes      | Phone number (min 9 chars)   |
-| `gender`    | Gender         | Yes      | `MALE`, `FEMALE`, or `OTHER` |
+| `gender`    | Gender         | Yes      | `MALE` or `FEMALE` (Note: `OTHER` not supported) |
 | `dob`       | Date           | Yes      | Date of birth                |
 | `position`  | StaffPosition  | Yes      | Job position                 |
 | `status`    | StaffStatus    | Yes      | Employment status            |

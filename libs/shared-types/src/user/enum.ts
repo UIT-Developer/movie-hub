@@ -1,0 +1,32 @@
+export enum Gender {
+  MALE = 'MALE',
+  FEMALE = 'FEMALE',
+}
+
+export enum StaffStatus {
+  ACTIVE = 'ACTIVE',
+  INACTIVE = 'INACTIVE',
+}
+
+export enum WorkType {
+  FULL_TIME = 'FULL_TIME',
+  PART_TIME = 'PART_TIME',
+  CONTRACT = 'CONTRACT',
+}
+
+export enum StaffPosition {
+  CINEMA_MANAGER = 'CINEMA_MANAGER',
+  ASSISTANT_MANAGER = 'ASSISTANT_MANAGER',
+  TICKET_CLERK = 'TICKET_CLERK',
+  CONCESSION_STAFF = 'CONCESSION_STAFF',
+  USHER = 'USHER',
+  PROJECTIONIST = 'PROJECTIONIST',
+  CLEANER = 'CLEANER',
+  SECURITY = 'SECURITY',
+}
+
+export enum ShiftType {
+  MORNING = 'MORNING',
+  AFTERNOON = 'AFTERNOON',
+  NIGHT = 'NIGHT',
+}

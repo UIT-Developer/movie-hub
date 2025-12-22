@@ -24,6 +24,7 @@ import { Input } from '@movie-hub/shacdn-ui/input';
 import { useToast } from '../_libs/use-toast';
 import { useCinemas, useHallsByCinema, useTicketPricing, useUpdateTicketPricing } from '@/libs/api';
 import type { SeatType, DayType } from '@/libs/api/types';
+import { SeatTypeEnum, DayTypeEnum } from '@movie-hub/shared-types/cinema/enum';
 import type { TicketPricingFiltersParams } from '@/libs/api';
 
 interface TicketPricing {
@@ -103,13 +104,13 @@ export default function TicketPricingPage() {
 
   const getSeatTypeIcon = (type: SeatType) => {
     switch (type) {
-      case 'VIP':
+      case SeatTypeEnum.VIP:
         return '👑';
-      case 'COUPLE':
+      case SeatTypeEnum.COUPLE:
         return '💑';
-      case 'PREMIUM':
+      case SeatTypeEnum.PREMIUM:
         return '⭐';
-      case 'WHEELCHAIR':
+      case SeatTypeEnum.WHEELCHAIR:
         return '♿';
       default:
         return '🪑';
@@ -118,22 +119,22 @@ export default function TicketPricingPage() {
 
   const getDayTypeColor = (type: DayType) => {
     switch (type) {
-      case 'WEEKDAY':
+      case DayTypeEnum.WEEKDAY:
         return 'bg-blue-100 text-blue-700 border-blue-200';
-      case 'WEEKEND':
+      case DayTypeEnum.WEEKEND:
         return 'bg-purple-100 text-purple-700 border-purple-200';
-      case 'HOLIDAY':
+      case DayTypeEnum.HOLIDAY:
         return 'bg-amber-100 text-amber-700 border-amber-200';
     }
   };
 
   const getDayTypeIcon = (type: DayType) => {
     switch (type) {
-      case 'WEEKDAY':
+      case DayTypeEnum.WEEKDAY:
         return '📅';
-      case 'WEEKEND':
+      case DayTypeEnum.WEEKEND:
         return '🎉';
-      case 'HOLIDAY':
+      case DayTypeEnum.HOLIDAY:
         return '✨';
     }
   };
@@ -150,8 +151,8 @@ export default function TicketPricingPage() {
     return acc;
   }, {} as Record<SeatType, TicketPricing[]>);
 
-  const seatTypeOrder: SeatType[] = ['STANDARD', 'VIP', 'COUPLE', 'PREMIUM', 'WHEELCHAIR'];
-  const dayTypeOrder: DayType[] = ['WEEKDAY', 'WEEKEND', 'HOLIDAY'];
+  const seatTypeOrder: SeatType[] = [SeatTypeEnum.STANDARD, SeatTypeEnum.VIP, SeatTypeEnum.COUPLE, SeatTypeEnum.PREMIUM, SeatTypeEnum.WHEELCHAIR];
+  const dayTypeOrder: DayType[] = [DayTypeEnum.WEEKDAY, DayTypeEnum.WEEKEND, DayTypeEnum.HOLIDAY];
 
   return (
     <div className="space-y-6">

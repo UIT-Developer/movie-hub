@@ -171,22 +171,23 @@ export default function BatchShowtimesPage() {
     try {
       setLoading(true);
       // Convert admin form shape to API request shape
-      const apiRequest: ApiBatchCreateRequest = {
+      // BE expects startDate/endDate at root level, not in dateRange wrapper
+      const apiRequest = {
         movieId: formData.movieId,
         movieReleaseId: formData.movieReleaseId,
         cinemaId: formData.cinemaId,
         hallId: formData.hallId,
-        dateRange: {
-          startDate: formData.startDate,
-          endDate: formData.endDate,
-        },
+        startDate: formData.startDate,      // Unwrap from dateRange
+        endDate: formData.endDate,          // Unwrap from dateRange
         timeSlots: formData.timeSlots,
+        repeatType: formData.repeatType,    // Add required field for BE
+        weekdays: formData.weekdays || [],  // Add required field for BE
         format: formData.format as unknown as ApiShowtimeFormat,
         language: formData.language,
-        subtitles: formData.subtitles,
+        subtitles: formData.subtitles || [],
       };
 
-      const response = await batchCreateMutation.mutateAsync(apiRequest);
+      const response = await batchCreateMutation.mutateAsync(apiRequest as ApiBatchCreateRequest);
       // The backend returns an array of created showtimes (Showtime[]). Normalize to BatchCreateResponse
       let normalized: BatchCreateResponse;
       if (Array.isArray(response)) {

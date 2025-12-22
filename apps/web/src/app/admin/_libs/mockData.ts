@@ -27,7 +27,7 @@ import {
   ShowtimeStatus,
 } from './types';
 
-import { Gender as GenderEnum, StaffStatus as StaffStatusEnum, WorkType as WorkTypeEnum, ShiftType as ShiftTypeEnum, StaffPosition as StaffPositionEnum } from '@movie-hub/shared-types/user';
+import { Gender as GenderEnum, StaffStatus as StaffStatusEnum, WorkType as WorkTypeEnum, ShiftType as ShiftTypeEnum, StaffPosition as StaffPositionEnum } from '@movie-hub/shared-types/user/enum';
 import { SeatStatusEnum, SeatTypeEnum, DayTypeEnum } from '@movie-hub/shared-types/cinema/enum';
 
 // ========== MOVIE RELEASES ==========

@@ -54,7 +54,7 @@ import type {
   ShiftType,
   StaffPosition,
 } from '@/libs/api/types';
-import { Gender as GenderEnum, StaffStatus as StaffStatusEnum, WorkType as WorkTypeEnum, ShiftType as ShiftTypeEnum, StaffPosition as StaffPositionEnum } from '@movie-hub/shared-types/user';
+import { Gender as GenderEnum, StaffStatus as StaffStatusEnum, WorkType as WorkTypeEnum, ShiftType as ShiftTypeEnum, StaffPosition as StaffPositionEnum } from '@movie-hub/shared-types/user/enum';
 
 const POSITIONS: { value: StaffPosition; label: string }[] = [
   { value: StaffPositionEnum.CINEMA_MANAGER, label: 'Cinema Manager' },

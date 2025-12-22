@@ -40,7 +40,7 @@ import {
 } from '@movie-hub/shacdn-ui/dropdown-menu';
 import { useMovies, useCreateMovie, useUpdateMovie, useDeleteMovie, useGenres } from '@/libs/api';
 import type { Movie, CreateMovieRequest, AgeRating, LanguageType, MovieCast } from '@/libs/api/types';
-import { AgeRatingEnum, LanguageOptionEnum } from '@movie-hub/shared-types/movie';
+import { AgeRatingEnum, LanguageOptionEnum } from '@movie-hub/shared-types/movie/enum';
 import Image from 'next/image';
 import MovieReleaseDialog from '../_components/forms/MovieReleaseDialog';
 

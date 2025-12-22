@@ -334,15 +334,15 @@ export interface BatchCreateShowtimesRequest {
   movieReleaseId: string; // Backend requires this
   cinemaId: string;
   hallId: string;
-  dateRange: {
-    startDate: string;
-    endDate: string;
-  };
-  timeSlots: string[]; // ["10:00", "14:30", "19:00"]
+  startDate: string;      // yyyy-MM-dd (unwrapped from dateRange)
+  endDate: string;        // yyyy-MM-dd (unwrapped from dateRange)
+  timeSlots: string[];    // ["10:00", "14:30", "19:00"]
+  repeatType: 'DAILY' | 'WEEKLY' | 'CUSTOM_WEEKDAYS';
+  weekdays?: number[];    // [0-6] for CUSTOM_WEEKDAYS mode
   format: ShowtimeFormat;
   language: string;
   subtitles?: string[];
-  excludeDates?: string[]; // Skip specific dates
+  excludeDates?: string[]; // Optional: Skip specific dates
 }
 
 // ============================================================================

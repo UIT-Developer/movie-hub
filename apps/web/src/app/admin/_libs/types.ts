@@ -8,12 +8,12 @@ import {
   ShowtimeStatusEnum as ShowtimeStatus,
   FormatEnum as ShowtimeFormat,
   DayTypeEnum as DayType,
-} from '@movie-hub/shared-types/cinema';
+} from '@movie-hub/shared-types/cinema/enum';
 
 import {
   AgeRatingEnum as AgeRating,
   LanguageOptionEnum,
-} from '@movie-hub/shared-types/movie';
+} from '@movie-hub/shared-types/movie/enum';
 
 import {
   Gender,
@@ -21,13 +21,13 @@ import {
   WorkType,
   StaffPosition,
   ShiftType,
-} from '@movie-hub/shared-types/user';
+} from '@movie-hub/shared-types/user/enum';
 
 import {
   BookingStatus,
   PaymentStatus,
   PaymentMethod,
-} from '@movie-hub/shared-types/booking';
+} from '@movie-hub/shared-types/booking/enum';
 
 // Re-export for convenience
 export type {

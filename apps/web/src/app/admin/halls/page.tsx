@@ -40,7 +40,7 @@ import {
 import { useToast } from '../_libs/use-toast';
 import { useHallsGroupedByCinema, useCreateHall, useUpdateHall, useDeleteHall } from '@/libs/api';
 import type { Hall, HallType, CreateHallRequest } from '@/libs/api/types';
-import { HallTypeEnum, LayoutTypeEnum } from '@movie-hub/shared-types/cinema';
+import { HallTypeEnum, LayoutTypeEnum } from '@movie-hub/shared-types/cinema/enum';
 
 export default function HallsPage() {
   const [searchQuery, setSearchQuery] = useState('');

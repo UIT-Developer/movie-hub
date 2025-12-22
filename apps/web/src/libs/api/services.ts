@@ -1,6 +1,5 @@
 import { api } from './api-client';
 import type {
-  PaginationParams,
   Movie,
   CreateMovieRequest,
   UpdateMovieRequest,

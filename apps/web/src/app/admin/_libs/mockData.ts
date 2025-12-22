@@ -12,18 +12,19 @@ import {
   Seat,
   ShowtimeSeat,
   TicketPricing,
-  CinemaStatus,
   HallType,
-  HallStatus,
   LayoutType,
-  ShowtimeFormat,
-  ShowtimeStatus,
-  DayType,
   AgeRating,
   LanguageType,
   SeatType,
   SeatStatus,
-  ShowtimeSeatStatus,
+} from '@/libs/api/types';
+
+import {
+  CinemaStatus,
+  HallStatus,
+  ShowtimeFormat,
+  ShowtimeStatus,
 } from './types';
 
 // ========== MOVIE RELEASES ==========
@@ -443,7 +444,7 @@ export const mockMovies: Movie[] = [
     languageType: 'SUBTITLE' as LanguageType,
     originalLanguage: 'en',
     spokenLanguages: ['en'],
-    genre: [mockGenres[0], mockGenres[1]],
+    genre: mockGenres[0],
     cast: [
       {
         name: 'Tom Cruise',
@@ -458,7 +459,7 @@ export const mockMovies: Movie[] = [
     ],
     director: 'Christopher McQuarrie',
     releaseDate: '2023-07-12',
-    status: 'now_showing',
+    status: 'NOW_SHOWING',
   },
   {
     id: 'm_002',
@@ -477,7 +478,7 @@ export const mockMovies: Movie[] = [
     languageType: 'SUBTITLE' as LanguageType,
     originalLanguage: 'en',
     spokenLanguages: ['en'],
-    genre: [mockGenres[2], mockGenres[3], mockGenres[4]],
+    genre: mockGenres[2],
     cast: [
       {
         name: 'Cillian Murphy',
@@ -492,7 +493,7 @@ export const mockMovies: Movie[] = [
     ],
     director: 'Christopher Nolan',
     releaseDate: '2023-07-21',
-    status: 'now_showing',
+    status: 'NOW_SHOWING',
   },
   {
     id: 'm_003',
@@ -511,7 +512,7 @@ export const mockMovies: Movie[] = [
     languageType: 'SUBTITLE' as LanguageType,
     originalLanguage: 'en',
     spokenLanguages: ['en'],
-    genre: [mockGenres[5], mockGenres[6]],
+    genre: mockGenres[5],
     cast: [
       {
         name: 'Timothée Chalamet',
@@ -526,7 +527,7 @@ export const mockMovies: Movie[] = [
     ],
     director: 'Denis Villeneuve',
     releaseDate: '2024-03-01',
-    status: 'upcoming',
+    status: 'COMING_SOON',
   },
   {
     id: 'm_004',
@@ -545,7 +546,7 @@ export const mockMovies: Movie[] = [
     languageType: 'SUBTITLE' as LanguageType,
     originalLanguage: 'en',
     spokenLanguages: ['en'],
-    genre: [mockGenres[7], mockGenres[10]],
+    genre: mockGenres[7],
     cast: [
       {
         name: 'Margot Robbie',
@@ -560,7 +561,7 @@ export const mockMovies: Movie[] = [
     ],
     director: 'Greta Gerwig',
     releaseDate: '2023-07-21',
-    status: 'now_showing',
+    status: 'NOW_SHOWING',
   },
   {
     id: 'm_005',
@@ -579,7 +580,7 @@ export const mockMovies: Movie[] = [
     languageType: 'SUBTITLE' as LanguageType,
     originalLanguage: 'en',
     spokenLanguages: ['en'],
-    genre: [mockGenres[0], mockGenres[5], mockGenres[6]],
+    genre: mockGenres[0],
     cast: [
       {
         name: 'Brie Larson',
@@ -594,7 +595,7 @@ export const mockMovies: Movie[] = [
     ],
     director: 'Nia DaCosta',
     releaseDate: '2023-11-10',
-    status: 'now_showing',
+    status: 'NOW_SHOWING',
   },
   {
     id: 'm_006',
@@ -613,7 +614,7 @@ export const mockMovies: Movie[] = [
     languageType: 'SUBTITLE' as LanguageType,
     originalLanguage: 'en',
     spokenLanguages: ['en'],
-    genre: [mockGenres[7], mockGenres[10], mockGenres[11]],
+    genre: mockGenres[7],
     cast: [
       {
         name: 'Timothée Chalamet',
@@ -628,7 +629,7 @@ export const mockMovies: Movie[] = [
     ],
     director: 'Paul King',
     releaseDate: '2023-12-15',
-    status: 'upcoming',
+    status: 'COMING_SOON',
   },
 ];
 
@@ -649,9 +650,7 @@ export const mockShowtimes: Showtime[] = [
     language: 'en',
     subtitles: ['vi'],
     availableSeats: 200,
-    totalSeats: 350,
     status: 'SELLING' as ShowtimeStatus,
-    dayType: 'WEEKDAY' as DayType,
     createdAt: '2025-01-01T10:00:00Z',
     updatedAt: '2025-01-01T10:00:00Z',
   },
@@ -667,9 +666,7 @@ export const mockShowtimes: Showtime[] = [
     language: 'en',
     subtitles: ['vi'],
     availableSeats: 45,
-    totalSeats: 120,
     status: 'SELLING' as ShowtimeStatus,
-    dayType: 'WEEKDAY' as DayType,
     createdAt: '2025-01-01T10:00:00Z',
     updatedAt: '2025-01-01T10:00:00Z',
   },
@@ -685,9 +682,7 @@ export const mockShowtimes: Showtime[] = [
     language: 'en',
     subtitles: ['vi'],
     availableSeats: 12,
-    totalSeats: 40,
     status: 'SELLING' as ShowtimeStatus,
-    dayType: 'WEEKDAY' as DayType,
     createdAt: '2025-01-01T10:00:00Z',
     updatedAt: '2025-01-01T10:00:00Z',
   },
@@ -703,9 +698,7 @@ export const mockShowtimes: Showtime[] = [
     language: 'en',
     subtitles: ['vi'],
     availableSeats: 0,
-    totalSeats: 50,
     status: 'SELLING' as ShowtimeStatus,
-    dayType: 'WEEKDAY' as DayType,
     createdAt: '2025-01-01T10:00:00Z',
     updatedAt: '2025-01-01T10:00:00Z',
   },
@@ -721,9 +714,7 @@ export const mockShowtimes: Showtime[] = [
     language: 'en',
     subtitles: ['vi'],
     availableSeats: 120,
-    totalSeats: 350,
     status: 'SELLING' as ShowtimeStatus,
-    dayType: 'WEEKDAY' as DayType,
     createdAt: '2025-01-01T10:00:00Z',
     updatedAt: '2025-01-01T10:00:00Z',
   },
@@ -739,9 +730,7 @@ export const mockShowtimes: Showtime[] = [
     language: 'en',
     subtitles: ['vi'],
     availableSeats: 180,
-    totalSeats: 350,
     status: 'SELLING' as ShowtimeStatus,
-    dayType: 'WEEKDAY' as DayType,
     createdAt: '2025-01-01T10:00:00Z',
     updatedAt: '2025-01-01T10:00:00Z',
   },
@@ -757,9 +746,7 @@ export const mockShowtimes: Showtime[] = [
     language: 'en',
     subtitles: ['vi'],
     availableSeats: 35,
-    totalSeats: 80,
     status: 'SELLING' as ShowtimeStatus,
-    dayType: 'WEEKDAY' as DayType,
     createdAt: '2025-01-01T10:00:00Z',
     updatedAt: '2025-01-01T10:00:00Z',
   },
@@ -775,9 +762,7 @@ export const mockShowtimes: Showtime[] = [
     language: 'en',
     subtitles: ['vi'],
     availableSeats: 55,
-    totalSeats: 120,
     status: 'SELLING' as ShowtimeStatus,
-    dayType: 'WEEKDAY' as DayType,
     createdAt: '2025-01-01T10:00:00Z',
     updatedAt: '2025-01-01T10:00:00Z',
   },
@@ -793,9 +778,7 @@ export const mockShowtimes: Showtime[] = [
     language: 'en',
     subtitles: ['vi'],
     availableSeats: 45,
-    totalSeats: 80,
     status: 'SELLING' as ShowtimeStatus,
-    dayType: 'WEEKDAY' as DayType,
     createdAt: '2025-01-01T10:00:00Z',
     updatedAt: '2025-01-01T10:00:00Z',
   },
@@ -805,33 +788,48 @@ export const mockShowtimes: Showtime[] = [
 export const mockStaff: Staff[] = [
   {
     id: 's_001',
-    name: 'Nguyễn Văn A',
-    role: 'Cinema Manager',
+    cinemaId: 'c_hcm_001',
+    fullName: 'Nguyễn Văn A',
     email: 'anv@cinema.com',
     phone: '0901234567',
-    hiredAt: '2020-03-01',
-    status: 'Active',
-    locationId: 'c_hcm_001',
+    gender: 'MALE',
+    dob: '1990-05-15',
+    position: 'CINEMA_MANAGER' as const,
+    status: 'ACTIVE',
+    workType: 'FULL_TIME',
+    shiftType: 'MORNING',
+    salary: 5000000,
+    hireDate: '2020-03-01',
   },
   {
     id: 's_002',
-    name: 'Trần Thị B',
-    role: 'Ticketing Staff',
+    cinemaId: 'c_hn_002',
+    fullName: 'Trần Thị B',
     email: 'btt@cinema.com',
     phone: '0907654321',
-    hiredAt: '2022-08-15',
-    status: 'Active',
-    locationId: 'c_hn_002',
+    gender: 'FEMALE',
+    dob: '1995-08-20',
+    position: 'TICKET_CLERK' as const,
+    status: 'ACTIVE',
+    workType: 'FULL_TIME',
+    shiftType: 'AFTERNOON',
+    salary: 3000000,
+    hireDate: '2022-08-15',
   },
   {
     id: 's_003',
-    name: 'Lê Văn C',
-    role: 'Maintenance Technician',
+    cinemaId: 'c_dn_003',
+    fullName: 'Lê Văn C',
     email: 'clv@cinema.com',
     phone: '0912345678',
-    hiredAt: '2019-01-20',
-    status: 'Inactive',
-    locationId: 'c_dn_003',
+    gender: 'MALE',
+    dob: '1988-12-10',
+    position: 'PROJECTIONIST' as const,
+    status: 'INACTIVE',
+    workType: 'PART_TIME',
+    shiftType: 'NIGHT',
+    salary: 2500000,
+    hireDate: '2019-01-20',
   },
 ];
 
@@ -854,13 +852,10 @@ const generateSeats = (hallId: string, rows: number, seatsPerRow: number): Seat[
       
       seats.push({
         id: `seat_${hallId}_${rowLabels[r]}${s}`,
-        hallId,
-        row: rowLabels[r],
-        number: s,
+        rowLetter: rowLabels[r],
+        seatNumber: s,
         type: seatType,
         status,
-        createdAt: '2025-01-01T10:00:00Z',
-        updatedAt: '2025-01-01T10:00:00Z',
       });
     }
   }
@@ -875,27 +870,29 @@ export const mockSeats: Seat[] = [
   ...generateSeats('h_bitexco_gold', 6, 8),
 ];
 
+// Map seats by hall for easy lookup
+const seatsByHall: Record<string, Seat[]> = {
+  'h_lm81_imax': mockSeats.slice(0, 375),
+  'h_lm81_4dx': mockSeats.slice(375, 495),
+  'h_lm81_premium': mockSeats.slice(495, 575),
+  'h_caugiau_comfort': mockSeats.slice(575, 655),
+  'h_bitexco_gold': mockSeats.slice(655, 703),
+};
+
 // ========== SHOWTIME SEATS ==========
 const generateShowtimeSeats = (showtimeId: string, hallId: string): ShowtimeSeat[] => {
-  const hallSeats = mockSeats.filter(s => s.hallId === hallId);
+  const hallSeats = seatsByHall[hallId] || [];
   return hallSeats.map((seat, index) => {
-    const status: ShowtimeSeatStatus = 
-      seat.status !== 'ACTIVE' ? 'LOCKED' :
-      index % 5 === 0 ? 'BOOKED' : 
-      index % 7 === 0 ? 'RESERVED' : 
-      'AVAILABLE';
-    
+    const isBooked = index % 5 === 0;
+    const isReserved = index % 7 === 0 && !isBooked;
     const basePrice = seat.type === 'VIP' ? 150000 : seat.type === 'PREMIUM' ? 120000 : 90000;
     
     return {
-      id: `sts_${showtimeId}_${seat.id}`,
+      ...seat,
       showtimeId,
-      seatId: seat.id,
-      status,
+      isReserved,
+      isBooked,
       price: basePrice,
-      seat,
-      createdAt: '2025-01-01T10:00:00Z',
-      updatedAt: '2025-01-01T10:00:00Z',
     };
   });
 };
@@ -943,7 +940,7 @@ export const getHallsByCinemaId = (cinemaId: string): Hall[] =>
   mockHalls.filter((h) => h.cinemaId === cinemaId);
 
 export const getSeatsByHallId = (hallId: string): Seat[] =>
-  mockSeats.filter((s) => s.hallId === hallId);
+  seatsByHall[hallId] || [];
 
 export const getShowtimeSeatsByShowtimeId = (showtimeId: string): ShowtimeSeat[] =>
   mockShowtimeSeats.filter((s) => s.showtimeId === showtimeId);

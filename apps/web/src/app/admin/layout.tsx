@@ -1,8 +1,9 @@
 'use client';
 
+export const dynamic = 'force-dynamic';
+
 import React, { useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
@@ -56,9 +57,7 @@ export default function AdminLayout({
   const [sidebarOpen, setSidebarOpen] = useState(true);
   // const { signOut } = useClerk();
   // const { user } = useUser();
-  // When Clerk is disabled locally we still need a `user` variable
-  // Define a harmless placeholder so `user?.` references don't throw.
-  const user: unknown = undefined;
+  // When Clerk is disabled locally we still need a placeholder for user info
 
   const handleLogout = async () => {
     // await signOut();
@@ -165,21 +164,11 @@ export default function AdminLayout({
             </div>
             <div className="flex items-center gap-2">
               <div className="text-right mr-3">
-                <p className="text-sm font-medium">{user?.fullName || 'Admin User'}</p>
-                <p className="text-xs text-gray-500">{user?.primaryEmailAddress?.emailAddress || 'admin@cinema.com'}</p>
+                <p className="text-sm font-medium">Admin User</p>
+                <p className="text-xs text-gray-500">admin@cinema.com</p>
               </div>
               <div className="h-10 w-10 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center text-white font-semibold overflow-hidden">
-                {user?.imageUrl ? (
-                  <Image 
-                    src={user.imageUrl} 
-                    alt={user.fullName || ''} 
-                    width={40}
-                    height={40}
-                    className="h-full w-full object-cover" 
-                  />
-                ) : (
-                  user?.firstName?.[0] || 'A'
-                )}
+                A
               </div>
             </div>
           </div>

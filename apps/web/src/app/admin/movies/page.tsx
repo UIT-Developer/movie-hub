@@ -1,8 +1,9 @@
 // src/app/(admin)/movies/page.tsx
 'use client';
 
+export const dynamic = 'force-dynamic';
+
 import { useState } from 'react';
-// @ts-expect-error lucide-react types
 import { Plus, Search, MoreVertical, Edit, Trash2, Film as FilmIcon, Calendar } from 'lucide-react';
 import { Button } from '@movie-hub/shacdn-ui/button';
 import { Input } from '@movie-hub/shacdn-ui/input';
@@ -38,8 +39,7 @@ import {
   DropdownMenuTrigger,
 } from '@movie-hub/shacdn-ui/dropdown-menu';
 import { useMovies, useCreateMovie, useUpdateMovie, useDeleteMovie, useGenres } from '@/libs/api';
-import type { Movie, AgeRating, LanguageType, MovieCast, CreateMovieRequest } from '@/libs/api/types';
-import type { CreateMovieRequest } from '@/libs/api';
+import type { Movie, CreateMovieRequest, AgeRating, LanguageType, MovieCast } from '@/libs/api/types';
 import Image from 'next/image';
 import MovieReleaseDialog from '../_components/forms/MovieReleaseDialog';
 
@@ -87,7 +87,7 @@ export default function MoviesPage() {
     try {
       const apiData = {
         ...formData,
-        cast: formData.cast?.map(c => c.name) || [],
+        cast: formData.cast || [],
       };
       if (selectedMovie) {
         await updateMovie.mutateAsync({ id: selectedMovie.id, data: apiData });
@@ -135,6 +135,9 @@ export default function MoviesPage() {
 
   const openEditDialog = (movie: Movie) => {
     setSelectedMovie(movie);
+    const releaseDateStr = typeof movie.releaseDate === 'string' 
+      ? movie.releaseDate 
+      : new Date(movie.releaseDate).toISOString().split('T')[0];
     setFormData({
       title: movie.title,
       overview: movie.overview,
@@ -143,7 +146,7 @@ export default function MoviesPage() {
       trailerUrl: movie.trailerUrl || '',
       backdropUrl: movie.backdropUrl || '',
       runtime: movie.runtime,
-      releaseDate: movie.releaseDate,
+      releaseDate: releaseDateStr,
       ageRating: movie.ageRating,
       originalLanguage: movie.originalLanguage,
       spokenLanguages: movie.spokenLanguages,
@@ -429,7 +432,7 @@ export default function MoviesPage() {
                 <Input
                   id="releaseDate"
                   type="date"
-                  value={formData.releaseDate}
+                  value={typeof formData.releaseDate === 'string' ? formData.releaseDate : (formData.releaseDate instanceof Date ? formData.releaseDate.toISOString().split('T')[0] : '')}
                   onChange={(e) =>
                     setFormData({ ...formData, releaseDate: e.target.value })
                   }

@@ -1,8 +1,9 @@
 // src/app/(admin)/halls/page.tsx
 'use client';
 
+export const dynamic = 'force-dynamic';
+
 import { useState } from 'react';
-// @ts-expect-error - lucide-react lacks type definitions
 import { Plus, Search, MoreVertical, Edit, Trash2, DoorOpen } from 'lucide-react';
 import { Button } from '@movie-hub/shacdn-ui/button';
 import { Input } from '@movie-hub/shacdn-ui/input';
@@ -69,11 +70,14 @@ export default function HallsPage() {
   const handleSubmit = async () => {
     try {
       if (selectedHall) {
-        // @ts-expect-error - FormData shape is compatible after casting
         await updateHall.mutateAsync({ id: selectedHall.id, data: formData });
       } else {
-        // @ts-expect-error - FormData shape is compatible after casting
-        await createHall.mutateAsync(formData);
+        // Ensure cinemaId is set before creating
+        if (!formData.cinemaId) {
+          alert('Please select a cinema');
+          return;
+        }
+        await createHall.mutateAsync(formData as CreateHallRequest);
       }
       setDialogOpen(false);
       resetForm();
@@ -129,7 +133,6 @@ export default function HallsPage() {
     if (!acc[cinemaId]) {
       acc[cinemaId] = [];
     }
-    // @ts-expect-error - Hall type mismatch between API and admin types
     acc[cinemaId].push(hall);
     return acc;
   }, {} as Record<string, Hall[]>);
@@ -145,13 +148,13 @@ export default function HallsPage() {
     return colors[type] || 'bg-gray-100 text-gray-700';
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: string | undefined) => {
     const colors: Record<string, string> = {
       ACTIVE: 'bg-green-100 text-green-700',
       MAINTENANCE: 'bg-yellow-100 text-yellow-700',
       CLOSED: 'bg-red-100 text-red-700',
     };
-    return colors[status] || 'bg-gray-100 text-gray-700';
+    return (status && colors[status]) || 'bg-gray-100 text-gray-700';
   };
 
   return (

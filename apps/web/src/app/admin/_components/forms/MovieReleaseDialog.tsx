@@ -22,15 +22,7 @@ import {
 import { Button } from '@movie-hub/shacdn-ui/button';
 import { useToast } from '../../_libs/use-toast';
 // import { useAdminApi } from '@/libs/admin-api'; // DEPRECATED: Use new hooks from libs/api
-import type { Movie } from '../../_libs/types';
-
-interface MovieRelease {
-  id: string;
-  movieId: string;
-  startDate: string;
-  endDate: string;
-  note: string;
-}
+import type { Movie, MovieRelease } from '@/libs/api/types';
 
 interface MovieReleaseDialogProps {
   open: boolean;
@@ -62,9 +54,9 @@ export default function MovieReleaseDialog({
     if (editingRelease) {
       setFormData({
         movieId: editingRelease.movieId,
-        startDate: editingRelease.startDate,
-        endDate: editingRelease.endDate,
-        note: editingRelease.note,
+        startDate: typeof editingRelease.startDate === 'string' ? editingRelease.startDate : editingRelease.startDate.toISOString().split('T')[0],
+        endDate: typeof editingRelease.endDate === 'string' ? editingRelease.endDate : editingRelease.endDate.toISOString().split('T')[0],
+        note: editingRelease.note || '',
       });
     } else if (preSelectedMovieId) {
       // Pre-fill movieId when opening from Movies page

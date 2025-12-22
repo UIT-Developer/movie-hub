@@ -1,7 +1,8 @@
 'use client';
 
+export const dynamic = 'force-dynamic';
+
 import { useState } from 'react';
-// @ts-expect-error lucide-react lacks type definitions
 import { Building2, DoorOpen, DollarSign, Calendar, Sparkles, Edit2, Check, X } from 'lucide-react';
 import {
   Card,

@@ -1,5 +1,7 @@
 'use client';
 
+export const dynamic = 'force-dynamic';
+
 import { useState } from 'react';
 import { Eye, Filter, CheckCircle, Clock, Calendar } from 'lucide-react';
 import { Button } from '@movie-hub/shacdn-ui/button';
@@ -45,8 +47,6 @@ import {
   useCinemas,
 } from '@/libs/api';
 import type {
-  BookingSummary,
-  BookingDetail,
   BookingStatus,
   PaymentStatus,
 } from '@/libs/api/types';

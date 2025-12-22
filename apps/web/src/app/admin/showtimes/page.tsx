@@ -1,8 +1,9 @@
 // src/app/(admin)/showtimes/page.tsx
 'use client';
 
+export const dynamic = 'force-dynamic';
+
 import { useState, useEffect } from 'react';
-// @ts-expect-error lucide-react lacks type definitions
 import { Plus, Calendar as CalendarIcon, Clock, Trash2, Pencil } from 'lucide-react';
 import { Button } from '@movie-hub/shacdn-ui/button';
 import {
@@ -24,7 +25,7 @@ import { Badge } from '@movie-hub/shacdn-ui/badge';
 import { Calendar } from '@movie-hub/shacdn-ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@movie-hub/shacdn-ui/popover';
 import { useShowtimes, useDeleteShowtime, useMovies, useCinemas, useHallsGroupedByCinema } from '@/libs/api';
-import type { Showtime, Movie, Cinema, Hall } from '@/libs/api/types';
+import type { Showtime, Hall } from '@/libs/api/types';
 import { format } from 'date-fns';
 import ShowtimeDialog from '../_components/forms/ShowtimeDialog';
 
@@ -71,7 +72,7 @@ export default function ShowtimesPage() {
     }
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: string | undefined) => {
     switch (status) {
       case 'SELLING':
         return 'bg-green-100 text-green-700';
@@ -261,19 +262,20 @@ export default function ShowtimesPage() {
                               <div className="flex items-center gap-2 text-sm text-gray-600">
                                 <Clock className="h-4 w-4" />
                                 {format(new Date(showtime.startTime), 'HH:mm')} -{' '}
-                                {format(new Date(showtime.endTime), 'HH:mm')}
+                                {showtime.endTime ? format(new Date(showtime.endTime), 'HH:mm') : 'N/A'}
                               </div>
 
                               <div className="flex items-center justify-between">
                                 <Badge className={getStatusColor(showtime.status)}>
                                   {showtime.status}
                                 </Badge>
-                                <Badge variant="outline">{showtime.dayType}</Badge>
                               </div>
 
-                              <div className="text-sm text-gray-500">
-                                {showtime.availableSeats}/{showtime.totalSeats} seats available
-                              </div>
+                              {showtime.availableSeats !== undefined && (
+                                <div className="text-sm text-gray-500">
+                                  {showtime.availableSeats} seats available
+                                </div>
+                              )}
 
                               <div className="flex flex-wrap gap-2">
                                 <Badge variant="outline">{showtime.format}</Badge>
@@ -287,7 +289,7 @@ export default function ShowtimesPage() {
                                     th: 'Thai'
                                   }[showtime.language] || showtime.language}
                                 </Badge>
-                                {showtime.subtitles.length > 0 && (
+                                {showtime.subtitles && showtime.subtitles.length > 0 && (
                                   <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
                                     📝 {showtime.subtitles.map(s => ({
                                       vi: 'Phụ đề Việt',

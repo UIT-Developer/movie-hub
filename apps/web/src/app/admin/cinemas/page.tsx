@@ -1,8 +1,9 @@
 // src/app/(dashboard)/cinemas/page.tsx
 'use client';
 
+export const dynamic = 'force-dynamic';
+
 import { useState } from 'react';
-// @ts-expect-error - lucide-react lacks type declarations
 import { Plus, Search, MoreVertical, Edit, Trash2, MapPin, Phone, Mail, Star, Clock, Users } from 'lucide-react';
 import { Button } from '@movie-hub/shacdn-ui/button';
 import { Input } from '@movie-hub/shacdn-ui/input';
@@ -166,7 +167,7 @@ export default function CinemasPage() {
     cinema.city.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: string | undefined) => {
     switch (status) {
       case 'ACTIVE':
         return 'bg-green-100 text-green-700 hover:bg-green-200';

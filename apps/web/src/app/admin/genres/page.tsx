@@ -1,7 +1,8 @@
 'use client';
 
+export const dynamic = 'force-dynamic';
+
 import { useState } from 'react';
-// @ts-expect-error - lucide-react lacks type declarations
 import { Plus, Pencil, Trash2, Tag } from 'lucide-react';
 import { Button } from '@movie-hub/shacdn-ui/button';
 import {

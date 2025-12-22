@@ -1,7 +1,8 @@
 'use client';
 
+export const dynamic = 'force-dynamic';
+
 import { useState } from 'react';
-// @ts-expect-error - lucide-react lacks type definitions
 import { Ticket } from 'lucide-react';
 import {
   Card,
@@ -53,10 +54,10 @@ export default function ShowtimeSeatsPage() {
 
   // Group seats by row
   const groupedByRow = filteredSeats.reduce((acc, seat) => {
-    if (!acc[seat.rowLabel]) {
-      acc[seat.rowLabel] = [];
+    if (!acc[seat.rowLetter]) {
+      acc[seat.rowLetter] = [];
     }
-    acc[seat.rowLabel].push(seat);
+    acc[seat.rowLetter].push(seat);
     return acc;
   }, {} as Record<string, typeof filteredSeats>);
 
@@ -172,7 +173,7 @@ export default function ShowtimeSeatsPage() {
                         <div
                           key={seat.id}
                           className={`w-8 h-8 rounded flex items-center justify-center text-xs font-semibold text-white cursor-pointer transition-colors ${getReservationStatusColor(seat.isBooked, seat.isReserved)}`}
-                          title={`${seat.rowLabel}${seat.seatNumber} - ${seat.type} - ₫${seat.price || 0}`}
+                          title={`${seat.rowLetter}${seat.seatNumber} - ${seat.type} - ₫${seat.price || 0}`}
                         >
                           {seat.seatNumber}
                         </div>

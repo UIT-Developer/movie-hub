@@ -1,5 +1,7 @@
 'use client';
 
+export const dynamic = 'force-dynamic';
+
 import { useState, useEffect } from 'react';
 import {
   Settings,
@@ -21,7 +23,6 @@ import {
   Moon,
   Sun,
   Monitor,
-// @ts-expect-error lucide-react lacks type definitions
 } from 'lucide-react';
 import { Button } from '@movie-hub/shacdn-ui/button';
 import { Input } from '@movie-hub/shacdn-ui/input';

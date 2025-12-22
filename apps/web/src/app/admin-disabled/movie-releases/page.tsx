@@ -23,13 +23,13 @@ import {
   SelectValue,
 } from '@movie-hub/shacdn-ui/select';
 import { Badge } from '@movie-hub/shacdn-ui/badge';
-import { useToast } from '../_libs/use-toast';
+import { useToast } from '../../admin/_libs/use-toast';
 import { useMovieReleases, useDeleteMovieRelease, useMovies, useCinemas, useHallsGroupedByCinema } from '@/libs/api';
 import type { MovieRelease } from '@/libs/api';
-import type { Hall } from '@/libs/api/types';
+import type { Movie, Hall } from '@/libs/api/types';
 import { format } from 'date-fns';
-import MovieReleaseDialog from '../_components/forms/MovieReleaseDialog';
-import ShowtimeDialog from '../_components/forms/ShowtimeDialog';
+import MovieReleaseDialog from '../../admin/_components/forms/MovieReleaseDialog';
+import ShowtimeDialog from '../../admin/_components/forms/ShowtimeDialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -86,7 +86,7 @@ export default function MovieReleasesPage() {
   };
 
   const getMovieById = (movieId: string) => {
-    return movies.find(m => m.id === movieId);
+    return movies.find((m: Movie) => m.id === movieId);
   };
 
   const getReleaseStatus = (release: MovieRelease) => {
@@ -119,7 +119,7 @@ export default function MovieReleasesPage() {
   };
 
   // Filter releases
-  const filteredReleases = releases.filter(release => {
+  const filteredReleases = releases.filter((release: MovieRelease) => {
     const movie = getMovieById(release.movieId);
     const status = getReleaseStatus(release);
     
@@ -167,7 +167,7 @@ export default function MovieReleasesPage() {
                 <Input
                   placeholder="Search by movie name..."
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
                   className="w-full"
                 />
               </div>
@@ -244,7 +244,7 @@ export default function MovieReleasesPage() {
           </Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-            {filteredReleases.map((release) => {
+            {filteredReleases.map((release: MovieRelease) => {
               const movie = getMovieById(release.movieId);
               const status = getReleaseStatus(release);
               
@@ -423,7 +423,7 @@ export default function MovieReleasesPage() {
       {/* Add/Edit Release Dialog */}
       <MovieReleaseDialog
         open={dialogOpen}
-        onOpenChange={(open) => {
+        onOpenChange={(open: boolean) => {
           setDialogOpen(open);
           if (!open) {
             setEditingRelease(null);
@@ -439,7 +439,7 @@ export default function MovieReleasesPage() {
       {/* Add Showtime Dialog */}
       <ShowtimeDialog
         open={showtimeDialogOpen}
-        onOpenChange={(open) => {
+        onOpenChange={(open: boolean) => {
           setShowtimeDialogOpen(open);
           if (!open) {
             setSelectedReleaseForShowtime(null);

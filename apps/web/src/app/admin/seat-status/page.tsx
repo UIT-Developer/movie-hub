@@ -1,9 +1,9 @@
 'use client';
 
+export const dynamic = 'force-dynamic';
+
 import { useState } from 'react';
-// @ts-expect-error - lucide-react lacks type definitions
 import { Building2, DoorOpen, Wrench, CheckCircle2, XCircle } from 'lucide-react';
-import { Button } from '@movie-hub/shacdn-ui/button';
 import {
   Card,
   CardContent,
@@ -54,7 +54,6 @@ export default function SeatStatusPage() {
   const { data: cinemasData = [] } = useCinemas();
   const cinemas = cinemasData || [];
   const { data: hallsByCinema = {} } = useHallsGroupedByCinema();
-  // @ts-expect-error - Hall type mismatch between API and admin types
   const halls: Hall[] = Object.values(hallsByCinema).flatMap((g) => g.halls || []);
   const updateSeatMutation = useUpdateSeatStatus();
 
@@ -100,6 +99,7 @@ export default function SeatStatusPage() {
 
         setHallDetail({
           ...hall,
+          status: hall.status || 'ACTIVE',
           seats: mockSeats,
         });
       }
@@ -118,7 +118,6 @@ export default function SeatStatusPage() {
     try {
       await updateSeatMutation.mutateAsync({
         seatId,
-        // @ts-expect-error - Admin SeatStatus differs from API SeatStatus
         data: { status: newStatus },
       });
 

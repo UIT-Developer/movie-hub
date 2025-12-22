@@ -1,8 +1,9 @@
 'use client';
 
+export const dynamic = 'force-dynamic';
+
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
-// @ts-expect-error - lucide-react lacks type definitions
 import { Calendar as CalendarIcon, Clock, Film, Building2, Zap, History, ExternalLink } from 'lucide-react';
 import { Button } from '@movie-hub/shacdn-ui/button';
 import {
@@ -24,7 +25,7 @@ import {
 import { Badge } from '@movie-hub/shacdn-ui/badge';
 import { Checkbox } from '@movie-hub/shacdn-ui/checkbox';
 import { useToast } from '../_libs/use-toast';
-import type { BatchCreateShowtimesRequest as ApiBatchCreateRequest, Showtime as ApiShowtime, Hall as ApiHall, ShowtimeFormat as ApiShowtimeFormat, ShowtimeLanguage as ApiShowtimeLanguage } from '@/libs/api/types';
+import type { BatchCreateShowtimesRequest as ApiBatchCreateRequest, Showtime as ApiShowtime, Hall as ApiHall, ShowtimeFormat as ApiShowtimeFormat } from '@/libs/api/types';
 
 // Frontend-specific types for batch showtimes form
 interface BatchCreateShowtimesInput {
@@ -172,6 +173,7 @@ export default function BatchShowtimesPage() {
       // Convert admin form shape to API request shape (API expects dateRange and price)
       const apiRequest: ApiBatchCreateRequest = {
         movieId: formData.movieId,
+        movieReleaseId: formData.movieReleaseId,
         cinemaId: formData.cinemaId,
         hallId: formData.hallId,
         dateRange: {
@@ -180,8 +182,7 @@ export default function BatchShowtimesPage() {
         },
         timeSlots: formData.timeSlots,
         format: formData.format as unknown as ApiShowtimeFormat,
-        language: formData.language as unknown as ApiShowtimeLanguage,
-        price: 0, // default price (adjust if UI provides price)
+        language: formData.language,
       };
 
       const response = await batchCreateMutation.mutateAsync(apiRequest);
@@ -299,7 +300,7 @@ export default function BatchShowtimesPage() {
                         .filter((r: typeof movieReleases[0]) => r.movieId === formData.movieId)
                         .map((release: typeof movieReleases[0]) => (
                           <SelectItem key={release.id} value={release.id}>
-                            {release.startDate ?? ''} → {release.endDate ?? ''}
+                            {typeof release.startDate === 'string' ? release.startDate : new Date(release.startDate).toLocaleDateString()} → {typeof release.endDate === 'string' ? release.endDate : new Date(release.endDate).toLocaleDateString()}
                           </SelectItem>
                         ))}
                     </SelectContent>

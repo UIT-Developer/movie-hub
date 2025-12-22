@@ -1,5 +1,7 @@
 'use client';
 
+export const dynamic = 'force-dynamic';
+
 import { useState } from 'react';
 import { Trash2, MessageSquare, Star, Filter } from 'lucide-react';
 import { Button } from '@movie-hub/shacdn-ui/button';
@@ -21,7 +23,6 @@ import { Label } from '@movie-hub/shacdn-ui/label';
 import { Badge } from '@movie-hub/shacdn-ui/badge';
 import { useToast } from '../_libs/use-toast';
 import { useReviews, useDeleteReview, useMovies } from '@/libs/api';
-import type { Review } from '@/libs/api/types';
 
 export default function ReviewsPage() {
   const [filterMovieId, setFilterMovieId] = useState<string>('all');

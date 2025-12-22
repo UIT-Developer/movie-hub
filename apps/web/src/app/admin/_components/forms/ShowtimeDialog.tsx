@@ -21,7 +21,7 @@ import {
 import { Button } from '@movie-hub/shacdn-ui/button';
 import { useToast } from '../../_libs/use-toast';
 // import { useAdminApi } from '@/libs/admin-api'; // DEPRECATED: Use new hooks from libs/api
-import type { Showtime, Movie, Cinema, Hall, CreateShowtimeRequest } from '../../_libs/types';
+import type { Showtime, Movie, Cinema, Hall, CreateShowtimeRequest } from '@/libs/api/types';
 import { mockReleases } from '../../_libs/mockData';
 
 interface ShowtimeDialogProps {
@@ -336,7 +336,7 @@ export default function ShowtimeDialog({
             <Label htmlFor="subtitles">Subtitles (Phụ đề)</Label>
             <Input
               id="subtitles"
-              value={formData.subtitles.join(', ')}
+              value={(formData.subtitles || []).join(', ')}
               onChange={(e) => {
                 const subtitlesArray = e.target.value
                   .split(',')

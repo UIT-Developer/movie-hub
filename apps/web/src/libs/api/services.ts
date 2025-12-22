@@ -91,11 +91,11 @@ export const genresApi = {
 
 export const cinemasApi = {
   getAll: async (params?: CinemaFiltersParams): Promise<Cinema[]> => {
-    const response = await api.get<GetCinemasResponse>(
-      '/api/v1/cinemas/filters',
+    const response = await api.get<Cinema[]>(
+      '/api/v1/cinemas',
       { params }
     );
-    return response.cinemas;
+    return response || [];
   },
 
   getById: (id: string) =>
@@ -155,33 +155,35 @@ export const hallsApi = {
 // ============================================================================
 
 export const showtimesApi = {
-  // Workaround for flexible filtering
+  // Flexible filtering using client-side logic
+  // Note: BE does not have dedicated admin filtering endpoint,
+  // so we fetch showtimes and filter client-side
   getWithFilters: async (filters: ShowtimeFiltersParams): Promise<Showtime[]> => {
     const { cinemaId, movieId, date, hallId } = filters;
 
-    // If both cinemaId and movieId provided, use the specific endpoint
-    if (cinemaId && movieId) {
-      const params = date ? { date } : {};
-      return api.get<Showtime[]>(
-        `/api/v1/cinemas/${cinemaId}/movies/${movieId}/showtimes/admin`,
-        { params }
-      );
-    }
-
-    // Otherwise, fetch all combinations and filter client-side
+    // Get all cinemas/movies if not specified
     const cinemas = cinemaId ? [{ id: cinemaId }] : await cinemasApi.getAll();
     const movies = movieId ? [{ id: movieId }] : await moviesApi.getAll();
 
     const allShowtimes: Showtime[] = [];
 
+    // Fetch showtimes for each cinema-movie combination
     await Promise.all(
       cinemas.map(async (cinema) => {
         await Promise.all(
           movies.map(async (movie) => {
             try {
-              const params = date ? { date } : {};
+              // Fetch all showtimes and filter on client-side
+              const params: Record<string, unknown> = {
+                cinemaId: cinema.id,
+                movieId: movie.id,
+              };
+              if (date) {
+                params.date = date;
+              }
+
               const showtimes = await api.get<Showtime[]>(
-                `/api/v1/cinemas/${cinema.id}/movies/${movie.id}/showtimes/admin`,
+                `/api/v1/showtimes`,
                 { params }
               );
               allShowtimes.push(...showtimes);

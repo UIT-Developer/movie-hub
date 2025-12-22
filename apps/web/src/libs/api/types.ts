@@ -23,6 +23,7 @@ import {
   SeatStatusEnum,
   FormatEnum,
   ShowtimeStatusEnum,
+  CinemaStatusEnum,
 } from '@movie-hub/shared-types/cinema';
 
 import {
@@ -55,6 +56,7 @@ export type DayType = DayTypeEnum;
 export type SeatStatus = SeatStatusEnum;
 export type ShowtimeFormat = FormatEnum;
 export type ShowtimeStatus = ShowtimeStatusEnum;
+export type CinemaStatus = CinemaStatusEnum;
 
 export type {
   BookingStatus,
@@ -95,9 +97,9 @@ export interface Movie {
   id: string;
   title: string;
   originalTitle?: string;
-  overview?: string; // Backend uses 'overview' not 'description'
-  runtime: number; // Backend uses 'runtime' not 'duration' (minutes)
-  releaseDate: string | Date; // ISO date
+  overview?: string;
+  runtime: number;
+  releaseDate: string | Date;
   posterUrl: string;
   backdropUrl?: string;
   trailerUrl: string;
@@ -107,9 +109,9 @@ export interface Movie {
   productionCountry?: string;
   ageRating: AgeRating;
   director?: string;
-  cast?: MovieCast[]; // Backend uses array of objects with name, profileUrl
+  cast?: MovieCast[];
   genreIds?: string[];
-  genre?: Genre; // Backend returns single 'genre' object, not array
+  genres?: Genre[]; // Backend returns array of genres
   averageRating?: number;
   reviewCount?: number;
   status?: 'COMING_SOON' | 'NOW_SHOWING' | 'ENDED';
@@ -177,8 +179,8 @@ export interface Cinema {
   phone?: string;
   email?: string;
   website?: string;
-  latitude?: number; // Backend uses flat structure, not nested
-  longitude?: number; // Backend uses flat structure, not nested
+  latitude?: number;
+  longitude?: number;
   description?: string;
   amenities?: string[];
   facilities?: Record<string, unknown>;
@@ -187,7 +189,7 @@ export interface Cinema {
   operatingHours?: Record<string, unknown>;
   socialMedia?: Record<string, unknown>;
   timezone?: string;
-  status?: string;
+  status?: CinemaStatusEnum;
   rating?: number;
   totalReviews?: number;
   createdAt?: string | Date;

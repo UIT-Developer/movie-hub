@@ -155,7 +155,7 @@ export default function MoviesPage() {
       productionCountry: movie.productionCountry,
       director: movie.director || '',
       cast: movie.cast,
-      genreIds: movie.genre ? [movie.genre].map(g => g.id) : [],
+      genreIds: movie.genres ? movie.genres.map(g => g.id) : [],
     });
     setDialogOpen(true);
   };
@@ -292,7 +292,7 @@ export default function MoviesPage() {
                     </div>
                   )}
                   <div className="flex flex-wrap gap-1 mt-2">
-                    {movie.genre && [movie.genre].slice(0, 3).map((g) => (
+                    {(movie.genres || []).slice(0, 3).map((g) => (
                       <Badge key={g.id} variant="secondary" className="text-xs">
                         {g.name}
                       </Badge>

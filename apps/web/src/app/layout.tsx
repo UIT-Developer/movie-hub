@@ -32,7 +32,7 @@ export default function RootLayout({
                 colorPrimary: '#f43f5e',
               },
             }}
-            afterSignOutUrl="/"
+            afterSignOutUrl="/admin/login"
           >
             <PageWrapper>
             

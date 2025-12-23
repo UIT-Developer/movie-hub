@@ -57,9 +57,15 @@ export default function AdminLayout({
 }) {
   const pathname = usePathname();
   
-  // Don't wrap login page with auth protection
-  if (pathname === '/admin/login') {
-    return <AdminLayoutContent>{children}</AdminLayoutContent>;
+  // Auth pages (login, signup, reset-password) should not have admin layout
+  const isAuthPage = pathname.startsWith('/admin/login') || 
+                     pathname.startsWith('/admin/sign-up') || 
+                     pathname.startsWith('/admin/reset-password') ||
+                     pathname.startsWith('/admin/verify');
+  
+  if (isAuthPage) {
+    // Render auth pages without sidebar/navbar
+    return <>{children}</>;
   }
 
   return (
@@ -82,7 +88,7 @@ function AdminLayoutContent({
 
   const handleLogout = async () => {
     await signOut();
-    router.push('/');
+    router.push('/admin/login');
   };
 
   return (

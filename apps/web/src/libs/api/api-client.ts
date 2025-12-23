@@ -24,6 +24,8 @@ let normalizedBase = rawBase.replace(/\/+$|\s+$/g, '');
 // service paths (which already include `/api/v1`) won't be duplicated.
 normalizedBase = normalizedBase.replace(/\/api\/v1$/i, '');
 
+console.log('[API] Initialized with base URL:', normalizedBase);
+
 // Base API client
 const apiClient = axios.create({
   baseURL: normalizedBase,
@@ -31,31 +33,47 @@ const apiClient = axios.create({
     'Content-Type': 'application/json',
   },
   timeout: 30000,
+  // Enable sending credentials (cookies) with cross-origin requests
+  // This is critical for ClerkAuthGuard to receive __session cookie
+  withCredentials: true,
 });
 
-// Request interceptor for auth token
-// Attach Clerk token for authenticated admin calls (client-side only).
-// We dynamically import `getToken` to avoid server-side import errors.
+// Request interceptor for auth (both Bearer token and cookies)
+// For ClerkAuthGuard: Backend reads cookie `__session` from request.cookies
+// Token via header is optional; guard primarily validates via cookie.
 apiClient.interceptors.request.use(
   async (config) => {
     try {
       if (typeof window === 'undefined') return config;
-            const clerkModule = await import('@clerk/nextjs');
-            const clerkTyped = clerkModule as unknown as {
-              getToken?: () => Promise<string | undefined>;
-              default?: { getToken?: () => Promise<string | undefined> };
-            };
-            const getTokenFn = clerkTyped.getToken ?? clerkTyped.default?.getToken;
-            if (typeof getTokenFn === 'function') {
-              const token = await getTokenFn();
+      
+      // Try to attach Clerk Bearer token (alternative auth method)
+      const clerkModule = await import('@clerk/nextjs');
+      const clerkTyped = clerkModule as unknown as {
+        getToken?: () => Promise<string | undefined>;
+        default?: { getToken?: () => Promise<string | undefined> };
+      };
+      const getTokenFn = clerkTyped.getToken ?? clerkTyped.default?.getToken;
+      if (typeof getTokenFn === 'function') {
+        const token = await getTokenFn();
         if (token) {
           config.headers = config.headers || {};
           (config.headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
+          console.log('[API] Attached Bearer token to request:', config.url);
         }
       }
-    } catch {
-      // Ignore token attach failures — requests can still proceed (will 401 if protected)
+    } catch (err) {
+      // Ignore token attach failures — requests will use cookie-based auth via withCredentials
+      console.warn('[API] Failed to attach Bearer token:', err instanceof Error ? err.message : String(err));
     }
+    
+    // Log request details for debugging
+    console.log('[API] Request:', {
+      method: config.method?.toUpperCase(),
+      url: config.url,
+      withCredentials: config.withCredentials,
+      hasAuthHeader: !!config.headers?.['Authorization'],
+    });
+    
     return config;
   },
   (error) => Promise.reject(error)
@@ -63,9 +81,56 @@ apiClient.interceptors.request.use(
 
 // Response interceptor for error handling
 apiClient.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    console.log('[API] Response success:', {
+      status: response.status,
+      url: response.config.url,
+    });
+    return response;
+  },
   (error: AxiosError<ApiError>) => {
+    const status = error.response?.status;
     const message = error.response?.data?.message || error.message || 'An error occurred';
+    
+    // Protect logging from throwing when `error` contains circular or
+    // non-serializable structures. Try to produce a safe, plain object
+    // for console output; fall back to minimal text if that fails.
+    try {
+      let safeResponseData: unknown = undefined;
+      try {
+        safeResponseData = JSON.parse(JSON.stringify(error.response?.data));
+      } catch (_e) {
+        // If JSON stringify fails (circular structures), coerce to string
+        try {
+          safeResponseData = String(error.response?.data);
+        } catch (__) {
+          safeResponseData = '<unserializable response data>';
+        }
+      }
+
+      console.error('[API] Response error:', {
+        status,
+        url: error.config?.url,
+        message,
+        withCredentials: error.config?.withCredentials,
+        responseData: safeResponseData,
+      });
+    } catch (logErr) {
+      // Last-resort: logging failed (rare). Emit simple messages so dev can see something.
+      console.error('[API] Response error (logging failed):', message);
+      console.error('[API] Original error object:', error);
+      console.error('[API] Logging failure reason:', logErr);
+    }
+    
+    // Special handling for 401 (auth errors)
+    if (status === 401) {
+      console.error('[API] ❌ 401 Unauthorized - Check if __session cookie is present and valid');
+      if (typeof window !== 'undefined') {
+        // Log cookies for debugging (will show only domain-accessible cookies)
+        console.log('[API] Document cookies:', document.cookie);
+      }
+    }
+    
     return Promise.reject(new Error(message));
   }
 );

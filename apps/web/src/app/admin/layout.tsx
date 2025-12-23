@@ -4,7 +4,7 @@ export const dynamic = 'force-dynamic';
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   LayoutDashboard,
   Film,
@@ -23,11 +23,13 @@ import {
   Wrench,
   Eye,
   DollarSign,
+  User,
 } from 'lucide-react';
 import { Button } from '@movie-hub/shacdn-ui/button';
 import { ScrollArea } from '@movie-hub/shacdn-ui/scroll-area';
 import { cn } from '@movie-hub/shacdn-utils';
-// import { useClerk, useUser } from '@clerk/nextjs';
+import { useClerk, useUser, SignedIn, SignedOut } from '@clerk/nextjs';
+import { RequireAdminClerkAuth } from '@/components/require-admin-clerk-auth';
 
 const menuItems = [
   { icon: LayoutDashboard, label: 'Dashboard', href: '/admin', disabled: false },
@@ -54,14 +56,33 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  
+  // Don't wrap login page with auth protection
+  if (pathname === '/admin/login') {
+    return <AdminLayoutContent>{children}</AdminLayoutContent>;
+  }
+
+  return (
+    <RequireAdminClerkAuth>
+      <AdminLayoutContent>{children}</AdminLayoutContent>
+    </RequireAdminClerkAuth>
+  );
+}
+
+function AdminLayoutContent({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  // const { signOut } = useClerk();
-  // const { user } = useUser();
-  // When Clerk is disabled locally we still need a placeholder for user info
+  const { signOut } = useClerk();
+  const { user } = useUser();
+  const router = useRouter();
 
   const handleLogout = async () => {
-    // await signOut();
-    window.location.href = '/';
+    await signOut();
+    router.push('/');
   };
 
   return (
@@ -164,11 +185,11 @@ export default function AdminLayout({
             </div>
             <div className="flex items-center gap-2">
               <div className="text-right mr-3">
-                <p className="text-sm font-medium">Admin User</p>
-                <p className="text-xs text-gray-500">admin@cinema.com</p>
+                <p className="text-sm font-medium">{user?.fullName || user?.firstName || 'Admin User'}</p>
+                <p className="text-xs text-gray-500">{user?.primaryEmailAddress?.emailAddress || 'admin@cinema.com'}</p>
               </div>
               <div className="h-10 w-10 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center text-white font-semibold overflow-hidden">
-                A
+                {user?.firstName?.charAt(0).toUpperCase() || 'A'}
               </div>
             </div>
           </div>

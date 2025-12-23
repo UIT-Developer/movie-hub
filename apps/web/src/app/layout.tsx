@@ -1,5 +1,4 @@
-// import { ClerkProvider } from '@clerk/nextjs';
-// Clerk auth temporarily disabled
+import { ClerkProvider } from '@clerk/nextjs';
 import { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import { Toaster } from 'sonner';
@@ -27,22 +26,21 @@ export default function RootLayout({
     <html>
       <body className={inter.className}>
         <QueryClientProviders>
-          {/* <ClerkProvider
+          <ClerkProvider
             appearance={{
-              theme: 'simple',
               variables: {
                 colorPrimary: '#f43f5e',
               },
             }}
             afterSignOutUrl="/"
-          > */}
+          >
             <PageWrapper>
             
               <Toaster theme="light" richColors closeButton />
               
               {children}
             </PageWrapper>
-          {/* </ClerkProvider> */}
+          </ClerkProvider>
         </QueryClientProviders>
       </body>
     </html>

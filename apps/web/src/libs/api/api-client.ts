@@ -16,9 +16,17 @@ export interface ApiError {
   statusCode?: number;
 }
 
+// Normalize backend base URL so services can consistently use `/api/v1/...` paths
+const rawBase = process.env.NEXT_PUBLIC_BACKEND_API_URL || 'http://localhost:4000';
+// Remove trailing slashes and whitespace
+let normalizedBase = rawBase.replace(/\/+$|\s+$/g, '');
+// If environment accidentally includes the `/api/v1` prefix, strip it so
+// service paths (which already include `/api/v1`) won't be duplicated.
+normalizedBase = normalizedBase.replace(/\/api\/v1$/i, '');
+
 // Base API client
 const apiClient = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_BACKEND_API_URL || 'http://localhost:4000',
+  baseURL: normalizedBase,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -26,13 +34,28 @@ const apiClient = axios.create({
 });
 
 // Request interceptor for auth token
+// Attach Clerk token for authenticated admin calls (client-side only).
+// We dynamically import `getToken` to avoid server-side import errors.
 apiClient.interceptors.request.use(
-  (config) => {
-    // Add auth token if available (when Clerk is enabled)
-    // const token = getAuthToken();
-    // if (token) {
-    //   config.headers.Authorization = `Bearer ${token}`;
-    // }
+  async (config) => {
+    try {
+      if (typeof window === 'undefined') return config;
+            const clerkModule = await import('@clerk/nextjs');
+            const clerkTyped = clerkModule as unknown as {
+              getToken?: () => Promise<string | undefined>;
+              default?: { getToken?: () => Promise<string | undefined> };
+            };
+            const getTokenFn = clerkTyped.getToken ?? clerkTyped.default?.getToken;
+            if (typeof getTokenFn === 'function') {
+              const token = await getTokenFn();
+        if (token) {
+          config.headers = config.headers || {};
+          (config.headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
+        }
+      }
+    } catch {
+      // Ignore token attach failures — requests can still proceed (will 401 if protected)
+    }
     return config;
   },
   (error) => Promise.reject(error)

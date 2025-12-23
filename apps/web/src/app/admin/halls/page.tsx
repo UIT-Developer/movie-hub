@@ -38,7 +38,7 @@ import {
   SelectValue,
 } from '@movie-hub/shacdn-ui/select';
 import { useToast } from '../_libs/use-toast';
-import { useHallsGroupedByCinema, useCreateHall, useUpdateHall, useDeleteHall } from '@/libs/api';
+import { useHallsGroupedByCinema, useCreateHall, useUpdateHall, useDeleteHall, useCinemas } from '@/libs/api';
 import type { Hall, HallType, CreateHallRequest } from '@/libs/api/types';
 import { HallTypeEnum, LayoutTypeEnum } from '@movie-hub/shared-types/cinema/enum';
 
@@ -64,8 +64,12 @@ export default function HallsPage() {
   const updateHall = useUpdateHall();
   const deleteHall = useDeleteHall();
 
+  // Fetch cinemas list separately (so Add Hall dropdown works even when no halls exist)
+  const { data: cinemasData = [] } = useCinemas();
+  const cinemasDataArray = Array.isArray(cinemasData) ? cinemasData : [];
   // Extract all halls and cinemas from grouped data
-  const cinemas = Object.values(hallsByCinema).map(group => group.cinema);
+  const derivedCinemas = Object.values(hallsByCinema).map(group => group.cinema);
+  const cinemas = cinemasDataArray.length > 0 ? cinemasDataArray : derivedCinemas;
   const halls = Object.values(hallsByCinema).flatMap(group => group.halls);
 
   const handleSubmit = async () => {

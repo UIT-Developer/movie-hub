@@ -104,13 +104,58 @@ export default function CinemasPage() {
     return '24/7';
   };
 
+  // Normalize operating hours from DB format to form format (open/close time inputs)
+  const normalizeOperatingHours = (hours: any) => {
+    if (!hours) return { open: '', close: '' };
+    
+    const h = hours as Record<string, any>;
+    
+    // Already in open/close format
+    if (h.open && h.close) {
+      return { open: h.open, close: h.close };
+    }
+    
+    // Parse from mon_sun format (e.g., "9:00 - 24:00")
+    if (h.mon_sun && typeof h.mon_sun === 'string') {
+      const parts = h.mon_sun.split(' - ');
+      if (parts.length === 2) {
+        return {
+          open: parts[0].trim(),
+          close: parts[1].trim(),
+        };
+      }
+    }
+    
+    // Parse from day format (e.g., "9:00-24:00")
+    const firstValue = Object.values(h)[0];
+    if (typeof firstValue === 'string' && firstValue.includes('-')) {
+      const parts = firstValue.split('-');
+      if (parts.length === 2) {
+        return {
+          open: parts[0].trim(),
+          close: parts[1].trim(),
+        };
+      }
+    }
+    
+    return { open: '', close: '' };
+  };
+
   const handleSubmit = async () => {
     try {
+      // Normalize operatingHours back to mon_sun format for API
+      const submitData = { ...formData };
+      if (formData.operatingHours?.open && formData.operatingHours?.close) {
+        submitData.operatingHours = {
+          mon_sun: `${formData.operatingHours.open} - ${formData.operatingHours.close}`,
+        };
+      }
+      
       if (selectedCinema) {
-        await updateCinema.mutateAsync({ id: selectedCinema.id, data: formData });
+        await updateCinema.mutateAsync({ id: selectedCinema.id, data: submitData });
       } else {
         // ensure API-required fields have defaults
-        const apiPayload = { ...formData, district: formData?.district ?? '' } as ApiCreateCinemaRequest;
+        const apiPayload = { ...submitData, district: submitData?.district ?? '' } as ApiCreateCinemaRequest;
         await createCinema.mutateAsync(apiPayload);
       }
       setDialogOpen(false);
@@ -155,6 +200,8 @@ export default function CinemasPage() {
 
   const openEditDialog = (cinema: Cinema) => {
     setSelectedCinema(cinema);
+    // Normalize operatingHours to open/close format for the form
+    const normalizedHours = normalizeOperatingHours(cinema.operatingHours);
     setFormData({
       name: cinema.name,
       address: cinema.address,
@@ -170,7 +217,7 @@ export default function CinemasPage() {
       facilities: cinema.facilities || {},
       images: cinema.images || [],
       virtualTour360Url: cinema.virtualTour360Url || '',
-      operatingHours: cinema.operatingHours || {},
+      operatingHours: normalizedHours,
       socialMedia: cinema.socialMedia || {},
       timezone: cinema.timezone || 'Asia/Ho_Chi_Minh',
     });
@@ -606,56 +653,127 @@ export default function CinemasPage() {
             </div>
 
             <div className="grid grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="facilities">Facilities (JSON)</Label>
-                <Textarea
-                  id="facilities"
-                  value={JSON.stringify(formData.facilities, null, 2)}
-                  onChange={(e) => {
-                    try {
-                      const parsed = JSON.parse(e.target.value);
-                      setFormData({ ...formData, facilities: parsed });
-                    } catch {
-                      // Invalid JSON, keep current value
-                    }
+              {/* Facilities: dynamic key/value list */}
+              <div className="space-y-2 flex flex-col">
+                <Label>Facilities</Label>
+                <div className="space-y-2 flex-1">
+                  {(Object.entries(formData.facilities || {}) as [string, any][]).map(([key, value], idx) => (
+                    <div key={key || idx} className="flex gap-2">
+                      <Input
+                        value={key}
+                        placeholder="key"
+                        onChange={(e) => {
+                          const newKey = e.target.value;
+                          const fac = { ...(formData.facilities || {}) } as Record<string, any>;
+                          // rename key
+                          const val = fac[key];
+                          delete fac[key];
+                          fac[newKey] = val;
+                          setFormData({ ...formData, facilities: fac });
+                        }}
+                      />
+                      <Input
+                        value={value === undefined || value === null ? '' : String(value)}
+                        placeholder="value"
+                        onChange={(e) => {
+                          const fac = { ...(formData.facilities || {}) } as Record<string, any>;
+                          const parsed = (() => {
+                            const v = e.target.value.trim();
+                            if (v === 'true') return true;
+                            if (v === 'false') return false;
+                            const n = Number(v);
+                            return Number.isNaN(n) ? v : n;
+                          })();
+                          fac[key || `key_${idx}`] = parsed;
+                          setFormData({ ...formData, facilities: fac });
+                        }}
+                      />
+                      <Button
+                        variant="ghost"
+                        onClick={() => {
+                          const fac = { ...(formData.facilities || {}) } as Record<string, any>;
+                          delete fac[key];
+                          setFormData({ ...formData, facilities: fac });
+                        }}
+                      >
+                        Remove
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+                <Button
+                  onClick={() => {
+                    const fac = { ...(formData.facilities || {}) } as Record<string, any>;
+                    const newKey = `facility_${Date.now()}`;
+                    fac[newKey] = '';
+                    setFormData({ ...formData, facilities: fac });
                   }}
-                  placeholder='{"parking": true, "wheelchair": true}'
-                  rows={3}
-                />
+                  className="mt-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700"
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add facility
+                </Button>
               </div>
+
+              {/* Operating hours: open/close times */}
               <div className="space-y-2">
-                <Label htmlFor="operatingHours">Operating Hours (JSON)</Label>
-                <Textarea
-                  id="operatingHours"
-                  value={JSON.stringify(formData.operatingHours, null, 2)}
-                  onChange={(e) => {
-                    try {
-                      const parsed = JSON.parse(e.target.value);
-                      setFormData({ ...formData, operatingHours: parsed });
-                    } catch {
-                      // Invalid JSON, keep current value
-                    }
-                  }}
-                  placeholder='{"open": "09:00", "close": "24:00"}'
-                  rows={3}
-                />
+                <Label>Operating Hours</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <Label className="text-sm">Open</Label>
+                    <Input
+                      type="time"
+                      value={formData.operatingHours?.open || ''}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          operatingHours: { ...(formData.operatingHours || {}), open: e.target.value },
+                        })
+                      }
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-sm">Close</Label>
+                    <Input
+                      type="time"
+                      value={formData.operatingHours?.close || ''}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          operatingHours: { ...(formData.operatingHours || {}), close: e.target.value },
+                        })
+                      }
+                    />
+                  </div>
+                </div>
               </div>
+
+              {/* Social media: common fields */}
               <div className="space-y-2">
-                <Label htmlFor="socialMedia">Social Media (JSON)</Label>
-                <Textarea
-                  id="socialMedia"
-                  value={JSON.stringify(formData.socialMedia, null, 2)}
-                  onChange={(e) => {
-                    try {
-                      const parsed = JSON.parse(e.target.value);
-                      setFormData({ ...formData, socialMedia: parsed });
-                    } catch {
-                      // Invalid JSON, keep current value
+                <Label>Social Media</Label>
+                <div className="space-y-2">
+                  <Input
+                    placeholder="Facebook URL"
+                    value={formData.socialMedia?.facebook || ''}
+                    onChange={(e) =>
+                      setFormData({ ...formData, socialMedia: { ...(formData.socialMedia || {}), facebook: e.target.value } })
                     }
-                  }}
-                  placeholder='{"facebook": "url", "instagram": "url"}'
-                  rows={3}
-                />
+                  />
+                  <Input
+                    placeholder="Instagram URL"
+                    value={formData.socialMedia?.instagram || ''}
+                    onChange={(e) =>
+                      setFormData({ ...formData, socialMedia: { ...(formData.socialMedia || {}), instagram: e.target.value } })
+                    }
+                  />
+                  <Input
+                    placeholder="Twitter / X URL"
+                    value={formData.socialMedia?.twitter || ''}
+                    onChange={(e) =>
+                      setFormData({ ...formData, socialMedia: { ...(formData.socialMedia || {}), twitter: e.target.value } })
+                    }
+                  />
+                </div>
               </div>
             </div>
           </div>

@@ -46,6 +46,8 @@ export default function HallsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [validationErrorOpen, setValidationErrorOpen] = useState(false);
+  const [validationErrorMessage, setValidationErrorMessage] = useState('');
   const [selectedHall, setSelectedHall] = useState<Hall | null>(null);
   const [formData, setFormData] = useState<Partial<CreateHallRequest>>({
     cinemaId: '',
@@ -79,7 +81,8 @@ export default function HallsPage() {
       } else {
         // Ensure cinemaId is set before creating
         if (!formData.cinemaId) {
-          alert('Please select a cinema');
+          setValidationErrorMessage('Please select a cinema');
+          setValidationErrorOpen(true);
           return;
         }
         await createHall.mutateAsync(formData as CreateHallRequest);
@@ -495,6 +498,21 @@ export default function HallsPage() {
             </Button>
             <Button variant="destructive" onClick={handleDelete}>
               Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Validation Error Dialog */}
+      <Dialog open={validationErrorOpen} onOpenChange={setValidationErrorOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Validation Error</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-gray-600">{validationErrorMessage}</p>
+          <DialogFooter>
+            <Button onClick={() => setValidationErrorOpen(false)}>
+              OK
             </Button>
           </DialogFooter>
         </DialogContent>

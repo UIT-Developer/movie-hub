@@ -112,7 +112,7 @@ export interface Movie {
   director?: string;
   cast?: MovieCast[];
   genreIds?: string[];
-  genres?: Genre[]; // Backend returns array of genres
+  genre?: Genre[]; // Backend returns 'genre' (singular), array of Genre objects
   averageRating?: number;
   reviewCount?: number;
   status?: 'COMING_SOON' | 'NOW_SHOWING' | 'ENDED';

@@ -2,8 +2,8 @@
 
 export const dynamic = 'force-dynamic';
 
-import { useState } from 'react';
-import { Eye, Filter, CheckCircle, Clock, Calendar } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { Eye, Filter, CheckCircle, Clock, Calendar, ArrowUpDown } from 'lucide-react';
 import { Button } from '@movie-hub/shacdn-ui/button';
 import {
   Card,
@@ -38,7 +38,6 @@ import {
 import { Label } from '@movie-hub/shacdn-ui/label';
 import { Input } from '@movie-hub/shacdn-ui/input';
 import { Badge } from '@movie-hub/shacdn-ui/badge';
-import { useToast } from '../_libs/use-toast';
 import {
   useBookings,
   useBookingById,
@@ -63,39 +62,54 @@ export default function ReservationsPage() {
   });
   
   // Filters
-  const [filterCinemaId, setFilterCinemaId] = useState<string>('all');
-  const [filterStatus, setFilterStatus] = useState<string>('all');
-  const [filterPaymentStatus, setFilterPaymentStatus] = useState<string>('all');
+  const [filterCinemaId, setFilterCinemaId] = useState<string>('');
+  const [filterStatus, setFilterStatus] = useState<string>('');
+  const [filterPaymentStatus, setFilterPaymentStatus] = useState<string>('');
+  const [filterShowtimeId, setFilterShowtimeId] = useState<string>('');
   const [filterStartDate, setFilterStartDate] = useState<string>('');
   const [filterEndDate, setFilterEndDate] = useState<string>('');
+  const [sortBy, setSortBy] = useState<'created_at' | 'final_amount' | 'expires_at'>('created_at');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
 
-  const { toast } = useToast();
+  // const { toast } = useToast();
 
   // API hooks
   const { data: cinemasData = [] } = useCinemas();
   const cinemas = Array.isArray(cinemasData) ? cinemasData : [];
 
-  const { data: bookingsData = [], isLoading: loading, error } = useBookings({
-    cinemaId: filterCinemaId !== 'all' ? filterCinemaId : undefined,
-    status: filterStatus !== 'all' ? (filterStatus as BookingStatus) : undefined,
-    paymentStatus: filterPaymentStatus !== 'all' ? (filterPaymentStatus as PaymentStatus) : undefined,
+  const { data: bookingsData = [], isLoading: loading } = useBookings({
+    cinemaId: filterCinemaId || undefined,
+    showtimeId: filterShowtimeId || undefined,
+    status: filterStatus ? (filterStatus as BookingStatus) : undefined,
+    paymentStatus: filterPaymentStatus ? (filterPaymentStatus as PaymentStatus) : undefined,
     startDate: filterStartDate || undefined,
     endDate: filterEndDate || undefined,
+    sortBy,
+    sortOrder,
+    page,
+    limit,
   });
-  const bookings = bookingsData || [];
+  const bookings = useMemo(() => bookingsData || [], [bookingsData]);
 
   const { data: bookingDetail, isLoading: detailLoading } = useBookingById(selectedBookingId);
   const updateStatus = useUpdateBookingStatus();
   const confirmBooking = useConfirmBooking();
 
-  // Show error toast if query fails
-  if (error) {
-    toast({
-      title: 'Error',
-      description: 'Failed to fetch reservations',
-      variant: 'destructive',
-    });
-  }
+  // Calculate statistics based on filtered data
+  const stats = useMemo(() => {
+    return {
+      total: bookings.length,
+      confirmed: bookings.filter((b) => b.status === BookingStatusEnum.CONFIRMED).length,
+      pending: bookings.filter((b) => b.status === BookingStatusEnum.PENDING).length,
+      cancelled: bookings.filter((b) => b.status === BookingStatusEnum.CANCELLED).length,
+      completed: bookings.filter((b) => b.status === BookingStatusEnum.COMPLETED).length,
+      totalRevenue: bookings.reduce((sum, b) => sum + (b.totalAmount || 0), 0),
+      avgBookingValue: bookings.length > 0 ? bookings.reduce((sum, b) => sum + (b.totalAmount || 0), 0) / bookings.length : 0,
+      totalSeats: bookings.reduce((sum, b) => sum + (b.seatCount || 0), 0),
+    };
+  }, [bookings]);
 
   const handleViewDetail = (bookingId: string) => {
     setSelectedBookingId(bookingId);
@@ -139,6 +153,18 @@ export default function ReservationsPage() {
     setStatusDialogOpen(true);
   };
 
+  const handleClearFilters = () => {
+    setFilterCinemaId('');
+    setFilterStatus('');
+    setFilterPaymentStatus('');
+    setFilterShowtimeId('');
+    setFilterStartDate('');
+    setFilterEndDate('');
+    setPage(1);
+  };
+
+  const hasActiveFilters = filterCinemaId || filterStatus || filterPaymentStatus || filterShowtimeId || filterStartDate || filterEndDate;
+
   const getStatusBadgeColor = (status: BookingStatus) => {
     switch (status) {
       case BookingStatusEnum.CONFIRMED:
@@ -173,25 +199,21 @@ export default function ReservationsPage() {
     }
   };
 
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat('vi-VN', {
+      style: 'currency',
+      currency: 'VND',
+    }).format(price);
+  };
+
   const formatDate = (date: string | Date) => {
-    return new Date(date).toLocaleString('en-US', {
+    return new Date(date).toLocaleString('vi-VN', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
     });
-  };
-
-  // Calculate statistics
-  const stats = {
-    total: bookings.length,
-    confirmed: bookings.filter((b) => b.status === BookingStatusEnum.CONFIRMED).length,
-    pending: bookings.filter((b) => b.status === BookingStatusEnum.PENDING).length,
-    cancelled: bookings.filter((b) => b.status === BookingStatusEnum.CANCELLED).length,
-    totalRevenue: bookings.reduce((sum, b) => sum + (b.totalAmount || 0), 0),
-    avgBookingValue: bookings.length > 0 ? bookings.reduce((sum, b) => sum + (b.totalAmount || 0), 0) / bookings.length : 0,
-    totalSeats: bookings.reduce((sum, b) => sum + (b.seatCount || 0), 0),
   };
 
   return (
@@ -222,21 +244,21 @@ export default function ReservationsPage() {
             <CardTitle className="text-sm font-medium text-gray-600">Total Revenue</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${stats.totalRevenue.toFixed(2)}</div>
+            <div className="text-2xl font-bold">{formatPrice(stats.totalRevenue)}</div>
             <p className="text-xs text-gray-500 mt-1">
-              Avg: ${stats.avgBookingValue.toFixed(2)} per booking
+              Avg: {formatPrice(stats.avgBookingValue)} per booking
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Booking Status</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-600">Completed</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.confirmed}</div>
+            <div className="text-2xl font-bold text-blue-600">{stats.completed}</div>
             <p className="text-xs text-gray-500 mt-1">
-              {stats.cancelled} cancelled in period
+              Successfully completed
             </p>
           </CardContent>
         </Card>
@@ -266,12 +288,14 @@ export default function ReservationsPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
             <div>
               <Label htmlFor="filter-cinema">Cinema</Label>
-              <Select value={filterCinemaId} onValueChange={setFilterCinemaId}>
+              <Select value={filterCinemaId || ''} onValueChange={(value) => {
+                setFilterCinemaId(value);
+                setPage(1);
+              }}>
                 <SelectTrigger id="filter-cinema">
                   <SelectValue placeholder="All Cinemas" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Cinemas</SelectItem>
                   {cinemas.map((cinema) => (
                     <SelectItem key={cinema.id} value={cinema.id}>
                       {cinema.name}
@@ -282,33 +306,37 @@ export default function ReservationsPage() {
             </div>
             <div>
               <Label htmlFor="filter-status">Booking Status</Label>
-              <Select value={filterStatus} onValueChange={setFilterStatus}>
+              <Select value={filterStatus || ''} onValueChange={(value) => {
+                setFilterStatus(value);
+                setPage(1);
+              }}>
                 <SelectTrigger id="filter-status">
                   <SelectValue placeholder="All Status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="PENDING">Pending</SelectItem>
-                  <SelectItem value="CONFIRMED">Confirmed</SelectItem>
-                  <SelectItem value="CANCELLED">Cancelled</SelectItem>
-                  <SelectItem value="EXPIRED">Expired</SelectItem>
-                  <SelectItem value="COMPLETED">Completed</SelectItem>
+                  <SelectItem value={BookingStatusEnum.PENDING}>Pending</SelectItem>
+                  <SelectItem value={BookingStatusEnum.CONFIRMED}>Confirmed</SelectItem>
+                  <SelectItem value={BookingStatusEnum.CANCELLED}>Cancelled</SelectItem>
+                  <SelectItem value={BookingStatusEnum.EXPIRED}>Expired</SelectItem>
+                  <SelectItem value={BookingStatusEnum.COMPLETED}>Completed</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div>
               <Label htmlFor="filter-payment">Payment Status</Label>
-              <Select value={filterPaymentStatus} onValueChange={setFilterPaymentStatus}>
+              <Select value={filterPaymentStatus || ''} onValueChange={(value) => {
+                setFilterPaymentStatus(value);
+                setPage(1);
+              }}>
                 <SelectTrigger id="filter-payment">
                   <SelectValue placeholder="All Payment" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Payment</SelectItem>
-                  <SelectItem value="PENDING">Pending</SelectItem>
-                  <SelectItem value="PROCESSING">Processing</SelectItem>
-                  <SelectItem value="COMPLETED">Completed</SelectItem>
-                  <SelectItem value="FAILED">Failed</SelectItem>
-                  <SelectItem value="REFUNDED">Refunded</SelectItem>
+                  <SelectItem value={PaymentStatusEnum.PENDING}>Pending</SelectItem>
+                  <SelectItem value={PaymentStatusEnum.PROCESSING}>Processing</SelectItem>
+                  <SelectItem value={PaymentStatusEnum.COMPLETED}>Completed</SelectItem>
+                  <SelectItem value={PaymentStatusEnum.FAILED}>Failed</SelectItem>
+                  <SelectItem value={PaymentStatusEnum.REFUNDED}>Refunded</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -318,7 +346,10 @@ export default function ReservationsPage() {
                 id="filter-start-date"
                 type="date"
                 value={filterStartDate}
-                onChange={(e) => setFilterStartDate(e.target.value)}
+                onChange={(e) => {
+                  setFilterStartDate(e.target.value);
+                  setPage(1);
+                }}
               />
             </div>
             <div>
@@ -327,9 +358,65 @@ export default function ReservationsPage() {
                 id="filter-end-date"
                 type="date"
                 value={filterEndDate}
-                onChange={(e) => setFilterEndDate(e.target.value)}
+                onChange={(e) => {
+                  setFilterEndDate(e.target.value);
+                  setPage(1);
+                }}
               />
             </div>
+            <div>
+              <Label htmlFor="filter-sort">Sort By</Label>
+              <Select value={sortBy} onValueChange={(value: 'created_at' | 'final_amount' | 'expires_at') => setSortBy(value)}>
+                <SelectTrigger id="filter-sort">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="created_at">Created Date</SelectItem>
+                  <SelectItem value="final_amount">Amount</SelectItem>
+                  <SelectItem value="expires_at">Expiration</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="filter-limit">Per Page</Label>
+              <Select value={limit.toString()} onValueChange={(value) => {
+                setLimit(parseInt(value));
+                setPage(1);
+              }}>
+                <SelectTrigger id="filter-limit">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="10">10</SelectItem>
+                  <SelectItem value="25">25</SelectItem>
+                  <SelectItem value="50">50</SelectItem>
+                  <SelectItem value="100">100</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-end">
+              <Button
+                variant={sortOrder === 'desc' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc')}
+                className="w-full gap-2"
+              >
+                <ArrowUpDown className="h-4 w-4" />
+                {sortOrder === 'desc' ? 'Newest' : 'Oldest'}
+              </Button>
+            </div>
+            {hasActiveFilters && (
+              <div className="flex items-end">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleClearFilters}
+                  className="w-full"
+                >
+                  Clear Filters
+                </Button>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -375,38 +462,43 @@ export default function ReservationsPage() {
                       <TableCell className="font-medium">{booking.bookingCode}</TableCell>
                       <TableCell>{booking.movieTitle}</TableCell>
                       <TableCell>{booking.cinemaName}</TableCell>
-                      <TableCell>{formatDate(booking.startTime)}</TableCell>
-                      <TableCell>{booking.seatCount}</TableCell>
-                      <TableCell>${booking.totalAmount.toFixed(2)}</TableCell>
+                      <TableCell className="text-sm">{formatDate(booking.startTime)}</TableCell>
+                      <TableCell className="text-center">{booking.seatCount}</TableCell>
+                      <TableCell className="text-right font-medium">{formatPrice(booking.totalAmount)}</TableCell>
                       <TableCell>
                         <Badge className={getStatusBadgeColor(booking.status)}>
                           {booking.status}
                         </Badge>
                       </TableCell>
-                      <TableCell>{formatDate(booking.createdAt)}</TableCell>
+                      <TableCell className="text-sm text-gray-600">{formatDate(booking.createdAt)}</TableCell>
                       <TableCell>
                         <div className="flex gap-2">
                           <Button
-                            variant="outline"
+                            variant="ghost"
                             size="sm"
                             onClick={() => handleViewDetail(booking.id)}
+                            className="h-8 w-8 p-0"
+                            title="View details"
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
-                          {booking.status === 'PENDING' && (
+                          {booking.status === BookingStatusEnum.PENDING && (
                             <Button
-                              variant="outline"
+                              variant="ghost"
                               size="sm"
                               onClick={() => handleConfirm(booking.id)}
-                              className="text-green-600 hover:text-green-700"
+                              className="h-8 w-8 p-0 text-green-600 hover:text-green-700"
+                              title="Confirm booking"
                             >
                               <CheckCircle className="h-4 w-4" />
                             </Button>
                           )}
                           <Button
-                            variant="outline"
+                            variant="ghost"
                             size="sm"
                             onClick={() => openStatusDialog(booking.id, booking.status)}
+                            className="h-8 w-8 p-0"
+                            title="Change status"
                           >
                             <Clock className="h-4 w-4" />
                           </Button>
@@ -500,11 +592,11 @@ export default function ReservationsPage() {
               <div className="border-t pt-4">
                 <h3 className="font-semibold mb-2">Seats</h3>
                 <div className="grid grid-cols-3 gap-2">
-                  {bookingDetail.seats.map((seat, idx) => (
-                    <div key={idx} className="border p-2 rounded">
-                      <p className="font-medium">{seat.row}{seat.number}</p>
-                      <p className="text-sm text-gray-500">{seat.seatType}</p>
-                      <p className="text-sm">${seat.price.toFixed(2)}</p>
+                  {bookingDetail.seats && bookingDetail.seats.map((seat, idx: number) => (
+                    <div key={idx} className="border p-2 rounded text-sm">
+                      <p className="font-medium">{String(seat.row)}{seat.number}</p>
+                      <p className="text-xs text-gray-500">{seat.seatType}</p>
+                      <p className="text-xs font-semibold">{formatPrice(seat.price)}</p>
                     </div>
                   ))}
                 </div>
@@ -514,10 +606,10 @@ export default function ReservationsPage() {
               {bookingDetail.concessions && bookingDetail.concessions.length > 0 && (
                 <div className="border-t pt-4">
                   <h3 className="font-semibold mb-2">Concessions</h3>
-                  {bookingDetail.concessions.map((item, idx) => (
-                    <div key={idx} className="flex justify-between py-1">
+                  {bookingDetail.concessions.map((item, idx: number) => (
+                    <div key={idx} className="flex justify-between py-1 text-sm">
                       <span>{item.name} x {item.quantity}</span>
-                      <span>${item.totalPrice.toFixed(2)}</span>
+                      <span className="font-medium">{formatPrice(item.totalPrice)}</span>
                     </div>
                   ))}
                 </div>
@@ -526,31 +618,31 @@ export default function ReservationsPage() {
               {/* Pricing */}
               <div className="border-t pt-4">
                 <h3 className="font-semibold mb-2">Pricing</h3>
-                <div className="space-y-1">
+                <div className="space-y-1 text-sm">
                   <div className="flex justify-between">
                     <span>Subtotal</span>
-                    <span>${bookingDetail.subtotal.toFixed(2)}</span>
+                    <span className="font-medium">{formatPrice(bookingDetail.subtotal || 0)}</span>
                   </div>
-                  {bookingDetail.discount > 0 && (
+                  {bookingDetail.discount && bookingDetail.discount > 0 && (
                     <div className="flex justify-between text-green-600">
                       <span>Discount</span>
-                      <span>-${bookingDetail.discount.toFixed(2)}</span>
+                      <span>-{formatPrice(bookingDetail.discount)}</span>
                     </div>
                   )}
-                  {bookingDetail.pointsUsed > 0 && (
+                  {bookingDetail.pointsUsed && bookingDetail.pointsUsed > 0 && (
                     <div className="flex justify-between text-blue-600">
                       <span>Points Discount ({bookingDetail.pointsUsed} pts)</span>
-                      <span>-${bookingDetail.pointsDiscount.toFixed(2)}</span>
+                      <span>-{formatPrice(bookingDetail.pointsDiscount || 0)}</span>
                     </div>
                   )}
                   {bookingDetail.promotionCode && (
-                    <div className="flex justify-between text-purple-600">
-                      <span>Promo Code: {bookingDetail.promotionCode}</span>
+                    <div className="flex justify-between text-purple-600 py-1">
+                      <span>Promo: {bookingDetail.promotionCode}</span>
                     </div>
                   )}
-                  <div className="flex justify-between font-bold text-lg border-t pt-2">
+                  <div className="flex justify-between font-bold text-base border-t pt-2 mt-2">
                     <span>Total Amount</span>
-                    <span>${bookingDetail.finalAmount.toFixed(2)}</span>
+                    <span className="text-green-600">{formatPrice(bookingDetail.finalAmount || bookingDetail.totalAmount || 0)}</span>
                   </div>
                 </div>
               </div>

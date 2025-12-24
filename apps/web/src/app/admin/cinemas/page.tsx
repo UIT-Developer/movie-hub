@@ -53,8 +53,8 @@ export default function CinemasPage() {
     facilities: {},
     images: [],
     virtualTour360Url: '',
-    operatingHours: {},
-    socialMedia: {},
+    operatingHours: { open: '', close: '' } as any,
+    socialMedia: { facebook: '', instagram: '', twitter: '' } as any,
     timezone: 'Asia/Ho_Chi_Minh',
   });
   // toast not used in this page
@@ -395,11 +395,11 @@ export default function CinemasPage() {
                     <div className="flex items-center justify-center gap-1 mb-1">
                       <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
                       <span className="font-bold text-lg text-purple-900">
-                        {cinema.rating?.toFixed(1) || 'N/A'}
+                        {cinema.rating?.toFixed(1) || '-'}
                       </span>
                     </div>
                     <p className="text-xs text-gray-600">
-                      {cinema.totalReviews || 0} reviews
+                      {cinema.totalReviews === 0 ? 'No reviews' : `${cinema.totalReviews} reviews`}
                     </p>
                   </div>
 
@@ -723,7 +723,7 @@ export default function CinemasPage() {
                     <Label className="text-sm">Open</Label>
                     <Input
                       type="time"
-                      value={formData.operatingHours?.open || ''}
+                      value={(formData.operatingHours?.open as string) || ''}
                       onChange={(e) =>
                         setFormData({
                           ...formData,
@@ -736,7 +736,7 @@ export default function CinemasPage() {
                     <Label className="text-sm">Close</Label>
                     <Input
                       type="time"
-                      value={formData.operatingHours?.close || ''}
+                      value={(formData.operatingHours?.close as string) || ''}
                       onChange={(e) =>
                         setFormData({
                           ...formData,
@@ -754,21 +754,21 @@ export default function CinemasPage() {
                 <div className="space-y-2">
                   <Input
                     placeholder="Facebook URL"
-                    value={formData.socialMedia?.facebook || ''}
+                    value={(formData.socialMedia?.facebook as string) || ''}
                     onChange={(e) =>
                       setFormData({ ...formData, socialMedia: { ...(formData.socialMedia || {}), facebook: e.target.value } })
                     }
                   />
                   <Input
                     placeholder="Instagram URL"
-                    value={formData.socialMedia?.instagram || ''}
+                    value={(formData.socialMedia?.instagram as string) || ''}
                     onChange={(e) =>
                       setFormData({ ...formData, socialMedia: { ...(formData.socialMedia || {}), instagram: e.target.value } })
                     }
                   />
                   <Input
                     placeholder="Twitter / X URL"
-                    value={formData.socialMedia?.twitter || ''}
+                    value={(formData.socialMedia?.twitter as string) || ''}
                     onChange={(e) =>
                       setFormData({ ...formData, socialMedia: { ...(formData.socialMedia || {}), twitter: e.target.value } })
                     }

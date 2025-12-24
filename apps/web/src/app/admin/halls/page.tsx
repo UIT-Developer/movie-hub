@@ -38,7 +38,7 @@ import {
   SelectValue,
 } from '@movie-hub/shacdn-ui/select';
 import { useToast } from '../_libs/use-toast';
-import { useHallsGroupedByCinema, useCreateHall, useUpdateHall, useDeleteHall, useCinemas } from '@/libs/api';
+import { useHallsGroupedByCinema, useCreateHall, useUpdateHall, useDeleteHall, useCinemas, hallsApi } from '@/libs/api';
 import type { Hall, HallType, CreateHallRequest } from '@/libs/api/types';
 import { HallTypeEnum, LayoutTypeEnum } from '@movie-hub/shared-types/cinema/enum';
 
@@ -114,17 +114,33 @@ export default function HallsPage() {
     setSelectedHall(null);
   };
 
-  const openEditDialog = (hall: Hall) => {
-    setSelectedHall(hall);
-    setFormData({
-      cinemaId: hall.cinemaId,
-      name: hall.name,
-      type: hall.type,
-      screenType: hall.screenType || '',
-      soundSystem: hall.soundSystem || '',
-      features: hall.features || [],
-      layoutType: hall.layoutType || LayoutTypeEnum.STANDARD,
-    });
+  const openEditDialog = async (hall: Hall) => {
+    // Try to fetch full hall detail so we have features / seatMap etc.
+    try {
+      const detail = await hallsApi.getById(hall.id);
+      setSelectedHall(detail);
+      setFormData({
+        cinemaId: detail.cinemaId,
+        name: detail.name,
+        type: detail.type,
+        screenType: detail.screenType || '',
+        soundSystem: detail.soundSystem || '',
+        features: detail.features || [],
+        layoutType: detail.layoutType || LayoutTypeEnum.STANDARD,
+      });
+    } catch {
+      // Fallback to using supplied hall object when detail fetch fails
+      setSelectedHall(hall);
+      setFormData({
+        cinemaId: hall.cinemaId,
+        name: hall.name,
+        type: hall.type,
+        screenType: hall.screenType || '',
+        soundSystem: hall.soundSystem || '',
+        features: hall.features || [],
+        layoutType: hall.layoutType || LayoutTypeEnum.STANDARD,
+      });
+    }
     setDialogOpen(true);
   };
 
@@ -210,6 +226,7 @@ export default function HallsPage() {
           ) : (
             Object.entries(groupedFilteredHalls).map(([cinemaId, cinemaHalls]) => {
               const cinema = cinemas.find((c) => c.id === cinemaId);
+              const headerCinema = cinemaHalls[0]?.cinema || cinema;
               return (
                 <div key={cinemaId} className="space-y-4">
                   {/* Cinema Header */}
@@ -218,8 +235,8 @@ export default function HallsPage() {
                       <DoorOpen className="h-5 w-5 text-purple-600" />
                     </div>
                     <div>
-                      <h3 className="text-lg font-bold text-gray-900">{cinema?.name || 'Unknown Cinema'}</h3>
-                      <p className="text-sm text-gray-500">{cinema?.city || ''} • {cinemaHalls.length} halls</p>
+                      <h3 className="text-lg font-bold text-gray-900">{headerCinema?.name || 'Unknown Cinema'}</h3>
+                      <p className="text-sm text-gray-500">{headerCinema?.city || ''} • {cinemaHalls.length} halls</p>
                     </div>
                   </div>
 
@@ -418,6 +435,19 @@ export default function HallsPage() {
                 </SelectContent>
               </Select>
             </div>
+
+            {selectedHall && (
+              <div className="grid grid-cols-2 gap-4 p-3 bg-gray-50 rounded border">
+                <div>
+                  <Label className="text-xs text-gray-600">Capacity</Label>
+                  <div className="text-lg font-semibold">{selectedHall.capacity} seats</div>
+                </div>
+                <div>
+                  <Label className="text-xs text-gray-600">Rows</Label>
+                  <div className="text-lg font-semibold">{selectedHall.rows} rows</div>
+                </div>
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label>Features (Optional)</Label>

@@ -16,33 +16,60 @@ export class ClerkAuthGuard implements CanActivate {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
 
+    // ====== 1️⃣ Check if permission is required ======
+    const requiredPermission = this.reflector.get<string>(
+      PERMISSION_KEY,
+      context.getHandler()
+    );
 
-    // ====== 1️⃣ Auth via Clerk ======
-    const token = request.cookies?.__session;
+    // ====== 2️⃣ Auth via Clerk - Check both cookie and Authorization header ======
+    let token = request.cookies?.__session;
+    
+    // Fallback to Authorization header if no cookie
     if (!token) {
-      this.logger.warn('No token found');
+      const authHeader = request.headers?.authorization;
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        token = authHeader.substring(7); // Remove 'Bearer ' prefix
+        this.logger.debug('Token found in Authorization header');
+      }
+    } else {
+      this.logger.debug('Token found in __session cookie');
+    }
+
+    if (!token) {
+      this.logger.warn('No token found in __session cookie or Authorization header');
       return false;
     }
 
     try {
       const session = await clerkClient.verifyToken(token);
       request.userId = session.sub;
+      this.logger.debug(`User authenticated: ${session.sub}`);
     } catch (err) {
-      this.logger.error('Clerk verification failed', err);
+      this.logger.error('Clerk verification failed', {
+        error: err.message,
+        reason: err.reason,
+        tokenPrefix: token.substring(0, 20) + '...',
+      });
+      // Token might be from wrong Clerk instance (test vs production)
       return false;
     }
 
-    // ====== 2️⃣ Permission check ======
-    const requiredPermission = this.reflector.get<string>(
-      PERMISSION_KEY,
-      context.getHandler()
-    );
-    if (!requiredPermission) return true; // không có permission metadata => cho qua
+    // ====== 3️⃣ If no permission required, just return true after auth ======
+    if (!requiredPermission) {
+      this.logger.debug(`No permission required, user ${request.userId} authenticated successfully`);
+      return true;
+    }
 
+    // ====== 4️⃣ Permission check ======
     const userId = request.userId;
-    if (!userId) return false;
+    if (!userId) {
+      this.logger.warn('No userId found after token verification');
+      return false;
+    }
 
     try {
+      this.logger.debug(`Checking permissions for user ${userId}`);
       const permissions: string[] = await lastValueFrom(
         this.userClient.send<string[], { userId: string }>(
           UserMessage.GET_PERMISSIONS,
@@ -50,10 +77,19 @@ export class ClerkAuthGuard implements CanActivate {
         )
       );
 
-      this.logger.debug(`User ${userId} permissions: ${permissions}`);
-      return permissions.includes(requiredPermission);
+      this.logger.debug(`User ${userId} permissions: ${JSON.stringify(permissions)}`);
+      const hasPermission = permissions.includes(requiredPermission);
+      
+      if (!hasPermission) {
+        this.logger.warn(`User ${userId} missing required permission: ${requiredPermission}`);
+      }
+      
+      return hasPermission;
     } catch (error) {
-      this.logger.error('Permission check failed', error);
+      this.logger.error(`Permission check failed for user ${userId}:`, {
+        error: error.message,
+        stack: error.stack,
+      });
       return false;
     }
   }

@@ -185,24 +185,24 @@ export class TicketService {
     endDate?: Date;
     page?: number;
     limit?: number;
-  }): Promise<ServiceResult<TicketDetailDto[]>> {
-    const page = filters.page || 1;
-    const limit = filters.limit || 10;
+  } = {}): Promise<ServiceResult<TicketDetailDto[]>> {
+    const page = filters?.page || 1;
+    const limit = filters?.limit || 10;
     const skip = (page - 1) * limit;
 
     const where: any = {};
 
-    if (filters.bookingId) where.booking_id = filters.bookingId;
-    if (filters.status) where.status = filters.status;
+    if (filters?.bookingId) where.booking_id = filters.bookingId;
+    if (filters?.status) where.status = filters.status;
 
     // For showtime filtering, we need to join through booking
-    if (filters.showtimeId) {
+    if (filters?.showtimeId) {
       where.booking = {
         showtime_id: filters.showtimeId,
       };
     }
 
-    if (filters.startDate || filters.endDate) {
+    if (filters?.startDate || filters?.endDate) {
       where.created_at = {};
       if (filters.startDate) where.created_at.gte = filters.startDate;
       if (filters.endDate) where.created_at.lte = filters.endDate;

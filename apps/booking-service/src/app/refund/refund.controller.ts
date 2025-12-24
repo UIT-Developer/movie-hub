@@ -16,8 +16,8 @@ export class RefundController {
   }
 
   @MessagePattern('refund.findAll')
-  async findAll(@Payload() payload: { filters: FindAllRefundsDto }) {
-    return this.refundService.findAllRefunds(payload.filters);
+  async findAll(@Payload() payload: { filters?: FindAllRefundsDto }) {
+    return this.refundService.findAllRefunds(payload?.filters || {});
   }
 
   @MessagePattern('refund.findOne')

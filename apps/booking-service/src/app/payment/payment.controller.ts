@@ -52,8 +52,8 @@ export class PaymentController {
   // ==================== ADMIN OPERATIONS ====================
 
   @MessagePattern('payment.admin.findAll')
-  async adminFindAll(@Payload() payload: { filters: AdminFindAllPaymentsDto }) {
-    return this.paymentService.adminFindAllPayments(payload.filters);
+  async adminFindAll(@Payload() payload: { filters?: AdminFindAllPaymentsDto }) {
+    return this.paymentService.adminFindAllPayments(payload?.filters || {});
   }
 
   @MessagePattern('payment.findByStatus')
@@ -66,8 +66,8 @@ export class PaymentController {
   }
 
   @MessagePattern('payment.findByDateRange')
-  async findByDateRange(@Payload() payload: { filters: FindPaymentsByDateRangeDto }) {
-    return this.paymentService.findPaymentsByDateRange(payload.filters);
+  async findByDateRange(@Payload() payload: { filters?: FindPaymentsByDateRangeDto }) {
+    return this.paymentService.findPaymentsByDateRange(payload?.filters || {});
   }
 
   @MessagePattern('payment.cancel')
@@ -76,7 +76,7 @@ export class PaymentController {
   }
 
   @MessagePattern('payment.getStatistics')
-  async getStatistics(@Payload() payload: { filters: GetPaymentStatisticsDto }) {
-    return this.paymentService.getPaymentStatistics(payload.filters);
+  async getStatistics(@Payload() payload: { filters?: GetPaymentStatisticsDto }) {
+    return this.paymentService.getPaymentStatistics(payload?.filters || {});
   }
 }

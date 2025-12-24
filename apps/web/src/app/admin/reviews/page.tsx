@@ -23,6 +23,7 @@ import { Label } from '@movie-hub/shacdn-ui/label';
 import { Badge } from '@movie-hub/shacdn-ui/badge';
 import { useToast } from '../_libs/use-toast';
 import { useReviews, useDeleteReview, useMovies } from '@/libs/api';
+import type { Review, PaginatedResponse } from '@/libs/api';
 
 export default function ReviewsPage() {
   const [filterMovieId, setFilterMovieId] = useState<string>('all');
@@ -39,7 +40,7 @@ export default function ReviewsPage() {
   const { data: moviesData = [] } = useMovies();
   const movies = moviesData || [];
 
-  const { data: reviewsResponse = [], isLoading: loading, error } = useReviews({
+  const { data: reviewsResponse = { data: [], page: 1, limit: 10, total: 0, hasMore: false }, isLoading: loading, error } = useReviews({
     movieId: filterMovieId !== 'all' ? filterMovieId : undefined,
     rating: filterRating !== 'all' ? filterRating : undefined,
     userId: filterUserId ? filterUserId : undefined,
@@ -49,9 +50,9 @@ export default function ReviewsPage() {
     limit,
   });
   
-  // Handle both array and paginated response
-  const reviews = Array.isArray(reviewsResponse) ? reviewsResponse : (reviewsResponse?.data || []);
-  const totalPages = (reviewsResponse as any)?.totalPages || 1;
+  // Type-safe response handling
+  const reviews = (reviewsResponse as PaginatedResponse<Review>)?.data || [];
+  const totalPages = Math.ceil(((reviewsResponse as PaginatedResponse<Review>)?.total || 0) / limit) || 1;
 
   const deleteReview = useDeleteReview();
 
@@ -120,12 +121,12 @@ export default function ReviewsPage() {
   // Calculate statistics
   const stats = {
     total: reviews.length,
-    avgRating: reviews.length > 0 ? reviews.reduce((sum, r) => sum + (r.rating || 0), 0) / reviews.length : 0,
-    fiveStar: reviews.filter((r) => r.rating === 5).length,
-    fourStar: reviews.filter((r) => r.rating === 4).length,
-    threeStar: reviews.filter((r) => r.rating === 3).length,
-    twoStar: reviews.filter((r) => r.rating === 2).length,
-    oneStar: reviews.filter((r) => r.rating === 1).length,
+    avgRating: reviews.length > 0 ? reviews.reduce((sum: number, r: Review) => sum + (r.rating || 0), 0) / reviews.length : 0,
+    fiveStar: reviews.filter((r: Review) => r.rating === 5).length,
+    fourStar: reviews.filter((r: Review) => r.rating === 4).length,
+    threeStar: reviews.filter((r: Review) => r.rating === 3).length,
+    twoStar: reviews.filter((r: Review) => r.rating === 2).length,
+    oneStar: reviews.filter((r: Review) => r.rating === 1).length,
   };
 
   return (
@@ -345,7 +346,7 @@ export default function ReviewsPage() {
             </div>
           ) : (
             <div className="space-y-4">
-              {reviews.map((review) => (
+              {reviews.map((review: Review) => (
                 <Card key={review.id} className="border-l-4 border-l-purple-600">
                   <CardHeader>
                     <div className="flex items-start justify-between">

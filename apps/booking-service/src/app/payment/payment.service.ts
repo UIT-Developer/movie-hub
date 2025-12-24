@@ -373,27 +373,27 @@ export class PaymentService {
    * Admin: Find all payments with comprehensive filters
    */
   async adminFindAllPayments(
-    filters: AdminFindAllPaymentsDto
+    filters: AdminFindAllPaymentsDto = {}
   ): Promise<ServiceResult<PaymentDetailDto[]>> {
-    const page = filters.page || 1;
-    const limit = filters.limit || 10;
+    const page = filters?.page || 1;
+    const limit = filters?.limit || 10;
     const skip = (page - 1) * limit;
 
     const where: any = {};
 
-    if (filters.bookingId) where.booking_id = filters.bookingId;
-    if (filters.status) where.status = filters.status;
-    if (filters.paymentMethod) where.payment_method = filters.paymentMethod;
+    if (filters?.bookingId) where.booking_id = filters.bookingId;
+    if (filters?.status) where.status = filters.status;
+    if (filters?.paymentMethod) where.payment_method = filters.paymentMethod;
 
-    if (filters.startDate || filters.endDate) {
+    if (filters?.startDate || filters?.endDate) {
       where.created_at = {};
       if (filters.startDate) where.created_at.gte = filters.startDate;
       if (filters.endDate) where.created_at.lte = filters.endDate;
     }
 
     const orderBy: any = {};
-    const sortBy = filters.sortBy || 'created_at';
-    const sortOrder = filters.sortOrder || 'desc';
+    const sortBy = filters?.sortBy || 'created_at';
+    const sortOrder = filters?.sortOrder || 'desc';
     orderBy[sortBy] = sortOrder;
 
     const [payments, total] = await Promise.all([
@@ -460,24 +460,25 @@ export class PaymentService {
    * Find payments by date range
    */
   async findPaymentsByDateRange(filters: {
-    startDate: Date;
-    endDate: Date;
+    startDate?: Date;
+    endDate?: Date;
     status?: PaymentStatus;
     page?: number;
     limit?: number;
-  }): Promise<ServiceResult<PaymentDetailDto[]>> {
-    const page = filters.page || 1;
-    const limit = filters.limit || 10;
+  } = {}): Promise<ServiceResult<PaymentDetailDto[]>> {
+    const page = filters?.page || 1;
+    const limit = filters?.limit || 10;
     const skip = (page - 1) * limit;
 
-    const where: any = {
-      created_at: {
-        gte: filters.startDate,
-        lte: filters.endDate,
-      },
-    };
+    const where: any = {};
 
-    if (filters.status) where.status = filters.status;
+    if (filters?.startDate || filters?.endDate) {
+      where.created_at = {};
+      if (filters.startDate) where.created_at.gte = filters.startDate;
+      if (filters.endDate) where.created_at.lte = filters.endDate;
+    }
+
+    if (filters?.status) where.status = filters.status;
 
     const [payments, total] = await Promise.all([
       this.prisma.payments.findMany({
@@ -535,16 +536,16 @@ export class PaymentService {
     startDate?: Date;
     endDate?: Date;
     paymentMethod?: string;
-  }): Promise<ServiceResult<any>> {
+  } = {}): Promise<ServiceResult<any>> {
     const where: any = {};
 
-    if (filters.startDate || filters.endDate) {
+    if (filters?.startDate || filters?.endDate) {
       where.created_at = {};
       if (filters.startDate) where.created_at.gte = filters.startDate;
       if (filters.endDate) where.created_at.lte = filters.endDate;
     }
 
-    if (filters.paymentMethod) where.payment_method = filters.paymentMethod;
+    if (filters?.paymentMethod) where.payment_method = filters.paymentMethod;
 
     const [totalPayments, successfulPayments, failedPayments, pendingPayments, payments] = await Promise.all([
       this.prisma.payments.count({ where }),

@@ -147,22 +147,36 @@ async function main() {
   await prisma.promotions.createMany({ data: promotions });
   console.log(`✅ Created ${promotions.length} promotions`);
 
+  // Note: user_id, showtime_id, and seat_id are references to other microservices
+  // These don't have foreign keys as they're in different databases
+  // In a real scenario, these would be fetched from cinema-service via API
+  const sampleUserIds = [
+    'user_507f1f77bcf86cd799439011', // Sample clerk user IDs
+    'user_507f1f77bcf86cd799439012',
+    'user_507f1f77bcf86cd799439013',
+  ];
+
+  // Sample showtime and seat IDs (would normally come from cinema-service)
+  const { randomUUID } = await import('crypto');
+  const sampleShowtimeId = randomUUID();
+  const sampleSeatIds = [randomUUID(), randomUUID(), randomUUID()];
+
   // Create Loyalty Accounts
   const loyaltyAccounts = [
     {
-      user_id: 'customer-user-1',
+      user_id: sampleUserIds[0],
       current_points: 2500,
       tier: LoyaltyTier.GOLD,
       total_spent: 5000000,
     },
     {
-      user_id: 'customer-user-2',
+      user_id: sampleUserIds[1],
       current_points: 500,
       tier: LoyaltyTier.BRONZE,
       total_spent: 800000,
     },
     {
-      user_id: 'customer-user-3',
+      user_id: sampleUserIds[2],
       current_points: 1200,
       tier: LoyaltyTier.SILVER,
       total_spent: 2000000,
@@ -195,14 +209,14 @@ async function main() {
 
   console.log(`✅ Created ${loyaltyAccounts.length} loyalty accounts with transactions`);
 
-  // Create Sample Bookings (note: these reference external IDs from cinema/movie services)
+  // Create Sample Bookings
   const sampleBookingCode = () => `BK${Date.now()}${Math.floor(Math.random() * 1000)}`;
   
   const booking1 = await prisma.bookings.create({
     data: {
       booking_code: sampleBookingCode(),
-      user_id: 'customer-user-1',
-      showtime_id: '00000000-0000-0000-0000-000000000001', // Placeholder
+      user_id: sampleUserIds[0],
+      showtime_id: sampleShowtimeId,
       customer_name: 'Nguyễn Văn A',
       customer_email: 'nguyenvana@example.com',
       customer_phone: '0901234567',
@@ -222,7 +236,7 @@ async function main() {
     data: [
       {
         booking_id: booking1.id,
-        seat_id: '00000000-0000-0000-0000-000000000001',
+        seat_id: sampleSeatIds[0],
         ticket_code: `TK${Date.now()}001`,
         qr_code: 'QR_CODE_DATA_1',
         barcode: 'BARCODE_001',
@@ -232,7 +246,7 @@ async function main() {
       },
       {
         booking_id: booking1.id,
-        seat_id: '00000000-0000-0000-0000-000000000002',
+        seat_id: sampleSeatIds[1],
         ticket_code: `TK${Date.now()}002`,
         qr_code: 'QR_CODE_DATA_2',
         barcode: 'BARCODE_002',

@@ -83,17 +83,17 @@ export class RefundService {
     endDate?: Date;
     page?: number;
     limit?: number;
-  }): Promise<ServiceResult<RefundDetailDto[]>> {
-    const page = filters.page || 1;
-    const limit = filters.limit || 10;
+  } = {}): Promise<ServiceResult<RefundDetailDto[]>> {
+    const page = filters?.page || 1;
+    const limit = filters?.limit || 10;
     const skip = (page - 1) * limit;
 
     const where: Prisma.RefundsWhereInput = {};
 
-    if (filters.paymentId) where.payment_id = filters.paymentId;
-    if (filters.status) where.status = filters.status;
+    if (filters?.paymentId) where.payment_id = filters.paymentId;
+    if (filters?.status) where.status = filters.status;
 
-    if (filters.startDate || filters.endDate) {
+    if (filters?.startDate || filters?.endDate) {
       where.created_at = {};
       if (filters.startDate) where.created_at.gte = filters.startDate;
       if (filters.endDate) where.created_at.lte = filters.endDate;

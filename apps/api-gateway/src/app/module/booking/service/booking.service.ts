@@ -98,7 +98,7 @@ export class BookingService {
     filters: AdminFindAllBookingsDto
   ): Promise<ServiceResult<BookingSummaryDto[]>> {
     return lastValueFrom(
-      this.bookingClient.send(BookingMessage.ADMIN_FIND_ALL, filters)
+      this.bookingClient.send(BookingMessage.ADMIN_FIND_ALL, { filters })
     );
   }
 
@@ -118,7 +118,7 @@ export class BookingService {
     filters: FindBookingsByDateRangeDto
   ): Promise<ServiceResult<BookingSummaryDto[]>> {
     return lastValueFrom(
-      this.bookingClient.send(BookingMessage.FIND_BY_DATE_RANGE, filters)
+      this.bookingClient.send(BookingMessage.FIND_BY_DATE_RANGE, { filters })
     );
   }
 
@@ -158,7 +158,7 @@ export class BookingService {
     filters: GetBookingStatisticsDto
   ): Promise<ServiceResult<unknown>> {
     return lastValueFrom(
-      this.bookingClient.send(BookingMessage.GET_STATISTICS, filters)
+      this.bookingClient.send(BookingMessage.GET_STATISTICS, { filters })
     );
   }
 
@@ -166,7 +166,7 @@ export class BookingService {
     filters: GetRevenueReportDto
   ): Promise<ServiceResult<unknown>> {
     return lastValueFrom(
-      this.bookingClient.send(BookingMessage.GET_REVENUE_REPORT, filters)
+      this.bookingClient.send(BookingMessage.GET_REVENUE_REPORT, { filters })
     );
   }
 

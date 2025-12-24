@@ -12,11 +12,6 @@ import { BookingEventService } from './booking-event.service';
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
         url: config.get('REDIS_URL'),
-        config: {
-          host: config.get('REDIS_HOST'),
-          port: +config.get('REDIS_PORT'),
-          db: 0,
-        },
       }),
     }),
   ],

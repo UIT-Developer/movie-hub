@@ -129,8 +129,18 @@ export const hallsApi = {
 
     await Promise.all(
       cinemas.map(async (cinema) => {
-        const halls = await hallsApi.getByCinema(cinema.id);
-        result[cinema.id] = { cinema, halls };
+        try {
+          const halls = await hallsApi.getByCinema(cinema.id);
+          // Ensure each hall has cinemaId set (in case BE doesn't return it)
+          const hallsWithCinemaId = (halls || []).map(hall => ({
+            ...hall,
+            cinemaId: hall.cinemaId || cinema.id,
+          }));
+          result[cinema.id] = { cinema, halls: hallsWithCinemaId };
+        } catch (error) {
+          // Skip if error fetching halls for this cinema
+          result[cinema.id] = { cinema, halls: [] };
+        }
       })
     );
 
@@ -233,8 +243,14 @@ export const showtimesApi = {
 // ============================================================================
 
 export const movieReleasesApi = {
-  getAll: (params?: MovieReleasesListParams) =>
-    api.get<MovieRelease[]>('/api/v1/movie-releases', { params }),
+  getAll: (params?: MovieReleasesListParams): Promise<MovieRelease[]> => {
+    // When movieId is provided, fetch releases for that specific movie
+    if (params?.movieId) {
+      return api.get<MovieRelease[]>(`/api/v1/movies/${params.movieId}/releases`);
+    }
+    // Otherwise return empty (caller should use enabled flag in hook)
+    return Promise.resolve([]);
+  },
 
   getById: (id: string) =>
     api.get<MovieRelease>(`/api/v1/movie-releases/${id}`),

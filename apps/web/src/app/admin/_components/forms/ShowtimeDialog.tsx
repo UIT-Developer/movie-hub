@@ -47,8 +47,8 @@ export default function ShowtimeDialog({
   preSelectedReleaseId,
   onSuccess,
 }: ShowtimeDialogProps) {
-  const createShowtime = useCreateShowtime();  const { data: movieReleasesData = [] } = useMovieReleases();
-  const movieReleases = movieReleasesData || [];  const updateShowtime = useUpdateShowtime();
+  const createShowtime = useCreateShowtime();
+  const updateShowtime = useUpdateShowtime();
   const [formData, setFormData] = useState<CreateShowtimeRequest>({
     movieId: '',
     movieReleaseId: '',
@@ -59,6 +59,11 @@ export default function ShowtimeDialog({
     language: 'vi',
     subtitles: [],
   });
+  // Only fetch releases for the selected movie (or pre-selected movie)
+  const { data: movieReleasesData = [] } = useMovieReleases(
+    (formData?.movieId || preSelectedMovieId) ? { movieId: formData?.movieId || preSelectedMovieId } : undefined
+  );
+  const movieReleases = movieReleasesData || [];
   const { toast } = useToast();
 
   useEffect(() => {
@@ -245,26 +250,37 @@ export default function ShowtimeDialog({
           {/* Hall */}
           <div className="space-y-2">
             <Label htmlFor="hall">Hall *</Label>
-            <Select
-              value={formData.hallId}
-              onValueChange={(value) =>
-                setFormData({ ...formData, hallId: value })
-              }
-              disabled={!formData.cinemaId}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select hall" />
-              </SelectTrigger>
-              <SelectContent>
-                {halls
-                  .filter(hall => hall.cinemaId === formData.cinemaId)
-                  .map((hall) => (
-                    <SelectItem key={hall.id} value={hall.id}>
-                      {hall.name} ({hall.type}) - {hall.capacity} seats
-                    </SelectItem>
-                  ))}
-              </SelectContent>
-            </Select>
+            {!formData.cinemaId ? (
+              <div className="px-3 py-2 border rounded-md bg-gray-50 text-gray-500 text-sm">
+                Select a cinema first
+              </div>
+            ) : (
+              <Select
+                value={formData.hallId}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, hallId: value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select hall" />
+                </SelectTrigger>
+                <SelectContent>
+                  {halls && halls.length > 0 ? (
+                    halls
+                      .filter(hall => hall.cinemaId === formData.cinemaId)
+                      .map((hall) => (
+                        <SelectItem key={hall.id} value={hall.id}>
+                          {hall.name} ({hall.type}) - {hall.capacity} seats
+                        </SelectItem>
+                      ))
+                  ) : (
+                    <div className="p-2 text-sm text-gray-500">
+                      No halls available
+                    </div>
+                  )}
+                </SelectContent>
+              </Select>
+            )}
           </div>
 
           {/* Start Time */}

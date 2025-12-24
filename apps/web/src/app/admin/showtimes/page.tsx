@@ -32,15 +32,15 @@ import ShowtimeDialog from '../_components/forms/ShowtimeDialog';
 export default function ShowtimesPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingShowtime, setEditingShowtime] = useState<Showtime | null>(null);
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined); // No default date filter
   const [selectedCinemaId, setSelectedCinemaId] = useState('all');
   const [selectedMovieId, setSelectedMovieId] = useState('all');
 
-  // API hooks with flexible filtering
+  // API hooks: only pass date if user explicitly selected one
   const { data: showtimesData = [], isLoading: loading, refetch: refetchShowtimes } = useShowtimes({
     cinemaId: selectedCinemaId !== 'all' ? selectedCinemaId : undefined,
     movieId: selectedMovieId !== 'all' ? selectedMovieId : undefined,
-    date: selectedDate.toISOString().split('T')[0],
+    date: selectedDate ? selectedDate.toISOString().split('T')[0] : undefined,
   });
   const showtimes = showtimesData || [];
   const { data: moviesData = [] } = useMovies();
@@ -123,7 +123,7 @@ export default function ShowtimesPage() {
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button variant="outline" className="w-full justify-between">
-                      {format(selectedDate, 'PPP')}
+                      {selectedDate ? format(selectedDate, 'PPP') : 'All Dates'}
                       <CalendarIcon className="h-4 w-4 opacity-50" />
                     </Button>
                   </PopoverTrigger>
@@ -131,8 +131,20 @@ export default function ShowtimesPage() {
                     <Calendar
                       mode="single"
                       selected={selectedDate}
-                      onSelect={(date) => date && setSelectedDate(date)}
+                      onSelect={(date) => setSelectedDate(date)}
                     />
+                    {selectedDate && (
+                      <div className="border-t p-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setSelectedDate(undefined)}
+                          className="w-full"
+                        >
+                          Clear Date Filter
+                        </Button>
+                      </div>
+                    )}
                   </PopoverContent>
                 </Popover>
               </div>
@@ -178,16 +190,17 @@ export default function ShowtimesPage() {
               <div className="text-sm text-gray-500">
                 {showtimes.length} showtimes scheduled
               </div>
-              {(selectedCinemaId !== 'all' || selectedMovieId !== 'all') && (
+              {(selectedCinemaId !== 'all' || selectedMovieId !== 'all' || selectedDate) && (
                 <Button 
                   variant="outline" 
                   size="sm"
                   onClick={() => {
                     setSelectedCinemaId('all');
                     setSelectedMovieId('all');
+                    setSelectedDate(undefined);
                   }}
                 >
-                  Clear Filters
+                  Clear All Filters
                 </Button>
               )}
             </div>

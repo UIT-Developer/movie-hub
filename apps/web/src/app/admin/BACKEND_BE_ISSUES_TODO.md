@@ -153,6 +153,75 @@
 
 ---
 
+## 🎬 4. SHOWTIME SCREEN
+
+### ❌ Issue: GET /api/v1/showtimes Endpoint Not Implemented
+
+**Vấn đề Admin:** Màn hình Showtimes không hiển thị dữ liệu showtimes. Khi mở màn hình hoặc filter showtimes, không có dữ liệu được tải.
+
+**Root Cause BE:** 
+- Endpoint `GET /api/v1/showtimes` chỉ là test endpoint, trả về string `'Oke'` thay vì dữ liệu thực
+- File: `apps/api-gateway/src/app/module/cinema/controller/showtime.controller.ts`, dòng 31-33
+- Không hỗ trợ query parameters cho filtering (cinemaId, movieId, date, etc.)
+
+**Backend BE cần xử lý:**
+
+Thay thế method test hiện tại với implementation thực:
+
+```typescript
+// File: apps/api-gateway/src/app/module/cinema/controller/showtime.controller.ts
+
+@Get()
+@UseGuards(ClerkAuthGuard)
+getShowtimes(
+  @Query('cinemaId') cinemaId?: string,
+  @Query('movieId') movieId?: string,
+  @Query('date') date?: string,
+  @Query('hallId') hallId?: string,
+  @CurrentUserId() userId: string
+) {
+  return this.showtimeService.getShowtimes({
+    cinemaId,
+    movieId,
+    date,
+    hallId,
+  });
+}
+```
+
+**Parameters cần hỗ trợ:**
+- `cinemaId` (optional): Lọc showtimes theo rạp (cinema)
+- `movieId` (optional): Lọc showtimes theo phim
+- `date` (optional): Lọc showtimes theo ngày (format: YYYY-MM-DD)
+- `hallId` (optional): Lọc showtimes theo phòng
+
+**Return format:**
+```typescript
+Showtime[] | Array<{
+  id: string;
+  movieId: string;
+  movieReleaseId: string;
+  cinemaId: string;
+  hallId: string;
+  startTime: string; // ISO 8601 datetime
+  endTime?: string;
+  format: '2D' | '3D' | 'IMAX' | '4DX';
+  language: string;
+  subtitles?: string[];
+  status?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}>
+```
+
+**Cách verify sau khi fix:**
+1. Mở Admin Showtimes screen
+2. Verify rằng danh sách showtimes được tải hiển thị
+3. Test filters: chọn cinema, movie, date → showtimes cập nhật đúng
+4. API call: `GET /api/v1/showtimes?cinemaId=xxx&movieId=yyy&date=2025-12-25` trả về đúng dữ liệu
+
+---
+
 ## 📝 Template for Future Screens
 
 Khi test màn hình mới, nếu có issue BE cần fix, thêm section như sau:

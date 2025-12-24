@@ -431,6 +431,7 @@ export const useMovieReleases = (params?: { cinemaId?: string; movieId?: string 
   return useQuery({
     queryKey: queryKeys.movieReleases.list(params),
     queryFn: () => movieReleasesApi.getAll(params),
+    enabled: !!params?.movieId, // Only fetch when movieId is provided
   });
 };
 

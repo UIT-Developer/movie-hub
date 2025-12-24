@@ -27,6 +27,11 @@ import { useReviews, useDeleteReview, useMovies } from '@/libs/api';
 export default function ReviewsPage() {
   const [filterMovieId, setFilterMovieId] = useState<string>('all');
   const [filterRating, setFilterRating] = useState<string>('all');
+  const [filterUserId, setFilterUserId] = useState<string>('');
+  const [sortBy, setSortBy] = useState<'rating' | 'createdAt'>('createdAt');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
   
   const { toast } = useToast();
 
@@ -34,11 +39,19 @@ export default function ReviewsPage() {
   const { data: moviesData = [] } = useMovies();
   const movies = moviesData || [];
 
-  const { data: reviewsData = [], isLoading: loading, error } = useReviews({
+  const { data: reviewsResponse = [], isLoading: loading, error } = useReviews({
     movieId: filterMovieId !== 'all' ? filterMovieId : undefined,
-    rating: filterRating !== 'all' ? parseInt(filterRating) : undefined,
+    rating: filterRating !== 'all' ? filterRating : undefined,
+    userId: filterUserId ? filterUserId : undefined,
+    sortBy,
+    sortOrder,
+    page,
+    limit,
   });
-  const reviews = reviewsData || [];
+  
+  // Handle both array and paginated response
+  const reviews = Array.isArray(reviewsResponse) ? reviewsResponse : (reviewsResponse?.data || []);
+  const totalPages = (reviewsResponse as any)?.totalPages || 1;
 
   const deleteReview = useDeleteReview();
 
@@ -62,6 +75,15 @@ export default function ReviewsPage() {
       // Error toast already shown by mutation hook
     }
   };
+
+  const handleClearFilters = () => {
+    setFilterMovieId('all');
+    setFilterRating('all');
+    setFilterUserId('');
+    setPage(1);
+  };
+
+  const hasActiveFilters = filterMovieId !== 'all' || filterRating !== 'all' || filterUserId !== '';
 
   const formatDate = (date: string | Date) => {
     return new Date(date).toLocaleString('en-US', {
@@ -181,13 +203,29 @@ export default function ReviewsPage() {
       {/* Filters */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center">
-            <Filter className="mr-2 h-5 w-5" />
-            Filters
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center">
+              <Filter className="mr-2 h-5 w-5" />
+              Filters
+              {hasActiveFilters && (
+                <Badge variant="secondary" className="ml-2">
+                  {[filterMovieId !== 'all', filterRating !== 'all', filterUserId].filter(Boolean).length} Active
+                </Badge>
+              )}
+            </CardTitle>
+            {hasActiveFilters && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleClearFilters}
+              >
+                Clear All
+              </Button>
+            )}
+          </div>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
               <Label htmlFor="filter-movie">Movie</Label>
               <Select value={filterMovieId} onValueChange={setFilterMovieId}>
@@ -220,6 +258,67 @@ export default function ReviewsPage() {
                 </SelectContent>
               </Select>
             </div>
+            <div>
+              <Label htmlFor="filter-user">User ID (Optional)</Label>
+              <input
+                id="filter-user"
+                type="text"
+                placeholder="Search by user ID..."
+                value={filterUserId}
+                onChange={(e) => {
+                  setFilterUserId(e.target.value);
+                  setPage(1);
+                }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-purple-500 text-sm"
+              />
+            </div>
+            <div>
+              <Label htmlFor="sort-by">Sort By</Label>
+              <div className="flex gap-2">
+                <Select value={sortBy} onValueChange={(value) => setSortBy(value as 'rating' | 'createdAt')}>
+                  <SelectTrigger id="sort-by" className="flex-1">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="createdAt">Date</SelectItem>
+                    <SelectItem value="rating">Rating</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                  className="px-2"
+                  title={`Sort ${sortOrder === 'asc' ? 'Descending' : 'Ascending'}`}
+                >
+                  {sortOrder === 'asc' ? '↑' : '↓'}
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {/* Pagination & Per Page Control */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2 border-t">
+            <div className="flex items-center gap-2">
+              <Label htmlFor="limit">Per Page:</Label>
+              <Select value={limit.toString()} onValueChange={(value) => {
+                setLimit(Number(value));
+                setPage(1);
+              }}>
+                <SelectTrigger id="limit" className="w-20">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="10">10</SelectItem>
+                  <SelectItem value="25">25</SelectItem>
+                  <SelectItem value="50">50</SelectItem>
+                  <SelectItem value="100">100</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="text-sm text-gray-500">
+              Page {page} of {totalPages}
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -230,6 +329,7 @@ export default function ReviewsPage() {
           <CardTitle>Reviews</CardTitle>
           <CardDescription>
             {reviews.length} review{reviews.length !== 1 ? 's' : ''} found
+            {totalPages > 1 && ` • Page ${page} of ${totalPages}`}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -284,6 +384,31 @@ export default function ReviewsPage() {
                   </CardContent>
                 </Card>
               ))}
+              
+              {/* Pagination Controls */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between pt-4 border-t">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage(page - 1)}
+                    disabled={page === 1}
+                  >
+                    Previous
+                  </Button>
+                  <div className="text-sm text-gray-600">
+                    Page {page} of {totalPages}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage(page + 1)}
+                    disabled={page === totalPages}
+                  >
+                    Next
+                  </Button>
+                </div>
+              )}
             </div>
           )}
         </CardContent>

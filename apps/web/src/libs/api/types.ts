@@ -2,18 +2,19 @@
 // SHARED TYPES - Based on Backend API Responses
 // ============================================================================
 // Import enums from shared-types monorepo library
+// Import directly from enum files to avoid NestJS dependencies
 import {
   Gender,
   StaffStatus,
   WorkType,
   StaffPosition,
   ShiftType,
-} from '@movie-hub/shared-types/user';
+} from '@movie-hub/shared-types/user/enum';
 
 import {
   AgeRatingEnum,
   LanguageOptionEnum,
-} from '@movie-hub/shared-types/movie';
+} from '@movie-hub/shared-types/movie/enum';
 
 import {
   HallTypeEnum,
@@ -24,7 +25,7 @@ import {
   FormatEnum,
   ShowtimeStatusEnum,
   CinemaStatusEnum,
-} from '@movie-hub/shared-types/cinema';
+} from '@movie-hub/shared-types/cinema/enum';
 
 import {
   BookingStatus,
@@ -36,7 +37,7 @@ import {
   PromotionType,
   LoyaltyTransactionType,
   LoyaltyTier,
-} from '@movie-hub/shared-types/booking';
+} from '@movie-hub/shared-types/booking/enum';
 
 // Re-export with aliases for consistency
 export {

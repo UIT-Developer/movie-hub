@@ -38,32 +38,32 @@ const apiClient = axios.create({
   withCredentials: true,
 });
 
+// Store the token getter function
+let tokenGetter: (() => Promise<string | null>) | null = null;
+
+// Function to set the token getter (call this from PageWrapper component)
+export const setAuthTokenGetter = (getter: () => Promise<string | null>) => {
+  tokenGetter = getter;
+  console.log('[API] Token getter configured');
+};
+
 // Request interceptor for auth (both Bearer token and cookies)
 // For ClerkAuthGuard: Backend reads cookie `__session` from request.cookies
 // Token via header is optional; guard primarily validates via cookie.
 apiClient.interceptors.request.use(
   async (config) => {
-    try {
-      if (typeof window === 'undefined') return config;
-      
-      // Try to attach Clerk Bearer token (alternative auth method)
-      const clerkModule = await import('@clerk/nextjs');
-      const clerkTyped = clerkModule as unknown as {
-        getToken?: () => Promise<string | undefined>;
-        default?: { getToken?: () => Promise<string | undefined> };
-      };
-      const getTokenFn = clerkTyped.getToken ?? clerkTyped.default?.getToken;
-      if (typeof getTokenFn === 'function') {
-        const token = await getTokenFn();
+    // Try to get token from the configured getter
+    if (tokenGetter) {
+      try {
+        const token = await tokenGetter();
         if (token) {
           config.headers = config.headers || {};
           (config.headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
           console.log('[API] Attached Bearer token to request:', config.url);
         }
+      } catch (err) {
+        console.warn('[API] Failed to get auth token:', err instanceof Error ? err.message : String(err));
       }
-    } catch (err) {
-      // Ignore token attach failures — requests will use cookie-based auth via withCredentials
-      console.warn('[API] Failed to attach Bearer token:', err instanceof Error ? err.message : String(err));
     }
     
     // Log request details for debugging
@@ -99,11 +99,11 @@ apiClient.interceptors.response.use(
       let safeResponseData: unknown = undefined;
       try {
         safeResponseData = JSON.parse(JSON.stringify(error.response?.data));
-      } catch (_e) {
+      } catch {
         // If JSON stringify fails (circular structures), coerce to string
         try {
           safeResponseData = String(error.response?.data);
-        } catch (__) {
+        } catch {
           safeResponseData = '<unserializable response data>';
         }
       }

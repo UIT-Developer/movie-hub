@@ -23,13 +23,13 @@ import {
   Wrench,
   Eye,
   DollarSign,
-  User,
 } from 'lucide-react';
 import { Button } from '@movie-hub/shacdn-ui/button';
 import { ScrollArea } from '@movie-hub/shacdn-ui/scroll-area';
 import { cn } from '@movie-hub/shacdn-utils';
-import { useClerk, useUser, SignedIn, SignedOut } from '@clerk/nextjs';
+import { useClerk, useUser } from '@clerk/nextjs';
 import { RequireAdminClerkAuth } from '@/components/require-admin-clerk-auth';
+import PageWrapper from '@/components/providers/page-wrapper';
 
 const menuItems = [
   { icon: LayoutDashboard, label: 'Dashboard', href: '/admin', disabled: false },
@@ -70,7 +70,9 @@ export default function AdminLayout({
 
   return (
     <RequireAdminClerkAuth>
-      <AdminLayoutContent>{children}</AdminLayoutContent>
+      <PageWrapper>
+        <AdminLayoutContent>{children}</AdminLayoutContent>
+      </PageWrapper>
     </RequireAdminClerkAuth>
   );
 }

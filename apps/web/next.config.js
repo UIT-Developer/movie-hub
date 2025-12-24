@@ -24,6 +24,19 @@ const nextConfig = {
   
     ],
   },
+
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      // Provide empty modules for server-side only dependencies in client bundle
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        'class-transformer/storage': false,
+        'class-transformer': false,
+        'class-validator': false,
+      };
+    }
+    return config;
+  },
 };
 
 const plugins = [

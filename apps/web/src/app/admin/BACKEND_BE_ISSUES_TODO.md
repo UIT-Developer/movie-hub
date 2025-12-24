@@ -2,7 +2,7 @@
 
 **Tài liệu này ghi lại tất cả những vấn đề cần Backend BE xử lý để hỗ trợ Admin FE chính xác.**
 **Chỉ ghi các vấn đề từ phía BE - vấn đề FE Admin được sửa trực tiếp không cần note.**
-**Cập nhật lần cuối: 24/12/2025**
+**Cập nhật lần cuối: 25/12/2025**
 
 ---
 
@@ -12,6 +12,7 @@
 |--------|--------|----------|------------|
 | Cinema | ❌ Pending | High | 1 |
 | Hall | ❌ Pending | High | 2 |
+| Movie Releases | ❌ Pending | High | 1 |
 
 ---
 
@@ -120,6 +121,38 @@
 
 ---
 
+## 🎞️ 3. MOVIE RELEASES — Backend Action Items (FE -> BE)
+### ❌ Issue 1: Missing GET endpoints for Movie Releases
+**Vấn đề Admin:** FE gọi `GET /api/v1/movie-releases` và `GET /api/v1/movie-releases/:id` nhưng BE chưa expose các endpoint này.
+
+**Root Cause BE:** Thiếu GET handlers ở API Gateway và thiếu message keys / handlers trong movie-service (microservice).
+
+**Backend BE cần xử lý:**
+- Add `GET /api/v1/movie-releases` (support query `movieId`, `cinemaId`) and `GET /api/v1/movie-releases/:id` in API Gateway.
+- Add message keys `MovieServiceMessage.MOVIE_RELEASE.GET_ALL` and `...GET_BY_ID` and implement handlers in movie-service and gateway service.
+
+**Cách verify sau khi fix:**
+- `GET /api/v1/movie-releases` returns `{ data: MovieRelease[] }` (each item includes `movieId`).
+- `GET /api/v1/movie-releases/:id` returns `{ data: MovieRelease }` or 404 if not found.
+
+---
+
+## 🎯 Action Items for Backend Team
+
+### ❌ PENDING - High Priority
+- [ ] **Cinema Screen:** Fix missing fields in detail response (website, latitude, longitude, description, amenities, facilities, operatingHours, socialMedia, virtualTour360Url, images)
+- [ ] **Hall Screen:** Include cinema object in hall detail response
+- [ ] **Hall Screen:** Fix delete payload - send raw hallId string not { hallId } object
+
+- [x] **Movie Releases Screen:** Add GET endpoints for list all and get by ID
+- [x] **Movie Releases Screen:** Implement service methods with proper filtering
+- [x] **Movie Releases Screen:** Add message pattern handlers
+
+### Medium Priority
+- [ ] Review all other detail response DTOs to ensure completeness
+
+---
+
 ## 📝 Template for Future Screens
 
 Khi test màn hình mới, nếu có issue BE cần fix, thêm section như sau:
@@ -136,16 +169,4 @@ Khi test màn hình mới, nếu có issue BE cần fix, thêm section như sau:
 **Cách verify sau khi fix:**
 [Cách kiểm tra xác nhận đã fix]
 ```
-
----
-
-## 🎯 Action Items for Backend Team
-
-### ❌ PENDING - High Priority
-- [ ] **Cinema Screen:** Fix missing fields in detail response (website, latitude, longitude, description, amenities, facilities, operatingHours, socialMedia, virtualTour360Url, images)
-- [ ] **Hall Screen:** Include cinema object in hall detail response
-- [ ] **Hall Screen:** Fix delete payload - send raw hallId string not { hallId } object
-
-### Medium Priority
-- [ ] Review all other detail response DTOs to ensure completeness
 

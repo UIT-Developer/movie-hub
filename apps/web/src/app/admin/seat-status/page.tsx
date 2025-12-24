@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-dynamic';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Building2, DoorOpen, Wrench, CheckCircle2, XCircle } from 'lucide-react';
 import {
   Card,
@@ -20,8 +20,8 @@ import {
 } from '@movie-hub/shacdn-ui/select';
 import { Badge } from '@movie-hub/shacdn-ui/badge';
 import { useToast } from '../_libs/use-toast';
-import { useCinemas, useHallsGroupedByCinema, useUpdateSeatStatus } from '@/libs/api';
-import type { Hall, SeatStatus, SeatType } from '@/libs/api/types';
+import { useCinemas, useHallsByCinema, useUpdateSeatStatus, hallsApi } from '@/libs/api';
+import type { SeatStatus, SeatType } from '@/libs/api/types';
 import { SeatStatusEnum, SeatTypeEnum } from '@movie-hub/shared-types/cinema/enum';
 
 // Frontend-specific types for seat status management
@@ -54,72 +54,58 @@ export default function SeatStatusPage() {
   // API hooks
   const { data: cinemasData = [] } = useCinemas();
   const cinemas = cinemasData || [];
-  const { data: hallsByCinema = {} } = useHallsGroupedByCinema();
-  const halls: Hall[] = Object.values(hallsByCinema).flatMap((g) => g.halls || []);
+  const { data: halls = [] } = useHallsByCinema(selectedCinemaId);
   const updateSeatMutation = useUpdateSeatStatus();
+
+  useEffect(() => {
+    // Reset selected hall and details when cinema changes
+    setSelectedHallId('');
+    setHallDetail(null);
+  }, [selectedCinemaId]);
 
   const handleHallChange = async (hallId: string) => {
     try {
       setSelectedHallId(hallId);
       setLoading(true);
-      const hall = halls.find(h => h.id === hallId);
-      if (hall) {
-        // Fetch actual seats from hall seatMap (BE returns seats in seatMap structure)
-        const hallSeats: SeatDetail[] = [];
-        
-        if (hall.seatMap && hall.seatMap.length > 0) {
-          // Hall has seatMap from BE - use actual data
-          hall.seatMap.forEach((row, rowIndex) => {
-            row.seats.forEach((seat) => {
-              hallSeats.push({
-                id: seat.id,
-                row: rowIndex + 1,
-                seatNumber: seat.seatNumber,
-                type: seat.type,
-                status: seat.status,
-              });
+      
+      // Fetch full hall detail to get real seatMap with actual seat UUIDs
+      // useHallsByCinema returns summaries without seatMap
+      const hallDetail = await hallsApi.getById(hallId);
+      
+      const hallSeats: SeatDetail[] = [];
+      
+      if (hallDetail.seatMap && hallDetail.seatMap.length > 0) {
+        // Use actual seatMap from BE with real seat IDs
+        hallDetail.seatMap.forEach((row, rowIndex) => {
+          row.seats.forEach((seat) => {
+            hallSeats.push({
+              id: seat.id,
+              row: rowIndex + 1,
+              seatNumber: seat.seatNumber,
+              type: seat.type,
+              status: seat.status,
             });
           });
-        } else {
-          // Fallback: generate mock seats based on hall capacity if seatMap is empty
-          // This handles cases where hall doesn't have seatMap yet
-          let seatId = 1;
-          for (let row = 1; row <= hall.rows; row++) {
-            const seatsPerRow = Math.ceil(hall.capacity / hall.rows);
-            for (let seatNum = 1; seatNum <= seatsPerRow; seatNum++) {
-              let seatType: SeatType = SeatTypeEnum.STANDARD;
-              if (row <= 2) {
-                seatType = SeatTypeEnum.VIP;
-              } else if (row === 3) {
-                seatType = SeatTypeEnum.PREMIUM;
-              } else if (row === 4 && seatNum >= 4 && seatNum <= 7) {
-                seatType = SeatTypeEnum.COUPLE;
-              } else if (row === hall.rows && (seatNum === 1 || seatNum === seatsPerRow)) {
-                seatType = SeatTypeEnum.WHEELCHAIR;
-              }
-              
-              hallSeats.push({
-                id: `seat_${seatId}`,
-                row,
-                seatNumber: seatNum,
-                type: seatType,
-                status: SeatStatusEnum.ACTIVE,
-              });
-              seatId++;
-            }
-          }
-        }
-
-        setHallDetail({
-          id: hall.id,
-          name: hall.name,
-          type: hall.type,
-          capacity: hall.capacity,
-          rows: hall.rows,
-          status: hall.status || 'ACTIVE',
-          seats: hallSeats,
         });
+      } else {
+        // Fallback: if BE doesn't return seatMap, show error (BE issue)
+        toast({
+          title: 'Warning',
+          description: 'Hall seatMap not available from backend. Please check with admin.',
+          variant: 'destructive',
+        });
+        return;
       }
+
+      setHallDetail({
+        id: hallDetail.id,
+        name: hallDetail.name,
+        type: hallDetail.type,
+        capacity: hallDetail.capacity,
+        rows: hallDetail.rows,
+        status: hallDetail.status || 'ACTIVE',
+        seats: hallSeats,
+      });
     } catch {
       toast({
         title: 'Error',
@@ -269,16 +255,14 @@ export default function SeatStatusPage() {
                   <SelectValue placeholder="Select hall" />
                 </SelectTrigger>
                 <SelectContent>
-                  {halls
-                    .filter(h => h.cinemaId === selectedCinemaId)
-                    .map((hall) => (
-                      <SelectItem key={hall.id} value={hall.id}>
-                        <div className="flex items-center gap-2">
-                          <DoorOpen className="h-4 w-4" />
-                          {hall.name} - {hall.capacity} seats
-                        </div>
-                      </SelectItem>
-                    ))}
+                  {halls.map((hall) => (
+                    <SelectItem key={hall.id} value={hall.id}>
+                      <div className="flex items-center gap-2">
+                        <DoorOpen className="h-4 w-4" />
+                        {hall.name} - {hall.capacity} seats
+                      </div>
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

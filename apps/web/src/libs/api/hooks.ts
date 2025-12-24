@@ -524,7 +524,7 @@ export const useUpdateSeatStatus = () => {
 
   return useMutation({
     mutationFn: ({ seatId, data }: { seatId: string; data: UpdateSeatStatusRequest }) =>
-      showtimesApi.updateSeatStatus(seatId, data),
+      hallsApi.updateSeatStatus(seatId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.showtimes.all });
       toast.success('Seat status updated successfully');

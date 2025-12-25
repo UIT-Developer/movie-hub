@@ -5,19 +5,20 @@ import {
   NotFoundException,
   Inject,
 } from '@nestjs/common';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, throwError } from 'rxjs';
 import { PrismaService } from '../prisma.service';
 import {
   BatchCreateShowtimeResponse,
   BatchCreateShowtimesInput,
   CreateShowtimeRequest,
   MovieServiceMessage,
+  ResourceNotFoundException,
   ShowtimeDetailResponse,
   ShowtimeInfoDto,
   UpdateShowtimeRequest,
 } from '@movie-hub/shared-types';
 import { DayType, Format, ShowtimeStatus } from '../../../generated/prisma';
-import { ClientProxy } from '@nestjs/microservices';
+import { ClientProxy, RpcException } from '@nestjs/microservices';
 import { ServiceResult } from '@movie-hub/shared-types/common';
 import { ShowtimeMapper } from './showtime.mapper';
 
@@ -34,146 +35,43 @@ export class ShowtimeCommandService {
   async createShowtime(
     dto: CreateShowtimeRequest
   ): Promise<ServiceResult<ShowtimeDetailResponse>> {
-    const {
-      movieId,
-      movieReleaseId,
-      cinemaId,
-      hallId,
-      startTime,
-      format,
-      language,
-      subtitles,
-    } = dto;
-
-    const { movie, release } = await this.fetchMovieAndRelease(
-      movieId,
-      movieReleaseId
-    );
-
-    const start = new Date(startTime);
-    const end = new Date(start.getTime() + movie.runtime * 60000 + 15 * 60000);
-
-    await this.checkHallConflict(hallId, start, end);
-
-    const totalSeats = await this.getTotalSeats(hallId);
-    const dayType = this.getDayType(start);
-
-    const showtime = await this.prisma.showtimes.create({
-      data: {
-        movie_id: movie.id,
-        movie_release_id: release?.id ?? null,
-        cinema_id: cinemaId,
-        hall_id: hallId,
-        start_time: start,
-        end_time: end,
-        format: format as Format,
+    try {
+      const {
+        movieId,
+        movieReleaseId,
+        cinemaId,
+        hallId,
+        startTime,
+        format,
         language,
         subtitles,
-        total_seats: totalSeats,
-        available_seats: totalSeats,
-        day_type: dayType,
-      },
-    });
-    return {
-      data: ShowtimeMapper.toShowtimDetailResponse(showtime),
-      message: 'Showtime created successfully',
-    };
-  }
+      } = dto;
 
-  // ===========================
-  // BATCH CREATE SHOWTIME
-  // ===========================
-  async batchCreateShowtimes(
-    input: BatchCreateShowtimesInput
-  ): Promise<ServiceResult<BatchCreateShowtimeResponse>> {
-    const {
-      movieId,
-      movieReleaseId,
-      cinemaId,
-      hallId,
-      startDate,
-      endDate,
-      timeSlots,
-      repeatType,
-      weekdays,
-      format,
-      language,
-      subtitles,
-    } = input;
+      await this.checkCinemaAndHallStatus(cinemaId, hallId);
 
-    const { movie, release } = await this.fetchMovieAndRelease(
-      movieId,
-      movieReleaseId
-    );
+      const { movie, release } = await this.fetchMovieAndRelease(
+        movieId,
+        movieReleaseId
+      );
 
-    if (release) {
-      if (
-        new Date(startDate) < release.startDate ||
-        new Date(endDate) > release.endDate
-      ) {
-        throw new BadRequestException(
-          'Showtimes must be within the movie release period'
-        );
-      }
-    }
+      const start = new Date(startTime);
+      const end = new Date(
+        start.getTime() + movie.runtime * 60000 + 15 * 60000
+      );
 
-    const runtime = movie.runtime;
-    const bufferMin = 15;
-
-    const days: Date[] = [];
-    // eslint-disable-next-line prefer-const
-    let d = new Date(startDate);
-    while (d <= new Date(endDate)) {
-      const dow = d.getDay();
-      if (
-        repeatType === 'DAILY' ||
-        (repeatType === 'WEEKLY' && true) ||
-        (repeatType === 'CUSTOM_WEEKDAYS' && weekdays.includes(dow))
-      ) {
-        days.push(new Date(d));
-      }
-      d.setDate(d.getDate() + 1);
-    }
-
-    const candidateShowtimes = [];
-    for (const day of days) {
-      for (const slot of timeSlots) {
-        const [hh, mm] = slot.split(':').map(Number);
-        const start = new Date(day);
-        start.setHours(hh, mm, 0, 0);
-        const end = new Date(start.getTime() + (runtime + bufferMin) * 60000);
-        candidateShowtimes.push({ start, end });
-      }
-    }
-
-    const created: any[] = [];
-    const skipped: any[] = [];
-
-    for (const c of candidateShowtimes) {
-      const conflict = await this.prisma.showtimes.findFirst({
-        where: {
-          hall_id: hallId,
-          start_time: { lt: c.end },
-          end_time: { gt: c.start },
-        },
-      });
-
-      if (conflict) {
-        skipped.push({ start: c.start, reason: 'TIME_CONFLICT' });
-        continue;
-      }
+      await this.checkHallConflict(hallId, start, end);
 
       const totalSeats = await this.getTotalSeats(hallId);
-      const dayType = this.getDayType(c.start);
+      const dayType = this.getDayType(start);
 
-      const st = await this.prisma.showtimes.create({
+      const showtime = await this.prisma.showtimes.create({
         data: {
           movie_id: movie.id,
           movie_release_id: release?.id ?? null,
           cinema_id: cinemaId,
           hall_id: hallId,
-          start_time: c.start,
-          end_time: c.end,
+          start_time: start,
+          end_time: end,
           format: format as Format,
           language,
           subtitles,
@@ -182,19 +80,136 @@ export class ShowtimeCommandService {
           day_type: dayType,
         },
       });
-
-      created.push(st);
+      return {
+        data: ShowtimeMapper.toShowtimDetailResponse(showtime),
+        message: 'Showtime created successfully',
+      };
+    } catch (exception) {
+      throw new RpcException(exception);
     }
+  }
 
-    return {
-      data: {
-        createdCount: created.length,
-        skippedCount: skipped.length,
-        created: ShowtimeMapper.toShowtimeDetailList(created),
-        skipped,
-      },
-      message: 'Batch create showtimes completed',
-    };
+  // ===========================
+  // BATCH CREATE SHOWTIME
+  // ===========================
+  async batchCreateShowtimes(
+    input: BatchCreateShowtimesInput
+  ): Promise<ServiceResult<BatchCreateShowtimeResponse>> {
+    try {
+      const {
+        movieId,
+        movieReleaseId,
+        cinemaId,
+        hallId,
+        startDate,
+        endDate,
+        timeSlots,
+        repeatType,
+        weekdays,
+        format,
+        language,
+        subtitles,
+      } = input;
+
+      await this.checkCinemaAndHallStatus(cinemaId, hallId);
+
+      const { movie, release } = await this.fetchMovieAndRelease(
+        movieId,
+        movieReleaseId
+      );
+
+      if (release) {
+        if (
+          new Date(startDate) < release.startDate ||
+          new Date(endDate) > release.endDate
+        ) {
+          throw new BadRequestException(
+            'Showtimes must be within the movie release period'
+          );
+        }
+      }
+
+      const runtime = movie.runtime;
+      const bufferMin = 15;
+
+      const days: Date[] = [];
+      // eslint-disable-next-line prefer-const
+      let d = new Date(startDate);
+      while (d <= new Date(endDate)) {
+        const dow = d.getDay();
+        if (
+          repeatType === 'DAILY' ||
+          (repeatType === 'WEEKLY' && true) ||
+          (repeatType === 'CUSTOM_WEEKDAYS' && weekdays.includes(dow))
+        ) {
+          days.push(new Date(d));
+        }
+        d.setDate(d.getDate() + 1);
+      }
+
+      const candidateShowtimes = [];
+      for (const day of days) {
+        for (const slot of timeSlots) {
+          const [hh, mm] = slot.split(':').map(Number);
+          const start = new Date(day);
+          start.setHours(hh, mm, 0, 0);
+          const end = new Date(start.getTime() + (runtime + bufferMin) * 60000);
+          candidateShowtimes.push({ start, end });
+        }
+      }
+
+      const created: any[] = [];
+      const skipped: any[] = [];
+
+      for (const c of candidateShowtimes) {
+        const conflict = await this.prisma.showtimes.findFirst({
+          where: {
+            hall_id: hallId,
+            start_time: { lt: c.end },
+            end_time: { gt: c.start },
+          },
+        });
+
+        if (conflict) {
+          skipped.push({ start: c.start, reason: 'TIME_CONFLICT' });
+          continue;
+        }
+
+        const totalSeats = await this.getTotalSeats(hallId);
+        const dayType = this.getDayType(c.start);
+
+        const st = await this.prisma.showtimes.create({
+          data: {
+            movie_id: movie.id,
+            movie_release_id: release?.id ?? null,
+            cinema_id: cinemaId,
+            hall_id: hallId,
+            start_time: c.start,
+            end_time: c.end,
+            format: format as Format,
+            language,
+            subtitles,
+            total_seats: totalSeats,
+            available_seats: totalSeats,
+            day_type: dayType,
+          },
+        });
+
+        created.push(st);
+      }
+
+      return {
+        data: {
+          createdCount: created.length,
+          skippedCount: skipped.length,
+          created: ShowtimeMapper.toShowtimeDetailList(created),
+          skipped,
+        },
+        message: 'Batch create showtimes completed',
+      };
+    } catch (e) {
+      throw new RpcException(e);
+    }
   }
 
   // ===========================
@@ -351,5 +366,44 @@ export class ShowtimeCommandService {
     return date.getDay() === 0 || date.getDay() === 6
       ? DayType.WEEKEND
       : DayType.WEEKDAY;
+  }
+
+  private async checkCinemaAndHallStatus(cinemaId: string, hallId: string) {
+    const [cinema, hall] = await Promise.all([
+      this.prisma.cinemas.findUnique({
+        where: { id: cinemaId },
+        select: { status: true },
+      }),
+      this.prisma.halls.findUnique({
+        where: { id: hallId },
+        select: { status: true },
+      }),
+    ]);
+
+    if (!cinema) {
+      throw new ResourceNotFoundException('Cinema', 'id', cinemaId);
+    }
+
+    if (!hall) {
+      throw new ResourceNotFoundException('Hall', 'id', hallId);
+    }
+
+    if (cinema.status !== 'ACTIVE') {
+      throw new RpcException({
+        summary: 'Cinema inactive',
+        statusCode: 409,
+        code: 'CINEMA_INACTIVE',
+        message: 'Cinema is not active',
+      });
+    }
+
+    if (hall.status !== 'ACTIVE') {
+      throw new RpcException({
+        summary: 'Hall inactive',
+        statusCode: 409,
+        code: 'HALL_INACTIVE',
+        message: 'Hall is not active',
+      });
+    }
   }
 }

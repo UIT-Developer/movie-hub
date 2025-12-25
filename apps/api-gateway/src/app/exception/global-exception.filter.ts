@@ -53,6 +53,23 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         path: request.path,
         timestamp: new Date().toISOString(),
       };
+    } else if (exception?.error?.statusCode) {
+      const err = exception.error;
+
+      response.status(err.statusCode).json({
+        success: false,
+        message: err.summary,
+        errors: [
+          {
+            code: err.statusCode,
+            field: err.field ?? null,
+            message: err.message,
+          },
+        ],
+        path: request.path,
+        timestamp: new Date().toISOString(),
+      });
+      return;
     } else {
       errorResponse = {
         success: false,

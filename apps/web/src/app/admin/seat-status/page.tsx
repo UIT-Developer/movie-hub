@@ -1,7 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Building2, DoorOpen, Wrench, AlertTriangle, CheckCircle2, XCircle } from 'lucide-react';
+import {
+  Building2,
+  DoorOpen,
+  Wrench,
+  AlertTriangle,
+  CheckCircle2,
+  XCircle,
+} from 'lucide-react';
 import { Button } from '@movie-hub/shacdn-ui/button';
 import {
   Card,
@@ -19,8 +26,15 @@ import {
 } from '@movie-hub/shacdn-ui/select';
 import { Badge } from '@movie-hub/shacdn-ui/badge';
 import { useToast } from '../_libs/use-toast';
-import type { Cinema, Hall, SeatStatus, SeatDetail, HallDetail } from '../_libs/types';
+import type {
+  Cinema,
+  Hall,
+  SeatStatus,
+  SeatDetail,
+  HallDetail,
+} from '../_libs/types';
 import { mockCinemas, mockHalls } from '../_libs/mockData';
+import api from '@/libs/api-client';
 
 export default function SeatStatusPage() {
   const [cinemas, setCinemas] = useState<Cinema[]>([]);
@@ -52,29 +66,45 @@ export default function SeatStatusPage() {
   const fetchHallDetail = async (hallId: string) => {
     try {
       setLoading(true);
-      const hall = mockHalls.find(h => h.id === hallId);
+      const hall = mockHalls.find((h) => h.id === hallId);
       if (hall) {
         const mockSeats: SeatDetail[] = [];
         let seatId = 1;
-        
+
         for (let row = 1; row <= hall.rows; row++) {
           const seatsPerRow = Math.ceil(hall.capacity / hall.rows);
           for (let seatNum = 1; seatNum <= seatsPerRow; seatNum++) {
-            const statuses: SeatStatus[] = ['ACTIVE', 'ACTIVE', 'ACTIVE', 'ACTIVE', 'ACTIVE', 'BROKEN', 'MAINTENANCE'];
-            
-            let seatType: 'STANDARD' | 'VIP' | 'COUPLE' | 'PREMIUM' | 'WHEELCHAIR' = 'STANDARD';
+            const statuses: SeatStatus[] = [
+              'ACTIVE',
+              'ACTIVE',
+              'ACTIVE',
+              'ACTIVE',
+              'ACTIVE',
+              'BROKEN',
+              'MAINTENANCE',
+            ];
+
+            let seatType:
+              | 'STANDARD'
+              | 'VIP'
+              | 'COUPLE'
+              | 'PREMIUM'
+              | 'WHEELCHAIR' = 'STANDARD';
             if (row <= 2) {
               seatType = 'VIP';
             } else if (row === 3) {
               seatType = 'PREMIUM';
             } else if (row === 4 && seatNum >= 4 && seatNum <= 7) {
               seatType = 'COUPLE';
-            } else if (row === hall.rows && (seatNum === 1 || seatNum === seatsPerRow)) {
+            } else if (
+              row === hall.rows &&
+              (seatNum === 1 || seatNum === seatsPerRow)
+            ) {
               seatType = 'WHEELCHAIR';
             } else {
               seatType = 'STANDARD';
             }
-            
+
             mockSeats.push({
               id: `seat_${seatId}`,
               row,
@@ -110,11 +140,11 @@ export default function SeatStatusPage() {
   const updateSeatStatus = async (seatId: string, newStatus: SeatStatus) => {
     try {
       await api.patch(`/halls/seat/${seatId}/status`, { status: newStatus });
-      
+
       if (hallDetail) {
         setHallDetail({
           ...hallDetail,
-          seats: hallDetail.seats.map(seat =>
+          seats: hallDetail.seats.map((seat) =>
             seat.id === seatId ? { ...seat, status: newStatus } : seat
           ),
         });
@@ -185,17 +215,19 @@ export default function SeatStatusPage() {
     }
   };
 
-  const filteredSeats = hallDetail?.seats.filter(seat =>
-    filterStatus === 'ALL' || seat.status === filterStatus
-  ) || [];
+  const filteredSeats =
+    hallDetail?.seats.filter(
+      (seat) => filterStatus === 'ALL' || seat.status === filterStatus
+    ) || [];
 
   const statusCounts = {
-    ACTIVE: hallDetail?.seats.filter(s => s.status === 'ACTIVE').length || 0,
-    BROKEN: hallDetail?.seats.filter(s => s.status === 'BROKEN').length || 0,
-    MAINTENANCE: hallDetail?.seats.filter(s => s.status === 'MAINTENANCE').length || 0,
+    ACTIVE: hallDetail?.seats.filter((s) => s.status === 'ACTIVE').length || 0,
+    BROKEN: hallDetail?.seats.filter((s) => s.status === 'BROKEN').length || 0,
+    MAINTENANCE:
+      hallDetail?.seats.filter((s) => s.status === 'MAINTENANCE').length || 0,
   };
 
-  const selectedCinema = cinemas.find(c => c.id === selectedCinemaId);
+  const selectedCinema = cinemas.find((c) => c.id === selectedCinemaId);
 
   return (
     <div className="space-y-6">
@@ -205,20 +237,27 @@ export default function SeatStatusPage() {
             <Wrench className="h-8 w-8 text-orange-600" />
             Seat Status Management
           </h1>
-          <p className="text-gray-500 mt-1">Monitor and manage seat conditions across all halls</p>
+          <p className="text-gray-500 mt-1">
+            Monitor and manage seat conditions across all halls
+          </p>
         </div>
       </div>
 
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">Select Hall</CardTitle>
-          <CardDescription>Choose a cinema and hall to view seat status</CardDescription>
+          <CardDescription>
+            Choose a cinema and hall to view seat status
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Cinema</label>
-              <Select value={selectedCinemaId} onValueChange={setSelectedCinemaId}>
+              <Select
+                value={selectedCinemaId}
+                onValueChange={setSelectedCinemaId}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Select cinema" />
                 </SelectTrigger>
@@ -247,7 +286,7 @@ export default function SeatStatusPage() {
                 </SelectTrigger>
                 <SelectContent>
                   {halls
-                    .filter(h => h.cinemaId === selectedCinemaId)
+                    .filter((h) => h.cinemaId === selectedCinemaId)
                     .map((hall) => (
                       <SelectItem key={hall.id} value={hall.id}>
                         <div className="flex items-center gap-2">
@@ -274,8 +313,12 @@ export default function SeatStatusPage() {
             <Card className="border-2 border-purple-200 bg-purple-50">
               <CardContent className="pt-6">
                 <div className="text-center">
-                  <p className="text-sm font-medium text-gray-600">Total Seats</p>
-                  <p className="text-3xl font-bold text-purple-600 mt-2">{hallDetail.seats.length}</p>
+                  <p className="text-sm font-medium text-gray-600">
+                    Total Seats
+                  </p>
+                  <p className="text-3xl font-bold text-purple-600 mt-2">
+                    {hallDetail.seats.length}
+                  </p>
                 </div>
               </CardContent>
             </Card>
@@ -287,7 +330,9 @@ export default function SeatStatusPage() {
                     <CheckCircle2 className="h-5 w-5 text-green-600" />
                     <p className="text-sm font-medium text-gray-600">Active</p>
                   </div>
-                  <p className="text-3xl font-bold text-green-600 mt-2">{statusCounts.ACTIVE}</p>
+                  <p className="text-3xl font-bold text-green-600 mt-2">
+                    {statusCounts.ACTIVE}
+                  </p>
                 </div>
               </CardContent>
             </Card>
@@ -299,7 +344,9 @@ export default function SeatStatusPage() {
                     <XCircle className="h-5 w-5 text-red-600" />
                     <p className="text-sm font-medium text-gray-600">Broken</p>
                   </div>
-                  <p className="text-3xl font-bold text-red-600 mt-2">{statusCounts.BROKEN}</p>
+                  <p className="text-3xl font-bold text-red-600 mt-2">
+                    {statusCounts.BROKEN}
+                  </p>
                 </div>
               </CardContent>
             </Card>
@@ -309,9 +356,13 @@ export default function SeatStatusPage() {
                 <div className="text-center">
                   <div className="flex items-center justify-center gap-2">
                     <Wrench className="h-5 w-5 text-orange-600" />
-                    <p className="text-sm font-medium text-gray-600">Maintenance</p>
+                    <p className="text-sm font-medium text-gray-600">
+                      Maintenance
+                    </p>
                   </div>
-                  <p className="text-3xl font-bold text-orange-600 mt-2">{statusCounts.MAINTENANCE}</p>
+                  <p className="text-3xl font-bold text-orange-600 mt-2">
+                    {statusCounts.MAINTENANCE}
+                  </p>
                 </div>
               </CardContent>
             </Card>
@@ -323,10 +374,16 @@ export default function SeatStatusPage() {
                 <div>
                   <CardTitle>{hallDetail.name} - Seat Layout</CardTitle>
                   <CardDescription>
-                    {selectedCinema?.name} • {hallDetail.type} • {hallDetail.capacity} seats
+                    {selectedCinema?.name} • {hallDetail.type} •{' '}
+                    {hallDetail.capacity} seats
                   </CardDescription>
                 </div>
-                <Select value={filterStatus} onValueChange={(v: string) => setFilterStatus(v as typeof filterStatus)}>
+                <Select
+                  value={filterStatus}
+                  onValueChange={(v: string) =>
+                    setFilterStatus(v as typeof filterStatus)
+                  }
+                >
                   <SelectTrigger className="w-[180px]">
                     <SelectValue />
                   </SelectTrigger>
@@ -334,7 +391,9 @@ export default function SeatStatusPage() {
                     <SelectItem value="ALL">All Seats</SelectItem>
                     <SelectItem value="ACTIVE">Active Only</SelectItem>
                     <SelectItem value="BROKEN">Broken Only</SelectItem>
-                    <SelectItem value="MAINTENANCE">Maintenance Only</SelectItem>
+                    <SelectItem value="MAINTENANCE">
+                      Maintenance Only
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -345,101 +404,163 @@ export default function SeatStatusPage() {
                   <div className="h-1 bg-gradient-to-r from-transparent via-slate-400 to-transparent mb-2"></div>
                   <div className="h-4 bg-gradient-to-b from-slate-600 to-transparent rounded-t-3xl"></div>
                 </div>
-                <p className="text-center text-sm text-gray-500 font-semibold tracking-wider mt-3">🎬 SCREEN</p>
+                <p className="text-center text-sm text-gray-500 font-semibold tracking-wider mt-3">
+                  🎬 SCREEN
+                </p>
               </div>
 
               <div className="space-y-2.5 max-w-5xl mx-auto">
-                {Array.from(new Set(filteredSeats.map(s => s.row))).sort((a, b) => a - b).map(row => (
-                  <div key={row} className="flex items-center gap-4">
-                    <div className="w-12 text-center">
-                      <Badge variant="outline" className="font-mono font-bold text-base bg-gradient-to-r from-purple-50 to-pink-50 border-purple-200">
-                        {String.fromCharCode(64 + row)}
-                      </Badge>
-                    </div>
-                    <div className="flex-1 flex justify-center">
-                      <div className="flex gap-2">
-                      {filteredSeats
-                        .filter(s => s.row === row)
-                        .sort((a, b) => a.seatNumber - b.seatNumber)
-                        .map(seat => (
-                          <div key={seat.id} className="group relative">
-                            <button
-                              onClick={() => {
-                                const statuses: SeatStatus[] = ['ACTIVE', 'BROKEN', 'MAINTENANCE'];
-                                const currentIndex = statuses.indexOf(seat.status);
-                                const nextStatus = statuses[(currentIndex + 1) % statuses.length];
-                                updateSeatStatus(seat.id, nextStatus);
-                              }}
-                              className={`
+                {Array.from(new Set(filteredSeats.map((s) => s.row)))
+                  .sort((a, b) => a - b)
+                  .map((row) => (
+                    <div key={row} className="flex items-center gap-4">
+                      <div className="w-12 text-center">
+                        <Badge
+                          variant="outline"
+                          className="font-mono font-bold text-base bg-gradient-to-r from-purple-50 to-pink-50 border-purple-200"
+                        >
+                          {String.fromCharCode(64 + row)}
+                        </Badge>
+                      </div>
+                      <div className="flex-1 flex justify-center">
+                        <div className="flex gap-2">
+                          {filteredSeats
+                            .filter((s) => s.row === row)
+                            .sort((a, b) => a.seatNumber - b.seatNumber)
+                            .map((seat) => (
+                              <div key={seat.id} className="group relative">
+                                <button
+                                  onClick={() => {
+                                    const statuses: SeatStatus[] = [
+                                      'ACTIVE',
+                                      'BROKEN',
+                                      'MAINTENANCE',
+                                    ];
+                                    const currentIndex = statuses.indexOf(
+                                      seat.status
+                                    );
+                                    const nextStatus =
+                                      statuses[
+                                        (currentIndex + 1) % statuses.length
+                                      ];
+                                    updateSeatStatus(seat.id, nextStatus);
+                                  }}
+                                  className={`
                                 w-12 h-12 rounded-xl transition-all duration-300
                                 flex items-center justify-center
                                 border-2 ${getSeatTypeColor(seat.type)}
                                 ${getSeatStatusBgColor(seat.status)}
-                                ${seat.status === 'ACTIVE' ? 'hover:scale-125 hover:shadow-2xl hover:z-10' : 'opacity-70'}
+                                ${
+                                  seat.status === 'ACTIVE'
+                                    ? 'hover:scale-125 hover:shadow-2xl hover:z-10'
+                                    : 'opacity-70'
+                                }
                                 relative font-bold text-white shadow-md
                               `}
-                            >
-                              <span className="text-sm drop-shadow-lg">{seat.seatNumber}</span>
-                              {seat.status !== 'ACTIVE' && (
-                                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                  <span className="text-3xl opacity-40">{seat.status === 'BROKEN' ? '✕' : '🔧'}</span>
-                                </div>
-                              )}
-                              {seat.type !== 'STANDARD' && (
-                                <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-white shadow-lg flex items-center justify-center text-[10px]">
-                                  {seat.type === 'VIP' ? '👑' :
-                                   seat.type === 'COUPLE' ? '💑' :
-                                   seat.type === 'PREMIUM' ? '⭐' :
-                                   seat.type === 'WHEELCHAIR' ? '♿' : ''}
-                                </div>
-                              )}
-                            </button>
-                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 hidden group-hover:block z-20 animate-in fade-in duration-200">
-                              <div className="bg-gradient-to-br from-gray-900 to-gray-800 text-white rounded-xl px-4 py-3 whitespace-nowrap shadow-2xl border border-gray-700">
-                                <div className="flex items-center gap-2 mb-2">
-                                  <p className="font-bold text-lg">{String.fromCharCode(64 + seat.row)}{seat.seatNumber}</p>
-                                  {seat.type !== 'STANDARD' && (
-                                    <span className="text-lg">
-                                      {seat.type === 'VIP' ? '👑' :
-                                       seat.type === 'COUPLE' ? '💑' :
-                                       seat.type === 'PREMIUM' ? '⭐' :
-                                       seat.type === 'WHEELCHAIR' ? '♿' : ''}
-                                    </span>
+                                >
+                                  <span className="text-sm drop-shadow-lg">
+                                    {seat.seatNumber}
+                                  </span>
+                                  {seat.status !== 'ACTIVE' && (
+                                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                      <span className="text-3xl opacity-40">
+                                        {seat.status === 'BROKEN' ? '✕' : '🔧'}
+                                      </span>
+                                    </div>
                                   )}
-                                </div>
-                                <p className="text-gray-300 text-xs mb-2">{seat.type}</p>
-                                <Badge className={`${getStatusColor(seat.status)} text-xs mb-2`}>
-                                  {getStatusIcon(seat.status)}
-                                  <span className="ml-1">{seat.status}</span>
-                                </Badge>
-                                <div className="pt-2 border-t border-gray-700">
-                                  <p className="text-amber-300 text-xs">👆 Click to cycle status</p>
+                                  {seat.type !== 'STANDARD' && (
+                                    <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-white shadow-lg flex items-center justify-center text-[10px]">
+                                      {seat.type === 'VIP'
+                                        ? '👑'
+                                        : seat.type === 'COUPLE'
+                                        ? '💑'
+                                        : seat.type === 'PREMIUM'
+                                        ? '⭐'
+                                        : seat.type === 'WHEELCHAIR'
+                                        ? '♿'
+                                        : ''}
+                                    </div>
+                                  )}
+                                </button>
+                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 hidden group-hover:block z-20 animate-in fade-in duration-200">
+                                  <div className="bg-gradient-to-br from-gray-900 to-gray-800 text-white rounded-xl px-4 py-3 whitespace-nowrap shadow-2xl border border-gray-700">
+                                    <div className="flex items-center gap-2 mb-2">
+                                      <p className="font-bold text-lg">
+                                        {String.fromCharCode(64 + seat.row)}
+                                        {seat.seatNumber}
+                                      </p>
+                                      {seat.type !== 'STANDARD' && (
+                                        <span className="text-lg">
+                                          {seat.type === 'VIP'
+                                            ? '👑'
+                                            : seat.type === 'COUPLE'
+                                            ? '💑'
+                                            : seat.type === 'PREMIUM'
+                                            ? '⭐'
+                                            : seat.type === 'WHEELCHAIR'
+                                            ? '♿'
+                                            : ''}
+                                        </span>
+                                      )}
+                                    </div>
+                                    <p className="text-gray-300 text-xs mb-2">
+                                      {seat.type}
+                                    </p>
+                                    <Badge
+                                      className={`${getStatusColor(
+                                        seat.status
+                                      )} text-xs mb-2`}
+                                    >
+                                      {getStatusIcon(seat.status)}
+                                      <span className="ml-1">
+                                        {seat.status}
+                                      </span>
+                                    </Badge>
+                                    <div className="pt-2 border-t border-gray-700">
+                                      <p className="text-amber-300 text-xs">
+                                        👆 Click to cycle status
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-px">
+                                    <div className="w-3 h-3 bg-gray-800 rotate-45 border-r border-b border-gray-700"></div>
+                                  </div>
                                 </div>
                               </div>
-                              <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-px">
-                                <div className="w-3 h-3 bg-gray-800 rotate-45 border-r border-b border-gray-700"></div>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
+                            ))}
+                        </div>
+                      </div>
+                      <div className="w-12 text-center">
+                        <Badge
+                          variant="outline"
+                          className="font-mono font-bold text-base bg-gradient-to-r from-purple-50 to-pink-50 border-purple-200"
+                        >
+                          {String.fromCharCode(64 + row)}
+                        </Badge>
                       </div>
                     </div>
-                    <div className="w-12 text-center">
-                      <Badge variant="outline" className="font-mono font-bold text-base bg-gradient-to-r from-purple-50 to-pink-50 border-purple-200">
-                        {String.fromCharCode(64 + row)}
-                      </Badge>
-                    </div>
-                  </div>
-                ))}
+                  ))}
               </div>
 
               <div className="mt-8 pt-6 border-t space-y-4">
                 <div>
-                  <p className="text-sm font-medium text-gray-700 mb-3">Seat Types (Border Indicator)</p>
+                  <p className="text-sm font-medium text-gray-700 mb-3">
+                    Seat Types (Border Indicator)
+                  </p>
                   <div className="flex flex-wrap gap-4">
-                    {[{type: 'STANDARD', emoji: ''}, {type: 'VIP', emoji: '👑'}, {type: 'COUPLE', emoji: '💑'}, {type: 'PREMIUM', emoji: '⭐'}, {type: 'WHEELCHAIR', emoji: '♿'}].map(item => (
+                    {[
+                      { type: 'STANDARD', emoji: '' },
+                      { type: 'VIP', emoji: '👑' },
+                      { type: 'COUPLE', emoji: '💑' },
+                      { type: 'PREMIUM', emoji: '⭐' },
+                      { type: 'WHEELCHAIR', emoji: '♿' },
+                    ].map((item) => (
                       <div key={item.type} className="flex items-center gap-2">
-                        <div className={`w-10 h-10 rounded-full border-2 ${getSeatTypeColor(item.type)} bg-gray-100 flex items-center justify-center text-lg shadow-sm`}>
+                        <div
+                          className={`w-10 h-10 rounded-full border-2 ${getSeatTypeColor(
+                            item.type
+                          )} bg-gray-100 flex items-center justify-center text-lg shadow-sm`}
+                        >
                           {item.emoji}
                         </div>
                         <span className="text-sm font-medium">{item.type}</span>
@@ -449,18 +570,26 @@ export default function SeatStatusPage() {
                 </div>
 
                 <div>
-                  <p className="text-sm font-medium text-gray-700 mb-3">Physical Status (Background Color)</p>
+                  <p className="text-sm font-medium text-gray-700 mb-3">
+                    Physical Status (Background Color)
+                  </p>
                   <div className="flex flex-wrap gap-4">
                     <div className="flex items-center gap-2">
-                      <div className="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center text-white font-bold shadow-md">1</div>
+                      <div className="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center text-white font-bold shadow-md">
+                        1
+                      </div>
                       <span className="text-sm">Active (Working)</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <div className="w-10 h-10 rounded-xl bg-rose-600 flex items-center justify-center text-white text-2xl opacity-70 shadow-md">✕</div>
+                      <div className="w-10 h-10 rounded-xl bg-rose-600 flex items-center justify-center text-white text-2xl opacity-70 shadow-md">
+                        ✕
+                      </div>
                       <span className="text-sm">Broken (Not Usable)</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <div className="w-10 h-10 rounded-xl bg-amber-400 flex items-center justify-center text-white text-2xl opacity-70 shadow-md">🔧</div>
+                      <div className="w-10 h-10 rounded-xl bg-amber-400 flex items-center justify-center text-white text-2xl opacity-70 shadow-md">
+                        🔧
+                      </div>
                       <span className="text-sm">Maintenance (Repairing)</span>
                     </div>
                   </div>
@@ -473,7 +602,9 @@ export default function SeatStatusPage() {
         <Card>
           <CardContent className="py-16 text-center">
             <DoorOpen className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-500">Select a cinema and hall to view seat status</p>
+            <p className="text-gray-500">
+              Select a cinema and hall to view seat status
+            </p>
           </CardContent>
         </Card>
       )}

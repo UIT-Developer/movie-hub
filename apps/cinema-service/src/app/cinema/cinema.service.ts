@@ -2,6 +2,7 @@ import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import {
   CinemaDetailResponse,
+  CinemaStatusEnum,
   CreateCinemaRequest,
   MovieDetailResponse,
   MovieServiceMessage,
@@ -14,9 +15,10 @@ import {
 import { CinemaMapper } from './cinema.mapper';
 import { PaginationQuery, ServiceResult } from '@movie-hub/shared-types/common';
 import { ShowtimeStatus } from '../../../generated/prisma';
-import { ClientProxy } from '@nestjs/microservices';
+import { ClientProxy, RpcException } from '@nestjs/microservices';
 import { lastValueFrom, timeout } from 'rxjs';
 import { ShowtimeMapper } from '../showtime/showtime.mapper';
+import { PrismaClientKnownRequestError } from '../../../generated/prisma/runtime/library';
 
 @Injectable()
 export class CinemaService {
@@ -68,18 +70,54 @@ export class CinemaService {
   }
 
   async deleteCinema(id: string): Promise<ServiceResult<void>> {
-    await this.prisma.cinemas.delete({
-      where: { id },
-    });
-    return {
-      data: undefined,
-      message: 'Delete cinema successfully!',
-    };
+    try {
+      await this.prisma.cinemas.delete({
+        where: { id },
+      });
+
+      return {
+        data: undefined,
+        message: 'Delete cinema successfully!',
+      };
+    } catch (e) {
+      if (e instanceof PrismaClientKnownRequestError) {
+        // Không tồn tại
+        if (e.code === 'P2025') {
+          throw new RpcException({
+            summary: 'Delete cinema failed',
+            statusCode: 404,
+            code: 'CINEMA_NOT_FOUND',
+            message: 'Cinema does not exist',
+          });
+        }
+
+        // Bị ràng buộc FK (có hall / showtime)
+        if (e.code === 'P2003') {
+          throw new RpcException({
+            summary: 'Delete cinema failed',
+            statusCode: 400,
+            code: 'CINEMA_IN_USE',
+            message:
+              'Cinema cannot be deleted because it is referenced by halls or showtimes',
+          });
+        }
+      }
+
+      // Fallback
+      throw new RpcException({
+        summary: 'Delete cinema failed',
+        statusCode: 500,
+        code: 'DELETE_CINEMA_FAILED',
+        message: 'Unexpected error occurred while deleting cinema',
+      });
+    }
   }
 
-  async getAllCinemas(): Promise<ServiceResult<CinemaDetailResponse[]>> {
+  async getAllCinemas(
+    status: CinemaStatusEnum
+  ): Promise<ServiceResult<CinemaDetailResponse[]>> {
     const cinemas = await this.prisma.cinemas.findMany({
-      where: { status: 'ACTIVE' },
+      where: { status: status },
       orderBy: { name: 'asc' },
     });
 
@@ -247,7 +285,6 @@ export class CinemaService {
           .pipe(timeout(5000))
       );
     } catch (err) {
-      console.error('RPC error:', err);
       throw new BadRequestException('Cannot fetch movies from movie-service');
     }
 

@@ -1,6 +1,7 @@
 import {
   CinemaMessage,
   CreateHallRequest,
+  HallStatusEnum,
   SERVICE_NAME,
   UpdateHallRequest,
   UpdateSeatStatusRequest,
@@ -18,8 +19,11 @@ export class HallService {
     return this.cinemaClient.send(CinemaMessage.HALL.GET_DETAIL, hallId);
   }
 
-  async getHallsOfCinema(cinemaId: string) {
-    return this.cinemaClient.send(CinemaMessage.HALL.GET_BY_CINEMA, cinemaId);
+  async getHallsOfCinema(cinemaId: string, status: HallStatusEnum) {
+    return this.cinemaClient.send(CinemaMessage.HALL.GET_BY_CINEMA, {
+      cinemaId,
+      status,
+    });
   }
 
   async createHall(createHallRequest: CreateHallRequest) {

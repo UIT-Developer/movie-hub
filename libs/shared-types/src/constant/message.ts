@@ -9,9 +9,9 @@ export const UserMessage = {
     GET_DETAIL: 'movie.detail',
   },
   CONFIG: {
-    GET_LIST: "config.list",
-    UPDATED: 'config.updated'
-  }
+    GET_LIST: 'config.list',
+    UPDATED: 'config.updated',
+  },
 };
 
 export const MovieServiceMessage = {
@@ -67,6 +67,7 @@ export const CinemaMessage = {
     UPDATE_SEAT_STATUS: 'cinema.update_seat_status',
   },
   SHOWTIME: {
+    FILTER_SHOWTIME: ' showtime.filter',
     CREATE_SHOWTIME: 'showtime.create_showtime',
     BATCH_CREATE_SHOWTIMES: 'showtime.batch_create_showtimes',
     UPDATE_SHOWTIME: 'showtime.update_showtime',

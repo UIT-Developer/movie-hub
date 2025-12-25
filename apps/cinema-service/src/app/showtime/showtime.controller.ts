@@ -7,9 +7,9 @@ import {
   CinemaMessage,
   CreateShowtimeRequest,
   GetShowtimesQuery,
-  ShowtimeSummaryResponse,
   UpdateShowtimeRequest,
   SeatPricingWithTtlDto,
+  AdminShowtimeFilterDTO,
 } from '@movie-hub/shared-types';
 import { ShowtimeCommandService } from './showtime-command.service';
 
@@ -19,6 +19,11 @@ export class ShowtimeController {
     private readonly showtimeService: ShowtimeService,
     private readonly showtimeCommandService: ShowtimeCommandService
   ) {}
+
+  @MessagePattern(CinemaMessage.SHOWTIME.FILTER_SHOWTIME)
+  getShowtimes(@Payload() filter: AdminShowtimeFilterDTO) {
+    return this.showtimeService.getShowtimes(filter);
+  }
 
   @MessagePattern(CinemaMessage.CINEMA.GET_SHOWTIME)
   getMovieShowtimesAtCinema(
@@ -108,6 +113,4 @@ export class ShowtimeController {
   deleteShowtime(@Payload() payload: { showtimeId: string }) {
     return this.showtimeCommandService.cancelShowtime(payload.showtimeId);
   }
-
-
 }

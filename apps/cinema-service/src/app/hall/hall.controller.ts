@@ -4,6 +4,7 @@ import { MessagePattern, Payload } from '@nestjs/microservices';
 import {
   CinemaMessage,
   CreateHallRequest,
+  HallStatusEnum,
   UpdateCinemaRequest,
   UpdateSeatStatusRequest,
 } from '@movie-hub/shared-types';
@@ -19,8 +20,13 @@ export class HallController {
   }
 
   @MessagePattern(CinemaMessage.HALL.GET_BY_CINEMA)
-  async getHallsOfCinema(@Payload() cinemaId: string) {
-    return await this.hallService.getHallsOfCinema(cinemaId);
+  async getHallsOfCinema(
+    @Payload() payload: { cinemaId: string; status: HallStatusEnum }
+  ) {
+    return await this.hallService.getHallsOfCinema(
+      payload.cinemaId,
+      payload.status
+    );
   }
 
   @MessagePattern(CinemaMessage.HALL.CREATE)

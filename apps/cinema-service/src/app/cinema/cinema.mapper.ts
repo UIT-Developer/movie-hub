@@ -50,6 +50,12 @@ export class CinemaMapper {
       rating: cinema.rating != null ? Number(cinema.rating) : undefined,
       totalReviews: cinema.total_reviews,
       images: cinema.images,
+      amenities: cinema.amenities,
+      description: cinema.description,
+      facilities: parseJsonToRecord(cinema.facilities),
+      latitude: cinema.latitude != null ? Number(cinema.latitude) : undefined,
+      longitude:
+        cinema.longitude != null ? Number(cinema.longitude) : undefined,
       status: cinema.status as CinemaStatusEnum,
       virtualTour360Url: cinema.virtual_tour_360_url,
       operatingHours: parseJsonToRecord(cinema.operating_hours),

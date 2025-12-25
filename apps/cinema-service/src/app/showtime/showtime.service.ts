@@ -92,6 +92,10 @@ export class ShowtimeService {
         format: showtime.format as FormatEnum,
         startTime: showtime.start_time,
         endTime: showtime.end_time,
+        language: showtime.language,
+        subtitles: showtime.subtitles ?? [],
+        availableSeats: showtime.available_seats,
+        totalSeats: showtime.total_seats,
         status: showtime.status as ShowtimeStatusEnum,
       };
     });

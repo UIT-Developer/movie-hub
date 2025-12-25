@@ -13,6 +13,10 @@ export interface ShowtimeSummaryResponse {
   hallName?: string;
   startTime: Date;
   endTime: Date;
+  language?: string;
+  subtitle?: string[];
+  availableSeats?: number;
+  totalSeats?: number;
   format: FormatEnum;
   status: ShowtimeStatusEnum;
 }

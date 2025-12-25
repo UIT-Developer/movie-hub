@@ -14,7 +14,7 @@ import { HallMapper } from './hall.mapper';
 import { AutoPricingGenerator } from './pricing-ticket-template';
 import { SeatStatus } from '../../../generated/prisma';
 import { RpcException } from '@nestjs/microservices';
-import { PrismaClientKnownRequestError } from 'apps/cinema-service/generated/prisma/runtime/library';
+import { PrismaClientKnownRequestError } from '../../../generated/prisma/runtime/library';
 
 @Injectable()
 export class HallService {

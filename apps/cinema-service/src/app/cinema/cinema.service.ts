@@ -18,7 +18,7 @@ import { ShowtimeStatus } from '../../../generated/prisma';
 import { ClientProxy, RpcException } from '@nestjs/microservices';
 import { lastValueFrom, timeout } from 'rxjs';
 import { ShowtimeMapper } from '../showtime/showtime.mapper';
-import { PrismaClientKnownRequestError } from 'apps/cinema-service/generated/prisma/runtime/library';
+import { PrismaClientKnownRequestError } from '../../../generated/prisma/runtime/library';
 
 @Injectable()
 export class CinemaService {
@@ -285,7 +285,6 @@ export class CinemaService {
           .pipe(timeout(5000))
       );
     } catch (err) {
-      console.error('RPC error:', err);
       throw new BadRequestException('Cannot fetch movies from movie-service');
     }
 

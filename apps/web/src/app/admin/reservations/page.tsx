@@ -62,16 +62,15 @@ export default function ReservationsPage() {
   });
   
   // Filters
-  const [filterCinemaId, setFilterCinemaId] = useState<string>('');
-  const [filterStatus, setFilterStatus] = useState<string>('');
-  const [filterPaymentStatus, setFilterPaymentStatus] = useState<string>('');
+  const [filterCinemaId, setFilterCinemaId] = useState<string>('all');
+  const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [filterPaymentStatus, setFilterPaymentStatus] = useState<string>('all');
   const [filterShowtimeId, setFilterShowtimeId] = useState<string>('');
   const [filterStartDate, setFilterStartDate] = useState<string>('');
   const [filterEndDate, setFilterEndDate] = useState<string>('');
   const [sortBy, setSortBy] = useState<'created_at' | 'final_amount' | 'expires_at'>('created_at');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(10);
 
   // const { toast } = useToast();
 
@@ -80,16 +79,15 @@ export default function ReservationsPage() {
   const cinemas = Array.isArray(cinemasData) ? cinemasData : [];
 
   const { data: bookingsData = [], isLoading: loading } = useBookings({
-    cinemaId: filterCinemaId || undefined,
+    cinemaId: filterCinemaId === 'all' ? undefined : filterCinemaId,
     showtimeId: filterShowtimeId || undefined,
-    status: filterStatus ? (filterStatus as BookingStatus) : undefined,
-    paymentStatus: filterPaymentStatus ? (filterPaymentStatus as PaymentStatus) : undefined,
+    status: filterStatus === 'all' ? undefined : (filterStatus as BookingStatus),
+    paymentStatus: filterPaymentStatus === 'all' ? undefined : (filterPaymentStatus as PaymentStatus),
     startDate: filterStartDate || undefined,
     endDate: filterEndDate || undefined,
     sortBy,
     sortOrder,
     page,
-    limit,
   });
   const bookings = useMemo(() => bookingsData || [], [bookingsData]);
 
@@ -154,16 +152,16 @@ export default function ReservationsPage() {
   };
 
   const handleClearFilters = () => {
-    setFilterCinemaId('');
-    setFilterStatus('');
-    setFilterPaymentStatus('');
+    setFilterCinemaId('all');
+    setFilterStatus('all');
+    setFilterPaymentStatus('all');
     setFilterShowtimeId('');
     setFilterStartDate('');
     setFilterEndDate('');
     setPage(1);
   };
 
-  const hasActiveFilters = filterCinemaId || filterStatus || filterPaymentStatus || filterShowtimeId || filterStartDate || filterEndDate;
+  const hasActiveFilters = filterCinemaId !== 'all' || filterStatus !== 'all' || filterPaymentStatus !== 'all' || filterShowtimeId || filterStartDate || filterEndDate;
 
   const getStatusBadgeColor = (status: BookingStatus) => {
     switch (status) {
@@ -288,7 +286,7 @@ export default function ReservationsPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
             <div>
               <Label htmlFor="filter-cinema">Cinema</Label>
-              <Select value={filterCinemaId || ''} onValueChange={(value) => {
+              <Select value={filterCinemaId} onValueChange={(value) => {
                 setFilterCinemaId(value);
                 setPage(1);
               }}>
@@ -306,7 +304,7 @@ export default function ReservationsPage() {
             </div>
             <div>
               <Label htmlFor="filter-status">Booking Status</Label>
-              <Select value={filterStatus || ''} onValueChange={(value) => {
+              <Select value={filterStatus} onValueChange={(value) => {
                 setFilterStatus(value);
                 setPage(1);
               }}>
@@ -324,7 +322,7 @@ export default function ReservationsPage() {
             </div>
             <div>
               <Label htmlFor="filter-payment">Payment Status</Label>
-              <Select value={filterPaymentStatus || ''} onValueChange={(value) => {
+              <Select value={filterPaymentStatus} onValueChange={(value) => {
                 setFilterPaymentStatus(value);
                 setPage(1);
               }}>
@@ -374,23 +372,6 @@ export default function ReservationsPage() {
                   <SelectItem value="created_at">Created Date</SelectItem>
                   <SelectItem value="final_amount">Amount</SelectItem>
                   <SelectItem value="expires_at">Expiration</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="filter-limit">Per Page</Label>
-              <Select value={limit.toString()} onValueChange={(value) => {
-                setLimit(parseInt(value));
-                setPage(1);
-              }}>
-                <SelectTrigger id="filter-limit">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="10">10</SelectItem>
-                  <SelectItem value="25">25</SelectItem>
-                  <SelectItem value="50">50</SelectItem>
-                  <SelectItem value="100">100</SelectItem>
                 </SelectContent>
               </Select>
             </div>

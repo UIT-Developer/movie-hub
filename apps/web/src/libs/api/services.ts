@@ -316,8 +316,21 @@ export const staffApi = {
 
 export const bookingsApi = {
   // Admin: Get all bookings with filters
-  getAll: (params?: BookingFiltersParams) =>
-    api.get<BookingSummary[]>('/api/v1/bookings/admin/all', { params }),
+  getAll: (params?: BookingFiltersParams) => {
+    // Clean params to remove undefined, empty strings, and "all" sentinel values
+    const cleanParams: Record<string, any> = {};
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        // Skip undefined, null, empty strings, and "all" sentinel values
+        if (value !== undefined && value !== null && value !== '' && value !== 'all') {
+          cleanParams[key] = value;
+        }
+      });
+    }
+    return api.get<BookingSummary[]>('/api/v1/bookings/admin/all', {
+      params: Object.keys(cleanParams).length > 0 ? cleanParams : undefined,
+    });
+  },
 
   // Get booking detail
   getById: (id: string) =>

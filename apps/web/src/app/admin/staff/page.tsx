@@ -124,6 +124,7 @@ export default function StaffPage() {
   }
 
   const handleSubmit = async () => {
+    // Validate required fields
     if (!formData.fullName.trim()) {
       toast({
         title: 'Error',
@@ -142,6 +143,15 @@ export default function StaffPage() {
       return;
     }
 
+    if (!formData.phone.trim() || formData.phone.trim().length < 9) {
+      toast({
+        title: 'Error',
+        description: 'Phone number must be at least 9 characters',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     if (!formData.cinemaId && !editingStaff) {
       toast({
         title: 'Error',
@@ -151,14 +161,65 @@ export default function StaffPage() {
       return;
     }
 
+    if (!formData.dob) {
+      toast({
+        title: 'Error',
+        description: 'Date of birth is required',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!formData.hireDate) {
+      toast({
+        title: 'Error',
+        description: 'Hire date is required',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (formData.salary < 0) {
+      toast({
+        title: 'Error',
+        description: 'Salary cannot be negative',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     try {
+      // Convert dates to ISO DateTime format for API
+      const submitData = editingStaff ? {
+        fullName: formData.fullName,
+        phone: formData.phone,
+        gender: formData.gender,
+        dob: new Date(formData.dob).toISOString(),
+        position: formData.position,
+        status: formData.status,
+        workType: formData.workType,
+        shiftType: formData.shiftType,
+        salary: formData.salary,
+        hireDate: new Date(formData.hireDate).toISOString(),
+      } : {
+        cinemaId: formData.cinemaId,
+        fullName: formData.fullName,
+        email: formData.email,
+        phone: formData.phone,
+        gender: formData.gender,
+        dob: new Date(formData.dob).toISOString(),
+        position: formData.position,
+        status: formData.status,
+        workType: formData.workType,
+        shiftType: formData.shiftType,
+        salary: formData.salary,
+        hireDate: new Date(formData.hireDate).toISOString(),
+      };
+
       if (editingStaff) {
-        // Update existing staff
-        const { ...updateData } = formData;
-        await updateStaff.mutateAsync({ id: editingStaff.id, data: updateData });
+        await updateStaff.mutateAsync({ id: editingStaff.id, data: submitData });
       } else {
-        // Create new staff
-        await createStaff.mutateAsync(formData);
+        await createStaff.mutateAsync(submitData);
       }
       setDialogOpen(false);
       resetForm();
@@ -305,9 +366,9 @@ export default function StaffPage() {
             <CardTitle className="text-sm font-medium text-gray-600">Salary Expense</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${(stats.totalSalaryExpense / 1000).toFixed(1)}k</div>
+            <div className="text-2xl font-bold">₫{(stats.totalSalaryExpense / 1000000).toFixed(1)}M</div>
             <p className="text-xs text-gray-500 mt-1">
-              Avg: ${(stats.avgSalary / 1000).toFixed(1)}k per person
+              Avg: ₫{(stats.avgSalary / 1000000).toFixed(2)}M per person
             </p>
           </CardContent>
         </Card>
@@ -316,10 +377,29 @@ export default function StaffPage() {
       {/* Filters */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center">
-            <Filter className="mr-2 h-5 w-5" />
-            Filters
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center">
+              <Filter className="mr-2 h-5 w-5" />
+              Filters
+              {(filterCinemaId !== 'all' || filterStatus !== 'all') && (
+                <Badge variant="secondary" className="ml-2">
+                  {[filterCinemaId !== 'all', filterStatus !== 'all'].filter(Boolean).length} Active
+                </Badge>
+              )}
+            </CardTitle>
+            {(filterCinemaId !== 'all' || filterStatus !== 'all') && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setFilterCinemaId('all');
+                  setFilterStatus('all');
+                }}
+              >
+                Clear All
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -515,14 +595,19 @@ export default function StaffPage() {
             {/* Phone */}
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="phone" className="text-right">
-                Phone
+                Phone *
               </Label>
-              <Input
-                id="phone"
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                className="col-span-3"
-              />
+              <div className="col-span-3">
+                <Input
+                  id="phone"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  placeholder="Min 9 characters"
+                />
+                {formData.phone && formData.phone.length < 9 && (
+                  <p className="text-xs text-red-500 mt-1">Phone must be at least 9 characters</p>
+                )}
+              </div>
             </div>
 
             {/* Gender & DOB */}
@@ -648,14 +733,16 @@ export default function StaffPage() {
             {/* Salary */}
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="salary" className="text-right">
-                Salary
+                Salary *
               </Label>
               <Input
                 id="salary"
                 type="number"
-                value={formData.salary}
+                value={formData.salary || ''}
                 onChange={(e) => setFormData({ ...formData, salary: parseFloat(e.target.value) || 0 })}
+                placeholder="e.g., 10000000"
                 className="col-span-3"
+                min="0"
               />
             </div>
 
@@ -687,7 +774,7 @@ export default function StaffPage() {
             <Button
               onClick={handleSubmit}
               className="bg-gradient-to-r from-purple-600 to-pink-600"
-              disabled={createStaff.isPending || updateStaff.isPending}
+              disabled={createStaff.isPending || updateStaff.isPending || !formData.fullName.trim() || !formData.email.trim() || !formData.phone.trim() || formData.phone.length < 9 || !formData.dob || !formData.hireDate || formData.salary < 0}
             >
               {createStaff.isPending || updateStaff.isPending ? 'Saving...' : 'Save'}
             </Button>

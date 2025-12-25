@@ -2,6 +2,16 @@ export const UserMessage = {
   GET_PERMISSIONS: 'user.getPermissions',
   GET_USERS: 'user.getAll',
   GET_USER_DETAIL: 'user.getDetail',
+  STAFF: {
+    GET_LIST: 'movie.list',
+    CREATED: 'movie.created',
+    UPDATED: 'movie.updated',
+    GET_DETAIL: 'movie.detail',
+  },
+  CONFIG: {
+    GET_LIST: "config.list",
+    UPDATED: 'config.updated'
+  }
 };
 
 export const MovieServiceMessage = {
@@ -13,6 +23,9 @@ export const MovieServiceMessage = {
     DELETED: 'movie.deleted',
     GET_LIST_RELEASE: 'movie.release.list',
     GET_LIST_BY_ID: 'movie.list.by-id',
+    CREATED_REVIEW: 'movie.review.created',
+    UPDATED_REVIEW: 'movie.review.updated',
+    GET_REVIEWS: 'movie.review.list',
   },
   MOVIE_RELEASE: {
     CREATED: 'movie.release.created',
@@ -25,6 +38,10 @@ export const MovieServiceMessage = {
     CREATED: 'genre.created',
     UPDATED: 'genre.updated',
     DELETED: 'genre.deleted',
+  },
+  REVIEW: {
+    GET_LIST: 'review.list',
+    DELETED: 'review.deleted',
   },
 };
 

@@ -27,8 +27,8 @@ export class MovieMapper {
   }
 
   static toResponse(
-    movie: Movie & { movieGenres: (MovieGenre & { genre: Genre })[] }
-  ): MovieDetailResponse {
+    movie: Movie & {averageRating: number, reviewCount: number} &{ movieGenres: (MovieGenre & { genre: Genre } )[] }
+  ): MovieDetailResponse  {
     return {
       id: movie.id,
       title: movie.title,
@@ -50,6 +50,8 @@ export class MovieMapper {
         id: mg.genre.id,
         name: mg.genre.name,
       })),
+      averageRating: movie.averageRating,
+      reviewCount: movie.reviewCount,
     };
   }
 }

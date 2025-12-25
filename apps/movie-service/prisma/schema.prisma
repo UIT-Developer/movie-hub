@@ -60,6 +60,7 @@ model Movie {
 
   movieGenres   MovieGenre[]   @relation("MovieToGenre")
   movieReleases MovieRelease[] @relation("MovieToRelease")
+  reviews Review[]
 
   @@map("movies")
 }
@@ -99,4 +100,25 @@ model MovieGenre {
   @@index([genreId])
 
   @@map("movie_genres")
+}
+
+model Review {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  movieId   String   @map("movie_id")@db.Uuid
+  userId    String   @map("user_id")
+
+  rating    Int      @map("rating") // 1–5
+  content   String   @map("content")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  movie Movie @relation(fields: [movieId], references: [id], onDelete: Cascade)
+
+  @@index([movieId])
+  @@index([userId])
+  @@unique([movieId, userId]) // 1 user chỉ review 1 lần / movie
+
+  @@map("reviews")
 }

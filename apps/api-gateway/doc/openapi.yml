@@ -19,8 +19,15 @@ servers:
 
 tags:
   - name: Movies
+  - name: Staffs
+  - name: Config
+  - name: Reviews
   - name: Movie Releases
   - name: Genres
+  - name: Cinemas
+  - name: Halls
+  - name: Showtimes
+  - name: Ticket Pricing
 
 paths:
   ## Movie Service Endpoints
@@ -175,6 +182,124 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiErrorResponse'
 
+  /movies/{movieId}/reviews:
+    get:
+      tags: [Movies]
+      summary: Lấy chi tiết bình luận phim
+      parameters:
+        - name: movieId
+          in: path
+          schema:
+            type: string
+            format: uuid
+          required: true
+        - $ref: '#/components/parameters/PageParameter'
+        - $ref: '#/components/parameters/LimitParameter'
+        - $ref: '#/components/parameters/SortByParameter'
+        - $ref: '#/components/parameters/SortOrderParameter'
+        - name: movieId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: rating
+          in: query
+          schema:
+            type: integer
+        - name: userId
+          in: query
+          schema:
+            type: string
+
+      responses:
+        '200':
+          description: Chi tiết phim
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiSuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/ReviewResponse'
+        '400':
+          description: Lỗi request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+    post:
+      tags: [Movies]
+      summary: Tạo bình luận mới cho phim
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateReviewDto'
+      responses:
+        '201':
+          description: Phim được tạo thành công
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiSuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ReviewResponse'
+        '400':
+          description: Lỗi request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+  /movies/{movieId}/reviews/{reviewId}:
+    put:
+      tags: [Movies]
+      summary: Sửa bình luận cho phim
+      parameters:
+        - name: movieId
+          in: path
+          schema:
+            type: string
+            format: uuid
+          required: true
+        - name: reviewId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateReviewDto'
+      responses:
+        '201':
+          description: Phim được tạo thành công
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiSuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ReviewResponse'
+        '400':
+          description: Lỗi request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+
   /movies/{movieId}/releases:
     get:
       tags: [Movies]
@@ -290,6 +415,334 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiErrorResponse'
 
+  /reviews:
+    get:
+      tags:
+        - Reviews
+      summary: Lấy danh sách phim
+      parameters:
+        - $ref: '#/components/parameters/PageParameter'
+        - $ref: '#/components/parameters/LimitParameter'
+        - $ref: '#/components/parameters/SortByParameter'
+        - $ref: '#/components/parameters/SortOrderParameter'
+        - name: movieId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: rating
+          in: query
+          schema:
+            type: integer
+        - name: userId
+          in: query
+          schema:
+            type: string
+
+      responses:
+        '200':
+          description: Danh sách phim
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiSuccessResponse'
+                  - type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/MovieSummary'
+                  meta:
+                    $ref: '#/components/schemas/ListMeta'
+        '400':
+          description: Lỗi request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+
+  /staffs:
+    get:
+      tags: [Staffs]
+      summary: Lấy danh sách nhân viên
+      parameters:
+        # Pagination
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            default: 10
+
+        # Sorting
+        - in: query
+          name: sortBy
+          schema:
+            type: string
+            example: createdAt
+
+        - in: query
+          name: sortOrder
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: asc
+
+        # Filters
+        - in: query
+          name: cinemaId
+          schema:
+            type: string
+            format: uuid
+
+        - in: query
+          name: fullName
+          schema:
+            type: string
+
+        - in: query
+          name: gender
+          schema:
+            type: string
+            enum: [MALE, FEMALE, OTHER]
+
+        - in: query
+          name: dob
+          schema:
+            type: string
+            format: date
+
+        - in: query
+          name: position
+          schema:
+            type: string
+            enum:
+              - CINEMA_MANAGER
+              - ASSISTANT_MANAGER
+              - TICKET_CLERK
+              - CONCESSION_STAFF
+              - USHER
+              - PROJECTIONIST
+              - CLEANER
+              - SECURITY
+
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [ACTIVE, INACTIVE]
+
+        - in: query
+          name: workType
+          schema:
+            type: string
+            enum: [FULL_TIME, PART_TIME, CONTRACT]
+
+        - in: query
+          name: shiftType
+          schema:
+            type: string
+            enum: [MORNING, AFTERNOON, NIGHT]
+
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/StaffResponse'
+                  meta:
+                    $ref: '#/components/schemas/PaginationMeta'
+                  message:
+                    type: string
+    post:
+      tags: [Staffs]
+      summary: Create staff
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateStaffDto'
+      responses:
+        201:
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/StaffResponse'
+                  message:
+                    type: string
+
+  /staffs/{id}:
+    get:
+      tags: [Staffs]
+      summary: Lấy chi tiết nhân viên
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/StaffResponse'
+                  message:
+                    type: string
+    put:
+      tags: [Staffs]
+      summary: Update staff
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateStaffDto'
+      responses:
+        200:
+          description: Updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/StaffResponse'
+                  message:
+                    type: string
+
+  /config:
+    get:
+      tags: [Config]
+      summary: Lấy tất cả cấu hình hệ thống
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        key:
+                          type: string
+                          example: theme
+                        value:
+                          type: object
+                          example:
+                            mode: dark
+                            primaryColor: "#0ea5e9"
+                        description:
+                          type: string
+                          example: Theme configuration
+                        updatedAt:
+                          type: string
+                          format: date-time
+                  message:
+                    type: string
+                    example: Get configs successfully
+
+  /config/{key}:
+    put:
+      tags: [Config]
+      summary: Cập nhật giá trị cấu hình
+      description: |
+        Update system config by key.
+        - Key must exist
+        - Cannot delete
+        - Cannot create new key
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - key
+                - value
+              properties:
+                key:
+                  type: string
+                  example: theme
+                value:
+                  type: object
+                  example:
+                    mode: light
+                    primaryColor: "#22c55e"
+                description:
+                  type: string
+                  example: Theme config for admin & user
+      responses:
+        200:
+          description: Updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      key:
+                        type: string
+                        example: theme
+                      value:
+                        type: object
+                        example:
+                          mode: light
+                          primaryColor: "#22c55e"
+                      description:
+                        type: string
+                        example: Theme config for admin & user
+                      updatedAt:
+                        type: string
+                        format: date-time
+                  message:
+                    type: string
+                    example: Update config successfully
+
   /genres:
     get:
       tags: [Genres]
@@ -401,6 +854,705 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiErrorResponse'
 
+  ## Cinema Endpoints
+  # ----------------------
+  /cinema:
+    post:
+      summary: Create a cinema
+      security:
+        - bearerAuth: []
+      tags:
+        - Cinemas
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCinemaRequest'
+      responses:
+        '200':
+          description: Cinema created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiSuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/CinemaDetailResponse'
+        '400':
+          description: Lỗi request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+
+  /cinema/{cinemaId}:
+    patch:
+      summary: Update cinema
+      security:
+        - bearerAuth: []
+      tags:
+        - Cinemas
+      parameters:
+        - name: cinemaId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCinemaRequest'
+      responses:
+        '200':
+          description: Cinema updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiSuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/CinemaDetailResponse'
+        '400':
+          description: Lỗi request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+
+    delete:
+      summary: Delete cinema
+      security:
+        - bearerAuth: []
+      tags:
+        - Cinemas
+      parameters:
+        - name: cinemaId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Cinema deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccessResponse'
+
+  /{cinemaId}/movies/{movieId}/showtimes:
+    get:
+      summary: Get showtimes of a movie at a cinema
+      tags:
+        - Cinemas
+      parameters:
+        - name: cinemaId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: movieId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: date
+          in: query
+          required: true
+          schema:
+            $ref: '#/components/schemas/GetShowtimesQuery'
+      responses:
+        '200':
+          description: List of showtimes is SELLING
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiSuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/ShowtimeSummaryResponse'
+        '400':
+          description: Lỗi request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+
+  /{cinemaId}/movies/{movieId}/showtimes/admin:
+    get:
+      summary: Admin get showtimes of movie at cinema
+      tags:
+        - Cinemas
+      parameters:
+        - name: cinemaId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: movieId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: date
+          in: query
+          schema:
+            $ref: '#/components/schemas/AdminGetShowtimesQuery'
+      responses:
+        '200':
+          description: List of showtimes
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiSuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/ShowtimeSummaryResponse'
+        '400':
+          description: Lỗi request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+
+  /cinema/{cinemaId}/movies:
+    get:
+      summary: Get movies at cinema
+      tags:
+        - Cinemas
+      parameters:
+        - name: cinemaId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Movies with showtimes
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiSuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/MovieWithShowtimeResponse'
+                      meta:
+                        $ref: '#/components/schemas/PaginationMeta'
+        '400':
+          description: Lỗi request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+
+  /movies/showtimes:
+    get:
+      summary: Get all movies with cinema & showtime info
+      tags:
+        - Cinemas
+      parameters:
+        - in: query
+          name: date
+          schema:
+            type: string
+            format: date
+          description: Ngày cần lấy suất chiếu (YYYY-MM-DD). Nếu không truyền thì mặc định = hôm nay.
+      responses:
+        '200':
+          description: List of movies across all cinemas
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiSuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/MovieWithCinemaAndShowtimeResponse'
+        '400':
+          description: Lỗi request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+
+  # ----------------------
+  # Halls endpoints
+  # ----------------------
+  /halls/cinema/{cinemaId}:
+    get:
+      summary: Get halls of a cinema
+      tags:
+        - Halls
+      parameters:
+        - name: cinemaId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of halls
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiSuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/HallSummaryResponse'
+        '404':
+          description: Cinema not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+
+  /halls/hall:
+    post:
+      summary: Create a hall
+      tags:
+        - Halls
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateHallRequest'
+      responses:
+        '201':
+          description: Hall created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiSuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/HallDetailResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+
+  /halls/hall/{hallId}:
+    get:
+      summary: Get hall detail by ID
+      tags:
+        - Halls
+      parameters:
+        - name: hallId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Hall detail
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiSuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/HallDetailResponse'
+        '404':
+          description: Hall not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+    patch:
+      summary: Update hall
+      tags:
+        - Halls
+      parameters:
+        - name: hallId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateHallRequest'
+      responses:
+        '200':
+          description: Hall updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiSuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/HallDetailResponse'
+        '404':
+          description: Hall not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+    delete:
+      summary: Delete hall
+      tags:
+        - Halls
+      parameters:
+        - name: hallId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Hall deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccessResponse'
+        '404':
+          description: Hall not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+
+  /halls/seat/{seatId}/status:
+    patch:
+      summary: Update seat status
+      tags:
+        - Halls
+      parameters:
+        - name: seatId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateSeatStatusRequest'
+      responses:
+        '200':
+          description: Seat status updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiSuccessResponse'
+                  - type: object
+                    properties:
+                      message:
+                        type: string
+                        example: Seat updated successfully
+        '404':
+          description: Seat not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+
+    # ----------------------
+    # SHOWTIMES endpoints
+    # ----------------------
+  /showtimes/{id}/seats:
+    get:
+      summary: Get showtime seats
+      tags:
+        - Showtimes
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Showtime seats retrieved
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiSuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ShowtimeSeatResponse'
+        '404':
+          description: Showtime not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+
+  /showtimes/showtime/{showtimeId}/ttl:
+    get:
+      summary: Get TTL of user's session for a showtime
+      tags:
+        - Showtimes
+      parameters:
+        - name: showtimeId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: TTL retrieved
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiSuccessResponse'
+                  - type: object
+                    properties:
+                      ttl:
+                        type: integer
+                        example: 100
+        '404':
+          description: Showtime not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+
+  /showtimes/showtime:
+    post:
+      summary: Create a new showtime
+      tags:
+        - Showtimes
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateShowtimeRequest'
+      responses:
+        '200':
+          description: Showtime created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiSuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ShowtimeDetailResponse'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+
+  /showtimes/batch:
+    post:
+      summary: Batch create showtimes
+      tags:
+        - Showtimes
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BatchCreateShowtimesInput'
+      responses:
+        '200':
+          description: Batch created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiSuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/BatchCreateShowtimeResponse'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+
+  /showtimes/showtime/{id}:
+    patch:
+      summary: Update showtime
+      tags:
+        - Showtimes
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateShowtimeRequest'
+      responses:
+        '200':
+          description: Showtime updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiSuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ShowtimeDetailResponse'
+        '404':
+          description: Showtime not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+
+    delete:
+      summary: Delete showtime
+      tags:
+        - Showtimes
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Showtime deleted
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiSuccessResponse'
+                  - type: object
+                    properties:
+                      message:
+                        type: string
+                        example: Showtime deleted successfully
+        '404':
+          description: Showtime not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+
+  /ticket-pricings/hall/{hallId}:
+    get:
+      summary: Get ticket pricing list for a hall
+      tags:
+        - Ticket Pricing
+      parameters:
+        - name: hallId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Ticket pricing retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiSuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/TicketPricingResponse'
+        '404':
+          description: Hall not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+
+  /ticket-pricings/pricing/{pricingId}:
+    patch:
+      summary: Update ticket pricing
+      tags:
+        - Ticket Pricing
+      parameters:
+        - name: pricingId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                price:
+                  type: number
+                  example: 120000
+              required:
+                - price
+      responses:
+        '200':
+          description: Ticket pricing updated successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiSuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/TicketPricingResponse'
+        '404':
+          description: Pricing not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+
 components:
   schemas:
     ListMeta:
@@ -477,6 +1629,10 @@ components:
         languageType:
           type: string
           enum: ['ORIGINAL', 'SUBTITLE', 'DUBBED']
+        averageRating:
+          type: number
+        reviewCount:
+          type: number
 
     MovieDetail:
       allOf:
@@ -719,6 +1875,59 @@ components:
           type: string
           example: Phát hành dịp lễ quốc khánh
 
+    CreateReviewDto:
+      type: object
+      properties:
+        movieId:
+          type: string
+          format: uuid
+        userId:
+          type: string
+        rating:
+          type: integer
+        content:
+          type: string
+      required:
+        - movieId
+        - userId
+        - rating
+        - content
+
+    UpdateReviewDto:
+      type: object
+      properties:
+        movieId:
+          type: string
+          format: uuid
+        userId:
+          type: string
+        rating:
+          type: integer
+        content:
+          type: string
+
+    ReviewResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        movieId:
+          type: string
+          format: uuid
+        userId:
+          type: string
+        rating:
+          type: integer
+        content:
+          type: string
+        createdAt:
+          type: string
+          format: date
+        updatedAt:
+          type: string
+          format: date
+
     MovieRelease:
       type: object
       properties:
@@ -733,6 +1942,873 @@ components:
           format: date
         note:
           type: string
+
+    # ----------------------
+    # Staff
+    # ----------------------
+    CreateStaffDto:
+      type: object
+      required:
+        - cinemaId
+        - fullName
+        - email
+        - phone
+        - gender
+        - dob
+        - position
+        - status
+        - workType
+        - shiftType
+        - salary
+        - hireDate
+      properties:
+        cinemaId:
+          type: string
+          format: uuid
+
+        fullName:
+          type: string
+          minLength: 1
+          example: 'Nguyễn Văn A'
+
+        email:
+          type: string
+          format: email
+          example: 'nguyenvana@example.com'
+
+        phone:
+          type: string
+          minLength: 9
+          example: '0987654321'
+
+        gender:
+          type: string
+          enum: [MALE, FEMALE, OTHER]
+
+        dob:
+          type: string
+          format: date
+          example: '1998-06-15'
+
+        position:
+          type: string
+          enum:
+            - CINEMA_MANAGER
+            - ASSISTANT_MANAGER
+            - TICKET_CLERK
+            - CONCESSION_STAFF
+            - USHER
+            - PROJECTIONIST
+            - CLEANER
+            - SECURITY
+
+        status:
+          type: string
+          enum: [ACTIVE, INACTIVE]
+
+        workType:
+          type: string
+          enum: [FULL_TIME, PART_TIME, CONTRACT]
+
+        shiftType:
+          type: string
+          enum: [MORNING, AFTERNOON, NIGHT]
+
+        salary:
+          type: number
+          format: double
+          example: 8000000
+
+        hireDate:
+          type: string
+          format: date
+          example: '2024-01-10'
+    UpdateStaffDto:
+      type: object
+      properties:
+        fullName:
+          type: string
+          minLength: 1
+
+        phone:
+          type: string
+          minLength: 9
+
+        gender:
+          type: string
+          enum: [MALE, FEMALE, OTHER]
+
+        dob:
+          type: string
+          format: date
+
+        position:
+          type: string
+          enum:
+            - CINEMA_MANAGER
+            - ASSISTANT_MANAGER
+            - TICKET_CLERK
+            - CONCESSION_STAFF
+            - USHER
+            - PROJECTIONIST
+            - CLEANER
+            - SECURITY
+
+        status:
+          type: string
+          enum: [ACTIVE, INACTIVE]
+
+        workType:
+          type: string
+          enum: [FULL_TIME, PART_TIME, CONTRACT]
+
+        shiftType:
+          type: string
+          enum: [MORNING, AFTERNOON, NIGHT]
+
+        salary:
+          type: number
+          format: double
+
+        hireDate:
+          type: string
+          format: date
+    StaffResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+
+        cinemaId:
+          type: string
+          format: uuid
+
+        fullName:
+          type: string
+
+        email:
+          type: string
+          format: email
+
+        phone:
+          type: string
+
+        gender:
+          type: string
+          enum: [MALE, FEMALE, OTHER]
+
+        dob:
+          type: string
+          format: date
+
+        position:
+          type: string
+          enum:
+            - CINEMA_MANAGER
+            - ASSISTANT_MANAGER
+            - TICKET_CLERK
+            - CONCESSION_STAFF
+            - USHER
+            - PROJECTIONIST
+            - CLEANER
+            - SECURITY
+
+        status:
+          type: string
+          enum: [ACTIVE, INACTIVE]
+
+        workType:
+          type: string
+          enum: [FULL_TIME, PART_TIME, CONTRACT]
+
+        shiftType:
+          type: string
+          enum: [MORNING, AFTERNOON, NIGHT]
+
+        salary:
+          type: number
+          format: double
+
+        hireDate:
+          type: string
+          format: date
+
+    # ----------------------
+    # CINEMA
+    # ----------------------
+
+    CreateCinemaRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          example: CGV Vincom Center
+        address:
+          type: string
+          example: 70 Lê Duẩn
+        city:
+          type: string
+          example: Hà Nội
+        district:
+          type: string
+          nullable: true
+          example: Ba Đình
+        phone:
+          type: string
+          nullable: true
+          example: 0123456789
+        email:
+          type: string
+          nullable: true
+          example: cgv@example.com
+        website:
+          type: string
+          nullable: true
+        latitude:
+          type: number
+          nullable: true
+          example: 21.027763
+        longitude:
+          type: number
+          nullable: true
+          example: 105.834160
+        description:
+          type: string
+          nullable: true
+        amenities:
+          type: array
+          items:
+            type: string
+        facilities:
+          type: object
+          nullable: true
+          additionalProperties: true
+        images:
+          type: array
+          items:
+            type: string
+        virtualTour360Url:
+          type: string
+          nullable: true
+        operatingHours:
+          type: object
+          nullable: true
+          additionalProperties: true
+        socialMedia:
+          type: object
+          nullable: true
+          additionalProperties: true
+        timezone:
+          type: string
+          example: Asia/Ho_Chi_Minh
+
+    UpdateCinemaRequest:
+      type: object
+      description: Same fields as CreateCinemaRequest but optional
+      properties:
+        name:
+          type: string
+          nullable: true
+        address:
+          type: string
+          nullable: true
+        city:
+          type: string
+          nullable: true
+        district:
+          type: string
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+        email:
+          type: string
+          nullable: true
+        website:
+          type: string
+          nullable: true
+        latitude:
+          type: number
+          nullable: true
+        longitude:
+          type: number
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        amenities:
+          type: array
+          items:
+            type: string
+        facilities:
+          type: object
+          nullable: true
+          additionalProperties: true
+        images:
+          type: array
+          items:
+            type: string
+        virtualTour360Url:
+          type: string
+          nullable: true
+        operatingHours:
+          type: object
+          nullable: true
+          additionalProperties: true
+        socialMedia:
+          type: object
+          nullable: true
+          additionalProperties: true
+        timezone:
+          type: string
+          nullable: true
+
+    GetShowtimesQuery:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+          example: 2025-01-16
+
+    AdminGetShowtimesQuery:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+          example: 2025-01-16
+        status:
+          type: string
+          nullable: true
+          enum: [SCHEDULED, SELLING, SOLD_OUT, CANCELLED, COMPLETED]
+          example: SELLING
+        format:
+          type: string
+          nullable: true
+          enum: [TWO_D, THREE_D, IMAX, FOUR_DX]
+        hallId:
+          type: string
+          nullable: true
+        language:
+          type: string
+          nullable: true
+
+    PaginationMeta:
+      type: object
+      properties:
+        page:
+          type: number
+        limit:
+          type: number
+        totalRecords:
+          type: number
+        totalPages:
+          type: number
+        hasPrev:
+          type: boolean
+        hasNext:
+          type: boolean
+
+    CinemaSummaryResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        address:
+          type: string
+        city:
+          type: string
+        district:
+          type: string
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+        email:
+          type: string
+          nullable: true
+        rating:
+          type: number
+          nullable: true
+        totalReviews:
+          type: number
+        images:
+          type: array
+          items:
+            type: string
+        status:
+          type: string
+          enum: [ACTIVE, MAINTENANCE, CLOSED]
+
+    CinemaDetailResponse:
+      type: object
+      allOf:
+        - $ref: '#/components/schemas/CinemaSummaryResponse'
+        - type: object
+          properties:
+            website:
+              type: string
+              nullable: true
+            latitude:
+              type: number
+              nullable: true
+            longitude:
+              type: number
+              nullable: true
+            description:
+              type: string
+              nullable: true
+            amenities:
+              type: array
+              items:
+                type: string
+            facilities:
+              type: object
+              nullable: true
+              additionalProperties: true
+            virtualTour360Url:
+              type: string
+              nullable: true
+            operatingHours:
+              type: object
+              nullable: true
+              additionalProperties: true
+            socialMedia:
+              type: object
+              nullable: true
+              additionalProperties: true
+            timezone:
+              type: string
+            createdAt:
+              type: string
+              format: date-time
+            updatedAt:
+              type: string
+              format: date-time
+
+    ShowtimeSummaryResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          nullable: true
+        hallId:
+          type: string
+        startTime:
+          type: string
+          format: date-time
+        endTime:
+          type: string
+          format: date-time
+        format:
+          type: string
+          enum: [TWO_D, THREE_D, IMAX, FOUR_DX]
+        status:
+          type: string
+          enum: [SCHEDULED, SELLING, SOLD_OUT, CANCELLED, COMPLETED]
+          example: SELLING
+
+    MovieWithShowtimeResponse:
+      type: object
+      allOf:
+        - $ref: '#/components/schemas/MovieDetail'
+        - type: object
+          properties:
+            showtimes:
+              type: array
+              items:
+                $ref: '#/components/schemas/ShowtimeSummaryResponse'
+
+    CinemaShowtimeGroup:
+      type: object
+      properties:
+        cinemaId:
+          type: string
+        name:
+          type: string
+        address:
+          type: string
+        showtimes:
+          type: array
+          items:
+            $ref: '#/components/schemas/ShowtimeSummaryResponse'
+
+    MovieWithCinemaAndShowtimeResponse:
+      type: object
+      allOf:
+        - $ref: '#/components/schemas/MovieDetail'
+        - type: object
+          properties:
+            cinemas:
+              type: array
+              items:
+                $ref: '#/components/schemas/CinemaShowtimeGroup'
+
+    # ----------------------
+    # HALL SCHEMAS
+    # ----------------------
+    CreateHallRequest:
+      type: object
+      properties:
+        cinemaId:
+          type: string
+          format: uuid
+          example: '7b1db2ee-9a1f-4c22-a458-aa9cfae09e8b'
+        name:
+          type: string
+          example: 'Hall 1'
+        type:
+          type: string
+          enum: [STANDARD, PREMIUM, IMAX, FOUR_DX]
+          example: STANDARD
+        screenType:
+          type: string
+          nullable: true
+          example: 'IMAX Laser'
+        soundSystem:
+          type: string
+          nullable: true
+          example: 'Dolby Atmos'
+        features:
+          type: array
+          items:
+            type: string
+          example: ['3D', 'ATMOS']
+        layoutType:
+          type: string
+          enum: [STANDARD, DUAL_AISLE, STADIUM]
+          example: STANDARD
+      required:
+        - cinemaId
+        - name
+        - type
+
+    UpdateHallRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          nullable: true
+          example: 'Hall VIP 2'
+        type:
+          type: string
+          enum: [STANDARD, PREMIUM, IMAX, FOUR_DX]
+          nullable: true
+          example: PREMIUM
+        screenType:
+          type: string
+          nullable: true
+        soundSystem:
+          type: string
+          nullable: true
+        features:
+          type: array
+          nullable: true
+          items:
+            type: string
+        # layoutType purposely omitted according to your DTO
+
+    UpdateSeatStatusRequest:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [ACTIVE, BROKEN, MAINTENANCE]
+          example: BROKEN
+      required:
+        - status
+
+    HallSummaryResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          example: 'Hall 1'
+        type:
+          type: string
+          enum: [STANDARD, PREMIUM, IMAX, FOUR_DX]
+        capacity:
+          type: number
+          example: 120
+        rows:
+          type: number
+          example: 10
+        status:
+          type: string
+          enum: [ACTIVE, MAINTENANCE, CLOSED]
+          example: ACTIVE
+        screenType:
+          type: string
+          nullable: true
+        soundSystem:
+          type: string
+          nullable: true
+
+    HallDetailResponse:
+      allOf:
+        - $ref: '#/components/schemas/HallSummaryResponse'
+        - type: object
+          properties:
+            features:
+              type: array
+              items:
+                type: string
+              example: ['3D', 'ATMOS']
+            cinemaId:
+              type: string
+              format: uuid
+            layoutType:
+              type: string
+              enum: [STANDARD, DUAL_AISLE, STADIUM]
+              example: STANDARD
+            createdAt:
+              type: string
+              format: date-time
+            updatedAt:
+              type: string
+              format: date-time
+
+            seatMap:
+              type: array
+              items:
+                type: object
+                properties:
+                  row:
+                    type: string
+                    example: 'A'
+                  seats:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        rowLetter:
+                          type: string
+                          example: 'A'
+                        seatNumber:
+                          type: number
+                          example: 5
+                        type:
+                          type: string
+                          enum: [STANDARD, VIP, COUPLE]
+                          example: STANDARD
+                        status:
+                          type: string
+                          enum: [ACTIVE, INACTIVE, MAINTENANCE]
+                          example: ACTIVE
+
+    # ----------------------
+    # SHOWTIME SCHEMAS
+    # ----------------------
+    ShowtimeSeatResponse:
+      type: object
+      properties:
+        showtime:
+          type: object
+          properties:
+            id: { type: string }
+            movieId: { type: string }
+            movieTitle: { type: string }
+            start_time: { type: string, format: date-time }
+            end_time: { type: string, format: date-time }
+            dateType:
+              type: string
+              enum: [WEEKDAY, WEEKEND, HOLIDAY]
+            format:
+              type: string
+              enum: [TWO_D, THREE_D, IMAX, FOUR_DX]
+            language: { type: string }
+            subtitles:
+              type: array
+              items: { type: string }
+        cinemaId: { type: string }
+        cinemaName: { type: string }
+        hallId: { type: string }
+        hallName: { type: string }
+        layoutType:
+          type: string
+          enum: [STANDARD, DUAL_AISLE, STADIUM]
+        seat_map:
+          type: array
+          items:
+            type: object
+            properties:
+              row: { type: string }
+              seats:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id: { type: string }
+                    number: { type: number }
+                    seatType:
+                      type: string
+                      enum: [STANDARD, VIP, COUPLE, PREMIUM, WHEELCHAIR]
+                    seatStatus:
+                      type: string
+                      enum: [ACTIVE, BROKEN, MAINTENANCE]
+                    reservationStatus:
+                      type: string
+                      enum: [AVAILABLE, HELD, CONFIRMED, CANCELLED]
+                    isHeldByCurrentUser:
+                      type: boolean
+                      nullable: true
+        ticketPrices:
+          type: array
+          items:
+            type: object
+            properties:
+              seatType:
+                type: string
+                enum: [STANDARD, VIP, COUPLE, PREMIUM, WHEELCHAIR]
+              price: { type: number }
+        rules:
+          type: object
+          properties:
+            max_selectable: { type: number }
+            hold_time_seconds: { type: number }
+
+    CreateShowtimeRequest:
+      type: object
+      properties:
+        movieId: { type: string }
+        movieReleaseId: { type: string }
+        cinemaId: { type: string }
+        hallId: { type: string }
+        startTime:
+          type: string
+          format: date-time
+        format:
+          type: string
+          enum: [TWO_D, THREE_D, IMAX, FOUR_DX]
+        language: { type: string }
+        subtitles:
+          type: array
+          items: { type: string }
+
+    UpdateShowtimeRequest:
+      type: object
+      properties:
+        movieId: { type: string }
+        movieReleaseId: { type: string }
+        cinemaId: { type: string }
+        hallId: { type: string }
+        startTime:
+          type: string
+          format: date-time
+        format:
+          type: string
+          enum: [TWO_D, THREE_D, IMAX, FOUR_DX]
+        language: { type: string }
+        subtitles:
+          type: array
+          items: { type: string }
+
+    ShowtimeDetailResponse:
+      type: object
+      properties:
+        id: { type: string }
+        movieId: { type: string }
+        movieReleaseId: { type: string, nullable: true }
+        cinemaId: { type: string }
+        hallId: { type: string }
+        startTime: { type: string, format: date-time }
+        endTime: { type: string, format: date-time }
+        format:
+          type: string
+          enum: [TWO_D, THREE_D, IMAX, FOUR_DX]
+        language: { type: string }
+        subtitles:
+          type: array
+          items: { type: string }
+        availableSeats: { type: number }
+        totalSeats: { type: number }
+        status:
+          type: string
+          enum: [SELLING, STOPPED, CANCELLED]
+        dayType:
+          type: string
+          enum: [WEEKDAY, WEEKEND, HOLIDAY]
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    BatchCreateShowtimesInput:
+      type: object
+      properties:
+        movieId: { type: string }
+        movieReleaseId: { type: string }
+        cinemaId: { type: string }
+        hallId: { type: string }
+        startDate: { type: string, format: date-time }
+        endDate: { type: string, format: date-time }
+        timeSlots:
+          type: array
+          items:
+            type: string
+            pattern: '^([01]\d|2[0-3]):([0-5]\d)$'
+          example: ['14:00', '18:00', '21:00']
+        repeatType:
+          type: string
+          enum: [DAILY, WEEKLY, CUSTOM_WEEKDAYS]
+        weekdays:
+          type: array
+          description: Thứ trong tuần
+          items:
+            type: integer
+            enum: [0, 1, 2, 3, 4, 5, 6]
+          example: [1, 3, 5]
+        format:
+          type: string
+          enum: [TWO_D, THREE_D, IMAX, FOUR_DX]
+        language: { type: string }
+        subtitles:
+          type: array
+          items: { type: string }
+
+    BatchCreateShowtimeResponse:
+      type: object
+      properties:
+        createdCount: { type: number }
+        skippedCount: { type: number }
+        created:
+          type: array
+          items:
+            $ref: '#/components/schemas/ShowtimeDetailResponse'
+        skipped:
+          type: array
+          items:
+            type: object
+            properties:
+              start: { type: string, format: date-time }
+              reason: { type: string, example: 'TIME_CONFLICT' }
+
+    # ----------------------
+    # TICKET PRICING SCHEMAS
+    # ----------------------
+    TicketPricingResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        hallId:
+          type: string
+        seatType:
+          type: string
+          enum: [STANDARD, VIP, COUPLE, PREMIUM, WHEELCHAIR]
+        dayType:
+          type: string
+          enum: [WEEKDAY, WEEKEND, HOLIDAY]
+        price:
+          type: number
 
   parameters:
     PageParameter:

@@ -1,8 +1,9 @@
-import {clerkClient } from '@clerk/clerk-sdk-node';
+import { clerkClient } from '@clerk/clerk-sdk-node';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Inject, Injectable } from '@nestjs/common';
 import { Cache } from 'cache-manager';
 import { PrismaService } from '../prisma.service';
+import { Prisma } from '../../../generated/prisma';
 
 @Injectable()
 export class UserService {
@@ -12,7 +13,6 @@ export class UserService {
   ) {}
 
   async getPermissions(userId: string): Promise<string[]> {
-
     const cacheKey = `permissions:${userId}`;
     const cached = await this.cacheManager.get<string[]>(cacheKey);
     if (cached) return cached;
@@ -49,9 +49,35 @@ export class UserService {
       email: user.emailAddresses[0]?.emailAddress || '',
       firstName: user.firstName || '',
       lastName: user.lastName || '',
-      fullName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.username || 'Guest',
+      fullName:
+        `${user.firstName || ''} ${user.lastName || ''}`.trim() ||
+        user.username ||
+        'Guest',
       phone: user.phoneNumbers[0]?.phoneNumber || '',
       imageUrl: user.imageUrl,
+    };
+  }
+
+  async findSettingVariables() {
+    return {
+      data: await this.prismaService.setting.findMany(),
+    };
+  }
+
+  async updateSettingVariable(dto: {
+    key: string;
+    value: Prisma.JsonObject;
+    description?: string;
+  }) {
+    return {
+      data: await this.prismaService.setting.update({
+        where: { key: dto.key },
+        data: {
+          value: dto.value ?? undefined,
+          description: dto.description ? dto.description : undefined,
+        },
+      }),
+      message: 'Update setting variable successfully!',
     };
   }
 }

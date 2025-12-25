@@ -35,7 +35,7 @@ export class HallService {
     cinemaId: string
   ): Promise<ServiceResult<HallSummaryResponse[]>> {
     const halls = await this.prisma.halls.findMany({
-      where: { cinema_id: cinemaId },
+      where: { cinema_id: cinemaId, status: 'ACTIVE' },
       include: { seats: true },
     });
     return {

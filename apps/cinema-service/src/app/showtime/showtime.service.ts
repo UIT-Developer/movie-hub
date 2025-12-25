@@ -11,6 +11,9 @@ import {
   SeatTypeEnum,
   MovieServiceMessage,
   ServiceResult,
+  AdminShowtimeFilterDTO,
+  FormatEnum,
+  ShowtimeStatusEnum,
 } from '@movie-hub/shared-types';
 import { PrismaService } from '../prisma.service';
 import { RealtimeService } from '../realtime/realtime.service';
@@ -33,6 +36,71 @@ export class ShowtimeService {
     private readonly realtimeService: RealtimeService,
     @Inject('MOVIE_SERVICE') private readonly movieClient: ClientProxy
   ) {}
+
+  async getShowtimes(filter: AdminShowtimeFilterDTO) {
+    const { cinemaId, date, movieId, hallId } = filter;
+
+    const where: Prisma.ShowtimesWhereInput = {};
+
+    if (cinemaId) where.cinema_id = cinemaId;
+    if (movieId) where.movie_id = movieId;
+    if (hallId) where.hall_id = hallId;
+
+    if (date) {
+      where.start_time = {
+        gte: new Date(`${date}T00:00:00.000Z`),
+        lt: new Date(`${date}T23:59:59.999Z`),
+      };
+    }
+
+    const showtimes = await this.prisma.showtimes.findMany({
+      where,
+      orderBy: { start_time: 'asc' },
+      include: {
+        hall: true,
+        cinema: true,
+      },
+    });
+
+    // ===== 1. Gom unique movieIds =====
+    const movieIds = [...new Set(showtimes.map((s) => s.movie_id))];
+
+    // ===== 2. Gọi movie service =====
+    const movies = movieIds.length
+      ? await lastValueFrom(
+          this.movieClient.send(
+            MovieServiceMessage.MOVIE.GET_LIST_BY_ID,
+            movieIds
+          )
+        )
+      : [];
+
+    // ===== 3. Map movieId -> movie =====
+    const movieMap = new Map(movies.map((movie) => [movie.id, movie]));
+
+    // ===== 4. Build response =====
+    const data: ShowtimeSummaryResponse[] = showtimes.map((showtime) => {
+      const movie: any = movieMap.get(showtime.movie_id);
+      return {
+        id: showtime.id,
+        cinemaId: showtime.cinema_id,
+        cinemaName: showtime.cinema.name,
+        movieId: showtime.movie_id,
+        movieTitle: movie?.title,
+        hallId: showtime.hall_id,
+        hallName: showtime.hall.name,
+        format: showtime.format as FormatEnum,
+        startTime: showtime.start_time,
+        endTime: showtime.end_time,
+        status: showtime.status as ShowtimeStatusEnum,
+      };
+    });
+
+    return {
+      data,
+      message: 'Fetch showtimes successfully',
+    };
+  }
 
   /**
    * 📅 Lấy danh sách suất chiếu của 1 phim tại 1 rạp (có cache)

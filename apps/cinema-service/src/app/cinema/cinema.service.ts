@@ -14,7 +14,7 @@ import {
 import { CinemaMapper } from './cinema.mapper';
 import { PaginationQuery, ServiceResult } from '@movie-hub/shared-types/common';
 import { ShowtimeStatus } from '../../../generated/prisma';
-import { ClientProxy } from '@nestjs/microservices';
+import { ClientProxy, RpcException } from '@nestjs/microservices';
 import { lastValueFrom, timeout } from 'rxjs';
 import { ShowtimeMapper } from '../showtime/showtime.mapper';
 
@@ -68,13 +68,17 @@ export class CinemaService {
   }
 
   async deleteCinema(id: string): Promise<ServiceResult<void>> {
-    await this.prisma.cinemas.delete({
-      where: { id },
-    });
-    return {
-      data: undefined,
-      message: 'Delete cinema successfully!',
-    };
+    try {
+      await this.prisma.cinemas.delete({
+        where: { id },
+      });
+      return {
+        data: undefined,
+        message: 'Delete cinema successfully!',
+      };
+    } catch (e) {
+      throw new RpcException("Can't delete this cinema");
+    }
   }
 
   async getAllCinemas(): Promise<ServiceResult<CinemaDetailResponse[]>> {

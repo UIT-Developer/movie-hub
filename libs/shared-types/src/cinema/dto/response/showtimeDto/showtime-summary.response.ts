@@ -5,7 +5,12 @@ import {
 
 export interface ShowtimeSummaryResponse {
   id?: string;
+  cinemaId?: string;
+  cinemaName?: string;
+  movieId?: string;
+  movieTitle?: string;
   hallId: string;
+  hallName?: string;
   startTime: Date;
   endTime: Date;
   format: FormatEnum;

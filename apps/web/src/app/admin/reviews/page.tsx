@@ -3,7 +3,7 @@
 export const dynamic = 'force-dynamic';
 
 import { useState, useMemo } from 'react';
-import { Eye, Filter, Trash2, Star, Calendar } from 'lucide-react';
+import { Eye, Filter, Trash2, Star } from 'lucide-react';
 import { Button } from '@movie-hub/shacdn-ui/button';
 import {
   Card,
@@ -37,7 +37,6 @@ import {
 } from '@movie-hub/shacdn-ui/select';
 import { Label } from '@movie-hub/shacdn-ui/label';
 import { Input } from '@movie-hub/shacdn-ui/input';
-import { Badge } from '@movie-hub/shacdn-ui/badge';
 import { useReviews, useDeleteReview, useMovies } from '@/libs/api';
 
 export default function ReviewsPage() {
@@ -55,7 +54,7 @@ export default function ReviewsPage() {
 
   // API hooks
   const { data: moviesData = [] } = useMovies();
-  const movies = Array.isArray(moviesData) ? moviesData : [];
+  const movies = useMemo(() => Array.isArray(moviesData) ? moviesData : [], [moviesData]);
 
   const { data: reviewsData = [], isLoading: loading } = useReviews({
     movieId: filterMovieId === 'all' ? undefined : filterMovieId,
@@ -66,24 +65,50 @@ export default function ReviewsPage() {
     page,
   });
   const reviews = useMemo(() => Array.isArray(reviewsData) ? reviewsData : [], [reviewsData]);
-  
-  const selectedReview = reviews.find(r => r.id === selectedReviewId);
+
+  // Create movie map for enrichment
+  const movieMap = useMemo(() => {
+    const map = new Map<string, string>();
+    movies.forEach((movie) => {
+      if (movie?.id) {
+        map.set(movie.id, movie.title || 'Unknown Movie');
+      }
+    });
+    return map;
+  }, [movies]);
+
+  // Enrich reviews with movie titles
+  const enrichedReviews = useMemo(() => {
+    return reviews.map((review) => {
+      const movieTitle = movieMap.get(review.movieId) || 'Unknown Movie';
+      
+      return {
+        ...review,
+        movieTitle,
+        // userName/userEmail not available from BE, would need user-service integration
+        userName: 'User', // Placeholder - BE doesn't return user info
+        userEmail: '',
+      };
+    });
+  }, [reviews, movieMap]);
+
+  const selectedReview = enrichedReviews.find(r => r.id === selectedReviewId);
   const deleteReview = useDeleteReview();
 
   // Calculate statistics
   const stats = useMemo(() => {
     return {
-      total: reviews.length,
-      avgRating: reviews.length > 0 
-        ? (reviews.reduce((sum, r) => sum + (r.rating || 0), 0) / reviews.length).toFixed(1)
+      total: enrichedReviews.length,
+      avgRating: enrichedReviews.length > 0 
+        ? (enrichedReviews.reduce((sum, r) => sum + (r.rating || 0), 0) / enrichedReviews.length).toFixed(1)
         : 0,
-      fiveStars: reviews.filter(r => r.rating === 5).length,
-      fourStars: reviews.filter(r => r.rating === 4).length,
-      threeStars: reviews.filter(r => r.rating === 3).length,
-      twoStars: reviews.filter(r => r.rating === 2).length,
-      oneStars: reviews.filter(r => r.rating === 1).length,
+      fiveStars: enrichedReviews.filter(r => r.rating === 5).length,
+      fourStars: enrichedReviews.filter(r => r.rating === 4).length,
+      threeStars: enrichedReviews.filter(r => r.rating === 3).length,
+      twoStars: enrichedReviews.filter(r => r.rating === 2).length,
+      oneStars: enrichedReviews.filter(r => r.rating === 1).length,
     };
-  }, [reviews]);
+  }, [enrichedReviews]);
 
   const handleViewDetail = (reviewId: string) => {
     setSelectedReviewId(reviewId);
@@ -300,7 +325,7 @@ export default function ReviewsPage() {
         <CardHeader>
           <CardTitle>Reviews</CardTitle>
           <CardDescription>
-            {reviews.length} review{reviews.length !== 1 ? 's' : ''} found
+            {enrichedReviews.length} review{enrichedReviews.length !== 1 ? 's' : ''} found
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -309,7 +334,7 @@ export default function ReviewsPage() {
               <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-purple-600 border-r-transparent"></div>
               <p className="mt-4 text-gray-500">Loading reviews...</p>
             </div>
-          ) : reviews.length === 0 ? (
+          ) : enrichedReviews.length === 0 ? (
             <div className="text-center py-16">
               <Star className="h-16 w-16 text-gray-300 mx-auto mb-4" />
               <p className="text-gray-500">No reviews found with current filters.</p>
@@ -322,14 +347,13 @@ export default function ReviewsPage() {
                     <TableHead>Rating</TableHead>
                     <TableHead>Movie</TableHead>
                     <TableHead>Reviewer</TableHead>
-                    <TableHead>Title</TableHead>
                     <TableHead>Comment</TableHead>
                     <TableHead>Date</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {reviews.map((review) => (
+                  {enrichedReviews.map((review) => (
                     <TableRow key={review.id}>
                       <TableCell>
                         <div className="flex items-center gap-2">
@@ -338,9 +362,8 @@ export default function ReviewsPage() {
                         </div>
                       </TableCell>
                       <TableCell className="font-medium">{review.movieTitle}</TableCell>
-                      <TableCell>{review.userName || review.userEmail}</TableCell>
-                      <TableCell className="max-w-xs truncate">{review.title}</TableCell>
-                      <TableCell className="max-w-md truncate text-gray-600">{review.content}</TableCell>
+                      <TableCell>{review.userName || review.userEmail || 'Unknown'}</TableCell>
+                      <TableCell className="max-w-lg truncate text-gray-600">{review.content}</TableCell>
                       <TableCell className="text-sm text-gray-600">{formatDate(review.createdAt)}</TableCell>
                       <TableCell>
                         <div className="flex gap-2">

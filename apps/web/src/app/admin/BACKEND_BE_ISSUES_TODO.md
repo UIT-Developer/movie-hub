@@ -207,3 +207,126 @@ Notes for BE team:
 - Check if `movieClient` service communication is failing (microservice networking issue)
 - Check if cinema/hall/movie/release exist in database
 
+---
+
+## Issue: Admin Reviews List — Missing Movie Title, Reviewer Name (important)
+Status: 🟡 PARTIALLY ADDRESSED with FE workaround
+
+**Current Status**: FE has implemented workaround using movie enrichment. However, several BE issues remain.
+
+### Problem Analysis:
+
+**Missing Fields in API Response:**
+- BE endpoint `GET /api/v1/reviews` returns only: `id`, `rating`, `content`, `createdAt`
+- FE needs: `movieId`, `userId`, `movieTitle`, `userName`, `userEmail`, `title`
+- **BE currently returns**: Only basic fields, no relations included
+- **BE doesn't have**: `title` field in Review model (only `content`)
+
+**Files with Issues:**
+- `libs/shared-types/src/movie/dto/response/review.response.ts` (ReviewResponse): Missing `movieId`, `userId`, `title`
+- `apps/movie-service/src/module/review/review.service.ts` (findAll method): Not including Movie/User relations in query
+- `apps/movie-service/prisma/schema.prisma`: Review model doesn't have separate `title` field (only has `content`)
+
+**Code Issues (BE movie-service/review.service.ts line 27-37):**
+```typescript
+const [data, totalRecords] = await Promise.all([
+  this.prisma.review.findMany({
+    where,
+    skip,
+    take: limit,
+    orderBy,
+    // ❌ MISSING: include: { movie: true, user: true }
+  }),
+  // ...
+]);
+```
+
+### Current FE Workaround:
+
+FE implemented enrichment to work around missing BE data:
+1. **Movie Title**: Fetch `useMovies()` hook separately and map `movieId` → `movieTitle`
+2. **Reviewer**: Set to placeholder "User" (can't enrich without user data endpoint)
+3. **Title**: Use first 100 chars of `content` since BE doesn't have `title` field
+
+**Why this is a workaround**: 
+- BE should return complete data with relations
+- FE shouldn't need to do extra fetches for basic data already in DB
+
+### Recommendations for BE Team:
+
+**Option 1 (Recommended): Update ReviewResponse to include relations**
+```typescript
+// In review.response.ts
+export interface ReviewResponse {
+  id: string;
+  movieId: string;
+  userId: string;
+  rating: number;
+  content: string;
+  createdAt: Date;
+  // Add relations
+  movie?: { id: string; title: string };
+  user?: { id: string; name: string; email: string };
+}
+
+// In review.service.ts findAll method
+const [data, totalRecords] = await Promise.all([
+  this.prisma.review.findMany({
+    where,
+    skip,
+    take: limit,
+    orderBy,
+    include: {
+      movie: { select: { id: true, title: true } },
+      // If user-service integration exists, include user data
+    },
+  }),
+  // ...
+]);
+```
+
+**Option 2: Add `title` field to Review model**
+```sql
+-- In prisma schema
+model Review {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  movieId   String   @map("movie_id") @db.Uuid
+  userId    String   @map("user_id")
+  rating    Int      @map("rating")
+  title     String?  @map("title")      // ← NEW: Add optional title field
+  content   String   @map("content")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  movie     Movie    @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  // ...
+}
+```
+
+**Option 3: Add user-service integration**
+- Currently BE can't fetch user info (name, email) from user-service
+- Add similar pattern used for movie-service to include user data in reviews
+
+### FE Impact:
+
+- If BE is updated, FE workaround can be removed and simplified
+- Currently FE successfully renders reviews with enriched data
+- No blocking issues for users (workaround functional)
+
+### Testing with Current Workaround:
+
+FE Tests:
+- ✅ Reviews load with correct count
+- ✅ Movie title enriched from movies lookup
+- ✅ Reviewer shows "User" placeholder (limitation due to BE not returning user data)
+- ✅ Title shows first 100 chars of content
+- ✅ Comment displays full content
+- ✅ Date formatted correctly
+- ✅ Filters work (by movie, rating, date)
+- ✅ Statistics calculated correctly
+
+**Next Steps for BE Team:**
+1. Include `movie` relation in findAll query (highest priority)
+2. Add user integration to include reviewer name/email
+3. Consider adding `title` field as separate entity (or clarify it's intentionally just `content`)
+4. Ensure ReviewResponse type matches returned data
+

@@ -640,6 +640,10 @@ export interface Review {
   rating: number;
   content: string;
   createdAt: string | Date;
+  // BE doesn't return these, but FE can enrich them
+  movieTitle?: string;
+  userName?: string;
+  userEmail?: string;
 }
 
 export type GetReviewsResponse = PaginatedResponse<Review>;

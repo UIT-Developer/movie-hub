@@ -54,30 +54,52 @@ import type {
   ShiftType,
   StaffPosition,
 } from '@/libs/api/types';
-import { Gender as GenderEnum, StaffStatus as StaffStatusEnum, WorkType as WorkTypeEnum, ShiftType as ShiftTypeEnum, StaffPosition as StaffPositionEnum } from '@movie-hub/shared-types/user/enum';
 
-const POSITIONS: { value: StaffPosition; label: string }[] = [
-  { value: StaffPositionEnum.CINEMA_MANAGER, label: 'Cinema Manager' },
-  { value: StaffPositionEnum.ASSISTANT_MANAGER, label: 'Assistant Manager' },
-  { value: StaffPositionEnum.TICKET_CLERK, label: 'Ticket Clerk' },
-  { value: StaffPositionEnum.CONCESSION_STAFF, label: 'Concession Staff' },
-  { value: StaffPositionEnum.USHER, label: 'Usher' },
-  { value: StaffPositionEnum.PROJECTIONIST, label: 'Projectionist' },
-  { value: StaffPositionEnum.CLEANER, label: 'Cleaner' },
-  { value: StaffPositionEnum.SECURITY, label: 'Security' },
+const POSITIONS: { value: string; label: string }[] = [
+  { value: 'CINEMA_MANAGER', label: 'Cinema Manager' },
+  { value: 'ASSISTANT_MANAGER', label: 'Assistant Manager' },
+  { value: 'TICKET_CLERK', label: 'Ticket Clerk' },
+  { value: 'CONCESSION_STAFF', label: 'Concession Staff' },
+  { value: 'USHER', label: 'Usher' },
+  { value: 'PROJECTIONIST', label: 'Projectionist' },
+  { value: 'CLEANER', label: 'Cleaner' },
+  { value: 'SECURITY', label: 'Security' },
 ];
 
-const WORK_TYPES: { value: WorkType; label: string }[] = [
-  { value: WorkTypeEnum.FULL_TIME, label: 'Full Time' },
-  { value: WorkTypeEnum.PART_TIME, label: 'Part Time' },
-  { value: WorkTypeEnum.CONTRACT, label: 'Contract' },
+const WORK_TYPES: { value: string; label: string }[] = [
+  { value: 'FULL_TIME', label: 'Full Time' },
+  { value: 'PART_TIME', label: 'Part Time' },
+  { value: 'CONTRACT', label: 'Contract' },
 ];
 
-const SHIFT_TYPES: { value: ShiftType; label: string }[] = [
-  { value: ShiftTypeEnum.MORNING, label: 'Morning' },
-  { value: ShiftTypeEnum.AFTERNOON, label: 'Afternoon' },
-  { value: ShiftTypeEnum.NIGHT, label: 'Night' },
+const SHIFT_TYPES: { value: string; label: string }[] = [
+  { value: 'MORNING', label: 'Morning' },
+  { value: 'AFTERNOON', label: 'Afternoon' },
+  { value: 'NIGHT', label: 'Night' },
 ];
+
+// Helper function to format date for input type="date"
+const formatDateForInput = (dateValue: string | Date | undefined): string => {
+  if (!dateValue) return '';
+  try {
+    const date = typeof dateValue === 'string' ? new Date(dateValue) : dateValue;
+    if (isNaN(date.getTime())) return '';
+    // Format as YYYY-MM-DD for input[type="date"]
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  } catch {
+    return '';
+  }
+};
+
+// Helper function to ensure enum values are strings (handle numeric enums from API)
+const ensureEnumString = (value: string | number | unknown): string => {
+  if (typeof value === 'string') return value;
+  // If numeric enum or unknown, convert to string
+  return String(value);
+};
 
 export default function StaffPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -89,12 +111,12 @@ export default function StaffPage() {
     fullName: '',
     email: '',
     phone: '',
-    gender: GenderEnum.MALE as Gender,
+    gender: 'MALE',
     dob: '',
-    position: StaffPositionEnum.TICKET_CLERK as StaffPosition,
-    status: StaffStatusEnum.ACTIVE as StaffStatus,
-    workType: WorkTypeEnum.FULL_TIME as WorkType,
-    shiftType: ShiftTypeEnum.MORNING as ShiftType,
+    position: 'TICKET_CLERK',
+    status: 'ACTIVE',
+    workType: 'FULL_TIME',
+    shiftType: 'MORNING',
     salary: 0,
     hireDate: '',
   });
@@ -190,31 +212,65 @@ export default function StaffPage() {
 
     try {
       // Convert dates to ISO DateTime format for API
+      // For date inputs, they're in YYYY-MM-DD format, need to parse carefully
+      const dobDate = formData.dob ? new Date(formData.dob + 'T00:00:00Z') : null;
+      const hireDateDate = formData.hireDate ? new Date(formData.hireDate + 'T00:00:00Z') : null;
+
+      if (!dobDate || isNaN(dobDate.getTime())) {
+        toast({
+          title: 'Error',
+          description: 'Invalid date of birth format',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      if (!hireDateDate || isNaN(hireDateDate.getTime())) {
+        toast({
+          title: 'Error',
+          description: 'Invalid hire date format',
+          variant: 'destructive',
+        });
+        return;
+      }
+
       const submitData = editingStaff ? {
         fullName: formData.fullName,
         phone: formData.phone,
-        gender: formData.gender,
-        dob: new Date(formData.dob).toISOString(),
-        position: formData.position,
-        status: formData.status,
-        workType: formData.workType,
-        shiftType: formData.shiftType,
-        salary: formData.salary,
-        hireDate: new Date(formData.hireDate).toISOString(),
+        gender: formData.gender as Gender,
+        dob: dobDate.toISOString(),
+        position: formData.position as StaffPosition,
+        status: formData.status as StaffStatus,
+        workType: formData.workType as WorkType,
+        shiftType: formData.shiftType as ShiftType,
+        salary: Math.floor(formData.salary), // Ensure integer
+        hireDate: hireDateDate.toISOString(),
       } : {
         cinemaId: formData.cinemaId,
         fullName: formData.fullName,
         email: formData.email,
         phone: formData.phone,
-        gender: formData.gender,
-        dob: new Date(formData.dob).toISOString(),
-        position: formData.position,
-        status: formData.status,
-        workType: formData.workType,
-        shiftType: formData.shiftType,
-        salary: formData.salary,
-        hireDate: new Date(formData.hireDate).toISOString(),
+        gender: formData.gender as Gender,
+        dob: dobDate.toISOString(),
+        position: formData.position as StaffPosition,
+        status: formData.status as StaffStatus,
+        workType: formData.workType as WorkType,
+        shiftType: formData.shiftType as ShiftType,
+        salary: Math.floor(formData.salary), // Ensure integer
+        hireDate: hireDateDate.toISOString(),
       };
+
+      console.log('[Staff Form] Submitting data:', {
+        isUpdate: !!editingStaff,
+        data: submitData,
+        formDataEnums: {
+          gender: formData.gender,
+          position: formData.position,
+          status: formData.status,
+          workType: formData.workType,
+          shiftType: formData.shiftType,
+        },
+      });
 
       if (editingStaff) {
         await updateStaff.mutateAsync({ id: editingStaff.id, data: submitData });
@@ -235,14 +291,14 @@ export default function StaffPage() {
       fullName: staffMember.fullName,
       email: staffMember.email,
       phone: staffMember.phone,
-      gender: staffMember.gender,
-      dob: typeof staffMember.dob === 'string' ? staffMember.dob.split('T')[0] : '',
-      position: staffMember.position,
-      status: staffMember.status,
-      workType: staffMember.workType,
-      shiftType: staffMember.shiftType,
-      salary: staffMember.salary,
-      hireDate: typeof staffMember.hireDate === 'string' ? staffMember.hireDate.split('T')[0] : '',
+      gender: ensureEnumString(staffMember.gender),
+      dob: formatDateForInput(staffMember.dob),
+      position: ensureEnumString(staffMember.position),
+      status: ensureEnumString(staffMember.status),
+      workType: ensureEnumString(staffMember.workType),
+      shiftType: ensureEnumString(staffMember.shiftType),
+      salary: typeof staffMember.salary === 'string' ? parseFloat(staffMember.salary) : staffMember.salary,
+      hireDate: formatDateForInput(staffMember.hireDate),
     });
     setDialogOpen(true);
   };
@@ -266,12 +322,12 @@ export default function StaffPage() {
       fullName: '',
       email: '',
       phone: '',
-      gender: GenderEnum.MALE,
+      gender: 'MALE',
       dob: '',
-      position: StaffPositionEnum.TICKET_CLERK,
-      status: StaffStatusEnum.ACTIVE,
-      workType: WorkTypeEnum.FULL_TIME,
-      shiftType: ShiftTypeEnum.MORNING,
+      position: 'TICKET_CLERK',
+      status: 'ACTIVE',
+      workType: 'FULL_TIME',
+      shiftType: 'MORNING',
       salary: 0,
       hireDate: '',
     });
@@ -279,9 +335,9 @@ export default function StaffPage() {
 
   const getStatusBadgeColor = (status: StaffStatus) => {
     switch (status) {
-      case StaffStatusEnum.ACTIVE:
+      case 'ACTIVE':
         return 'bg-green-100 text-green-800';
-      case StaffStatusEnum.INACTIVE:
+      case 'INACTIVE':
         return 'bg-gray-100 text-gray-800';
       default:
         return 'bg-gray-100 text-gray-800';
@@ -291,14 +347,14 @@ export default function StaffPage() {
   // Calculate statistics
   const stats = {
     total: staff.length,
-    active: staff.filter((s) => s.status === StaffStatusEnum.ACTIVE).length,
-    inactive: staff.filter((s) => s.status === StaffStatusEnum.INACTIVE).length,
-    fullTime: staff.filter((s) => s.workType === WorkTypeEnum.FULL_TIME).length,
-    partTime: staff.filter((s) => s.workType === WorkTypeEnum.PART_TIME).length,
+    active: staff.filter((s) => s.status === 'ACTIVE').length,
+    inactive: staff.filter((s) => s.status === 'INACTIVE').length,
+    fullTime: staff.filter((s) => s.workType === 'FULL_TIME').length,
+    partTime: staff.filter((s) => s.workType === 'PART_TIME').length,
     positions: {
-      manager: staff.filter((s) => s.position === StaffPositionEnum.CINEMA_MANAGER).length,
-      assistantManager: staff.filter((s) => s.position === StaffPositionEnum.ASSISTANT_MANAGER).length,
-      ticketClerk: staff.filter((s) => s.position === StaffPositionEnum.TICKET_CLERK).length,
+      manager: staff.filter((s) => s.position === 'CINEMA_MANAGER').length,
+      assistantManager: staff.filter((s) => s.position === 'ASSISTANT_MANAGER').length,
+      ticketClerk: staff.filter((s) => s.position === 'TICKET_CLERK').length,
     },
     totalSalaryExpense: staff.reduce((sum, s) => sum + (s.salary || 0), 0),
     avgSalary: staff.length > 0 ? staff.reduce((sum, s) => sum + (s.salary || 0), 0) / staff.length : 0,
@@ -427,8 +483,8 @@ export default function StaffPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value={StaffStatusEnum.ACTIVE}>Active</SelectItem>
-                  <SelectItem value={StaffStatusEnum.INACTIVE}>Inactive</SelectItem>
+                  <SelectItem value="ACTIVE">Active</SelectItem>
+                  <SelectItem value="INACTIVE">Inactive</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -618,14 +674,14 @@ export default function StaffPage() {
               <div className="col-span-3 grid grid-cols-2 gap-4">
                 <Select
                   value={formData.gender}
-                  onValueChange={(value: Gender) => setFormData({ ...formData, gender: value })}
+                  onValueChange={(value) => setFormData({ ...formData, gender: value })}
                 >
                   <SelectTrigger id="gender">
                     <SelectValue placeholder="Select gender" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value={GenderEnum.MALE}>Male</SelectItem>
-                    <SelectItem value={GenderEnum.FEMALE}>Female</SelectItem>
+                    <SelectItem value="MALE">Male</SelectItem>
+                    <SelectItem value="FEMALE">Female</SelectItem>
                   </SelectContent>
                 </Select>
                 <Input
@@ -645,7 +701,7 @@ export default function StaffPage() {
               <div className="col-span-3">
                 <Select
                   value={formData.position}
-                  onValueChange={(value: StaffPosition) => setFormData({ ...formData, position: value })}
+                  onValueChange={(value) => setFormData({ ...formData, position: value })}
                 >
                   <SelectTrigger id="position">
                     <SelectValue placeholder="Select position" />
@@ -669,14 +725,14 @@ export default function StaffPage() {
               <div className="col-span-3">
                 <Select
                   value={formData.status}
-                  onValueChange={(value: StaffStatus) => setFormData({ ...formData, status: value })}
+                  onValueChange={(value) => setFormData({ ...formData, status: value })}
                 >
                   <SelectTrigger id="status">
                     <SelectValue placeholder="Select status" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value={StaffStatusEnum.ACTIVE}>Active</SelectItem>
-                    <SelectItem value={StaffStatusEnum.INACTIVE}>Inactive</SelectItem>
+                    <SelectItem value="ACTIVE">Active</SelectItem>
+                    <SelectItem value="INACTIVE">Inactive</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -690,7 +746,7 @@ export default function StaffPage() {
               <div className="col-span-3">
                 <Select
                   value={formData.workType}
-                  onValueChange={(value: WorkType) => setFormData({ ...formData, workType: value })}
+                  onValueChange={(value) => setFormData({ ...formData, workType: value })}
                 >
                   <SelectTrigger id="workType">
                     <SelectValue placeholder="Select work type" />
@@ -714,7 +770,7 @@ export default function StaffPage() {
               <div className="col-span-3">
                 <Select
                   value={formData.shiftType}
-                  onValueChange={(value: ShiftType) => setFormData({ ...formData, shiftType: value })}
+                  onValueChange={(value) => setFormData({ ...formData, shiftType: value })}
                 >
                   <SelectTrigger id="shiftType">
                     <SelectValue placeholder="Select shift type" />

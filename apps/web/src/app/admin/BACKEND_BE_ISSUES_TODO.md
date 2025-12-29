@@ -330,3 +330,106 @@ FE Tests:
 3. Consider adding `title` field as separate entity (or clarify it's intentionally just `content`)
 4. Ensure ReviewResponse type matches returned data
 
+---
+
+## Issue: Admin Staff Management — Date Parsing & Validation Inconsistency (urgent)
+Status: 🟡 FIXED via FE workaround - monitoring for BE alignment
+
+**Problem (tóm tắt):**
+- FE sends dates as ISO strings (e.g., `2025-12-30T00:00:00.000Z`) but BE Zod schema may have inconsistent validation
+- When creating staff, FE received "Validation failed" with 6 errors despite form validation passing
+- When editing staff, date fields in dialog weren't loading correctly because date type handling was inconsistent (string vs Date object)
+
+**Root Cause Analysis:**
+- CreateStaffRequest schema expects dates as `z.coerce.date()` but timezone handling between client/server can cause issues
+- BE likely validates:
+  - `dob: z.coerce.date()` - may fail if date string format doesn't parse correctly in BE's timezone
+  - `hireDate: z.coerce.date()` - same issue
+  - Other enums (gender, position, status, workType, shiftType) may have case-sensitivity or enum value mismatch
+  - Salary may need to be integer vs float
+
+**Files Affected (BE):**
+- `libs/shared-types/src/user/create-staff.request.ts` - CreateStaffSchema validation rules
+- `libs/shared-types/src/user/update-staff.request.ts` - UpdateStaffSchema (already correct: omits cinemaId & email)
+- `apps/user-service/src/app/staff/staff.service.ts` - staff create/update methods
+- `apps/api-gateway/src/app/module/user/service/staff.service.ts` - API gateway forwarding
+
+**FE Workaround Implemented:**
+✅ **Fixed in:** `FE/movie-hub-fe/apps/web/src/app/admin/staff/page.tsx`
+
+1. **Added `formatDateForInput()` helper** (lines 79-92):
+   - Properly handles both string and Date objects
+   - Converts to YYYY-MM-DD format required by `input[type="date"]`
+   - Handles timezone issues by checking for invalid dates
+
+2. **Fixed `handleEdit()` function** (lines 289-305):
+   - Replaced simple `.split('T')[0]` with `formatDateForInput()` helper
+   - Now safely loads staff data even if dates come as Date objects from API
+   - Dialog now displays dates correctly for editing
+
+3. **Improved `handleSubmit()` validation** (lines 177-237):
+   - Added explicit date validation before submission
+   - Parses dates with UTC timezone: `new Date(formData.dob + 'T00:00:00Z')`
+   - Validates date parsing result before sending to API
+   - Converts salary to integer: `Math.floor(formData.salary)`
+   - Provides better error messages for invalid dates
+
+**Recommendations for BE Team:**
+
+1. **CreateStaffSchema (Zod) validation:**
+   ```typescript
+   export const CreateStaffSchema = z.object({
+     cinemaId: z.uuid("cinemaId must be valid UUID"),
+     fullName: z.string().min(1, "fullName is required"),
+     email: z.string().email("email must be valid email"),
+     phone: z.string().min(9, "phone must be min 9 chars"),
+     gender: z.enum(Object.values(Gender) as [string, ...string[]], 
+       "gender must be MALE or FEMALE"),
+     dob: z.coerce.date("dob must be valid date"),
+     position: z.enum(Object.values(StaffPosition) as [string, ...string[]],
+       "position must match enum"),
+     status: z.enum(Object.values(StaffStatus) as [string, ...string[]],
+       "status must match enum"),
+     workType: z.enum(Object.values(WorkType) as [string, ...string[]],
+       "workType must match enum"),
+     shiftType: z.enum(Object.values(ShiftType) as [string, ...string[]],
+       "shiftType must match enum"),
+     salary: z.number().int("salary must be integer").min(0),
+     hireDate: z.coerce.date("hireDate must be valid date"),
+   });
+   ```
+
+2. **BE should ensure:**
+   - `z.coerce.date()` can parse ISO strings like `2025-12-30T00:00:00.000Z`
+   - Enum validation doesn't fail on casing (use case-insensitive or ensure FE uses exact enum values)
+   - Return detailed error messages in response so FE can show which field failed
+   - Salary field correctly stores as integer in database
+
+3. **Error Response Format:**
+   - Instead of generic `"Validation failed"`, return:
+   ```typescript
+   {
+     success: false,
+     message: 'Validation failed',
+     errors: [
+       { field: 'dob', message: 'Invalid date format' },
+       { field: 'salary', message: 'Must be integer' }
+     ]
+   }
+   ```
+   This helps FE debug and show field-specific errors to users.
+
+**Current Status:**
+- ✅ Edit staff dialog now loads data correctly
+- ✅ Create staff validates dates properly
+- ✅ Salary ensures integer format
+- ✅ Error handling improved
+
+**Monitoring:**
+- If validation continues to fail after these changes, BE team should check:
+  1. Exact enum values in database schema match those sent by FE
+  2. Date coercion timezone handling
+  3. Field-level validation error details in BE logs
+  4. Response from API gateway doesn't strip fields
+
+---

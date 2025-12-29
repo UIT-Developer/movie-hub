@@ -645,7 +645,29 @@ export const useCreateStaff = () => {
       toast.success('Staff member created successfully');
     },
     onError: (error: unknown) => {
-      toast.error((error as Error)?.message || 'Failed to create staff member');
+      let errorMessage = 'Failed to create staff member';
+      
+      if (error instanceof Error) {
+        errorMessage = error.message;
+        
+        // Check for additional error details
+        const err = error as Error & { responseData?: Record<string, unknown> };
+        if (err.responseData?.errors && Array.isArray(err.responseData.errors)) {
+          const details = (err.responseData.errors as unknown[]).map((e: unknown) => {
+            if (typeof e === 'string') return e;
+            if (e && typeof e === 'object') {
+              const errObj = e as Record<string, unknown>;
+              if (errObj.message) return String(errObj.message);
+              if (errObj.path) return `${errObj.path}: ${errObj.message || errObj.code}`;
+            }
+            return JSON.stringify(e);
+          }).join('; ');
+          errorMessage = `Validation failed: ${details}`;
+        }
+      }
+      
+      console.error('[useCreateStaff] Error:', { error, errorMessage });
+      toast.error(errorMessage);
     },
   });
 };

@@ -1,16 +1,11 @@
-# Backend BE Issues & TODO
+# Backend BE Issues & TODO (Admin Movie Releases)
 
 ## Summary
-Tập hợp các lỗi của backend liên quan đến Admin Showtimes và Movie Releases. Mục đích: copy phần này cho đội BE để họ sửa contract/validation.
-
-**Update (2025-12-30):** 
-- ✅ Showtimes movieReleaseId loading issue → WORKAROUND APPLIED on FE (auto-select logic)
-- Still BLOCKING: BE detail endpoint missing, BE movie-release create contract issue
-- See details below
+Tập hợp các lỗi của backend liên quan đến module Movie Releases mà frontend admin gặp phải khi tạo "New Movie Release". Mục đích: copy phần này cho đội BE để họ sửa contract/validation.
 
 ---
 
-## Issue: Create New Movie Release — Validation / Response mismatch (BLOCKING)
+## Issue: Create New Movie Release — Validation / Response mismatch (urgent)
 Status: 🔴 BLOCKING for Admin FE create flow
 
 Problem (ngắn):
@@ -46,103 +41,14 @@ Notes for BE team:
 
 ---
 
-## Issue: Showtimes movieReleaseId Not Loading (2025-12-30 UPDATE)
-Status: 🟡 WORKAROUND APPLIED on FE
-
-**Update:** FE team applied workaround logic to auto-select movieReleaseId when editing showtime. Issue is PARTIALLY RESOLVED but still needs BE improvements.
-
-### FE Workaround Applied:
-1. ✅ Auto-select movieReleaseId when releases list loads (after editingShowtime provided)
-2. ✅ Removed strict status filter from releases dropdown (show all releases)
-3. ✅ Enhanced logging for debugging
-
-### Remaining BE Issues:
-1. **Missing Detail Endpoint** (see below) — still needs implementation
-2. **Possible NULL movieReleaseId in DB** — if showtimes have null movie_release_id, it won't load
-
-### BE Verification Needed:
-- Confirm `getShowtimes()` in showtime.service.ts includes `movieReleaseId: showtime.movie_release_id` in response (it should be at line 97)
-- Verify showtimes in DB don't have null `movie_release_id` values
-- If NULL values exist, populate them or document expected behavior
+Add this note to the BE issues list so backend team can fix the contract mismatch; frontend will be able to use the create flow without workaround once BE returns `movieId` and aligns date/validation rules.
 
 ---
 
-## Issue: Missing Showtime Detail API Endpoint (BLOCKING)
-Status: 🔴 BLOCKING for optimal FE flow (but workaround exists)
+## Issue: Missing Showtime Detail API Endpoint (urgent)
+Status: 🔴 BLOCKING for Admin FE edit showtime flow
 
 Problem (ngắn):
-- FE calls `GET /api/v1/showtimes/:id` to fetch showtime details when editing a showtime (for pre-populating form fields like `movieId`, `movieReleaseId`, `startTime`, etc.), but **this endpoint does not exist in BE**.
-- BE cinema-service has `getShowtimes()` which fetches list of showtimes, and `getShowtimeSeats()` for fetching seats, but **no detail/single-showtime endpoint**.
-- API Gateway showtime controller has:
-  - `GET /api/v1/showtimes` (list with filters)
-  - `GET /api/v1/showtimes/:id/seats` (get seats for showtime)
-  - But **NO `GET /api/v1/showtimes/:id`** for fetching single showtime detail.
-
-**FE Workaround:** FE now uses list data (which includes movieReleaseId) instead of trying to fetch detail. Works for admin flows since you always come from list first.
-
-Chi tiết kỹ thuật / files BE cần sửa:
-1. `apps/cinema-service/src/app/showtime/showtime.service.ts`: thêm method `getShowtimeById(id: string)` để fetch chi tiết một showtime từ DB, kèm theo `movieId` và `movieReleaseId`.
-2. `apps/cinema-service/src/app/showtime/showtime.controller.ts`: thêm message pattern `CinemaMessage.SHOWTIME.GET_SHOWTIME` hoặc tương tự để handle request từ gateway.
-3. `apps/api-gateway/src/app/module/cinema/service/showtime.service.ts`: thêm `async getShowtime(id: string)` để gọi cinema-service.
-4. `apps/api-gateway/src/app/module/cinema/controller/showtime.controller.ts`: thêm `@Get(':id')` route (careful with order: place **AFTER** other specific routes like `:id/seats` to avoid route shadowing) để fetch single showtime.
-
-Response DTO should match:
-- Showtime response should include `id`, `movieId`, `movieReleaseId`, `cinemaId`, `hallId`, `startTime`, `format`, `language`, `subtitles`, `pricePerSeat`, `createdAt`, `updatedAt`.
-- Make sure `movieId` and `movieReleaseId` are **never null** in the response (should be guaranteed by DB constraints).
-
-Gợi ý sửa cụ thể (đề xuất cho BE team):
-```typescript
-// In cinema-service/showtime.service.ts
-async getShowtimeById(showtimeId: string) {
-  const showtime = await this.prisma.showtime.findUnique({
-    where: { id: showtimeId },
-    select: {
-      id: true,
-      movieId: true,
-      movieReleaseId: true,
-      cinemaId: true,
-      hallId: true,
-      startTime: true,
-      format: true,
-      language: true,
-      subtitles: true,
-      pricePerSeat: true,
-      createdAt: true,
-      updatedAt: true,
-    },
-  });
-  if (!showtime) throw new NotFoundException('Showtime not found');
-  return showtime;
-}
-
-// In cinema-service/showtime.controller.ts
-@MessagePattern(CinemaMessage.SHOWTIME.GET_SHOWTIME)
-getShowtime(@Payload() showtimeId: string) {
-  return this.showtimeService.getShowtimeById(showtimeId);
-}
-
-// In api-gateway/showtime.controller.ts
-@Get(':id')
-@UseGuards(ClerkAuthGuard)
-getShowtime(@Param('id') showtimeId: string) {
-  return this.showtimeService.getShowtime(showtimeId);
-}
-```
-
-Reproduction steps (FE flow):
-1. Open Admin → Showtimes → Click "Edit" on any showtime in the list.
-2. ShowtimeDialog opens — with FE workaround, movieReleaseId now auto-selects correctly
-3. (Without workaround, would see 404 for GET /api/v1/showtimes/:id)
-
-Expected behaviour after BE fix:
-- `GET /api/v1/showtimes/:id` returns 200 with showtime object including `movieId`, `movieReleaseId`, and all other fields.
-- FE can optionally use this endpoint for additional verification or if need showtime by ID without list context.
-
-Notes for BE team:
-- **Route order matters**: Place `@Get(':id')` **after** `@Get(':id/seats')` in the controller to prevent shadowing.
-- This endpoint should be protected by `ClerkAuthGuard` for security (admin-only).
-- Make sure `movieId` and `movieReleaseId` are never null (cascade delete or constraint in DB).
-
 - FE calls `GET /api/v1/showtimes/:id` to fetch showtime details when editing a showtime (for pre-populating form fields like `movieId`, `movieReleaseId`, `startTime`, etc.), but **this endpoint does not exist in BE**.
 - BE cinema-service has `getShowtimes()` which fetches list of showtimes, and `getShowtimeSeats()` for fetching seats, but **no detail/single-showtime endpoint**.
 - API Gateway showtime controller has:
@@ -213,4 +119,81 @@ Notes for BE team:
 - **Route order matters**: Place `@Get(':id')` **after** `@Get(':id/seats')` in the controller to prevent shadowing.
 - This endpoint should be protected by `ClerkAuthGuard` for security (admin-only).
 - Make sure `movieId` and `movieReleaseId` are never null (cascade delete or constraint in DB).
+
+---
+
+## Issue: GET /api/v1/showtimes Response Type Mismatch (medium priority)
+Status: 🟡 WORKAROUND APPLIED — FE handles both response types
+
+Problem (ngắn):
+- BE `GET /api/v1/showtimes` returns data with fields like `movieTitle` (string), `cinemaName` (string), `hallName` (string) in a flattened structure.
+- FE `Showtime` interface and API typing expects nested objects like `movie?: { title: string }`, `cinema?: { name: string }`, etc.
+- This causes FE code that accesses `showtime.movie?.title` to get `undefined` and display "Unknown" in dropdowns/lists.
+
+Chi tiết kỹ thuật / files BE returns:
+```json
+{
+  "id": "...",
+  "movieId": "...",
+  "movieTitle": "Oppenheimer",     // String, not movie object
+  "cinemaId": "...",
+  "cinemaName": "CGV",              // String, not cinema object
+  "hallId": "...",
+  "hallName": "Hall A",             // String, not hall object
+  "startTime": "2025-12-28T04:15:00Z",
+  "endTime": "2025-12-28T07:15:00Z",
+  "format": "2D",
+  "language": "en",
+  "subtitles": ["vi", "en"],
+  "availableSeats": 50,
+  "totalSeats": 100,
+  "status": "SELLING"
+}
+```
+
+Current workaround (FE fix applied):
+- Updated FE code to use fallback: `(showtime as any).movieTitle || showtime.movie?.title || 'Unknown'`
+- This works at runtime but violates type safety (uses `any` casting).
+
+Gợi ý sửa cụ thể (đề xuất cho BE team — choose ONE approach):
+
+**Option A (Recommended): Return nested objects** 
+- Modify `cinema-service/showtime.service.ts` `getShowtimes()` to return full nested objects:
+  ```typescript
+  {
+    id: "...",
+    movie: { id: "...", title: "Oppenheimer", ... },
+    cinema: { id: "...", name: "CGV", ... },
+    hall: { id: "...", name: "Hall A", ... },
+    startTime: "...",
+    format: "...",
+    // ... other fields
+  }
+  ```
+- This matches FE expectations and eliminates type mismatches.
+
+**Option B: Update FE types to match BE response**
+- Update `Showtime` interface in `FE/libs/shared-types/cinema/dto/response/` to have:
+  ```typescript
+  interface Showtime {
+    movieId: string;
+    movieTitle: string;
+    cinemaId: string;
+    cinemaName: string;
+    hallId: string;
+    hallName: string;
+    // ... other fields
+  }
+  ```
+- Then remove `as any` casting in FE code.
+
+**Current state:**
+- FE code in `apps/web/src/app/admin/showtime-seats/page.tsx` (line 96) uses fallback with `as any` casting.
+- This works but is not ideal for type safety.
+
+Notes for BE team:
+- If choosing Option A: requires microservice communication to fetch movie/cinema/hall data (already being done for movies).
+- If choosing Option B: BE can keep returning flat structure, but FE types must match.
+- Recommend Option A for cleaner FE code and better API contract clarity.
+
 

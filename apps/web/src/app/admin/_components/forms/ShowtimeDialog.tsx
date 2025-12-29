@@ -20,7 +20,7 @@ import {
 } from '@movie-hub/shacdn-ui/select';
 import { Button } from '@movie-hub/shacdn-ui/button';
 import { useToast } from '../../_libs/use-toast';
-import { useCreateShowtime, useUpdateShowtime, useMovieReleases } from '@/libs/api';
+import { useCreateShowtime, useUpdateShowtime, useMovieReleases, useShowtime } from '@/libs/api';
 import type { Showtime, Movie, Cinema, Hall, CreateShowtimeRequest } from '@/libs/api/types';
 import { FormatEnum } from '@movie-hub/shared-types/cinema/enum';
 
@@ -49,6 +49,8 @@ export default function ShowtimeDialog({
 }: ShowtimeDialogProps) {
   const createShowtime = useCreateShowtime();
   const updateShowtime = useUpdateShowtime();
+  // Fetch full showtime detail when editing
+  const { data: fullShowtimeDetail } = useShowtime(editingShowtime?.id || '');
   const [formData, setFormData] = useState<CreateShowtimeRequest>({
     movieId: '',
     movieReleaseId: '',
@@ -67,16 +69,19 @@ export default function ShowtimeDialog({
   const { toast } = useToast();
 
   useEffect(() => {
-    if (editingShowtime) {
+    // Use fullShowtimeDetail if available (has complete data from API)
+    const showtimeToUse = fullShowtimeDetail || editingShowtime;
+    
+    if (showtimeToUse) {
       setFormData({
-        movieId: editingShowtime.movieId,
-        movieReleaseId: editingShowtime.movieReleaseId,
-        cinemaId: editingShowtime.cinemaId,
-        hallId: editingShowtime.hallId,
-        startTime: editingShowtime.startTime.slice(0, 16),
-        format: editingShowtime.format,
-        language: editingShowtime.language,
-        subtitles: editingShowtime.subtitles || [],
+        movieId: showtimeToUse.movieId,
+        movieReleaseId: showtimeToUse.movieReleaseId || '',
+        cinemaId: showtimeToUse.cinemaId,
+        hallId: showtimeToUse.hallId,
+        startTime: showtimeToUse.startTime.slice(0, 16),
+        format: showtimeToUse.format,
+        language: showtimeToUse.language,
+        subtitles: showtimeToUse.subtitles || [],
       });
     } else if (preSelectedMovieId && preSelectedReleaseId) {
       // Pre-fill when opening from Movie Releases page
@@ -102,7 +107,7 @@ export default function ShowtimeDialog({
         subtitles: [],
       });
     }
-  }, [editingShowtime, preSelectedMovieId, preSelectedReleaseId, open]);
+  }, [fullShowtimeDetail, editingShowtime, preSelectedMovieId, preSelectedReleaseId, open]);
 
   const handleSubmit = async () => {
     if (!formData.movieId || !formData.movieReleaseId || !formData.cinemaId || 
@@ -141,6 +146,17 @@ export default function ShowtimeDialog({
   const isMovieDisabled = !!preSelectedMovieId;
   const isReleaseDisabled = !!preSelectedReleaseId;
 
+  // Debug logging
+  useEffect(() => {
+    if (editingShowtime && !selectedMovie) {
+      console.warn('[ShowtimeDialog] Movie not found in passed movies array', {
+        formDataMovieId: formData.movieId,
+        editingShowtimeMovieId: editingShowtime.movieId,
+        availableMovies: movies.map(m => ({ id: m.id, title: m.title })),
+      });
+    }
+  }, [editingShowtime, selectedMovie, formData.movieId, movies]);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -157,7 +173,7 @@ export default function ShowtimeDialog({
             {isMovieDisabled ? (
               <Input
                 id="movie"
-                value={selectedMovie?.title || ''}
+                value={selectedMovie ? `${selectedMovie.title} (${selectedMovie.runtime} mins)` : (formData.movieId || 'No movie selected')}
                 disabled
                 className="bg-gray-50"
               />
@@ -173,7 +189,9 @@ export default function ShowtimeDialog({
                 }}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select movie" />
+                  <SelectValue placeholder="Select movie">
+                    {selectedMovie ? `${selectedMovie.title} (${selectedMovie.runtime} mins)` : undefined}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {movies.map((movie) => (
@@ -205,7 +223,9 @@ export default function ShowtimeDialog({
                 disabled={!formData.movieId}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select movie release" />
+                  <SelectValue placeholder="Select movie release">
+                    {selectedRelease ? `${new Date(selectedRelease.startDate).toLocaleDateString()} → ${new Date(selectedRelease.endDate).toLocaleDateString()}` : undefined}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {formData.movieId && (() => {

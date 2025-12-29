@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, startTransition } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -53,10 +53,25 @@ export default function MovieReleaseDialog({
 
   useEffect(() => {
     if (editingRelease) {
+      // Helper to format date - handle both string and Date objects
+      const formatDate = (date: string | Date | undefined): string => {
+        if (!date) return '';
+        if (typeof date === 'string') {
+          // If it's already in YYYY-MM-DD format, return as-is
+          if (date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+            return date;
+          }
+          // If it's ISO format with time, extract date part
+          return date.split('T')[0];
+        }
+        // If it's a Date object, convert to YYYY-MM-DD
+        return date.toISOString().split('T')[0];
+      };
+
       setFormData({
         movieId: editingRelease.movieId,
-        startDate: typeof editingRelease.startDate === 'string' ? editingRelease.startDate : editingRelease.startDate.toISOString().split('T')[0],
-        endDate: typeof editingRelease.endDate === 'string' ? editingRelease.endDate : editingRelease.endDate.toISOString().split('T')[0],
+        startDate: formatDate(editingRelease.startDate),
+        endDate: formatDate(editingRelease.endDate),
         note: editingRelease.note || '',
       });
     } else if (preSelectedMovieId) {
@@ -118,7 +133,11 @@ export default function MovieReleaseDialog({
     }
   };
 
-  const selectedMovie = movies.find(m => m.id === formData.movieId);
+  const selectedId = formData.movieId || editingRelease?.movieId || '';
+  const selectedMovie = movies.find((m) => m.id === selectedId) || editingRelease?.movie;
+  const selectedLabel = selectedMovie
+    ? `${selectedMovie.title} (${selectedMovie.runtime} mins)`
+    : (selectedId ? `Movie (${selectedId})` : undefined);
   const isMovieDisabled = !!preSelectedMovieId;
 
   return (
@@ -133,32 +152,35 @@ export default function MovieReleaseDialog({
         <div className="grid gap-4 py-4">
           <div className="space-y-2">
             <Label htmlFor="movieId">Movie *</Label>
-            {isMovieDisabled ? (
-              <Input
-                id="movieId"
-                value={selectedMovie?.title || ''}
-                disabled
-                className="bg-gray-50"
-              />
-            ) : (
-              <Select
-                value={formData.movieId}
-                onValueChange={(value) =>
-                  setFormData({ ...formData, movieId: value })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select movie" />
-                </SelectTrigger>
-                <SelectContent>
-                  {movies.map((movie) => (
-                    <SelectItem key={movie.id} value={movie.id}>
-                      {movie.title} ({movie.runtime} mins)
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
+            <Select
+              value={selectedId}
+              onValueChange={(value) => {
+                // Use startTransition to schedule a low-priority state update
+                // which avoids synchronous unmounts of portal children
+                startTransition(() => {
+                  setFormData((prev) => ({ ...prev, movieId: value }));
+                });
+              }}
+              disabled={isMovieDisabled}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select movie">
+                  {selectedLabel}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {editingRelease && !movies.find(m => m.id === editingRelease.movieId) && (
+                  <SelectItem key={`injected-${editingRelease.movieId}`} value={editingRelease.movieId}>
+                    {editingRelease.movie ? `${editingRelease.movie.title} (${editingRelease.movie.runtime} mins) - Current` : `Movie (${editingRelease.movieId}) - Current`}
+                  </SelectItem>
+                )}
+                {movies.map((movie) => (
+                  <SelectItem key={movie.id} value={movie.id}>
+                    {movie.title} ({movie.runtime} mins)
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="grid grid-cols-2 gap-4">

@@ -366,9 +366,9 @@ export default function StaffPage() {
             <CardTitle className="text-sm font-medium text-gray-600">Salary Expense</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">₫{(stats.totalSalaryExpense / 1000000).toFixed(1)}M</div>
+            <div className="text-2xl font-bold">₫{(stats.totalSalaryExpense / 1000).toFixed(1)}K</div>
             <p className="text-xs text-gray-500 mt-1">
-              Avg: ₫{(stats.avgSalary / 1000000).toFixed(2)}M per person
+              Avg: ₫{(stats.avgSalary / 1000).toFixed(1)}K per person
             </p>
           </CardContent>
         </Card>

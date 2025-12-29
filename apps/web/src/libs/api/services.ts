@@ -165,50 +165,27 @@ export const hallsApi = {
 // ============================================================================
 
 export const showtimesApi = {
-  // Flexible filtering using client-side logic
-  // Note: BE does not have dedicated admin filtering endpoint,
-  // so we fetch showtimes and filter client-side
+  // Use BE endpoint with proper filters
   getWithFilters: async (filters: ShowtimeFiltersParams): Promise<Showtime[]> => {
     const { cinemaId, movieId, date, hallId } = filters;
 
-    // Get all cinemas/movies if not specified
-    const cinemas = cinemaId ? [{ id: cinemaId }] : await cinemasApi.getAll();
-    const movies = movieId ? [{ id: movieId }] : await moviesApi.getAll();
+    // Build query params for BE endpoint
+    const params: Record<string, string> = {};
+    if (cinemaId) params.cinemaId = cinemaId;
+    if (movieId) params.movieId = movieId;
+    if (date) params.date = date;
+    if (hallId) params.hallId = hallId;
 
-    const allShowtimes: Showtime[] = [];
-
-    // Fetch showtimes for each cinema-movie combination
-    await Promise.all(
-      cinemas.map(async (cinema) => {
-        await Promise.all(
-          movies.map(async (movie) => {
-            try {
-              // Fetch all showtimes and filter on client-side
-              const params: Record<string, unknown> = {
-                cinemaId: cinema.id,
-                movieId: movie.id,
-              };
-              if (date) {
-                params.date = date;
-              }
-
-              const showtimes = await api.get<Showtime[]>(
-                `/api/v1/showtimes`,
-                { params }
-              );
-              allShowtimes.push(...showtimes);
-            } catch {
-              // Skip if no showtimes found for this combination
-            }
-          })
-        );
-      })
-    );
-
-    // Filter by hallId if provided
-    return hallId
-      ? allShowtimes.filter((st) => st.hallId === hallId)
-      : allShowtimes;
+    try {
+      console.log('[ShowtimesAPI] Fetching showtimes with filters:', { filters, params });
+      // Call BE GET /api/v1/showtimes with filters
+      const result = await api.get<Showtime[]>('/api/v1/showtimes', { params });
+      console.log('[ShowtimesAPI] Got showtimes:', result);
+      return result || [];
+    } catch (error) {
+      console.error('[ShowtimesAPI] Error fetching showtimes:', error);
+      return [];
+    }
   },
 
   getById: (id: string) =>
@@ -243,17 +220,50 @@ export const showtimesApi = {
 // ============================================================================
 
 export const movieReleasesApi = {
-  getAll: (params?: MovieReleasesListParams): Promise<MovieRelease[]> => {
+  getAll: async (params?: MovieReleasesListParams): Promise<MovieRelease[]> => {
     // When movieId is provided, fetch releases for that specific movie
     if (params?.movieId) {
       return api.get<MovieRelease[]>(`/api/v1/movies/${params.movieId}/releases`);
     }
-    // Otherwise return empty (caller should use enabled flag in hook)
-    return Promise.resolve([]);
+    
+    // Otherwise, fetch all movies and then fetch releases for each
+    // (Workaround for missing GET /api/v1/movie-releases endpoint)
+    let movies: any[] = [];
+    
+    try {
+      movies = await moviesApi.getAll();
+    } catch (error) {
+      console.warn('[MovieReleasesAPI] Failed to fetch movies list:', error);
+      // Continue anyway - we can still fetch releases by iterating through them individually
+      // This fallback won't work for the full list, but is better than complete failure
+      return [];
+    }
+    
+    const allReleases: MovieRelease[] = [];
+    
+    // Fetch releases for each movie and combine
+    for (const movie of movies) {
+      try {
+        const releases = await api.get<MovieRelease[]>(
+          `/api/v1/movies/${movie.id}/releases`
+        );
+        // Enrich releases with movie data so dialog can populate fields
+        const enrichedReleases = (releases || []).map(r => ({
+          ...r,
+          movie, // Include full movie object
+        }));
+        allReleases.push(...enrichedReleases);
+      } catch (error) {
+        // Skip if error fetching for this movie
+        console.warn(`[MovieReleasesAPI] Failed to fetch releases for movie ${movie.id}`);
+      }
+    }
+    
+    return allReleases;
   },
 
   getById: (id: string) =>
-    api.get<MovieRelease>(`/api/v1/movie-releases/${id}`),
+    api.get<MovieRelease>(`/api/v1/movie-releases/${id}`).catch(() => null),
 
   create: (data: CreateMovieReleaseRequest) =>
     api.post<MovieRelease>('/api/v1/movie-releases', data),

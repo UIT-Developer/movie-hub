@@ -85,8 +85,17 @@ export default function MovieReleasesPage() {
     }
   };
 
-  const getMovieById = (movieId: string) => {
-    return movies.find(m => m.id === movieId);
+  const getMovieById = (movieId: string, release?: MovieRelease) => {
+    // First try to get from page's movies list
+    const movieFromList = movies.find(m => m.id === movieId);
+    if (movieFromList) return movieFromList;
+    
+    // If not found and release has enriched movie data, use that
+    if (release?.movie) {
+      return release.movie;
+    }
+    
+    return undefined;
   };
 
   const getReleaseStatus = (release: MovieRelease) => {
@@ -120,7 +129,7 @@ export default function MovieReleasesPage() {
 
   // Filter releases
   const filteredReleases = releases.filter(release => {
-    const movie = getMovieById(release.movieId);
+    const movie = getMovieById(release.movieId, release);
     const status = getReleaseStatus(release);
     
     // Search by movie name
@@ -245,7 +254,7 @@ export default function MovieReleasesPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
             {filteredReleases.map((release) => {
-              const movie = getMovieById(release.movieId);
+              const movie = getMovieById(release.movieId, release);
               const status = getReleaseStatus(release);
               
               return (

@@ -32,15 +32,15 @@ import ShowtimeDialog from '../_components/forms/ShowtimeDialog';
 export default function ShowtimesPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingShowtime, setEditingShowtime] = useState<Showtime | null>(null);
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined); // No default date filter
+  const [selectedDate, setSelectedDate] = useState<Date>(() => new Date()); // Set to today by default
   const [selectedCinemaId, setSelectedCinemaId] = useState('all');
   const [selectedMovieId, setSelectedMovieId] = useState('all');
 
-  // API hooks: only pass date if user explicitly selected one
+  // API hooks: pass date (now defaults to today)
   const { data: showtimesData = [], isLoading: loading, refetch: refetchShowtimes } = useShowtimes({
     cinemaId: selectedCinemaId !== 'all' ? selectedCinemaId : undefined,
     movieId: selectedMovieId !== 'all' ? selectedMovieId : undefined,
-    date: selectedDate ? selectedDate.toISOString().split('T')[0] : undefined,
+    date: selectedDate.toISOString().split('T')[0],
   });
   const showtimes = showtimesData || [];
   const { data: moviesData = [] } = useMovies();
@@ -60,7 +60,14 @@ export default function ShowtimesPage() {
   }, [selectedDate, selectedCinemaId, selectedMovieId]);
 
   const handleEdit = (showtime: Showtime) => {
-    setEditingShowtime(showtime);
+    // Showtime object should have movieId and movieReleaseId from API
+    // If it doesn't, try to find from the loaded data
+    const enrichedShowtime = {
+      ...showtime,
+      movieId: showtime.movieId || '',
+      movieReleaseId: showtime.movieReleaseId || '',
+    };
+    setEditingShowtime(enrichedShowtime);
     setDialogOpen(true);
   };
 
@@ -133,18 +140,16 @@ export default function ShowtimesPage() {
                       selected={selectedDate}
                       onSelect={(date) => setSelectedDate(date)}
                     />
-                    {selectedDate && (
-                      <div className="border-t p-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setSelectedDate(undefined)}
-                          className="w-full"
-                        >
-                          Clear Date Filter
-                        </Button>
-                      </div>
-                    )}
+                    <div className="border-t p-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setSelectedDate(new Date())}
+                        className="w-full"
+                      >
+                        Reset to Today
+                      </Button>
+                    </div>
                   </PopoverContent>
                 </Popover>
               </div>
@@ -190,14 +195,14 @@ export default function ShowtimesPage() {
               <div className="text-sm text-gray-500">
                 {showtimes.length} showtimes scheduled
               </div>
-              {(selectedCinemaId !== 'all' || selectedMovieId !== 'all' || selectedDate) && (
+              {(selectedCinemaId !== 'all' || selectedMovieId !== 'all') && (
                 <Button 
                   variant="outline" 
                   size="sm"
                   onClick={() => {
                     setSelectedCinemaId('all');
                     setSelectedMovieId('all');
-                    setSelectedDate(undefined);
+                    setSelectedDate(new Date());
                   }}
                 >
                   Clear All Filters
@@ -222,11 +227,18 @@ export default function ShowtimesPage() {
         ) : (
           Object.entries(groupedShowtimes).map(([movieId, movieShowtimes]) => {
             const movie = moviesAdmin.find((m) => m.id === movieId);
+            // Debug log for Unknown Movie issue
+            if (!movie) {
+              console.warn(`[ShowtimesPage] Movie not found for movieId: ${movieId}. Available movies:`, moviesAdmin.map(m => m.id));
+            }
+            // Get movieTitle from showtime if available (some showtimes might have movieTitle)
+            // Or fall back to moviesAdmin lookup
+            const movieTitle = movie?.title || movieShowtimes[0]?.movie?.title || `Unknown Movie (${movieId})`;
             return (
               <Card key={movieId}>
                 <CardHeader>
                   <CardTitle className="flex items-center justify-between">
-                    <span>{movie?.title || 'Unknown Movie'}</span>
+                    <span>{movieTitle}</span>
                     <Badge variant="secondary">
                       {movieShowtimes.length} sessions
                     </Badge>

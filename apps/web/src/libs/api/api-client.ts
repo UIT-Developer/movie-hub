@@ -90,7 +90,8 @@ apiClient.interceptors.response.use(
   },
   (error: AxiosError<ApiError>) => {
     const status = error.response?.status;
-    const message = error.response?.data?.message || error.message || 'An error occurred';
+    const responseData = error.response?.data;
+    const message = responseData?.message || error.message || 'An error occurred';
     
     // Protect logging from throwing when `error` contains circular or
     // non-serializable structures. Try to produce a safe, plain object
@@ -131,7 +132,17 @@ apiClient.interceptors.response.use(
       }
     }
     
-    return Promise.reject(new Error(message));
+    // Create a richer error object so callers (hooks) can inspect status and response data.
+    const wrappedError = new Error(message) as Error & {
+      status?: number;
+      responseData?: unknown;
+      raw?: unknown;
+    };
+    wrappedError.status = status;
+    wrappedError.responseData = responseData;
+    wrappedError.raw = error;
+
+    return Promise.reject(wrappedError);
   }
 );
 

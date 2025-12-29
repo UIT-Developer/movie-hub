@@ -69,7 +69,8 @@ export default function MovieReleaseDialog({
       };
 
       setFormData({
-        movieId: editingRelease.movieId,
+        // Fall back to editingRelease.movie?.id when movieId missing from BE
+        movieId: editingRelease.movieId || editingRelease.movie?.id || '',
         startDate: formatDate(editingRelease.startDate),
         endDate: formatDate(editingRelease.endDate),
         note: editingRelease.note || '',
@@ -112,17 +113,25 @@ export default function MovieReleaseDialog({
     }
 
     try {
-      const payload = {
-        movieId: formData.movieId,
-        startDate: formData.startDate,
-        endDate: formData.endDate,
+      // Build payloads: create requires movieId, update should not change relation
+      const basePayload = {
+        // Send ISO timestamps to avoid backend parsing ambiguity
+        startDate: new Date(formData.startDate).toISOString(),
+        endDate: new Date(formData.endDate).toISOString(),
         note: formData.note || undefined, // note is optional in backend
       };
 
+      const createPayload = { movieId: formData.movieId, ...basePayload };
+
+      // Temporary debug log: inspect payload before submit
+      console.log('[MovieReleaseDialog] submit payload (create):', createPayload);
+      console.log('[MovieReleaseDialog] submit payload (update):', basePayload);
+
       if (editingRelease) {
-        await updateMovieRelease.mutateAsync({ id: editingRelease.id, data: payload });
+        // For update, omit movieId to avoid backend validation rejecting relation changes
+        await updateMovieRelease.mutateAsync({ id: editingRelease.id, data: basePayload });
       } else {
-        await createMovieRelease.mutateAsync(payload);
+        await createMovieRelease.mutateAsync(createPayload);
       }
 
       onOpenChange(false);
@@ -209,7 +218,7 @@ export default function MovieReleaseDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="note">Note *</Label>
+            <Label htmlFor="note">Note</Label>
             <Textarea
               id="note"
               value={formData.note}

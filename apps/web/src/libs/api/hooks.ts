@@ -448,9 +448,56 @@ export const useCreateMovieRelease = () => {
 
   return useMutation({
     mutationFn: (data: CreateMovieReleaseRequest) => movieReleasesApi.create(data),
-    onSuccess: () => {
+    onSuccess: async (created, variables) => {
+      // Invalidate general lists, then try to fetch releases for the affected movie
       queryClient.invalidateQueries({ queryKey: queryKeys.movieReleases.lists() });
       toast.success('Movie release created successfully');
+
+      try {
+        const movieId = (variables as any)?.movieId;
+        if (movieId) {
+          const releases = await movieReleasesApi.getAll({ movieId });
+
+          // Try to find the created release by id or by matching dates
+          const createdId = (created as any)?.id;
+          const found = Array.isArray(releases)
+            ? releases.find((r: any) => r.id === createdId) || releases.find((r: any) => r.startDate === (created as any)?.startDate && r.endDate === (created as any)?.endDate)
+            : null;
+
+          if (found) {
+            // Update list cache for the specific movieId list key
+            const listKey = queryKeys.movieReleases.list({ movieId });
+            queryClient.setQueryData(listKey, (old: any) => {
+              // If we don't have an old array, use fetched releases
+              if (!Array.isArray(old)) return releases;
+              // Merge ensuring dedup by id
+              const byId = new Map<string, any>();
+              for (const it of [...old, ...releases]) {
+                if (it && it.id) byId.set(it.id, it);
+              }
+              return Array.from(byId.values());
+            });
+
+            // Ensure detail cache exists for the created release
+            if (found.id) {
+              queryClient.setQueryData(queryKeys.movieReleases.detail(found.id), found);
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('[MovieRelease] post-create fetch error:', err);
+      }
+    },
+    onError: (error: unknown) => {
+      // If error was wrapped by api-client, it may include status and responseData
+      const errAny = error as any;
+      const status = errAny?.status;
+      const responseData = errAny?.responseData;
+
+      // Show concise toast with status, and log full details to console
+      const toastMsg = status ? `${errAny?.message} (status: ${status})` : errAny?.message || 'Failed to create movie release';
+      toast.error(toastMsg);
+      console.error('[MovieRelease] create error details:', { status, responseData, raw: errAny?.raw || errAny });
     },
   });
 };
@@ -461,10 +508,46 @@ export const useUpdateMovieRelease = () => {
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: UpdateMovieReleaseRequest }) =>
       movieReleasesApi.update(id, data),
-    onSuccess: (_, variables) => {
+    onSuccess: async (_, variables) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.movieReleases.lists() });
       queryClient.invalidateQueries({ queryKey: queryKeys.movieReleases.detail(variables.id) });
       toast.success('Movie release updated successfully');
+
+      try {
+        // After update, refetch releases for the movie and update cache for the updated item
+        const movieId = (variables as any)?.data?.movieId;
+        const updatedId = variables.id;
+        if (movieId) {
+          const releases = await movieReleasesApi.getAll({ movieId });
+          if (Array.isArray(releases)) {
+            const found = releases.find((r: any) => r.id === updatedId);
+            if (found) {
+              // Update specific list cache and detail cache
+              const listKey = queryKeys.movieReleases.list({ movieId });
+              queryClient.setQueryData(listKey, (old: any) => {
+                if (!Array.isArray(old)) return releases;
+                const byId = new Map<string, any>();
+                for (const it of [...old, ...releases]) {
+                  if (it && it.id) byId.set(it.id, it);
+                }
+                return Array.from(byId.values());
+              });
+
+              queryClient.setQueryData(queryKeys.movieReleases.detail(found.id), found);
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('[MovieRelease] post-update fetch error:', err);
+      }
+    },
+    onError: (error: unknown) => {
+      const errAny = error as any;
+      const status = errAny?.status;
+      const responseData = errAny?.responseData;
+      const toastMsg = status ? `${errAny?.message} (status: ${status})` : errAny?.message || 'Failed to update movie release';
+      toast.error(toastMsg);
+      console.error('[MovieRelease] update error details:', { status, responseData, raw: errAny?.raw || errAny });
     },
   });
 };

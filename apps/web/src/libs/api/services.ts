@@ -250,6 +250,8 @@ export const movieReleasesApi = {
         // Enrich releases with movie data so dialog can populate fields
         const enrichedReleases = (releases || []).map(r => ({
           ...r,
+          // Ensure movieId is present for FE usage; backend may omit it
+          movieId: r.movieId || movie.id,
           movie, // Include full movie object
         }));
         allReleases.push(...enrichedReleases);

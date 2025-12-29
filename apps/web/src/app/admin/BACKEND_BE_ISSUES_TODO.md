@@ -122,78 +122,88 @@ Notes for BE team:
 
 ---
 
-## Issue: GET /api/v1/showtimes Response Type Mismatch (medium priority)
-Status: 🟡 WORKAROUND APPLIED — FE handles both response types
+## Issue: Batch Create Showtimes — 500 Unexpected Error (urgent)
+Status: 🔴 BLOCKING for Admin FE batch showtimes flow
 
 Problem (ngắn):
-- BE `GET /api/v1/showtimes` returns data with fields like `movieTitle` (string), `cinemaName` (string), `hallName` (string) in a flattened structure.
-- FE `Showtime` interface and API typing expects nested objects like `movie?: { title: string }`, `cinema?: { name: string }`, etc.
-- This causes FE code that accesses `showtime.movie?.title` to get `undefined` and display "Unknown" in dropdowns/lists.
+- Khi admin FE gửi POST `/api/v1/showtimes/batch` để tạo multiple showtimes, backend trả 500 error với message "Unexpected error". FE đã gửi đúng format (dates as yyyy-MM-dd strings, timeSlots as HH:mm strings) nhưng BE vẫn fail.
 
-Chi tiết kỹ thuật / files BE returns:
-```json
+Error response example:
+```
 {
-  "id": "...",
-  "movieId": "...",
-  "movieTitle": "Oppenheimer",     // String, not movie object
-  "cinemaId": "...",
-  "cinemaName": "CGV",              // String, not cinema object
-  "hallId": "...",
-  "hallName": "Hall A",             // String, not hall object
-  "startTime": "2025-12-28T04:15:00Z",
-  "endTime": "2025-12-28T07:15:00Z",
-  "format": "2D",
-  "language": "en",
-  "subtitles": ["vi", "en"],
-  "availableSeats": 50,
-  "totalSeats": 100,
-  "status": "SELLING"
+  success: false,
+  message: 'Unexpected error',
+  errors: [...],
+  status: 500
 }
 ```
 
-Current workaround (FE fix applied):
-- Updated FE code to use fallback: `(showtime as any).movieTitle || showtime.movie?.title || 'Unknown'`
-- This works at runtime but violates type safety (uses `any` casting).
+Chi tiết kỹ thuật / files BE cần kiểm tra:
+- `apps/cinema-service/src/app/showtime/showtime-command.service.ts` → `batchCreateShowtimes()` method
+  - Line 115: Check `checkCinemaAndHallStatus()` — có thể cinema hoặc hall không được tìm thấy
+  - Line 117: Check `fetchMovieAndRelease()` — có thể movie hoặc release không được lấy từ movie-service
+  - Error handling: Method wraps error in `RpcException` which might be causing 500 instead of proper error
+- Xem logs BE để biết exact error cause (check cinema-service logs, api-gateway logs)
 
-Gợi ý sửa cụ thể (đề xuất cho BE team — choose ONE approach):
+Reproduction steps (FE flow):
+1. Open Admin → Batch Showtimes
+2. Fill all required fields:
+   - Movie (select)
+   - Movie Release (select)
+   - Cinema (select)
+   - Hall (select)
+   - Start Date (e.g., 2025-12-28, format: yyyy-MM-dd)
+   - End Date (e.g., 2025-12-31, format: yyyy-MM-dd)
+   - Select at least one time slot (e.g., 14:00)
+   - Choose repeat pattern (DAILY, WEEKLY, or CUSTOM_WEEKDAYS)
+   - Format, Language, Subtitles
+3. Click "Create Batch Showtimes" button
+4. Get 500 error with "Unexpected error"
 
-**Option A (Recommended): Return nested objects** 
-- Modify `cinema-service/showtime.service.ts` `getShowtimes()` to return full nested objects:
-  ```typescript
+FE sends (correct format):
+```json
+{
+  "movieId": "movie-123",
+  "movieReleaseId": "release-456",
+  "cinemaId": "cinema-789",
+  "hallId": "hall-001",
+  "startDate": "2025-12-28",      // yyyy-MM-dd string ✓
+  "endDate": "2025-12-31",        // yyyy-MM-dd string ✓
+  "timeSlots": ["14:00", "18:00"], // HH:mm strings ✓
+  "repeatType": "DAILY",
+  "weekdays": [],
+  "format": "2D",
+  "language": "vi",
+  "subtitles": []
+}
+```
+
+Expected behaviour after BE fix:
+- POST `/api/v1/showtimes/batch` returns 200 with response:
+  ```json
   {
-    id: "...",
-    movie: { id: "...", title: "Oppenheimer", ... },
-    cinema: { id: "...", name: "CGV", ... },
-    hall: { id: "...", name: "Hall A", ... },
-    startTime: "...",
-    format: "...",
-    // ... other fields
+    "success": true,
+    "message": "Batch create showtimes completed",
+    "data": {
+      "createdCount": <number>,
+      "skippedCount": <number>,
+      "created": [...Showtime[]],
+      "skipped": [...]
+    }
   }
   ```
-- This matches FE expectations and eliminates type mismatches.
 
-**Option B: Update FE types to match BE response**
-- Update `Showtime` interface in `FE/libs/shared-types/cinema/dto/response/` to have:
-  ```typescript
-  interface Showtime {
-    movieId: string;
-    movieTitle: string;
-    cinemaId: string;
-    cinemaName: string;
-    hallId: string;
-    hallName: string;
-    // ... other fields
-  }
-  ```
-- Then remove `as any` casting in FE code.
-
-**Current state:**
-- FE code in `apps/web/src/app/admin/showtime-seats/page.tsx` (line 96) uses fallback with `as any` casting.
-- This works but is not ideal for type safety.
+Gợi ý sửa cụ thể (đề xuất cho BE team):
+1. **Check cinema/hall validation**: Ensure `checkCinemaAndHallStatus()` properly validates and throws appropriate errors instead of generic exceptions
+2. **Check movie/release fetch**: Ensure `fetchMovieAndRelease()` handles microservice communication errors gracefully
+3. **Improve error handling**: Catch specific errors and return appropriate HTTP status codes (400 for validation, 404 for not found, 500 only for unexpected)
+4. **Add logging**: Log exact error in cinema-service before throwing RpcException
+5. **Test microservice communication**: Verify movie-service is reachable and returns correct data structure
 
 Notes for BE team:
-- If choosing Option A: requires microservice communication to fetch movie/cinema/hall data (already being done for movies).
-- If choosing Option B: BE can keep returning flat structure, but FE types must match.
-- Recommend Option A for cleaner FE code and better API contract clarity.
-
+- The Zod schema `batchCreateShowtimesSchema` is correct on FE — it accepts the formats we're sending
+- FE has already validated input before sending (all required fields present, dates match regex, etc.)
+- Issue is likely in BE service layer (cinema-service) not in validation
+- Check if `movieClient` service communication is failing (microservice networking issue)
+- Check if cinema/hall/movie/release exist in database
 

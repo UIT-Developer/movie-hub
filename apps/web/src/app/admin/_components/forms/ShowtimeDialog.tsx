@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -20,7 +20,7 @@ import {
 } from '@movie-hub/shacdn-ui/select';
 import { Button } from '@movie-hub/shacdn-ui/button';
 import { useToast } from '../../_libs/use-toast';
-import { useCreateShowtime, useUpdateShowtime, useMovieReleases, useShowtime } from '@/libs/api';
+import { useCreateShowtime, useUpdateShowtime, useMovieReleases } from '@/libs/api';
 import type { Showtime, Movie, Cinema, Hall, CreateShowtimeRequest } from '@/libs/api/types';
 import { FormatEnum } from '@movie-hub/shared-types/cinema/enum';
 
@@ -49,8 +49,11 @@ export default function ShowtimeDialog({
 }: ShowtimeDialogProps) {
   const createShowtime = useCreateShowtime();
   const updateShowtime = useUpdateShowtime();
-  // Fetch full showtime detail when editing
-  const { data: fullShowtimeDetail } = useShowtime(editingShowtime?.id || '');
+  // NOTE: useShowtime endpoint doesn't exist in BE yet (GET /api/v1/showtimes/:id not implemented).
+  // Using editingShowtime from props instead, which comes from the list and already has movieId/movieReleaseId.
+  // Once BE implements the detail endpoint, can uncomment below to fetch full details:
+  // const { data: fullShowtimeDetail } = useShowtime(editingShowtime?.id || '');
+  const fullShowtimeDetail = null; // Placeholder until BE endpoint exists
   const [formData, setFormData] = useState<CreateShowtimeRequest>({
     movieId: '',
     movieReleaseId: '',
@@ -61,27 +64,88 @@ export default function ShowtimeDialog({
     language: 'vi',
     subtitles: [],
   });
-  // Only fetch releases for the selected movie (or pre-selected movie)
+  // Fetch releases for the selected movie (or pre-selected movie)
+  // Triggers whenever movieId in form changes OR when editingShowtime's movieId is loaded
   const { data: movieReleasesData = [] } = useMovieReleases(
     (formData?.movieId || preSelectedMovieId) ? { movieId: formData?.movieId || preSelectedMovieId } : undefined
   );
-  const movieReleases = movieReleasesData || [];
+  const movieReleases = useMemo(() => movieReleasesData || [], [movieReleasesData]);
   const { toast } = useToast();
+
+  // Debug: log when releases are fetched
+  useEffect(() => {
+    if (formData?.movieId && movieReleases.length > 0) {
+      console.log('[ShowtimeDialog] Loaded releases for movie:', {
+        movieId: formData.movieId,
+        releaseCount: movieReleases.length,
+        releases: movieReleases.map(r => ({ id: r.id, startDate: r.startDate, status: r.status })),
+      });
+    } else if (formData?.movieId && movieReleases.length === 0) {
+      console.warn('[ShowtimeDialog] No releases found for movie:', formData.movieId);
+    }
+  }, [formData?.movieId, movieReleases]);
+
+  // Auto-select movieReleaseId if editingShowtime has it but form doesn't yet
+  useEffect(() => {
+    if (editingShowtime?.movieReleaseId && !formData.movieReleaseId && movieReleases.length > 0) {
+      console.log('[ShowtimeDialog] Auto-selecting movieReleaseId from editingShowtime:', {
+        movieReleaseId: editingShowtime.movieReleaseId,
+      });
+      // Check if the movieReleaseId exists in the releases list
+      const releaseExists = movieReleases.some(r => r.id === editingShowtime.movieReleaseId);
+      if (releaseExists) {
+        setFormData(prev => ({
+          ...prev,
+          movieReleaseId: editingShowtime.movieReleaseId,
+        }));
+      } else {
+        console.warn('[ShowtimeDialog] movieReleaseId not found in releases list:', editingShowtime.movieReleaseId);
+      }
+    }
+  }, [editingShowtime?.movieReleaseId, movieReleases, formData.movieReleaseId]);
 
   useEffect(() => {
     // Use fullShowtimeDetail if available (has complete data from API)
     const showtimeToUse = fullShowtimeDetail || editingShowtime;
     
     if (showtimeToUse) {
+      // Parse startTime properly: handle both ISO format and 'yyyy-MM-dd HH:mm:ss' format
+      let formattedStartTime = '';
+      try {
+        const date = new Date(showtimeToUse.startTime);
+        // Format as datetime-local: YYYY-MM-DDTHH:mm
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        formattedStartTime = `${year}-${month}-${day}T${hours}:${minutes}`;
+      } catch (e) {
+        console.warn('[ShowtimeDialog] Failed to parse startTime:', showtimeToUse.startTime, e);
+        formattedStartTime = '';
+      }
+
+      console.log('[ShowtimeDialog] Setting formData from editingShowtime:', {
+        movieId: showtimeToUse.movieId,
+        movieReleaseId: showtimeToUse.movieReleaseId,
+      });
+
       setFormData({
         movieId: showtimeToUse.movieId,
         movieReleaseId: showtimeToUse.movieReleaseId || '',
         cinemaId: showtimeToUse.cinemaId,
         hallId: showtimeToUse.hallId,
-        startTime: showtimeToUse.startTime.slice(0, 16),
+        startTime: formattedStartTime,
         format: showtimeToUse.format,
         language: showtimeToUse.language,
         subtitles: showtimeToUse.subtitles || [],
+      });
+      console.log('[ShowtimeDialog] Loaded showtime for edit:', {
+        id: showtimeToUse.id,
+        movieId: showtimeToUse.movieId,
+        movieReleaseId: showtimeToUse.movieReleaseId,
+        startTime: formattedStartTime,
+        raw: showtimeToUse.startTime,
       });
     } else if (preSelectedMovieId && preSelectedReleaseId) {
       // Pre-fill when opening from Movie Releases page
@@ -229,14 +293,20 @@ export default function ShowtimeDialog({
                 </SelectTrigger>
                 <SelectContent>
                   {formData.movieId && (() => {
-                    // Lấy các releases ACTIVE hoặc UPCOMING của movie này
-                    const releases = movieReleases.filter(r => 
-                      r.movieId === formData.movieId && 
-                      (r.status === 'ACTIVE' || r.status === 'UPCOMING')
-                    );
+                    // Get all releases for this movie (including ACTIVE, UPCOMING, EXPIRED)
+                    const releases = movieReleases.filter(r => r.movieId === formData.movieId);
+                    console.log('[ShowtimeDialog] Filtering releases for movieId:', {
+                      movieId: formData.movieId,
+                      totalAvailable: movieReleases.length,
+                      forThisMovie: releases.length,
+                      releases: releases.map(r => ({ id: r.id, status: r.status })),
+                    });
+                    if (releases.length === 0) {
+                      return <div className="px-2 py-1.5 text-sm text-gray-500">No releases available</div>;
+                    }
                     return releases.map((release) => (
                       <SelectItem key={release.id} value={release.id}>
-                        {new Date(release.startDate).toLocaleDateString()} → {new Date(release.endDate).toLocaleDateString()} ({release.status === 'ACTIVE' ? 'Now Showing' : 'Coming Soon'})
+                        {new Date(release.startDate).toLocaleDateString()} → {new Date(release.endDate).toLocaleDateString()} ({release.status})
                       </SelectItem>
                     ));
                   })()}

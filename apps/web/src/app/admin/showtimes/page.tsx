@@ -287,7 +287,11 @@ export default function ShowtimesPage() {
                               <div className="flex items-center gap-2 text-sm text-gray-600">
                                 <Clock className="h-4 w-4" />
                                 {format(new Date(showtime.startTime), 'HH:mm')} -{' '}
-                                {showtime.endTime ? format(new Date(showtime.endTime), 'HH:mm') : 'N/A'}
+                                {movie?.runtime ? (() => {
+                                  const startDate = new Date(showtime.startTime);
+                                  const endDate = new Date(startDate.getTime() + movie.runtime * 60 * 1000);
+                                  return format(endDate, 'HH:mm');
+                                })() : 'N/A'}
                               </div>
 
                               <div className="flex items-center justify-between">

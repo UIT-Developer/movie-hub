@@ -80,7 +80,7 @@ export interface Cinema {
   totalReviews: number;
   operatingHours?: GenericObject;
   socialMedia?: GenericObject;
-  status: CinemaStatus;
+  status: CinemaStatus | string;
   timezone: string;
   createdAt: Date;
   updatedAt: Date;

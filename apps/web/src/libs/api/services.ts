@@ -23,6 +23,7 @@ import type {
   ShowtimeFiltersParams,
   BatchCreateShowtimesRequest,
   ShowtimeSeat,
+  ShowtimeSeatResponse,
   MovieRelease,
   CreateMovieReleaseRequest,
   UpdateMovieReleaseRequest,
@@ -209,7 +210,7 @@ export const showtimesApi = {
 
   // Backend endpoint: GET /api/v1/showtimes/:id/seats
   getSeats: (showtimeId: string) =>
-    api.get<ShowtimeSeat[]>(`/api/v1/showtimes/${showtimeId}/seats`),
+    api.get<ShowtimeSeatResponse>(`/api/v1/showtimes/${showtimeId}/seats`),
 
   updateSeatStatus: (seatId: string, data: UpdateSeatStatusRequest) =>
     api.patch(`/api/v1/seats/${seatId}`, data),

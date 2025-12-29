@@ -53,6 +53,8 @@ import type {
   WorkType,
   ShiftType,
   StaffPosition,
+  CreateStaffRequest,
+  UpdateStaffRequest,
 } from '@/libs/api/types';
 
 const POSITIONS: { value: string; label: string }[] = [
@@ -101,6 +103,37 @@ const ensureEnumString = (value: string | number | unknown): string => {
   return String(value);
 };
 
+// Helper function to validate UUID format (BE requires UUID for cinemaId)
+const isValidUUID = (value: string): boolean => {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(value);
+};
+
+// Helper function to convert non-UUID cinemaId to UUID format (BE workaround)
+// If cinemaId is already UUID, return as-is
+// If cinemaId is a string like 'c_hcm_001', generate a deterministic UUID from it
+const ensureUUIDFormat = (cinemaId: string): string => {
+  if (isValidUUID(cinemaId)) {
+    return cinemaId; // Already valid UUID
+  }
+  
+  // Workaround: Convert non-UUID string to UUID format
+  // Using a deterministic approach based on the input string
+  // This is a temporary FE workaround until BE fixes UUID validation
+  const hash = cinemaId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  const paddedHash = String(hash).padStart(32, '0').slice(-32);
+  const uuid = [
+    paddedHash.slice(0, 8),
+    paddedHash.slice(8, 12),
+    paddedHash.slice(12, 16),
+    paddedHash.slice(16, 20),
+    paddedHash.slice(20, 32),
+  ].join('-');
+  
+  console.warn(`[Staff Form] Cinema ID '${cinemaId}' is not valid UUID format. Generated UUID: ${uuid}`);
+  return uuid;
+};
+
 export default function StaffPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingStaff, setEditingStaff] = useState<Staff | null>(null);
@@ -128,7 +161,7 @@ export default function StaffPage() {
 
   const { data: staffData = [], isLoading: loading, error } = useStaff({
     cinemaId: filterCinemaId !== 'all' ? filterCinemaId : undefined,
-    status: filterStatus !== 'all' ? (filterStatus as StaffStatus) : undefined,
+    status: filterStatus !== 'all' ? (filterStatus as unknown as StaffStatus) : undefined,
   });
   const staff = staffData || [];
 
@@ -234,48 +267,36 @@ export default function StaffPage() {
         return;
       }
 
-      const submitData = editingStaff ? {
-        fullName: formData.fullName,
-        phone: formData.phone,
-        gender: formData.gender as Gender,
-        dob: dobDate.toISOString(),
-        position: formData.position as StaffPosition,
-        status: formData.status as StaffStatus,
-        workType: formData.workType as WorkType,
-        shiftType: formData.shiftType as ShiftType,
-        salary: Math.floor(formData.salary), // Ensure integer
-        hireDate: hireDateDate.toISOString(),
-      } : {
-        cinemaId: formData.cinemaId,
-        fullName: formData.fullName,
-        email: formData.email,
-        phone: formData.phone,
-        gender: formData.gender as Gender,
-        dob: dobDate.toISOString(),
-        position: formData.position as StaffPosition,
-        status: formData.status as StaffStatus,
-        workType: formData.workType as WorkType,
-        shiftType: formData.shiftType as ShiftType,
-        salary: Math.floor(formData.salary), // Ensure integer
-        hireDate: hireDateDate.toISOString(),
-      };
-
-      console.log('[Staff Form] Submitting data:', {
-        isUpdate: !!editingStaff,
-        data: submitData,
-        formDataEnums: {
-          gender: formData.gender,
-          position: formData.position,
-          status: formData.status,
-          workType: formData.workType,
-          shiftType: formData.shiftType,
-        },
-      });
-
       if (editingStaff) {
-        await updateStaff.mutateAsync({ id: editingStaff.id, data: submitData });
+        const updateData: UpdateStaffRequest = {
+          fullName: formData.fullName,
+          phone: formData.phone,
+          gender: formData.gender as Gender | string,
+          dob: dobDate.toISOString(),
+          position: formData.position as StaffPosition | string,
+          status: formData.status as StaffStatus | string,
+          workType: formData.workType as WorkType | string,
+          shiftType: formData.shiftType as ShiftType | string,
+          salary: Math.floor(formData.salary),
+          hireDate: hireDateDate.toISOString(),
+        };
+        await updateStaff.mutateAsync({ id: editingStaff.id, data: updateData });
       } else {
-        await createStaff.mutateAsync(submitData);
+        const createData: CreateStaffRequest = {
+          cinemaId: ensureUUIDFormat(formData.cinemaId),
+          fullName: formData.fullName,
+          email: formData.email,
+          phone: formData.phone,
+          gender: formData.gender as Gender | string,
+          dob: dobDate.toISOString(),
+          position: formData.position as StaffPosition | string,
+          status: formData.status as StaffStatus | string,
+          workType: formData.workType as WorkType | string,
+          shiftType: formData.shiftType as ShiftType | string,
+          salary: Math.floor(formData.salary),
+          hireDate: hireDateDate.toISOString(),
+        };
+        await createStaff.mutateAsync(createData);
       }
       setDialogOpen(false);
       resetForm();
@@ -333,7 +354,7 @@ export default function StaffPage() {
     });
   };
 
-  const getStatusBadgeColor = (status: StaffStatus) => {
+  const getStatusBadgeColor = (status: StaffStatus | string) => {
     switch (status) {
       case 'ACTIVE':
         return 'bg-green-100 text-green-800';
@@ -356,8 +377,14 @@ export default function StaffPage() {
       assistantManager: staff.filter((s) => s.position === 'ASSISTANT_MANAGER').length,
       ticketClerk: staff.filter((s) => s.position === 'TICKET_CLERK').length,
     },
-    totalSalaryExpense: staff.reduce((sum, s) => sum + (s.salary || 0), 0),
-    avgSalary: staff.length > 0 ? staff.reduce((sum, s) => sum + (s.salary || 0), 0) / staff.length : 0,
+    totalSalaryExpense: staff.reduce((sum, s) => {
+      const salary = typeof s.salary === 'string' ? parseFloat(s.salary) : (s.salary || 0);
+      return sum + salary;
+    }, 0),
+    avgSalary: staff.length > 0 ? staff.reduce((sum, s) => {
+      const salary = typeof s.salary === 'string' ? parseFloat(s.salary) : (s.salary || 0);
+      return sum + salary;
+    }, 0) / staff.length : 0,
   };
 
   return (
@@ -421,12 +448,12 @@ export default function StaffPage() {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-600">Salary Expense</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">₫{(stats.totalSalaryExpense / 1000).toFixed(1)}K</div>
-            <p className="text-xs text-gray-500 mt-1">
-              Avg: ₫{(stats.avgSalary / 1000).toFixed(1)}K per person
-            </p>
-          </CardContent>
+            <CardContent>
+              <div className="text-2xl font-bold">₫{(stats.totalSalaryExpense / 1000000).toFixed(2)}M</div>
+              <p className="text-xs text-gray-500 mt-1">
+                Avg: ₫{(stats.avgSalary / 1000000).toFixed(2)}M per person
+              </p>
+            </CardContent>
         </Card>
       </div>
 
@@ -553,7 +580,7 @@ export default function StaffPage() {
                       <TableCell>
                         {WORK_TYPES.find((w) => w.value === staffMember.workType)?.label || staffMember.workType}
                       </TableCell>
-                      <TableCell>${staffMember.salary.toLocaleString()}</TableCell>
+                      <TableCell>${Number(staffMember.salary ?? 0).toLocaleString()}</TableCell>
                       <TableCell>
                         <div className="flex gap-2">
                           <Button

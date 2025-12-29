@@ -48,19 +48,19 @@ export {
   ShiftType,
 };
 
-export type AgeRating = AgeRatingEnum;
-export type LanguageType = LanguageOptionEnum;
-export type HallType = HallTypeEnum;
-export type LayoutType = LayoutTypeEnum;
-export type SeatType = SeatTypeEnum;
-export type DayType = DayTypeEnum;
-export type SeatStatus = SeatStatusEnum;
-export type ShowtimeFormat = FormatEnum;
-export type ShowtimeStatus = ShowtimeStatusEnum;
-export type CinemaStatus = CinemaStatusEnum;
+export type AgeRating = AgeRatingEnum | string;
+export type LanguageType = LanguageOptionEnum | string;
+export type HallType = HallTypeEnum | string;
+export type LayoutType = LayoutTypeEnum | string;
+export type SeatType = SeatTypeEnum | string;
+export type DayType = DayTypeEnum | string;
+export type SeatStatus = SeatStatusEnum | string;
+export type ShowtimeFormat = FormatEnum | string;
+export type ShowtimeStatus = ShowtimeStatusEnum | string;
+export type CinemaStatus = CinemaStatusEnum | string;
 
 export type {
-  BookingStatus,
+  BookingStatus,  
   PaymentStatus,
   PaymentMethod,
   RefundStatus,
@@ -190,7 +190,7 @@ export interface Cinema {
   operatingHours?: Record<string, unknown>;
   socialMedia?: Record<string, unknown>;
   timezone?: string;
-  status?: CinemaStatusEnum;
+  status?: CinemaStatus;
   rating?: number;
   totalReviews?: number;
   createdAt?: string | Date;
@@ -359,6 +359,52 @@ export interface ShowtimeSeat extends Seat {
   price?: number;
 }
 
+export interface SeatItemDto {
+  id: string;
+  number: number;
+  seatType: SeatType;
+  seatStatus: SeatStatus;
+  reservationStatus: 'AVAILABLE' | 'HELD' | 'CONFIRMED' | 'CANCELLED';
+  isHeldByCurrentUser?: boolean;
+}
+
+export interface SeatRowDto {
+  row: string;
+  seats: SeatItemDto[];
+}
+
+export interface ShowtimeInfoDto {
+  id: string;
+  movieId: string;
+  movieTitle: string;
+  start_time: string | Date;
+  end_time: string | Date;
+  dateType: DayType;
+  format: ShowtimeFormat;
+  language: string;
+  subtitles: string[];
+}
+
+export interface TicketPricingDto {
+  seatType: SeatType;
+  price: number;
+}
+
+export interface ShowtimeSeatResponse {
+  showtime: ShowtimeInfoDto;
+  cinemaId: string;
+  cinemaName: string;
+  hallId: string;
+  hallName: string;
+  layoutType: string;
+  seat_map: SeatRowDto[];
+  ticketPrices: TicketPricingDto[];
+  rules: {
+    max_selectable: number;
+    hold_time_seconds: number;
+  };
+}
+
 // ============================================================================
 // MOVIE RELEASE TYPES (API 6.x)
 // ============================================================================
@@ -427,12 +473,12 @@ export interface Staff {
   fullName: string;
   email: string;
   phone: string;
-  gender: Gender;
+  gender: Gender | string;
   dob: string | Date;
-  position: StaffPosition;
-  status: StaffStatus;
-  workType: WorkType;
-  shiftType: ShiftType;
+  position: StaffPosition | string;
+  status: StaffStatus | string;
+  workType: WorkType | string;
+  shiftType: ShiftType | string;
   salary: number;
   hireDate: string | Date;
 }
@@ -442,12 +488,12 @@ export interface CreateStaffRequest {
   fullName: string;
   email: string;
   phone: string;
-  gender: Gender;
+  gender: Gender | string;
   dob: string | Date;
-  position: StaffPosition;
-  status: StaffStatus;
-  workType: WorkType;
-  shiftType: ShiftType;
+  position: StaffPosition | string;
+  status: StaffStatus | string;
+  workType: WorkType | string;
+  shiftType: ShiftType | string;
   salary: number;
   hireDate: string | Date;
 }
@@ -472,12 +518,12 @@ export interface CreateStaffResponse {
 export interface UpdateStaffRequest {
   fullName?: string;
   phone?: string;
-  gender?: Gender;
+  gender?: Gender | string;
   dob?: string | Date;
-  position?: StaffPosition;
-  status?: StaffStatus;
-  workType?: WorkType;
-  shiftType?: ShiftType;
+  position?: StaffPosition | string;
+  status?: StaffStatus | string;
+  workType?: WorkType | string;
+  shiftType?: ShiftType | string;
   salary?: number;
   hireDate?: string | Date;
 }
@@ -640,6 +686,9 @@ export interface Review {
   rating: number;
   content: string;
   createdAt: string | Date;
+  title?: string;
+  helpfulCount?: number;
+  updatedAt?: string | Date;
   // BE doesn't return these, but FE can enrich them
   movieTitle?: string;
   userName?: string;
@@ -657,6 +706,9 @@ export interface ReviewFiltersParams extends PaginationParams {
   rating?: number;
   userId?: string;
   movieId?: string;
+  startDate?: string | Date;
+  endDate?: string | Date;
+  search?: string;
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
 }

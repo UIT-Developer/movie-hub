@@ -138,7 +138,7 @@ export default function ShowtimesPage() {
                     <Calendar
                       mode="single"
                       selected={selectedDate}
-                      onSelect={(date) => setSelectedDate(date)}
+                      onSelect={(date) => date && setSelectedDate(date)}
                     />
                     <div className="border-t p-2">
                       <Button

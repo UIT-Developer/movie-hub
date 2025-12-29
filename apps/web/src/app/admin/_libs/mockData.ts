@@ -447,7 +447,7 @@ export const mockMovies: Movie[] = [
     languageType: 'SUBTITLE' as LanguageType,
     originalLanguage: 'en',
     spokenLanguages: ['en'],
-    genre: mockGenres[0],
+    genre: [mockGenres[0]],
     cast: [
       {
         name: 'Tom Cruise',
@@ -481,7 +481,7 @@ export const mockMovies: Movie[] = [
     languageType: 'SUBTITLE' as LanguageType,
     originalLanguage: 'en',
     spokenLanguages: ['en'],
-    genre: mockGenres[2],
+    genre: [mockGenres[2]],
     cast: [
       {
         name: 'Cillian Murphy',
@@ -515,7 +515,7 @@ export const mockMovies: Movie[] = [
     languageType: 'SUBTITLE' as LanguageType,
     originalLanguage: 'en',
     spokenLanguages: ['en'],
-    genre: mockGenres[5],
+    genre: [mockGenres[5]],
     cast: [
       {
         name: 'Timothée Chalamet',
@@ -549,7 +549,7 @@ export const mockMovies: Movie[] = [
     languageType: 'SUBTITLE' as LanguageType,
     originalLanguage: 'en',
     spokenLanguages: ['en'],
-    genre: mockGenres[7],
+    genre: [mockGenres[7]],
     cast: [
       {
         name: 'Margot Robbie',
@@ -583,7 +583,7 @@ export const mockMovies: Movie[] = [
     languageType: 'SUBTITLE' as LanguageType,
     originalLanguage: 'en',
     spokenLanguages: ['en'],
-    genre: mockGenres[0],
+    genre: [mockGenres[0]],
     cast: [
       {
         name: 'Brie Larson',
@@ -617,7 +617,7 @@ export const mockMovies: Movie[] = [
     languageType: 'SUBTITLE' as LanguageType,
     originalLanguage: 'en',
     spokenLanguages: ['en'],
-    genre: mockGenres[7],
+    genre: [mockGenres[7]],
     cast: [
       {
         name: 'Timothée Chalamet',

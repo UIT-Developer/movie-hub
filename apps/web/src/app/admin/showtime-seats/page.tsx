@@ -22,6 +22,7 @@ import { Badge } from '@movie-hub/shacdn-ui/badge';
 import { useToast } from '../_libs/use-toast';
 import { format } from 'date-fns';
 import { useShowtimes, useShowtimeSeats } from '@/libs/api';
+import type { TicketPricingDto, SeatRowDto, SeatItemDto, Showtime } from '@/libs/api/types';
 
 type ReservationStatus = 'AVAILABLE' | 'HELD' | 'CONFIRMED' | 'CANCELLED';
 type SeatType = 'STANDARD' | 'VIP' | 'COUPLE' | 'PREMIUM' | 'WHEELCHAIR';
@@ -78,25 +79,25 @@ export default function ShowtimeSeatsPage() {
   };
 
   // Get ticket prices map
-  const ticketPricesMap = seatsResponse?.ticketPrices?.reduce((acc: any, tp: any) => {
+  const ticketPricesMap = seatsResponse?.ticketPrices?.reduce((acc: Record<string, number>, tp: TicketPricingDto) => {
     acc[tp.seatType] = tp.price;
     return acc;
   }, {}) || {};
 
   // Filter and group seats
-  const filteredSeats = seatsResponse?.seat_map?.map((row: any) => ({
+  const filteredSeats = seatsResponse?.seat_map?.map((row: SeatRowDto) => ({
     ...row,
-    seats: row.seats.filter((seat: any) =>
+    seats: row.seats.filter((seat: SeatItemDto) =>
       filterStatus === 'ALL' || seat.reservationStatus === filterStatus
     ),
-  })).filter((row: any) => row.seats.length > 0) || [];
+  })).filter((row: SeatRowDto) => row.seats.length > 0) || [];
 
   // Calculate status counts
   const statusCounts = seatsResponse ? {
-    available: seatsResponse.seat_map.flatMap((r: any) => r.seats).filter((s: any) => s.reservationStatus === 'AVAILABLE' && s.seatStatus === 'ACTIVE').length,
-    held: seatsResponse.seat_map.flatMap((r: any) => r.seats).filter((s: any) => s.reservationStatus === 'HELD').length,
-    confirmed: seatsResponse.seat_map.flatMap((r: any) => r.seats).filter((s: any) => s.reservationStatus === 'CONFIRMED').length,
-    unavailable: seatsResponse.seat_map.flatMap((r: any) => r.seats).filter((s: any) => s.seatStatus !== 'ACTIVE').length,
+    available: seatsResponse.seat_map.flatMap((r: SeatRowDto) => r.seats).filter((s: SeatItemDto) => s.reservationStatus === 'AVAILABLE' && s.seatStatus === 'ACTIVE').length,
+    held: seatsResponse.seat_map.flatMap((r: SeatRowDto) => r.seats).filter((s: SeatItemDto) => s.reservationStatus === 'HELD').length,
+    confirmed: seatsResponse.seat_map.flatMap((r: SeatRowDto) => r.seats).filter((s: SeatItemDto) => s.reservationStatus === 'CONFIRMED').length,
+    unavailable: seatsResponse.seat_map.flatMap((r: SeatRowDto) => r.seats).filter((s: SeatItemDto) => s.seatStatus !== 'ACTIVE').length,
   } : null;
 
   return (
@@ -123,15 +124,15 @@ export default function ShowtimeSeatsPage() {
               <SelectValue placeholder="Select showtime" />
             </SelectTrigger>
             <SelectContent>
-              {showtimes.map((showtime: any) => (
+              {showtimes.map((showtime: Showtime) => (
                 <SelectItem key={showtime.id} value={showtime.id}>
                   <div className="flex items-center gap-3">
                     <Film className="h-4 w-4" />
                     <span className="font-semibold">
-                      {showtime.movieTitle || showtime.movie?.title || 'Unknown'}
+                      {showtime.movie?.title || 'Unknown'}
                     </span>
                     <span className="text-gray-500">•</span>
-                    <span className="text-sm">{showtime.cinemaName || 'Cinema'}</span>
+                    <span className="text-sm">{showtime.cinema?.name || 'Cinema'}</span>
                     <span className="text-gray-500">•</span>
                     <span className="text-sm">
                       {format(new Date(showtime.startTime), 'MMM dd, HH:mm')}
@@ -277,7 +278,7 @@ export default function ShowtimeSeatsPage() {
 
               {/* Seat Grid */}
               <div className="space-y-2.5 max-w-5xl mx-auto">
-                {filteredSeats.map((row: any) => (
+                {filteredSeats.map((row: SeatRowDto) => (
                   <div key={row.row} className="flex items-center gap-4">
                     <div className="w-12 text-center">
                       <Badge variant="outline" className="font-mono font-bold text-base bg-gradient-to-r from-purple-50 to-pink-50 border-purple-200">
@@ -286,7 +287,7 @@ export default function ShowtimeSeatsPage() {
                     </div>
                     <div className="flex-1 flex justify-center">
                       <div className="flex gap-2">
-                        {row.seats.map((seat: any) => {
+                        {row.seats.map((seat: SeatItemDto) => {
                           const isUnavailable = seat.seatStatus !== 'ACTIVE' || 
                                               seat.reservationStatus === 'CONFIRMED' || 
                                               seat.reservationStatus === 'CANCELLED';

@@ -1,123 +1,45 @@
-# Backend BE Issues & TODO
+# Backend BE Issues & TODO (Admin Movie Releases)
 
-## Status: PARTIALLY FIXED IN ADMIN FE, BACKEND ISSUES IDENTIFIED 🔴
-
-### Movie Releases - Add New Release Dialog Issues
-
----
-
-## 🔴 BACKEND ISSUES - REQUIRE BE TEAM FIX
-
-### Issue 1: MovieReleaseResponse Missing Required Field
-**Status:** 🔴 BACKEND ISSUE - NEEDS BE FIX
-
-**Problem:** The `MovieReleaseResponse` interface does not include `movieId` field, but `movieId` is a required field in the Prisma schema and in the Create request.
-
-**Details:**
-- **BE Service Location:** `/BE/movie-hub/apps/movie-service/src/module/movie/movie.service.ts`
-- **Current Response:** Only returns `id`, `startDate`, `endDate`, `note`
-- **Expected:** Should also return `movieId`
-- **Prisma Schema:** `movieId` is required (`movieId String @db.Uuid` - no `?`)
-- **Impact:** Frontend cannot know which movie the created release belongs to; data integrity issue
-
-**Affected Methods (ALL NEED TO ADD `movieId` TO SELECT):**
-1. `createMovieRelease()` (line ~256)
-2. `updateMovieRelease()` (line ~286)
-3. `getMovieRelease()` (line ~239)
-
-**BE FIX REQUIRED:**
-1. **Update Response DTO:** `/BE/movie-hub/libs/shared-types/src/movie/dto/response/movie-release.response.ts`
-   ```typescript
-   export interface MovieReleaseResponse {
-     id: string;
-     movieId: string;      // ← ADD THIS
-     startDate: Date;
-     endDate: Date;
-     note: string;
-   }
-   ```
-
-2. **Update Service Methods:** `/BE/movie-hub/apps/movie-service/src/module/movie/movie.service.ts`
-   - Add `movieId: true` to SELECT clause in all 3 methods:
-     - Line ~239 in `getMovieRelease()` 
-     - Line ~269 in `createMovieRelease()`
-     - Line ~296 in `updateMovieRelease()`
-
-**Current SELECT (WRONG):**
-```typescript
-select: {
-  id: true,
-  startDate: true,
-  endDate: true,
-  note: true,
-}
-```
-
-**Should be:**
-```typescript
-select: {
-  id: true,
-  movieId: true,      // ← ADD THIS
-  startDate: true,
-  endDate: true,
-  note: true,
-}
-```
-
-**API Gateway Note:**
-The API Gateway Movie Service (`/BE/movie-hub/apps/api-gateway/src/app/module/movie/service/movie.service.ts`) also has `getMovieRelease()` method (line ~79) that calls the movie-service. This should automatically work once the movie-service is fixed.
+## Summary
+Tập hợp các lỗi của backend liên quan đến module Movie Releases mà frontend admin gặp phải khi tạo "New Movie Release". Mục đích: copy phần này cho đội BE để họ sửa contract/validation.
 
 ---
 
-## Backend API Schema Reference
+## Issue: Create New Movie Release — Validation / Response mismatch (urgent)
+Status: 🔴 BLOCKING for Admin FE create flow
 
-**CreateMovieReleaseRequest Schema:**
-```typescript
-{
-  movieId: z.uuid().optional(),        // Optional in schema, but required logically
-  startDate: z.coerce.date(),          // Required - string format: YYYY-MM-DD from HTML input
-  endDate: z.coerce.date(),            // Required - string format: YYYY-MM-DD from HTML input
-  note: z.string().max(500).optional() // Optional
-}
-```
+Problem (ngắn):
+- Khi admin FE gửi POST `/api/v1/movie-releases` để tạo release, backend có thể trả 400 (Zod validation failed) hoặc trả về object release nhưng **thiếu `movieId`** trong response. FE cần `movieId` để cập nhật cache và hiển thị tên phim liên quan.
 
-**Prisma Schema:**
-```
-model MovieRelease {
-  id          String   @id
-  movieId     String   @db.Uuid       // REQUIRED (no ?)
-  startDate   DateTime @db.Date       // REQUIRED
-  endDate     DateTime? @db.Date      // OPTIONAL (has ?)
-  note        String?                 // OPTIONAL
-}
-```
+Chi tiết kỹ thuật / files BE cần sửa:
+- `libs/shared-types/src/movie/dto/request/movie-release.request.ts` (Zod schema): hiện schema ở một số bản đặt `movieId` là optional — nên **bắt buộc** cho create request (BE có thể giữ optional nếu có lý do, nhưng FE luôn gửi `movieId`).
+- `libs/shared-types/src/movie/dto/response/movie-release.response.ts`: thiếu `movieId: string` — cần thêm vào response DTO.
+- `apps/movie-service/src/module/movie/movie.service.ts`: trong Prisma `select` của `findMany`, `create`, `update` cho `movieRelease` cần `movieId: true` để trả về `movieId` trong response.
+- API Gateway controller/service: đảm bảo không loại bỏ `movieId` khi forward response.
 
-**⚠️ SCHEMA MISMATCH:** 
-- Prisma has `endDate` as optional (`?`), but Zod schema requires it
-- BE team should verify if this is intentional
+Gợi ý sửa cụ thể (đề xuất cho BE team):
+1. Create DTO (Zod):
+	- `movieId: z.uuid()` (required)
+	- `startDate: z.coerce.date()` (required)
+	- `endDate: z.coerce.date().optional()` ( nếu DB cho phép null )
+	- `note: z.string().max(500).optional()`
+2. Response DTO: thêm `movieId: string;` và để `endDate`/`note` là optional nếu DB có thể trả null.
+3. Trong `movie.service.ts`, cập nhật các `select` để include `movieId: true` ở các chỗ: `getMovieRelease`, `createMovieRelease`, `updateMovieRelease`.
 
----
+Reproduction steps (FE flow):
+1. Open Admin → Movie Releases → Add New Release dialog.
+2. Fill: Movie (select), Start Date (e.g., 2025-12-31), End Date (e.g., 2026-01-06), Note optional.
+3. Click Create Release → nếu BE chưa sửa, sẽ thấy toast lỗi hoặc Network response 400; nếu BE trả release but no `movieId`, FE cannot match it to movie list.
 
-## Testing Steps After BE Fix
-1. Fill in Movie Release form with:
-   - Movie: Select any movie
-   - Start Date: Select date (e.g., 2025-12-31)
-   - End Date: Select date (e.g., 2026-02-28)
-   - Note: Optional, can be left empty
-2. Click "Create Release"
-3. Verify:
-   - ✅ Success toast appears
-   - ✅ Dialog closes
-   - ✅ Release appears in list with correct movieId
-   - ✅ Movie name displays correctly next to release
+Expected behaviour after BE fix:
+- POST `/api/v1/movie-releases` returns 200/201 with body containing created release including `id`, `movieId`, `startDate`, `endDate?`, `note?`.
+- Zod validation should accept ISO date strings sent by FE (FE sends `new Date(dateValue).toISOString()`); or BE should accept `YYYY-MM-DD` and coerce to Date.
+
+Notes for BE team:
+- FE sends `startDate` and `endDate` as ISO strings (e.g. `2025-12-31T00:00:00.000Z`) — please ensure Zod schema uses `z.coerce.date()` or accept string date formats.
+- If BE intentionally does not return `movieId` (e.g., privacy reasons), please provide an alternative field or return the `movie` object so FE can resolve title — otherwise add `movieId`.
 
 ---
 
-## Admin FE Workaround Status
-❌ Cannot fully workaround the missing `movieId` in response - this is a BE contract issue
-✅ Error handling is now properly displayed to users
-✅ Field labels now correctly reflect required/optional status
+Add this note to the BE issues list so backend team can fix the contract mismatch; frontend will be able to use the create flow without workaround once BE returns `movieId` and aligns date/validation rules.
 
-## Next Steps
-🚀 **Backend team MUST fix Issue 3** before Add New Release will work properly
-📝 The FE is ready and waiting for the correct API response

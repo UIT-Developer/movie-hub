@@ -21,7 +21,8 @@ import {
 import { Badge } from '@movie-hub/shacdn-ui/badge';
 import { useToast } from '../_libs/use-toast';
 import { format } from 'date-fns';
-import { useShowtimes, useShowtimeSeats } from '@/libs/api';
+import { useShowtimes, useShowtimeSeats, useMovies, useHallsGroupedByCinema } from '@/libs/api';
+import { useMemo } from 'react';
 import type { TicketPricingDto, SeatRowDto, SeatItemDto, Showtime } from '@/libs/api/types';
 
 type ReservationStatus = 'AVAILABLE' | 'HELD' | 'CONFIRMED' | 'CANCELLED';
@@ -36,6 +37,22 @@ export default function ShowtimeSeatsPage() {
   const { data: showtimesData = [] } = useShowtimes();
   const showtimes = showtimesData || [];
   const { data: seatsResponse, isLoading: loading } = useShowtimeSeats(selectedShowtimeId);
+  const { data: moviesData = [] } = useMovies();
+  const movies = moviesData || [];
+  const { data: hallsByCinema = {} } = useHallsGroupedByCinema();
+  const halls = useMemo(() => Object.values(hallsByCinema).flatMap((g: any) => (g.halls || [])), [hallsByCinema]);
+
+  const movieMap = useMemo(() => {
+    const m: Record<string,string> = {};
+    movies.forEach((mv: any) => { if (mv?.id) m[mv.id] = mv.title || 'Unknown'; });
+    return m;
+  }, [movies]);
+
+  const hallMap = useMemo(() => {
+    const m: Record<string,string> = {};
+    (halls || []).forEach((h: any) => { if (h?.id) m[h.id] = h.name || 'Unknown Hall'; });
+    return m;
+  }, [halls]);
 
   const handleShowtimeChange = (showtimeId: string) => {
     setSelectedShowtimeId(showtimeId);
@@ -124,20 +141,20 @@ export default function ShowtimeSeatsPage() {
               <SelectValue placeholder="Select showtime" />
             </SelectTrigger>
             <SelectContent>
-              {showtimes.map((showtime: Showtime) => (
+              {showtimes.map((showtime: any) => (
                 <SelectItem key={showtime.id} value={showtime.id}>
-                  <div className="flex items-center gap-3">
-                    <Film className="h-4 w-4" />
-                    <span className="font-semibold">
-                      {showtime.movie?.title || 'Unknown'}
-                    </span>
-                    <span className="text-gray-500">•</span>
-                    <span className="text-sm">{showtime.cinema?.name || 'Cinema'}</span>
-                    <span className="text-gray-500">•</span>
-                    <span className="text-sm">
-                      {format(new Date(showtime.startTime), 'MMM dd, HH:mm')}
-                    </span>
-                    <Badge variant="outline">{showtime.format || '2D'}</Badge>
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className="font-semibold">{movieMap[showtime.movieId] || showtime.movieTitle || 'Unknown'}</span>
+                    <span className="text-gray-400">•</span>
+                    <span className="text-gray-600">{hallMap[showtime.hallId] || showtime.hallName || 'Unknown Hall'}</span>
+                    <span className="text-gray-400">•</span>
+                    <span className="text-gray-600">{format(new Date(showtime.startTime || showtime.start_time || showtime.start), 'MMM dd, HH:mm')}</span>
+                    {showtime.format && (
+                      <>
+                        <span className="text-gray-400">•</span>
+                        <Badge variant="outline" className="text-xs">{showtime.format}</Badge>
+                      </>
+                    )}
                   </div>
                 </SelectItem>
               ))}

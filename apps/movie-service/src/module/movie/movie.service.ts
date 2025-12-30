@@ -241,6 +241,7 @@ export class MovieService {
       where: { movieId },
       select: {
         id: true,
+        movieId: true,
         startDate: true,
         endDate: true,
         note: true,
@@ -266,6 +267,7 @@ export class MovieService {
           },
           select: {
             id: true,
+            movieId: true,
             startDate: true,
             endDate: true,
             note: true,
@@ -291,10 +293,20 @@ export class MovieService {
         return await db.movieRelease.update({
           where: { id },
           data: {
-            ...movieRelese,
+            ...(movieRelese.movieId !== undefined && {
+              movieId: movieRelese.movieId,
+            }),
+            ...(movieRelese.startDate !== undefined && {
+              startDate: movieRelese.startDate,
+            }),
+            ...(movieRelese.endDate !== undefined && {
+              endDate: movieRelese.endDate,
+            }),
+            ...(movieRelese.note !== undefined && { note: movieRelese.note }),
           },
           select: {
             id: true,
+            movieId: true,
             startDate: true,
             endDate: true,
             note: true,

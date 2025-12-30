@@ -4,7 +4,7 @@
 export const dynamic = 'force-dynamic';
 
 import { useState, useEffect, useMemo } from 'react';
-import { Plus, Search, MoreVertical, Edit, Trash2, Film as FilmIcon, Calendar } from 'lucide-react';
+import { Plus, Search, Check, MoreVertical, Edit, Trash2, Film as FilmIcon, Calendar, X } from 'lucide-react';
 import { Button } from '@movie-hub/shacdn-ui/button';
 import { Input } from '@movie-hub/shacdn-ui/input';
 import {
@@ -50,6 +50,10 @@ interface EnrichedMovie extends Movie {
 
 export default function MoviesPage() {
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedGenreIds, setSelectedGenreIds] = useState<string[]>([]);
+  const [selectedStatus, setSelectedStatus] = useState<string>('all');
+  const [selectedRating, setSelectedRating] = useState<string>('all');
+  const [genreSearch, setGenreSearch] = useState<string>('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [validationErrorOpen, setValidationErrorOpen] = useState(false);
@@ -82,6 +86,11 @@ export default function MoviesPage() {
   const movies = useMemo(() => moviesData || [], [moviesData]);
   const { data: genresData = [] } = useGenres();
   const genres = useMemo(() => genresData || [], [genresData]);
+  const filteredGenres = useMemo(() => {
+    const q = genreSearch.trim().toLowerCase();
+    if (!q) return genres;
+    return genres.filter((g: any) => String(g.name || '').toLowerCase().includes(q));
+  }, [genres, genreSearch]);
   const createMovie = useCreateMovie();
   const updateMovie = useUpdateMovie();
   const deleteMovie = useDeleteMovie();
@@ -347,7 +356,16 @@ export default function MoviesPage() {
         productionCountry: fullMovieDetail.productionCountry,
         director: fullMovieDetail.director || '',
         cast: fullMovieDetail.cast || [],
-        genreIds: fullMovieDetail.genre ? fullMovieDetail.genre.map(g => g.id) : [],
+        genreIds: (() => {
+          const raw = (fullMovieDetail as any).genre ?? (fullMovieDetail as any).genres ?? (fullMovieDetail as any).genreIds ?? [];
+          if (Array.isArray(raw)) {
+            if (raw.length > 0 && typeof raw[0] === 'object') return raw.map((g: any) => String(g.id));
+            return raw.map((v: any) => String(v));
+          }
+          if (raw && typeof raw === 'object' && 'id' in raw) return [String(raw.id)];
+          if (raw != null) return [String(raw)];
+          return [];
+        })(),
       });
       setDialogOpen(true);
     } catch (error) {
@@ -369,28 +387,130 @@ export default function MoviesPage() {
         productionCountry: movie.productionCountry,
         director: movie.director || '',
         cast: movie.cast || [],
-        genreIds: movie.genre ? movie.genre.map(g => g.id) : [],
+        genreIds: (() => {
+          const raw = (movie as any).genre ?? (movie as any).genres ?? (movie as any).genreIds ?? [];
+          if (Array.isArray(raw)) {
+            if (raw.length > 0 && typeof raw[0] === 'object') return raw.map((g: any) => String(g.id));
+            return raw.map((v: any) => String(v));
+          }
+          if (raw && typeof raw === 'object' && 'id' in raw) return [String(raw.id)];
+          if (raw != null) return [String(raw)];
+          return [];
+        })(),
       });
       setDialogOpen(true);
     }
   };
 
-  const filteredMovies = movies.filter((movie) =>
-    movie.title.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  // Get enriched version of filtered movies
-  const displayedMovies = useMemo(() => {
-    return filteredMovies.map(movie => enrichedMovies.get(movie.id) || (movie as EnrichedMovie));
-  }, [filteredMovies, enrichedMovies]);
-
   // Utility: normalize possible singular or array API shapes into arrays
-  const ensureArray = <T,>(val?: T | T[] | null): T[] => {
+  function ensureArray<T>(val?: T | T[] | null): T[] {
     if (!val) return [];
     return Array.isArray(val) ? val : [val];
-  };
+  }
 
-  // status color helper removed — not used in current overlay
+  // Normalize movie -> genre ids (handles `genre`, `genres`, `genreIds`, singular/object shapes)
+  function getMovieGenreIds(movie: Movie): string[] {
+    const ids: string[] = [];
+
+    // movie.genre may be array, single object, or single id/string
+    const rawGenre = (movie as any).genre ?? (movie as any).genres ?? null;
+    if (rawGenre) {
+      if (Array.isArray(rawGenre)) {
+        rawGenre.forEach((g: any) => {
+          if (g && typeof g === 'object' && 'id' in g) ids.push(String(g.id));
+          else ids.push(String(g));
+        });
+      } else if (rawGenre && typeof rawGenre === 'object' && 'id' in rawGenre) {
+        ids.push(String(rawGenre.id));
+      } else if (rawGenre != null) {
+        ids.push(String(rawGenre));
+      }
+    }
+
+    // movie.genreIds explicit array
+    if (Array.isArray((movie as any).genreIds)) {
+      ((movie as any).genreIds as any[]).forEach(gid => ids.push(String(gid)));
+    }
+
+    // dedupe
+    return Array.from(new Set(ids.filter(Boolean)));
+  }
+
+  // Get display names for a movie's genres; prefer included objects, fallback to lookup by id
+  function getMovieGenreNames(movie: Movie): string[] {
+    const names: string[] = [];
+    const rawGenre = (movie as any).genre ?? (movie as any).genres ?? null;
+
+    if (rawGenre) {
+      if (Array.isArray(rawGenre)) {
+        rawGenre.forEach((g: any) => {
+          if (g && typeof g === 'object' && 'name' in g) names.push(String(g.name));
+          else if (g != null) names.push(String(g));
+        });
+      } else if (rawGenre && typeof rawGenre === 'object' && 'name' in rawGenre) {
+        names.push(String(rawGenre.name));
+      } else if (rawGenre != null) {
+        names.push(String(rawGenre));
+      }
+    }
+
+    if (Array.isArray((movie as any).genreIds)) {
+      ((movie as any).genreIds as string[]).forEach(gid => {
+        // try to resolve name from loaded genres list
+        const g = genres.find((x: any) => String(x.id) === String(gid));
+        if (g && g.name) names.push(g.name);
+        else names.push(String(gid));
+      });
+    }
+
+    return Array.from(new Set(names.filter(Boolean)));
+  }
+
+  // Filter by iterating original movies and preferring enriched data where present,
+  // but always falling back to the original movie for missing fields (e.g., releaseDate)
+  const filteredSources = movies.filter((movie) => {
+    const enriched = enrichedMovies.get(movie.id) as EnrichedMovie | undefined;
+    const source: Movie | EnrichedMovie = enriched || movie;
+
+    // Search filter (title should come from original movie to match listing behavior)
+    if (searchQuery && !String(movie.title || '').toLowerCase().includes(searchQuery.toLowerCase())) {
+      return false;
+    }
+
+    // Genre filter (must have ALL selected genres) - use enriched if available
+    if (selectedGenreIds.length > 0) {
+      const movieGenreIds = getMovieGenreIds(source as Movie);
+      const hasAllGenres = selectedGenreIds.every(genreId => movieGenreIds.includes(genreId));
+      if (!hasAllGenres) return false;
+    }
+
+    // Release year filter removed — filtering now relies on genres, status and rating only
+
+    // Rating filter - prefer enriched then fallback
+    const ratingToCheck = (source as any).ageRating ?? movie.ageRating;
+    if (selectedRating !== 'all' && ratingToCheck !== selectedRating) {
+      return false;
+    }
+
+    // Status filter - use enriched calculatedStatus if available, else fallback to movie.status
+    if (selectedStatus !== 'all') {
+      const statusToCheck = (enriched && enriched.calculatedStatus) || (movie as any).status || undefined;
+      if (statusToCheck !== selectedStatus) return false;
+    }
+
+    return true;
+  }).map(m => enrichedMovies.get(m.id) || m) as EnrichedMovie[];
+
+  const displayedMovies = useMemo(() => filteredSources, [filteredSources]);
+
+  const releaseDateValue = (() => {
+    const rd = (formData as any).releaseDate;
+    if (!rd) return '';
+    if (typeof rd === 'string') return rd.includes('T') ? rd.split('T')[0] : rd;
+    if (rd instanceof Date) return rd.toISOString().split('T')[0];
+    try { const d = new Date(rd as any); if (!isNaN(d.getTime())) return d.toISOString().split('T')[0]; } catch { }
+    return '';
+  })();
 
   return (
     <div className="space-y-6">
@@ -413,14 +533,138 @@ export default function MoviesPage() {
 
       <Card>
         <CardContent className="pt-6">
-          <div className="relative">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-            <Input
-              placeholder="Search movies..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
+          <div className="space-y-4">
+            {/* Search bar */}
+            <div className="relative">
+              <Search className="absolute left-4 top-4 h-5 w-5 text-gray-400" />
+              <Input
+                placeholder="Search movies by title..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-12 bg-white rounded-lg shadow-sm border border-gray-200 h-12"
+              />
+            </div>
+
+            {/* Advanced filters */}
+            <div className="flex flex-col lg:flex-row gap-4 items-start">
+              {/* Genres (Multi-select) */}
+              <div className="lg:w-1/3">
+                <Label className="text-xs font-semibold text-gray-600 mb-2 block uppercase tracking-wide">Genres</Label>
+                <div className="border rounded-lg p-3 max-h-72 overflow-y-auto bg-white shadow-sm">
+                  <div className="mb-2">
+                    <Input
+                      placeholder="Search genres..."
+                      value={genreSearch}
+                      onChange={(e) => setGenreSearch(e.target.value)}
+                      className="px-3 py-2"
+                    />
+                  </div>
+                  {filteredGenres.length === 0 ? (
+                    <p className="text-sm text-gray-500">No genres found</p>
+                  ) : (
+                    <div className="grid grid-cols-1 gap-2">
+                      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                      {filteredGenres.map((genre: any) => {
+                        const checked = selectedGenreIds.includes(genre.id);
+                        return (
+                          <label
+                            key={genre.id}
+                            className={`flex items-center justify-between gap-3 cursor-pointer p-2 rounded-md transition-all ${checked ? 'bg-gradient-to-r from-purple-50 to-pink-50 border border-gray-200' : 'hover:bg-gray-50'}`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className={`h-5 w-5 rounded-full flex items-center justify-center border ${checked ? 'bg-purple-600 border-purple-600 text-white' : 'bg-white border-gray-300'}`}>
+                                {checked ? <Check className="h-3 w-3" /> : null}
+                              </div>
+                              <span className="text-sm text-gray-800">{genre.name}</span>
+                            </div>
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={(e) => {
+                                if (e.target.checked) setSelectedGenreIds(prev => [...prev, genre.id]);
+                                else setSelectedGenreIds(prev => prev.filter(id => id !== genre.id));
+                              }}
+                              className="sr-only"
+                            />
+                          </label>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+                {selectedGenreIds.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    {selectedGenreIds.map(id => {
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                      const genre = genres.find((g: any) => g.id === id);
+                      return (
+                        <button
+                          key={id}
+                          onClick={() => setSelectedGenreIds(selectedGenreIds.filter(gid => gid !== id))}
+                          className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded-full flex items-center gap-1 hover:bg-purple-200"
+                        >
+                          {genre?.name}
+                          <X className="h-3 w-3" />
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              <div className="lg:flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
+                {/* Status filter */}
+                <div>
+                  <Label htmlFor="status-filter" className="text-xs font-semibold text-gray-600 mb-2 block uppercase tracking-wide">Status</Label>
+                  <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                    <SelectTrigger id="status-filter" className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 h-12">
+                      <SelectValue placeholder="All Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Status</SelectItem>
+                      <SelectItem value="NOW_SHOWING">Now Showing</SelectItem>
+                      <SelectItem value="COMING_SOON">Coming Soon</SelectItem>
+                      <SelectItem value="ENDED">Ended</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Age rating filter */}
+                <div>
+                  <Label htmlFor="rating-filter" className="text-xs font-semibold text-gray-600 mb-2 block uppercase tracking-wide">Age Rating</Label>
+                  <Select value={selectedRating} onValueChange={setSelectedRating}>
+                    <SelectTrigger id="rating-filter" className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 h-12">
+                      <SelectValue placeholder="All Ratings" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Ratings</SelectItem>
+                      <SelectItem value="P">P</SelectItem>
+                      <SelectItem value="K">K</SelectItem>
+                      <SelectItem value="T13">T13</SelectItem>
+                      <SelectItem value="T16">T16</SelectItem>
+                      <SelectItem value="T18">T18</SelectItem>
+                      <SelectItem value="C">C</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+
+            {/* Clear filters button */}
+            {(searchQuery || selectedGenreIds.length > 0 || selectedStatus !== 'all' || selectedRating !== 'all') && (
+              <button
+                onClick={() => {
+                  setSearchQuery('');
+                  setSelectedGenreIds([]);
+                  setSelectedStatus('all');
+                  setSelectedRating('all');
+                }}
+                className="text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1"
+              >
+                <X className="h-4 w-4" />
+                Clear all filters
+              </button>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -487,10 +731,10 @@ export default function MoviesPage() {
                           <p className="text-sm">{ensureArray(movie.cast).slice(0,6).map(a => typeof a === 'object' && a && 'name' in a ? (a as { name?: string }).name : String(a)).filter(Boolean).join(', ')}</p>
                         </div>
                       )}
-                      {ensureArray(movie.genre).length > 0 && (
+                      {getMovieGenreNames(movie).length > 0 && (
                         <div className="mb-2">
                           <p className="text-xs text-yellow-300 font-semibold mb-1 uppercase tracking-wider">Genres</p>
-                          <p className="text-sm">{ensureArray(movie.genre).map(g => typeof g === 'object' && g && 'name' in g ? (g as { name?: string }).name : String(g)).filter(Boolean).join(', ')}</p>
+                          <p className="text-sm">{getMovieGenreNames(movie).join(', ')}</p>
                         </div>
                       )}
                       {ensureArray(movie.spokenLanguages).length > 0 && (
@@ -646,13 +890,7 @@ export default function MoviesPage() {
                 <Input
                   id="releaseDate"
                   type="date"
-                  value={
-                    typeof formData.releaseDate === 'string'
-                      ? formData.releaseDate
-                      : formData.releaseDate instanceof Date
-                      ? formData.releaseDate.toISOString().split('T')[0]
-                      : ''
-                  }
+                  value={releaseDateValue}
                   onChange={(e) =>
                     setFormData({ ...formData, releaseDate: e.target.value })
                   }

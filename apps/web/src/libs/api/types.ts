@@ -146,6 +146,10 @@ export type UpdateMovieRequest = Partial<CreateMovieRequest>;
 
 export interface MoviesListParams extends PaginationParams {
   search?: string;
+  genreIds?: string[];
+  status?: 'COMING_SOON' | 'NOW_SHOWING' | 'ENDED';
+  releaseYear?: number;
+  ageRating?: AgeRating;
 }
 
 // ============================================================================

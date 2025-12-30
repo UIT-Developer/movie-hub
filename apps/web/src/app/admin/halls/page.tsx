@@ -44,6 +44,7 @@ import { HallTypeEnum, LayoutTypeEnum } from '@movie-hub/shared-types/cinema/enu
 
 export default function HallsPage() {
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCinemaId, setSelectedCinemaId] = useState<string>('all');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [validationErrorOpen, setValidationErrorOpen] = useState(false);
@@ -147,9 +148,11 @@ export default function HallsPage() {
     setDialogOpen(true);
   };
 
-  const filteredHalls = halls.filter((hall) =>
-    hall.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredHalls = halls.filter((hall) => {
+    const matchSearch = hall.name.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchCinema = selectedCinemaId === 'all' || hall.cinemaId === selectedCinemaId;
+    return matchSearch && matchCinema;
+  });
 
   // Group filtered halls by cinema (don't shadow the API `hallsByCinema` variable)
   const groupedFilteredHalls = filteredHalls.reduce((acc, hall) => {
@@ -202,14 +205,70 @@ export default function HallsPage() {
 
       <Card>
         <CardContent className="pt-6">
-          <div className="relative">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-            <Input
-              placeholder="Search halls..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
+          {/* Modern Filter Container with Gradient */}
+          <div className="p-4 bg-gradient-to-r from-purple-50 via-blue-50 to-pink-50 rounded-lg border border-purple-200/50 shadow-sm space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Search Input */}
+              <div>
+                <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2 block">🔍 Search</label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-3 h-4 w-4 text-purple-600" />
+                  <Input
+                    placeholder="Search halls by name..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10 h-11 bg-white border border-purple-200 focus:border-purple-400 focus:ring-purple-200 font-medium"
+                  />
+                </div>
+              </div>
+
+              {/* Cinema Filter */}
+              <div>
+                <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2 block">🏢 Cinema</label>
+                <Select value={selectedCinemaId} onValueChange={setSelectedCinemaId}>
+                  <SelectTrigger className="h-11 bg-white border border-purple-200 hover:border-purple-300 focus:border-purple-400 font-medium">
+                    <SelectValue placeholder="All Cinemas" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Cinemas</SelectItem>
+                    {cinemas.map((cinema) => (
+                      <SelectItem key={cinema.id} value={cinema.id}>
+                        {cinema.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Active Filters */}
+            {(searchQuery || selectedCinemaId !== 'all') && (
+              <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-purple-200/50">
+                {searchQuery && (
+                  <div className="inline-flex items-center gap-2 px-3 py-1 bg-white rounded-full border border-purple-200 shadow-sm">
+                    <span className="text-xs text-gray-600">Search: <span className="font-semibold text-purple-700">{searchQuery}</span></span>
+                    <button onClick={() => setSearchQuery('')} className="text-purple-400 hover:text-purple-600">✕</button>
+                  </div>
+                )}
+                {selectedCinemaId !== 'all' && (
+                  <div className="inline-flex items-center gap-2 px-3 py-1 bg-white rounded-full border border-purple-200 shadow-sm">
+                    <span className="text-xs text-gray-600">Cinema: <span className="font-semibold text-purple-700">{cinemas.find(c => c.id === selectedCinemaId)?.name}</span></span>
+                    <button onClick={() => setSelectedCinemaId('all')} className="text-purple-400 hover:text-purple-600">✕</button>
+                  </div>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setSearchQuery('');
+                    setSelectedCinemaId('all');
+                  }}
+                  className="border-purple-200 text-purple-700 hover:bg-purple-50 hover:text-purple-800 ml-auto"
+                >
+                  ✕ Clear All
+                </Button>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>

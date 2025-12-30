@@ -254,135 +254,171 @@ export default function ConcessionsPage() {
         </Button>
       </div>
 
-      {/* Statistics Cards */}
+      {/* Statistics Cards with Modern Gradient Design */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
+        {/* Total Items Card */}
+        <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200/60 shadow-md hover:shadow-lg transition-shadow">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Total Items</CardTitle>
+            <CardTitle className="text-sm font-semibold text-purple-700 uppercase tracking-wider">📦 Total Items</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.total}</div>
-            <p className="text-xs text-gray-500 mt-1">
+            <div className="text-3xl font-bold text-purple-900">{stats.total}</div>
+            <p className="text-xs text-purple-600 mt-2 font-medium">
               {stats.available} available · {stats.unavailable} unavailable
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        {/* Category Breakdown Card */}
+        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200/60 shadow-md hover:shadow-lg transition-shadow">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">By Category</CardTitle>
+            <CardTitle className="text-sm font-semibold text-blue-700 uppercase tracking-wider">🎯 By Category</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.combo}</div>
-            <p className="text-xs text-gray-500 mt-1">
-              {stats.food} food · {stats.drink} drinks · {stats.merchandise} merch
+            <div className="text-3xl font-bold text-blue-900">{stats.food + stats.drink + stats.combo + stats.merchandise}</div>
+            <p className="text-xs text-blue-600 mt-2 font-medium">
+              🍿{stats.food} 🥤{stats.drink} 🍔{stats.combo} 🎁{stats.merchandise}
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        {/* Inventory Value Card */}
+        <Card className="bg-gradient-to-br from-pink-50 to-pink-100 border-pink-200/60 shadow-md hover:shadow-lg transition-shadow">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Inventory Value</CardTitle>
+            <CardTitle className="text-sm font-semibold text-pink-700 uppercase tracking-wider">💰 Inventory Value</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">₫{(stats.totalValue / 1000).toFixed(1)}K</div>
-            <p className="text-xs text-gray-500 mt-1">
+            <div className="text-3xl font-bold text-pink-900">₫{(stats.totalValue / 1000).toFixed(1)}K</div>
+            <p className="text-xs text-pink-600 mt-2 font-medium">
               Total stock value
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        {/* Average Price Card */}
+        <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200/60 shadow-md hover:shadow-lg transition-shadow">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Average Price</CardTitle>
+            <CardTitle className="text-sm font-semibold text-emerald-700 uppercase tracking-wider">💵 Average Price</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">₫{(stats.avgPrice / 1000).toFixed(1)}K</div>
-            <p className="text-xs text-gray-500 mt-1">
+            <div className="text-3xl font-bold text-emerald-900">₫{(stats.avgPrice / 1000).toFixed(1)}K</div>
+            <p className="text-xs text-emerald-600 mt-2 font-medium">
               Per item
             </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Filters */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center">
-              <Filter className="mr-2 h-5 w-5" />
-              Filters
-              {(filterCinemaId !== 'all' || filterCategory !== 'all' || filterAvailable !== 'all') && (
-                <Badge variant="secondary" className="ml-2">
-                  {[filterCinemaId !== 'all', filterCategory !== 'all', filterAvailable !== 'all'].filter(Boolean).length} Active
-                </Badge>
-              )}
-            </CardTitle>
-            {(filterCinemaId !== 'all' || filterCategory !== 'all' || filterAvailable !== 'all') && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setFilterCinemaId('all');
-                  setFilterCategory('all');
-                  setFilterAvailable('all');
-                }}
-              >
-                Clear All
-              </Button>
+      {/* Modern Filter Container */}
+      <div className="p-4 bg-gradient-to-r from-purple-50 via-blue-50 to-pink-50 rounded-lg border border-purple-200/50 shadow-sm">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3">
+          {/* Cinema Filter */}
+          <div className="space-y-2">
+            <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">🏢 Cinema</label>
+            <Select value={filterCinemaId} onValueChange={setFilterCinemaId}>
+              <SelectTrigger className="h-11 border-purple-200 focus:ring-purple-500">
+                <SelectValue placeholder="All Cinemas" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Cinemas</SelectItem>
+                {cinemas.map((cinema) => (
+                  <SelectItem key={cinema.id} value={cinema.id}>
+                    {cinema.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Category Filter */}
+          <div className="space-y-2">
+            <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">🎯 Category</label>
+            <Select value={filterCategory} onValueChange={setFilterCategory}>
+              <SelectTrigger className="h-11 border-purple-200 focus:ring-purple-500">
+                <SelectValue placeholder="All Categories" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Categories</SelectItem>
+                {CATEGORIES.map((cat) => (
+                  <SelectItem key={cat.value} value={cat.value}>
+                    {cat.icon} {cat.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Availability Filter */}
+          <div className="space-y-2">
+            <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">✅ Availability</label>
+            <Select value={filterAvailable} onValueChange={setFilterAvailable}>
+              <SelectTrigger className="h-11 border-purple-200 focus:ring-purple-500">
+                <SelectValue placeholder="All" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Items</SelectItem>
+                <SelectItem value="true">✅ Available</SelectItem>
+                <SelectItem value="false">❌ Unavailable</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        {/* Active Filter Chips */}
+        {(filterCinemaId !== 'all' || filterCategory !== 'all' || filterAvailable !== 'all') && (
+          <div className="flex flex-wrap gap-2 pt-3 border-t border-purple-200/50">
+            {filterCinemaId !== 'all' && (
+              <div className="inline-flex items-center gap-2 px-3 py-1 bg-white rounded-full border border-purple-200 shadow-sm">
+                <span className="text-xs font-medium text-gray-700">
+                  🏢 {cinemas.find(c => c.id === filterCinemaId)?.name}
+                </span>
+                <button
+                  onClick={() => setFilterCinemaId('all')}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  ✕
+                </button>
+              </div>
             )}
+            {filterCategory !== 'all' && (
+              <div className="inline-flex items-center gap-2 px-3 py-1 bg-white rounded-full border border-purple-200 shadow-sm">
+                <span className="text-xs font-medium text-gray-700">
+                  {CATEGORIES.find(c => c.value === filterCategory)?.icon} {CATEGORIES.find(c => c.value === filterCategory)?.label}
+                </span>
+                <button
+                  onClick={() => setFilterCategory('all')}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  ✕
+                </button>
+              </div>
+            )}
+            {filterAvailable !== 'all' && (
+              <div className="inline-flex items-center gap-2 px-3 py-1 bg-white rounded-full border border-purple-200 shadow-sm">
+                <span className="text-xs font-medium text-gray-700">
+                  {filterAvailable === 'true' ? '✅ Available' : '❌ Unavailable'}
+                </span>
+                <button
+                  onClick={() => setFilterAvailable('all')}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  ✕
+                </button>
+              </div>
+            )}
+            <button
+              onClick={() => {
+                setFilterCinemaId('all');
+                setFilterCategory('all');
+                setFilterAvailable('all');
+              }}
+              className="text-xs font-medium text-purple-600 hover:text-purple-700 transition-colors ml-auto"
+            >
+              Clear All
+            </button>
           </div>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <Label htmlFor="filter-cinema">Cinema</Label>
-              <Select value={filterCinemaId} onValueChange={setFilterCinemaId}>
-                <SelectTrigger id="filter-cinema">
-                  <SelectValue placeholder="All Cinemas" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Cinemas</SelectItem>
-                  {cinemas.map((cinema) => (
-                    <SelectItem key={cinema.id} value={cinema.id}>
-                      {cinema.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="filter-category">Category</Label>
-              <Select value={filterCategory} onValueChange={setFilterCategory}>
-                <SelectTrigger id="filter-category">
-                  <SelectValue placeholder="All Categories" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Categories</SelectItem>
-                  {CATEGORIES.map((cat) => (
-                    <SelectItem key={cat.value} value={cat.value}>
-                      {cat.icon} {cat.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="filter-availability">Availability</Label>
-              <Select value={filterAvailable} onValueChange={setFilterAvailable}>
-                <SelectTrigger id="filter-availability">
-                  <SelectValue placeholder="All" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All</SelectItem>
-                  <SelectItem value="true">Available</SelectItem>
-                  <SelectItem value="false">Unavailable</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+        )}
+      </div>
 
       {/* Concessions Grid Cards */}
       <div>

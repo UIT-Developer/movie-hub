@@ -221,50 +221,53 @@ export default function SeatStatusPage() {
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">Select Hall</CardTitle>
-          <CardDescription>Choose a cinema and hall to view seat status</CardDescription>
+          <CardDescription>Choose a cinema and hall to view and manage seat status</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Cinema</label>
-              <Select value={selectedCinemaId} onValueChange={setSelectedCinemaId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select cinema" />
-                </SelectTrigger>
-                <SelectContent>
-                  {cinemas.map((cinema) => (
-                    <SelectItem key={cinema.id} value={cinema.id}>
-                      <div className="flex items-center gap-2">
-                        <Building2 className="h-4 w-4" />
-                        {cinema.name}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          {/* Modern Filter Container */}
+          <div className="p-4 bg-gradient-to-r from-purple-50 via-blue-50 to-pink-50 rounded-lg border border-purple-200/50 shadow-sm">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2 block">🏢 Cinema</label>
+                <Select value={selectedCinemaId} onValueChange={setSelectedCinemaId}>
+                  <SelectTrigger className="h-11 bg-white border border-purple-200 hover:border-purple-300 focus:border-purple-400 font-medium">
+                    <SelectValue placeholder="Select cinema" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {cinemas.map((cinema) => (
+                      <SelectItem key={cinema.id} value={cinema.id}>
+                        <div className="flex items-center gap-2">
+                          <Building2 className="h-4 w-4" />
+                          {cinema.name}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Hall</label>
-              <Select
-                value={selectedHallId}
-                onValueChange={handleHallChange}
-                disabled={!selectedCinemaId}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select hall" />
-                </SelectTrigger>
-                <SelectContent>
-                  {halls.map((hall) => (
-                    <SelectItem key={hall.id} value={hall.id}>
-                      <div className="flex items-center gap-2">
-                        <DoorOpen className="h-4 w-4" />
-                        {hall.name} - {hall.capacity} seats
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div>
+                <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2 block">🚪 Hall</label>
+                <Select
+                  value={selectedHallId}
+                  onValueChange={handleHallChange}
+                  disabled={!selectedCinemaId}
+                >
+                  <SelectTrigger className="h-11 bg-white border border-purple-200 hover:border-purple-300 focus:border-purple-400 font-medium disabled:opacity-50">
+                    <SelectValue placeholder="Select hall" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {halls.map((hall) => (
+                      <SelectItem key={hall.id} value={hall.id}>
+                        <div className="flex items-center gap-2">
+                          <DoorOpen className="h-4 w-4" />
+                          {hall.name} - {hall.capacity} seats
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
         </CardContent>
@@ -326,24 +329,38 @@ export default function SeatStatusPage() {
 
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div>
                   <CardTitle>{hallDetail.name} - Seat Layout</CardTitle>
                   <CardDescription>
                     {selectedCinema?.name} • {hallDetail.type} • {hallDetail.capacity} seats
                   </CardDescription>
                 </div>
-                <Select value={filterStatus} onValueChange={(v: string) => setFilterStatus(v as typeof filterStatus)}>
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ALL">All Seats</SelectItem>
-                    <SelectItem value={SeatStatusEnum.ACTIVE}>Active Only</SelectItem>
-                    <SelectItem value={SeatStatusEnum.BROKEN}>Broken Only</SelectItem>
-                    <SelectItem value={SeatStatusEnum.MAINTENANCE}>Maintenance Only</SelectItem>
-                  </SelectContent>
-                </Select>
+                {/* Modern Filter Section */}
+                <div className="p-3 bg-gradient-to-r from-orange-50 to-orange-100 rounded-lg border border-orange-200/50 shadow-sm">
+                  <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2 block">🔍 Filter Seats</label>
+                  <Select value={filterStatus} onValueChange={(v: string) => setFilterStatus(v as typeof filterStatus)}>
+                    <SelectTrigger className="w-full md:w-48 h-10 bg-white border border-orange-200 hover:border-orange-300 focus:border-orange-400 font-medium">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ALL">All Seats</SelectItem>
+                      <SelectItem value={SeatStatusEnum.ACTIVE}>✅ Active Only</SelectItem>
+                      <SelectItem value={SeatStatusEnum.BROKEN}>❌ Broken Only</SelectItem>
+                      <SelectItem value={SeatStatusEnum.MAINTENANCE}>🔧 Maintenance Only</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {filterStatus !== 'ALL' && (
+                    <div className="mt-2">
+                      <button
+                        onClick={() => setFilterStatus('ALL')}
+                        className="text-xs text-orange-600 hover:text-orange-700 font-medium underline"
+                      >
+                        Clear filter
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             </CardHeader>
             <CardContent>

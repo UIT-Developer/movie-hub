@@ -29,6 +29,7 @@ import type { Genre } from '@/libs/api/types';
 export default function GenresPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingGenre, setEditingGenre] = useState<Genre | null>(null);
+  const [genreSearch, setGenreSearch] = useState('');
   const [formData, setFormData] = useState({
     name: '',
   });
@@ -102,6 +103,11 @@ export default function GenresPage() {
     });
   };
 
+  // Filter genres based on search
+  const filteredGenres = genres.filter((g: Genre) =>
+    g.name.toLowerCase().includes(genreSearch.toLowerCase())
+  );
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -126,9 +132,17 @@ export default function GenresPage() {
           <CardHeader>
             <CardTitle>All Genres</CardTitle>
             <CardDescription>
-              {genres.length} genre{genres.length !== 1 ? 's' : ''} in total
+              {filteredGenres.length} of {genres.length} genre{genres.length !== 1 ? 's' : ''} found
             </CardDescription>
           </CardHeader>
+          <CardContent>
+            <Input
+              placeholder="🔍 Search genres by name..."
+              value={genreSearch}
+              onChange={(e) => setGenreSearch(e.target.value)}
+              className="w-full h-11 border-gray-200 focus:border-purple-400 focus:ring-purple-200 mb-6"
+            />
+          </CardContent>
         </Card>
 
         {loading ? (
@@ -153,9 +167,22 @@ export default function GenresPage() {
               </Button>
             </CardContent>
           </Card>
+        ) : filteredGenres.length === 0 ? (
+          <Card>
+            <CardContent className="py-16 text-center">
+              <Tag className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+              <p className="text-gray-500 mb-4">No genres match your search.</p>
+              <Button
+                variant="outline"
+                onClick={() => setGenreSearch('')}
+              >
+                Clear Search
+              </Button>
+            </CardContent>
+          </Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {genres.map((genre) => (
+            {filteredGenres.map((genre) => (
               <Card 
                 key={genre.id} 
                 className="group hover:shadow-lg transition-all duration-200 hover:-translate-y-1 border-2 hover:border-purple-200"

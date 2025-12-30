@@ -122,16 +122,17 @@ export default function ShowtimesPage() {
 
       <Card>
         <CardContent className="pt-6">
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:max-w-4xl">
+          {/* Modern Filter Container with Gradient */}
+          <div className="p-4 bg-gradient-to-r from-purple-50 via-blue-50 to-pink-50 rounded-lg border border-purple-200/50 shadow-sm">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {/* Date Picker */}
               <div className="space-y-2">
-                <Label className="text-sm font-medium">Date</Label>
+                <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">📅 Date</label>
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full justify-between">
-                      {selectedDate ? format(selectedDate, 'PPP') : 'All Dates'}
-                      <CalendarIcon className="h-4 w-4 opacity-50" />
+                    <Button className="w-full justify-between h-11 bg-white border border-purple-200 hover:border-purple-300 hover:bg-purple-50 text-left text-black font-medium transition-colors">
+                      {selectedDate ? format(selectedDate, 'MMM dd, yyyy') : 'Select Date'}
+                      <CalendarIcon className="h-4 w-4 text-purple-600" />
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0">
@@ -139,6 +140,7 @@ export default function ShowtimesPage() {
                       mode="single"
                       selected={selectedDate}
                       onSelect={(date) => date && setSelectedDate(date)}
+                      className="[&_[role=button]]:text-black [&_[role=button]]:font-semibold"
                     />
                     <div className="border-t p-2">
                       <Button
@@ -156,9 +158,9 @@ export default function ShowtimesPage() {
 
               {/* Cinema Filter */}
               <div className="space-y-2">
-                <Label className="text-sm font-medium">Cinema</Label>
+                <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">🏢 Cinema</label>
                 <Select value={selectedCinemaId} onValueChange={setSelectedCinemaId}>
-                  <SelectTrigger>
+                  <SelectTrigger className="h-11 bg-white border border-purple-200 hover:border-purple-300 focus:border-purple-400 font-medium">
                     <SelectValue placeholder="All Cinemas" />
                   </SelectTrigger>
                   <SelectContent>
@@ -174,9 +176,9 @@ export default function ShowtimesPage() {
 
               {/* Movie Filter */}
               <div className="space-y-2">
-                <Label className="text-sm font-medium">Movie</Label>
+                <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">🎬 Movie</label>
                 <Select value={selectedMovieId} onValueChange={setSelectedMovieId}>
-                  <SelectTrigger>
+                  <SelectTrigger className="h-11 bg-white border border-purple-200 hover:border-purple-300 focus:border-purple-400 font-medium">
                     <SelectValue placeholder="All Movies" />
                   </SelectTrigger>
                   <SelectContent>
@@ -191,24 +193,44 @@ export default function ShowtimesPage() {
               </div>
             </div>
 
-            <div className="flex items-center justify-between">
-              <div className="text-sm text-gray-500">
-                {showtimes.length} showtimes scheduled
+            {/* Active Filters Display */}
+            {(selectedCinemaId !== 'all' || selectedMovieId !== 'all') && (
+              <div className="flex flex-wrap gap-2 pt-3 mt-3 border-t border-purple-200/50">
+                {selectedCinemaId !== 'all' && (
+                  <div className="inline-flex items-center gap-2 px-3 py-1 bg-white rounded-full border border-purple-200 shadow-sm">
+                    <span className="text-xs text-gray-600">Cinema: <span className="font-semibold text-purple-700">{cinemas.find(c => c.id === selectedCinemaId)?.name || selectedCinemaId}</span></span>
+                    <button onClick={() => setSelectedCinemaId('all')} className="text-purple-400 hover:text-purple-600">✕</button>
+                  </div>
+                )}
+                {selectedMovieId !== 'all' && (
+                  <div className="inline-flex items-center gap-2 px-3 py-1 bg-white rounded-full border border-purple-200 shadow-sm">
+                    <span className="text-xs text-gray-600">Movie: <span className="font-semibold text-purple-700">{movies.find(m => m.id === selectedMovieId)?.title || selectedMovieId}</span></span>
+                    <button onClick={() => setSelectedMovieId('all')} className="text-purple-400 hover:text-purple-600">✕</button>
+                  </div>
+                )}
               </div>
-              {(selectedCinemaId !== 'all' || selectedMovieId !== 'all') && (
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => {
-                    setSelectedCinemaId('all');
-                    setSelectedMovieId('all');
-                    setSelectedDate(new Date());
-                  }}
-                >
-                  Clear All Filters
-                </Button>
-              )}
+            )}
+          </div>
+
+          {/* Stats Row */}
+          <div className="flex items-center justify-between mt-4">
+            <div className="text-sm font-medium text-gray-700">
+              <span className="text-purple-600 font-bold">{showtimes.length}</span> showtimes scheduled
             </div>
+            {(selectedCinemaId !== 'all' || selectedMovieId !== 'all') && (
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => {
+                  setSelectedCinemaId('all');
+                  setSelectedMovieId('all');
+                  setSelectedDate(new Date());
+                }}
+                className="border-purple-200 text-purple-700 hover:bg-purple-50 hover:text-purple-800"
+              >
+                ✕ Clear All Filters
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>

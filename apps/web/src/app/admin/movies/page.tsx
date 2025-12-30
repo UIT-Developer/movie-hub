@@ -533,50 +533,84 @@ export default function MoviesPage() {
 
       <Card>
         <CardContent className="pt-6">
-          <div className="space-y-4">
+          {/* Modern Filter Container with Gradient */}
+          <div className="p-5 bg-gradient-to-r from-purple-50 via-blue-50 to-pink-50 rounded-lg border border-purple-200/50 shadow-sm space-y-4">
             {/* Search bar */}
             <div className="relative">
-              <Search className="absolute left-4 top-4 h-5 w-5 text-gray-400" />
+              <Search className="absolute left-4 top-3.5 h-5 w-5 text-purple-600" />
               <Input
-                placeholder="Search movies by title..."
+                placeholder="🔍 Search movies by title..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-12 bg-white rounded-lg shadow-sm border border-gray-200 h-12"
+                className="pl-12 bg-white border border-purple-200 rounded-lg shadow-sm h-11 focus:border-purple-400 focus:ring-purple-200 font-medium"
               />
             </div>
 
-            {/* Advanced filters */}
-            <div className="flex flex-col lg:flex-row gap-4 items-start">
-              {/* Genres (Multi-select) */}
-              <div className="lg:w-1/3">
-                <Label className="text-xs font-semibold text-gray-600 mb-2 block uppercase tracking-wide">Genres</Label>
-                <div className="border rounded-lg p-3 max-h-72 overflow-y-auto bg-white shadow-sm">
+            {/* Advanced filters row */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Status filter */}
+              <div>
+                <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2 block">📊 Status</label>
+                <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                  <SelectTrigger className="h-10 bg-white border border-purple-200 hover:border-purple-300 focus:border-purple-400 font-medium">
+                    <SelectValue placeholder="All Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="NOW_SHOWING">Now Showing</SelectItem>
+                    <SelectItem value="COMING_SOON">Coming Soon</SelectItem>
+                    <SelectItem value="ENDED">Ended</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Age rating filter */}
+              <div>
+                <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2 block">🎫 Age Rating</label>
+                <Select value={selectedRating} onValueChange={setSelectedRating}>
+                  <SelectTrigger className="h-10 bg-white border border-purple-200 hover:border-purple-300 focus:border-purple-400 font-medium">
+                    <SelectValue placeholder="All Ratings" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Ratings</SelectItem>
+                    <SelectItem value="P">P</SelectItem>
+                    <SelectItem value="K">K</SelectItem>
+                    <SelectItem value="T13">T13</SelectItem>
+                    <SelectItem value="T16">T16</SelectItem>
+                    <SelectItem value="T18">T18</SelectItem>
+                    <SelectItem value="C">C</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Genres Multi-select (compact) */}
+              <div>
+                <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2 block">🎬 Genres</label>
+                <div className="border border-purple-200 rounded-lg bg-white p-2 max-h-40 overflow-y-auto shadow-sm">
                   <div className="mb-2">
                     <Input
-                      placeholder="Search genres..."
+                      placeholder="Search..."
                       value={genreSearch}
                       onChange={(e) => setGenreSearch(e.target.value)}
-                      className="px-3 py-2"
+                      className="px-2 py-1 h-8 text-xs border-gray-200"
                     />
                   </div>
                   {filteredGenres.length === 0 ? (
-                    <p className="text-sm text-gray-500">No genres found</p>
+                    <p className="text-xs text-gray-500 p-2">No genres</p>
                   ) : (
-                    <div className="grid grid-cols-1 gap-2">
+                    <div className="space-y-1">
                       {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                       {filteredGenres.map((genre: any) => {
                         const checked = selectedGenreIds.includes(genre.id);
                         return (
                           <label
                             key={genre.id}
-                            className={`flex items-center justify-between gap-3 cursor-pointer p-2 rounded-md transition-all ${checked ? 'bg-gradient-to-r from-purple-50 to-pink-50 border border-gray-200' : 'hover:bg-gray-50'}`}
+                            className="flex items-center gap-2 cursor-pointer p-1.5 rounded-md transition-all hover:bg-purple-50"
                           >
-                            <div className="flex items-center gap-3">
-                              <div className={`h-5 w-5 rounded-full flex items-center justify-center border ${checked ? 'bg-purple-600 border-purple-600 text-white' : 'bg-white border-gray-300'}`}>
-                                {checked ? <Check className="h-3 w-3" /> : null}
-                              </div>
-                              <span className="text-sm text-gray-800">{genre.name}</span>
+                            <div className={`h-4 w-4 rounded border ${checked ? 'bg-purple-600 border-purple-600' : 'bg-white border-gray-300'}`}>
+                              {checked && <Check className="h-3 w-3 text-white" />}
                             </div>
+                            <span className="text-xs text-gray-700">{genre.name}</span>
                             <input
                               type="checkbox"
                               checked={checked}
@@ -592,78 +626,51 @@ export default function MoviesPage() {
                     </div>
                   )}
                 </div>
-                {selectedGenreIds.length > 0 && (
-                  <div className="mt-2 flex flex-wrap gap-1">
-                    {selectedGenreIds.map(id => {
-                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                      const genre = genres.find((g: any) => g.id === id);
-                      return (
-                        <button
-                          key={id}
-                          onClick={() => setSelectedGenreIds(selectedGenreIds.filter(gid => gid !== id))}
-                          className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded-full flex items-center gap-1 hover:bg-purple-200"
-                        >
-                          {genre?.name}
-                          <X className="h-3 w-3" />
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-
-              <div className="lg:flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
-                {/* Status filter */}
-                <div>
-                  <Label htmlFor="status-filter" className="text-xs font-semibold text-gray-600 mb-2 block uppercase tracking-wide">Status</Label>
-                  <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-                    <SelectTrigger id="status-filter" className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 h-12">
-                      <SelectValue placeholder="All Status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Status</SelectItem>
-                      <SelectItem value="NOW_SHOWING">Now Showing</SelectItem>
-                      <SelectItem value="COMING_SOON">Coming Soon</SelectItem>
-                      <SelectItem value="ENDED">Ended</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Age rating filter */}
-                <div>
-                  <Label htmlFor="rating-filter" className="text-xs font-semibold text-gray-600 mb-2 block uppercase tracking-wide">Age Rating</Label>
-                  <Select value={selectedRating} onValueChange={setSelectedRating}>
-                    <SelectTrigger id="rating-filter" className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 h-12">
-                      <SelectValue placeholder="All Ratings" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Ratings</SelectItem>
-                      <SelectItem value="P">P</SelectItem>
-                      <SelectItem value="K">K</SelectItem>
-                      <SelectItem value="T13">T13</SelectItem>
-                      <SelectItem value="T16">T16</SelectItem>
-                      <SelectItem value="T18">T18</SelectItem>
-                      <SelectItem value="C">C</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
               </div>
             </div>
 
-            {/* Clear filters button */}
-            {(searchQuery || selectedGenreIds.length > 0 || selectedStatus !== 'all' || selectedRating !== 'all') && (
-              <button
-                onClick={() => {
-                  setSearchQuery('');
-                  setSelectedGenreIds([]);
-                  setSelectedStatus('all');
-                  setSelectedRating('all');
-                }}
-                className="text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1"
-              >
-                <X className="h-4 w-4" />
-                Clear all filters
-              </button>
+            {/* Active filters and clear button */}
+            {(searchQuery || selectedStatus !== 'all' || selectedRating !== 'all' || selectedGenreIds.length > 0) && (
+              <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-purple-200/50">
+                {searchQuery && (
+                  <div className="inline-flex items-center gap-2 px-3 py-1 bg-white rounded-full border border-purple-200 shadow-sm">
+                    <span className="text-xs text-gray-600">Search: <span className="font-semibold text-purple-700">{searchQuery}</span></span>
+                    <button onClick={() => setSearchQuery('')} className="text-purple-400 hover:text-purple-600">✕</button>
+                  </div>
+                )}
+                {selectedStatus !== 'all' && (
+                  <div className="inline-flex items-center gap-2 px-3 py-1 bg-white rounded-full border border-purple-200 shadow-sm">
+                    <span className="text-xs text-gray-600">Status: <span className="font-semibold text-purple-700">{selectedStatus}</span></span>
+                    <button onClick={() => setSelectedStatus('all')} className="text-purple-400 hover:text-purple-600">✕</button>
+                  </div>
+                )}
+                {selectedRating !== 'all' && (
+                  <div className="inline-flex items-center gap-2 px-3 py-1 bg-white rounded-full border border-purple-200 shadow-sm">
+                    <span className="text-xs text-gray-600">Rating: <span className="font-semibold text-purple-700">{selectedRating}</span></span>
+                    <button onClick={() => setSelectedRating('all')} className="text-purple-400 hover:text-purple-600">✕</button>
+                  </div>
+                )}
+                {selectedGenreIds.length > 0 && (
+                  <div className="inline-flex items-center gap-2 px-3 py-1 bg-white rounded-full border border-purple-200 shadow-sm">
+                    <span className="text-xs text-gray-600">Genres: <span className="font-semibold text-purple-700">{selectedGenreIds.length}</span></span>
+                    <button onClick={() => setSelectedGenreIds([])} className="text-purple-400 hover:text-purple-600">✕</button>
+                  </div>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setSearchQuery('');
+                    setSelectedStatus('all');
+                    setSelectedRating('all');
+                    setSelectedGenreIds([]);
+                    setGenreSearch('');
+                  }}
+                  className="border-purple-200 text-purple-700 hover:bg-purple-50 hover:text-purple-800 ml-auto"
+                >
+                  ✕ Clear All
+                </Button>
+              </div>
             )}
           </div>
         </CardContent>

@@ -189,58 +189,105 @@ export default function TicketPricingPage() {
               <AlertDescription>Failed to load cinemas. Please refresh the page.</AlertDescription>
             </Alert>
           )}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Cinema Selector */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Cinema</label>
-              <Select value={selectedCinemaId} onValueChange={handleCinemaChange}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select cinema" />
-                </SelectTrigger>
-                <SelectContent>
-                  {cinemas.map((cinema) => (
-                    <SelectItem key={cinema.id} value={cinema.id}>
-                      <div className="flex items-center gap-2">
-                        <Building2 className="h-4 w-4" />
-                        {cinema.name}
+          {/* Modern Filter Container */}
+          <div className="p-4 bg-gradient-to-r from-purple-50 via-blue-50 to-pink-50 rounded-lg border border-purple-200/50 shadow-sm">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Cinema Selector */}
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">🏢 Cinema</label>
+                <Select value={selectedCinemaId} onValueChange={handleCinemaChange}>
+                  <SelectTrigger className="h-11 border-purple-200 focus:ring-purple-500">
+                    <SelectValue placeholder="Select cinema" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {cinemas.map((cinema) => (
+                      <SelectItem key={cinema.id} value={cinema.id}>
+                        <div className="flex items-center gap-2">
+                          <Building2 className="h-4 w-4" />
+                          {cinema.name}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Hall Selector */}
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">🚪 Hall</label>
+                <Select
+                  value={selectedHallId}
+                  onValueChange={handleHallChange}
+                  disabled={!selectedCinemaId || hallsLoading}
+                >
+                  <SelectTrigger className="h-11 border-purple-200 focus:ring-purple-500 disabled:opacity-50">
+                    <SelectValue placeholder={hallsLoading ? "Loading halls..." : "Select hall"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {halls.length === 0 && !hallsLoading && (
+                      <div className="px-2 py-1.5 text-sm text-gray-500">
+                        No halls available for this cinema
                       </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                    )}
+                    {halls.map((hall) => (
+                      <SelectItem key={hall.id} value={hall.id}>
+                        <div className="flex items-center gap-2">
+                          <DoorOpen className="h-4 w-4" />
+                          {hall.name} - {hall.capacity} seats
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {hallsError && (
+                  <p className="text-sm text-red-500 mt-1">Failed to load halls for this cinema</p>
+                )}
+              </div>
             </div>
 
-            {/* Hall Selector */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Hall</label>
-              <Select
-                value={selectedHallId}
-                onValueChange={handleHallChange}
-                disabled={!selectedCinemaId || hallsLoading}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={hallsLoading ? "Loading halls..." : "Select hall"} />
-                </SelectTrigger>
-                <SelectContent>
-                  {halls.length === 0 && !hallsLoading && (
-                    <div className="px-2 py-1.5 text-sm text-gray-500">
-                      No halls available for this cinema
-                    </div>
-                  )}
-                  {halls.map((hall) => (
-                    <SelectItem key={hall.id} value={hall.id}>
-                      <div className="flex items-center gap-2">
-                        <DoorOpen className="h-4 w-4" />
-                        {hall.name} - {hall.capacity} seats
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {hallsError && (
-                <p className="text-sm text-red-500 mt-1">Failed to load halls for this cinema</p>
-              )}
-            </div>
+            {/* Active Filter Chips */}
+            {(selectedCinemaId || selectedHallId) && (
+              <div className="flex flex-wrap gap-2 pt-3 border-t border-purple-200/50">
+                {selectedCinemaId && (
+                  <div className="inline-flex items-center gap-2 px-3 py-1 bg-white rounded-full border border-purple-200 shadow-sm">
+                    <span className="text-xs font-medium text-gray-700">
+                      🏢 {cinemas.find(c => c.id === selectedCinemaId)?.name}
+                    </span>
+                    <button
+                      onClick={() => {
+                        setSelectedCinemaId('');
+                        setSelectedHallId('');
+                      }}
+                      className="text-gray-400 hover:text-gray-600 transition-colors"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                )}
+                {selectedHallId && (
+                  <div className="inline-flex items-center gap-2 px-3 py-1 bg-white rounded-full border border-purple-200 shadow-sm">
+                    <span className="text-xs font-medium text-gray-700">
+                      🚪 {halls.find(h => h.id === selectedHallId)?.name}
+                    </span>
+                    <button
+                      onClick={() => setSelectedHallId('')}
+                      className="text-gray-400 hover:text-gray-600 transition-colors"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                )}
+                <button
+                  onClick={() => {
+                    setSelectedCinemaId('');
+                    setSelectedHallId('');
+                  }}
+                  className="text-xs font-medium text-purple-600 hover:text-purple-700 transition-colors ml-auto"
+                >
+                  Clear All
+                </button>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>

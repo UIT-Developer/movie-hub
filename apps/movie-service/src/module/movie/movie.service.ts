@@ -254,16 +254,16 @@ export class MovieService {
   }
 
   async createMovieRelease(
-    movieRelese: CreateMovieReleaseRequest
+    movieRelease: CreateMovieReleaseRequest
   ): Promise<ServiceResult<MovieReleaseResponse>> {
     const createdMovieRelease = await this.prismaService.$transaction(
       async (db) => {
         return await db.movieRelease.create({
           data: {
-            movieId: movieRelese.movieId,
-            startDate: movieRelese.startDate,
-            endDate: movieRelese.endDate,
-            note: movieRelese.note,
+            movieId: movieRelease.movieId,
+            startDate: movieRelease.startDate,
+            endDate: movieRelease.endDate,
+            note: movieRelease.note,
           },
           select: {
             id: true,

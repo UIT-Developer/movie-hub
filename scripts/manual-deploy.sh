@@ -14,10 +14,16 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Default values
-ENVIRONMENT="${ENVIRONMENT:-dev}"
+ENVIRONMENT="${ENVIRONMENT:-staging}"
 DEPLOY_INFRA="${DEPLOY_INFRA:-false}"
 SERVICES="${SERVICES:-all}"
+REBUILD="${REBUILD:-true}"
 
+# Resolve project root and tfvars even when called from other cwd
+SCRIPT_DIR="$(cd -- "$(dirname "$0")" >/dev/null 2>&1 && pwd)"
+PROJECT_ROOT="$(cd -- "${SCRIPT_DIR}/.." >/dev/null 2>&1 && pwd)"
+DEFAULT_TFVARS_PATH="${PROJECT_ROOT}/infra/terraform/terraform.tfvars"
+TFVARS_PATH="${TFVARS_PATH:-$DEFAULT_TFVARS_PATH}"
 # Print colored message
 print_msg() {
     local color=$1
@@ -31,6 +37,12 @@ print_header() {
     print_msg "$BLUE" "============================================"
     print_msg "$BLUE" "$1"
     print_msg "$BLUE" "============================================"
+}
+
+# Read a database url from terraform.tfvars (database_urls map)
+get_db_url() {
+    local key=$1
+    awk -F'"' -v k="$key" '$1 ~ k {print $2}' "$TFVARS_PATH"
 }
 
 # Check required tools
@@ -55,9 +67,9 @@ check_prerequisites() {
 # Load environment variables
 load_env() {
     print_header "Loading Environment Configuration"
-    
-    if [ -f "infra/terraform/terraform.tfvars" ]; then
-        print_msg "$GREEN" "✓ Found terraform.tfvars"
+
+    if [ -f "$TFVARS_PATH" ]; then
+        print_msg "$GREEN" "✓ Found terraform.tfvars at $TFVARS_PATH"
     else
         print_msg "$RED" "✗ terraform.tfvars not found"
         print_msg "$YELLOW" "Please copy terraform.tfvars.example to terraform.tfvars and fill in your values"
@@ -66,17 +78,30 @@ load_env() {
     
     # Extract values from tfvars (basic parsing)
     if [ -z "$ACR_NAME" ]; then
-        ACR_NAME=$(grep -E "^acr_name" infra/terraform/terraform.tfvars | cut -d'"' -f2)
+        ACR_NAME=$(grep -E "^acr_name" "$TFVARS_PATH" | cut -d'"' -f2)
         ACR_NAME="${ACR_NAME}${ENVIRONMENT}"
     fi
     
     if [ -z "$RESOURCE_GROUP" ]; then
-        RESOURCE_GROUP=$(grep -E "^resource_group_name" infra/terraform/terraform.tfvars | cut -d'"' -f2)
+        RESOURCE_GROUP=$(grep -E "^resource_group_name" "$TFVARS_PATH" | cut -d'"' -f2)
         RESOURCE_GROUP="${RESOURCE_GROUP}-${ENVIRONMENT}"
     fi
     
     ACR_LOGIN_SERVER="${ACR_NAME}.azurecr.io"
     
+    USER_DATABASE_URL=${USER_DATABASE_URL:-$(get_db_url "user_service")}
+    MOVIE_DATABASE_URL=${MOVIE_DATABASE_URL:-$(get_db_url "movie_service")}
+    CINEMA_DATABASE_URL=${CINEMA_DATABASE_URL:-$(get_db_url "cinema_service")}
+    BOOKING_DATABASE_URL=${BOOKING_DATABASE_URL:-$(get_db_url "booking_service")}
+
+    export USER_DATABASE_URL MOVIE_DATABASE_URL CINEMA_DATABASE_URL BOOKING_DATABASE_URL
+
+    if [ -z "$USER_DATABASE_URL" ] || [ -z "$MOVIE_DATABASE_URL" ] || [ -z "$CINEMA_DATABASE_URL" ] || [ -z "$BOOKING_DATABASE_URL" ]; then
+        print_msg "$YELLOW" "⚠️  Missing one or more database_urls entries in terraform.tfvars; migrations will need manual DATABASE_URL values."
+    else
+        print_msg "$GREEN" "✓ Loaded database URLs from terraform.tfvars"
+    fi
+
     print_msg "$GREEN" "Environment: $ENVIRONMENT"
     print_msg "$GREEN" "ACR Name: $ACR_NAME"
     print_msg "$GREEN" "Resource Group: $RESOURCE_GROUP"
@@ -190,15 +215,22 @@ deploy_container_apps() {
 # Run database migrations
 run_migrations() {
     print_header "Running Database Migrations"
-    
-    print_msg "$YELLOW" "Note: Migrations require DATABASE_URL environment variables to be set"
-    print_msg "$YELLOW" "Skipping automatic migrations - please run manually if needed:"
+    if [ -z "$USER_DATABASE_URL" ] || [ -z "$MOVIE_DATABASE_URL" ] || [ -z "$CINEMA_DATABASE_URL" ] || [ -z "$BOOKING_DATABASE_URL" ]; then
+        print_msg "$YELLOW" "Database URLs not fully loaded; please set them manually (USER_DATABASE_URL, MOVIE_DATABASE_URL, CINEMA_DATABASE_URL, BOOKING_DATABASE_URL)."
+        return 0
+    fi
+
+    print_msg "$YELLOW" "Using database URLs from terraform.tfvars"
+    echo "  USER_DATABASE_URL=$USER_DATABASE_URL"
+    echo "  MOVIE_DATABASE_URL=$MOVIE_DATABASE_URL"
+    echo "  CINEMA_DATABASE_URL=$CINEMA_DATABASE_URL"
+    echo "  BOOKING_DATABASE_URL=$BOOKING_DATABASE_URL"
     echo ""
-    echo "  cd apps/user-service && DATABASE_URL=... npx prisma migrate deploy"
-    echo "  cd apps/movie-service && DATABASE_URL=... npx prisma migrate deploy"
-    echo "  cd apps/cinema-service && DATABASE_URL=... npx prisma migrate deploy"
-    echo "  cd apps/booking-service && DATABASE_URL=... npx prisma migrate deploy"
-    echo ""
+    echo "Run migrations manually if needed:"
+    cd apps/user-service   && DATABASE_URL=$USER_DATABASE_URL   npx prisma migrate deploy && cd ../..
+    cd apps/movie-service  && DATABASE_URL=$MOVIE_DATABASE_URL  npx prisma migrate deploy && cd ../..
+    cd apps/cinema-service && DATABASE_URL=$CINEMA_DATABASE_URL npx prisma migrate deploy && cd ../..
+    cd apps/booking-service && DATABASE_URL=$BOOKING_DATABASE_URL npx prisma migrate deploy && cd ../..
 }
 
 # Health check
@@ -294,16 +326,16 @@ main() {
         esac
     done
     
-    check_prerequisites
+    #check_prerequisites
     load_env
-    azure_login
+    #azure_login
     
     if [ "$DEPLOY_INFRA" == "true" ]; then
         deploy_infrastructure
     fi
     
-    build_push_images
-    deploy_container_apps
+    #build_push_images
+    #deploy_container_apps
     run_migrations
     health_check
     print_summary

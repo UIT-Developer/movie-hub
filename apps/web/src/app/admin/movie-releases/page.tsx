@@ -52,6 +52,8 @@ export default function MovieReleasesPage() {
   // Filter states
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   
   const { toast } = useToast();
 
@@ -139,7 +141,24 @@ export default function MovieReleasesPage() {
     // Filter by status
     const matchStatus = selectedStatus === 'all' || status === selectedStatus;
     
-    return matchSearch && matchStatus;
+    // Filter by date range (check if release period intersects with filter range)
+    let matchDateRange = true;
+    if (dateFrom || dateTo) {
+      const releaseStart = new Date(release.startDate);
+      const releaseEnd = new Date(release.endDate);
+      
+      if (dateFrom) {
+        const filterFrom = new Date(dateFrom);
+        matchDateRange = matchDateRange && releaseEnd >= filterFrom;
+      }
+      
+      if (dateTo) {
+        const filterTo = new Date(dateTo);
+        matchDateRange = matchDateRange && releaseStart <= filterTo;
+      }
+    }
+    
+    return matchSearch && matchStatus && matchDateRange;
   });
 
   return (
@@ -170,45 +189,106 @@ export default function MovieReleasesPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-col md:flex-row gap-4 md:max-w-2xl">
-              {/* Search */}
-              <div className="flex-1">
-                <Input
-                  placeholder="Search by movie name..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full"
-                />
+            {/* Single-line Filter Row - All 4 filters in purple box */}
+            <div className="p-4 bg-gradient-to-r from-purple-50 via-blue-50 to-pink-50 rounded-lg border border-purple-200/50 shadow-sm">
+              <div className="flex items-end gap-3">
+                {/* Search Input */}
+                <div className="flex-1 min-w-0">
+                  <label className="text-xs font-medium text-gray-600 mb-2 block">Search</label>
+                  <Input
+                    placeholder="🔍 Search by movie name..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full h-10 border-purple-200 focus:border-purple-400 focus:ring-purple-200 bg-white"
+                  />
+                </div>
+
+                {/* Status Select */}
+                <div className="w-48 flex-shrink-0">
+                  <label className="text-xs font-medium text-gray-600 mb-2 block">Status</label>
+                  <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                    <SelectTrigger className="h-10 border-purple-200 focus:border-purple-400 bg-white">
+                      <SelectValue placeholder="All Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Status</SelectItem>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="upcoming">Upcoming</SelectItem>
+                      <SelectItem value="ended">Ended</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* From Date */}
+                <div className="w-40 flex-shrink-0">
+                  <label className="text-xs font-medium text-gray-600 mb-2 block">From Date</label>
+                  <Input
+                    type="date"
+                    value={dateFrom}
+                    onChange={(e) => setDateFrom(e.target.value)}
+                    className="w-full h-10 border-purple-200 focus:border-purple-400 focus:ring-purple-200 bg-white"
+                  />
+                </div>
+
+                {/* To Date */}
+                <div className="w-40 flex-shrink-0">
+                  <label className="text-xs font-medium text-gray-600 mb-2 block">To Date</label>
+                  <Input
+                    type="date"
+                    value={dateTo}
+                    onChange={(e) => setDateTo(e.target.value)}
+                    className="w-full h-10 border-purple-200 focus:border-purple-400 focus:ring-purple-200 bg-white"
+                  />
+                </div>
               </div>
 
-              {/* Filter by Status */}
-              <div className="w-full md:w-64">
-                <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="All Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="upcoming">Upcoming</SelectItem>
-                    <SelectItem value="ended">Ended</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              {/* Active Filter Tags */}
+              {(searchTerm || selectedStatus !== 'all' || dateFrom || dateTo) && (
+                <div className="flex flex-wrap gap-2 pt-3 mt-3 border-t border-purple-200/50">
+                  {searchTerm && (
+                    <div className="inline-flex items-center gap-2 px-3 py-1 bg-white rounded-full border border-purple-200 shadow-sm">
+                      <span className="text-xs text-gray-600">Search: <span className="font-semibold text-purple-700">{searchTerm}</span></span>
+                      <button onClick={() => setSearchTerm('')} className="text-purple-400 hover:text-purple-600">✕</button>
+                    </div>
+                  )}
+                  {selectedStatus !== 'all' && (
+                    <div className="inline-flex items-center gap-2 px-3 py-1 bg-white rounded-full border border-purple-200 shadow-sm">
+                      <span className="text-xs text-gray-600">Status: <span className="font-semibold text-purple-700">{selectedStatus}</span></span>
+                      <button onClick={() => setSelectedStatus('all')} className="text-purple-400 hover:text-purple-600">✕</button>
+                    </div>
+                  )}
+                  {dateFrom && (
+                    <div className="inline-flex items-center gap-2 px-3 py-1 bg-white rounded-full border border-purple-200 shadow-sm">
+                      <span className="text-xs text-gray-600">From: <span className="font-semibold text-purple-700">{dateFrom}</span></span>
+                      <button onClick={() => setDateFrom('')} className="text-purple-400 hover:text-purple-600">✕</button>
+                    </div>
+                  )}
+                  {dateTo && (
+                    <div className="inline-flex items-center gap-2 px-3 py-1 bg-white rounded-full border border-pink-200 shadow-sm">
+                      <span className="text-xs text-gray-600">To: <span className="font-semibold text-pink-700">{dateTo}</span></span>
+                      <button onClick={() => setDateTo('')} className="text-pink-400 hover:text-pink-600">✕</button>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Clear Filters Button */}
-            {(searchTerm || selectedStatus !== 'all') && (
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setSearchTerm('');
-                  setSelectedStatus('all');
-                }}
-                className="mt-4"
-              >
-                Clear Filters
-              </Button>
+            {(searchTerm || selectedStatus !== 'all' || dateFrom || dateTo) && (
+              <div className="flex justify-end mt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setSearchTerm('');
+                    setSelectedStatus('all');
+                    setDateFrom('');
+                    setDateTo('');
+                  }}
+                  className="border-purple-200 text-purple-700 hover:bg-purple-50 hover:text-purple-800"
+                >
+                  ✕ Clear All Filters
+                </Button>
+              </div>
             )}
           </CardContent>
         </Card>

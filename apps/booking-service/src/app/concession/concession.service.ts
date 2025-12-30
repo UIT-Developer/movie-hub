@@ -124,8 +124,8 @@ export class ConcessionService {
     const concession = await this.prisma.concessions.update({
       where: { id },
       data: {
-        ...(dto.name !== undefined && { name: dto.name }),
-        ...(dto.nameEn !== undefined && { name_en: dto.nameEn }),
+        ...('name' in dto && { name: dto.name }),
+        ...('nameEn' in dto && { name_en: dto.nameEn }),
         ...('description' in dto && { description: dto.description }),
         ...(dto.category !== undefined && { category: dto.category }),
         ...(dto.price !== undefined && { price: dto.price }),

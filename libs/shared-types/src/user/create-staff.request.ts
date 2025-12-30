@@ -20,6 +20,7 @@ export const CreateStaffSchema = z.object({
   status: z.enum(Object.values(StaffStatus) as [string, ...string[]]),
   workType: z.enum(Object.values(WorkType) as [string, ...string[]]),
   shiftType: z.enum(Object.values(ShiftType) as [string, ...string[]]),
+  // Salary is stored in the smallest currency unit (e.g., cents) and must be a non-negative integer.
   salary: z.number().int().min(0),
   hireDate: z.coerce.date(),
 });

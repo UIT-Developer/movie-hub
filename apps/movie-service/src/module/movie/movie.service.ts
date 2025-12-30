@@ -286,23 +286,23 @@ export class MovieService {
 
   async updateMovieRelease(
     id: string,
-    movieRelese: UpdateMovieReleaseRequest
+    movieRelease: UpdateMovieReleaseRequest
   ): Promise<ServiceResult<MovieReleaseResponse>> {
     const updateMovieRelease = await this.prismaService.$transaction(
       async (db) => {
         return await db.movieRelease.update({
           where: { id },
           data: {
-            ...(movieRelese.movieId !== undefined && {
-              movieId: movieRelese.movieId,
+            ...('movieId' in movieRelease && {
+              movieId: movieRelease.movieId,
             }),
-            ...(movieRelese.startDate !== undefined && {
-              startDate: movieRelese.startDate,
+            ...('startDate' in movieRelease && {
+              startDate: movieRelease.startDate,
             }),
-            ...(movieRelese.endDate !== undefined && {
-              endDate: movieRelese.endDate,
+            ...('endDate' in movieRelease && {
+              endDate: movieRelease.endDate,
             }),
-            ...(movieRelese.note !== undefined && { note: movieRelese.note }),
+            ...('note' in movieRelease && { note: movieRelease.note }),
           },
           select: {
             id: true,

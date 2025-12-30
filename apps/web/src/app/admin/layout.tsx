@@ -23,6 +23,7 @@ import {
   Wrench,
   Eye,
   DollarSign,
+  ShoppingBag,
 } from 'lucide-react';
 import { Button } from '@movie-hub/shacdn-ui/button';
 import { ScrollArea } from '@movie-hub/shacdn-ui/scroll-area';
@@ -43,6 +44,7 @@ const menuItems = [
   { icon: Eye, label: 'Showtime Seats', href: '/admin/showtime-seats', disabled: false },
   { icon: Zap, label: 'Batch Showtimes', href: '/admin/batch-showtimes', disabled: false },
   { icon: DollarSign, label: 'Ticket Pricing', href: '/admin/ticket-pricing', disabled: false },
+  { icon: ShoppingBag, label: 'Concessions', href: '/admin/concessions', disabled: false },
   { icon: Ticket, label: 'Reservations', href: '/admin/reservations', disabled: false },
   { icon: MessageSquare, label: 'Reviews', href: '/admin/reviews', disabled: false },
   { icon: Users, label: 'Staff', href: '/admin/staff', disabled: false },

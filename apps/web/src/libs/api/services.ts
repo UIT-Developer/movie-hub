@@ -42,6 +42,9 @@ import type {
   UpdateBookingStatusRequest,
   Review,
   ReviewFiltersParams,
+  Concession,
+  CreateConcessionRequest,
+  UpdateConcessionRequest,
 } from './types';
 
 // ============================================================================
@@ -380,4 +383,28 @@ export const reviewsApi = {
 
   delete: (id: string) =>
     api.delete(`/api/v1/reviews/${id}`),
+};
+
+// ============================================================================
+// CONCESSIONS API
+// ============================================================================
+
+export const concessionsApi = {
+  getAll: (params?: { cinemaId?: string; category?: string; available?: boolean }) =>
+    api.get<Concession[]>('/api/v1/concessions', { params }),
+
+  getById: (id: string) =>
+    api.get<Concession>(`/api/v1/concessions/${id}`),
+
+  create: (data: CreateConcessionRequest) =>
+    api.post<Concession>('/api/v1/concessions', data),
+
+  update: (id: string, data: UpdateConcessionRequest) =>
+    api.put<Concession>(`/api/v1/concessions/${id}`, data),
+
+  delete: (id: string) =>
+    api.delete(`/api/v1/concessions/${id}`),
+
+  updateInventory: (id: string, quantity: number) =>
+    api.patch<Concession>(`/api/v1/concessions/${id}/inventory`, { quantity }),
 };

@@ -11,6 +11,7 @@ import {
   staffApi,
   bookingsApi,
   reviewsApi,
+  concessionsApi,
 } from './services';
 import type {
   CreateMovieRequest,
@@ -36,6 +37,9 @@ import type {
   BookingFiltersParams,
   UpdateBookingStatusRequest,
   ReviewFiltersParams,
+  CreateConcessionRequest,
+  UpdateConcessionRequest,
+  ConcessionFiltersParams,
 } from './types';
 
 // ============================================================================
@@ -112,6 +116,13 @@ export const queryKeys = {
     all: ['reviews'] as const,
     lists: () => [...queryKeys.reviews.all, 'list'] as const,
     list: (params?: ReviewFiltersParams) => [...queryKeys.reviews.lists(), params] as const,
+  },
+  concessions: {
+    all: ['concessions'] as const,
+    lists: () => [...queryKeys.concessions.all, 'list'] as const,
+    list: (params?: ConcessionFiltersParams) => [...queryKeys.concessions.lists(), params] as const,
+    details: () => [...queryKeys.concessions.all, 'detail'] as const,
+    detail: (id: string) => [...queryKeys.concessions.details(), id] as const,
   },
 };
 
@@ -780,10 +791,90 @@ export const useDeleteReview = () => {
     mutationFn: (id: string) => reviewsApi.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.reviews.lists() });
-      toast.success('Review deleted successfully');
-    },
-    onError: (error: unknown) => {
-      toast.error((error as Error)?.message || 'Failed to delete review');
     },
   });
 };
+
+// ============================================================================
+// CONCESSIONS HOOKS
+// ============================================================================
+
+export const useConcessions = (params?: ConcessionFiltersParams) => {
+  return useQuery({
+    queryKey: queryKeys.concessions.list(params),
+    queryFn: () => concessionsApi.getAll(params),
+  });
+};
+
+export const useConcession = (id: string) => {
+  return useQuery({
+    queryKey: queryKeys.concessions.detail(id),
+    queryFn: () => concessionsApi.getById(id),
+    enabled: !!id,
+  });
+};
+
+export const useCreateConcession = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: CreateConcessionRequest) => concessionsApi.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.concessions.lists() });
+      toast.success('Concession created successfully');
+    },
+    onError: (error: unknown) => {
+      toast.error((error as Error)?.message || 'Failed to create concession');
+    },
+  });
+};
+
+export const useUpdateConcession = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: UpdateConcessionRequest }) =>
+      concessionsApi.update(id, data),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.concessions.lists() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.concessions.detail(variables.id) });
+      toast.success('Concession updated successfully');
+    },
+    onError: (error: unknown) => {
+      toast.error((error as Error)?.message || 'Failed to update concession');
+    },
+  });
+};
+
+export const useDeleteConcession = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => concessionsApi.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.concessions.lists() });
+      toast.success('Concession deleted successfully');
+    },
+    onError: (error: unknown) => {
+      toast.error((error as Error)?.message || 'Failed to delete concession');
+    },
+  });
+};
+
+export const useUpdateConcessionInventory = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, quantity }: { id: string; quantity: number }) =>
+      concessionsApi.updateInventory(id, quantity),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.concessions.lists() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.concessions.detail(variables.id) });
+      toast.success('Inventory updated successfully');
+    },
+    onError: (error: unknown) => {
+      toast.error((error as Error)?.message || 'Failed to update inventory');
+    },
+  });
+};
+

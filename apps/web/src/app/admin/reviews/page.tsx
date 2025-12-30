@@ -49,7 +49,6 @@ export default function ReviewsPage() {
   const [filterRating, setFilterRating] = useState<string>('all');
   const [filterStartDate, setFilterStartDate] = useState<string>('');
   const [filterEndDate, setFilterEndDate] = useState<string>('');
-  const [searchQuery, setSearchQuery] = useState<string>('');
   const [page, setPage] = useState(1);
 
   // API hooks
@@ -61,7 +60,6 @@ export default function ReviewsPage() {
     rating: filterRating === 'all' ? undefined : parseInt(filterRating),
     startDate: filterStartDate || undefined,
     endDate: filterEndDate || undefined,
-    search: searchQuery || undefined,
     page,
   });
   const reviews = useMemo(() => Array.isArray(reviewsData) ? reviewsData : [], [reviewsData]);
@@ -133,11 +131,10 @@ export default function ReviewsPage() {
     setFilterRating('all');
     setFilterStartDate('');
     setFilterEndDate('');
-    setSearchQuery('');
     setPage(1);
   };
 
-  const hasActiveFilters = filterMovieId !== 'all' || filterRating !== 'all' || filterStartDate || filterEndDate || searchQuery;
+  const hasActiveFilters = filterMovieId !== 'all' || filterRating !== 'all' || filterStartDate || filterEndDate;
 
   const renderStars = (rating: number) => {
     return (
@@ -171,154 +168,201 @@ export default function ReviewsPage() {
         </div>
       </div>
 
-      {/* Statistics Cards */}
+      {/* Statistics Cards with Modern Gradient Design */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
+        <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200/60 shadow-md hover:shadow-lg transition-shadow">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Total Reviews</CardTitle>
+            <CardTitle className="text-sm font-semibold text-purple-700 uppercase tracking-wider">⭐ Total Reviews</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.total}</div>
-            <p className="text-xs text-gray-500 mt-1">
+            <div className="text-3xl font-bold text-purple-900">{stats.total}</div>
+            <p className="text-xs text-purple-600 mt-2 font-medium">
               Avg: {stats.avgRating} / 5 stars
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-200/60 shadow-md hover:shadow-lg transition-shadow">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">5 Stars</CardTitle>
+            <CardTitle className="text-sm font-semibold text-yellow-700 uppercase tracking-wider">⭐⭐⭐⭐⭐ 5 Stars</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">{stats.fiveStars}</div>
-            <p className="text-xs text-gray-500 mt-1">
+            <div className="text-3xl font-bold text-yellow-900">{stats.fiveStars}</div>
+            <p className="text-xs text-yellow-600 mt-2 font-medium">
               {stats.total > 0 ? ((stats.fiveStars / stats.total) * 100).toFixed(0) : 0}% of reviews
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200/60 shadow-md hover:shadow-lg transition-shadow">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">4 Stars</CardTitle>
+            <CardTitle className="text-sm font-semibold text-blue-700 uppercase tracking-wider">⭐⭐⭐⭐ 4 Stars</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-yellow-500">{stats.fourStars}</div>
-            <p className="text-xs text-gray-500 mt-1">
+            <div className="text-3xl font-bold text-blue-900">{stats.fourStars}</div>
+            <p className="text-xs text-blue-600 mt-2 font-medium">
               {stats.total > 0 ? ((stats.fourStars / stats.total) * 100).toFixed(0) : 0}% of reviews
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-gradient-to-br from-red-50 to-red-100 border-red-200/60 shadow-md hover:shadow-lg transition-shadow">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Low Ratings (1-2 ⭐)</CardTitle>
+            <CardTitle className="text-sm font-semibold text-red-700 uppercase tracking-wider">⚠️ Low Ratings (1-2⭐)</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">{stats.oneStars + stats.twoStars}</div>
-            <p className="text-xs text-gray-500 mt-1">
+            <div className="text-3xl font-bold text-red-900">{stats.oneStars + stats.twoStars}</div>
+            <p className="text-xs text-red-600 mt-2 font-medium">
               Need attention
             </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Filters */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <Filter className="mr-2 h-5 w-5" />
-            Filters
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
-            <div>
-              <Label htmlFor="search-query">Search</Label>
-              <Input
-                id="search-query"
-                placeholder="Search by title, name..."
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setPage(1);
-                }}
-              />
-            </div>
-            <div>
-              <Label htmlFor="filter-movie">Movie</Label>
-              <Select value={filterMovieId} onValueChange={(value) => {
-                setFilterMovieId(value);
+      {/* Modern Filter Container */}
+      <div className="p-4 bg-gradient-to-r from-purple-50 via-blue-50 to-pink-50 rounded-lg border border-purple-200/50 shadow-sm">
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {/* Movie Filter */}
+          <div className="space-y-2">
+            <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">🎬 Movie</label>
+            <Select value={filterMovieId} onValueChange={(value) => {
+              setFilterMovieId(value);
+              setPage(1);
+            }}>
+              <SelectTrigger className="h-11 border-purple-200 focus:ring-purple-500">
+                <SelectValue placeholder="All Movies" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Movies</SelectItem>
+                {movies.map((movie) => (
+                  <SelectItem key={movie.id} value={movie.id}>
+                    {movie.title}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Rating Filter */}
+          <div className="space-y-2">
+            <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">⭐ Rating</label>
+            <Select value={filterRating} onValueChange={(value) => {
+              setFilterRating(value);
+              setPage(1);
+            }}>
+              <SelectTrigger className="h-11 border-purple-200 focus:ring-purple-500">
+                <SelectValue placeholder="All Ratings" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Ratings</SelectItem>
+                <SelectItem value="5">⭐⭐⭐⭐⭐ 5 Stars</SelectItem>
+                <SelectItem value="4">⭐⭐⭐⭐ 4 Stars</SelectItem>
+                <SelectItem value="3">⭐⭐⭐ 3 Stars</SelectItem>
+                <SelectItem value="2">⭐⭐ 2 Stars</SelectItem>
+                <SelectItem value="1">⭐ 1 Star</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Start Date */}
+          <div className="space-y-2">
+            <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">📅 Start Date</label>
+            <Input
+              type="date"
+              value={filterStartDate}
+              onChange={(e) => {
+                setFilterStartDate(e.target.value);
                 setPage(1);
-              }}>
-                <SelectTrigger id="filter-movie">
-                  <SelectValue placeholder="All Movies" />
-                </SelectTrigger>
-                <SelectContent>
-                  {movies.map((movie) => (
-                    <SelectItem key={movie.id} value={movie.id}>
-                      {movie.title}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="filter-rating">Rating</Label>
-              <Select value={filterRating} onValueChange={(value) => {
-                setFilterRating(value);
+              }}
+              className="h-11 border-purple-200 focus:ring-purple-500"
+            />
+          </div>
+
+          {/* End Date */}
+          <div className="space-y-2">
+            <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">📅 End Date</label>
+            <Input
+              type="date"
+              value={filterEndDate}
+              onChange={(e) => {
+                setFilterEndDate(e.target.value);
                 setPage(1);
-              }}>
-                <SelectTrigger id="filter-rating">
-                  <SelectValue placeholder="All Ratings" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="5">5 Stars</SelectItem>
-                  <SelectItem value="4">4 Stars</SelectItem>
-                  <SelectItem value="3">3 Stars</SelectItem>
-                  <SelectItem value="2">2 Stars</SelectItem>
-                  <SelectItem value="1">1 Star</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="filter-start-date">Start Date</Label>
-              <Input
-                id="filter-start-date"
-                type="date"
-                value={filterStartDate}
-                onChange={(e) => {
-                  setFilterStartDate(e.target.value);
-                  setPage(1);
-                }}
-              />
-            </div>
-            <div>
-              <Label htmlFor="filter-end-date">End Date</Label>
-              <Input
-                id="filter-end-date"
-                type="date"
-                value={filterEndDate}
-                onChange={(e) => {
-                  setFilterEndDate(e.target.value);
-                  setPage(1);
-                }}
-              />
-            </div>
-            {hasActiveFilters && (
-              <div className="flex items-end">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleClearFilters}
-                  className="w-full"
+              }}
+              className="h-11 border-purple-200 focus:ring-purple-500"
+            />
+          </div>
+        </div>
+
+        {/* Active Filter Chips */}
+        {hasActiveFilters && (
+          <div className="flex flex-wrap gap-2 pt-3 border-t border-purple-200/50">
+            {filterMovieId !== 'all' && (
+              <div className="inline-flex items-center gap-2 px-3 py-1 bg-white rounded-full border border-purple-200 shadow-sm">
+                <span className="text-xs font-medium text-gray-700">
+                  🎬 {movies.find(m => m.id === filterMovieId)?.title}
+                </span>
+                <button
+                  onClick={() => {
+                    setFilterMovieId('all');
+                    setPage(1);
+                  }}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
                 >
-                  Clear Filters
-                </Button>
+                  ✕
+                </button>
               </div>
             )}
+            {filterRating !== 'all' && (
+              <div className="inline-flex items-center gap-2 px-3 py-1 bg-white rounded-full border border-purple-200 shadow-sm">
+                <span className="text-xs font-medium text-gray-700">⭐ {filterRating} Stars</span>
+                <button
+                  onClick={() => {
+                    setFilterRating('all');
+                    setPage(1);
+                  }}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  ✕
+                </button>
+              </div>
+            )}
+            {filterStartDate && (
+              <div className="inline-flex items-center gap-2 px-3 py-1 bg-white rounded-full border border-purple-200 shadow-sm">
+                <span className="text-xs font-medium text-gray-700">📅 From {filterStartDate}</span>
+                <button
+                  onClick={() => {
+                    setFilterStartDate('');
+                    setPage(1);
+                  }}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  ✕
+                </button>
+              </div>
+            )}
+            {filterEndDate && (
+              <div className="inline-flex items-center gap-2 px-3 py-1 bg-white rounded-full border border-purple-200 shadow-sm">
+                <span className="text-xs font-medium text-gray-700">📅 To {filterEndDate}</span>
+                <button
+                  onClick={() => {
+                    setFilterEndDate('');
+                    setPage(1);
+                  }}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  ✕
+                </button>
+              </div>
+            )}
+            <button
+              onClick={handleClearFilters}
+              className="text-xs font-medium text-purple-600 hover:text-purple-700 transition-colors ml-auto"
+            >
+              Clear All
+            </button>
           </div>
-        </CardContent>
-      </Card>
+        )}
+      </div>
 
       {/* Reviews Table */}
       <Card>

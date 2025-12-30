@@ -223,145 +223,245 @@ export default function ReservationsPage() {
         </div>
       </div>
 
-      {/* Statistics Cards */}
+      {/* Statistics Cards with Modern Gradient Design */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
+        <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200/60 shadow-md hover:shadow-lg transition-shadow">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Total Reservations</CardTitle>
+            <CardTitle className="text-sm font-semibold text-purple-700 uppercase tracking-wider">📊 Total Reservations</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.total}</div>
-            <p className="text-xs text-gray-500 mt-1">
+            <div className="text-3xl font-bold text-purple-900">{stats.total}</div>
+            <p className="text-xs text-purple-600 mt-2 font-medium">
               {stats.confirmed} confirmed · {stats.pending} pending
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200/60 shadow-md hover:shadow-lg transition-shadow">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Total Revenue</CardTitle>
+            <CardTitle className="text-sm font-semibold text-blue-700 uppercase tracking-wider">💰 Total Revenue</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatPrice(stats.totalRevenue)}</div>
-            <p className="text-xs text-gray-500 mt-1">
+            <div className="text-3xl font-bold text-blue-900">{formatPrice(stats.totalRevenue)}</div>
+            <p className="text-xs text-blue-600 mt-2 font-medium">
               Avg: {formatPrice(stats.avgBookingValue)} per booking
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200/60 shadow-md hover:shadow-lg transition-shadow">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Completed</CardTitle>
+            <CardTitle className="text-sm font-semibold text-emerald-700 uppercase tracking-wider">✅ Completed</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{stats.completed}</div>
-            <p className="text-xs text-gray-500 mt-1">
+            <div className="text-3xl font-bold text-emerald-900">{stats.completed}</div>
+            <p className="text-xs text-emerald-600 mt-2 font-medium">
               Successfully completed
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-gradient-to-br from-pink-50 to-pink-100 border-pink-200/60 shadow-md hover:shadow-lg transition-shadow">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Seats Booked</CardTitle>
+            <CardTitle className="text-sm font-semibold text-pink-700 uppercase tracking-wider">🪑 Seats Booked</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalSeats}</div>
-            <p className="text-xs text-gray-500 mt-1">
+            <div className="text-3xl font-bold text-pink-900">{stats.totalSeats}</div>
+            <p className="text-xs text-pink-600 mt-2 font-medium">
               Avg: {(stats.totalSeats / stats.total || 0).toFixed(1)} seats per booking
             </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Filters */}
+      {/* Modern Filter Container */}
+      <div className="p-4 bg-gradient-to-r from-purple-50 via-blue-50 to-pink-50 rounded-lg border border-purple-200/50 shadow-sm">
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+          {/* Cinema Filter */}
+          <div className="space-y-2">
+            <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">🏢 Cinema</label>
+            <Select value={filterCinemaId} onValueChange={(value) => {
+              setFilterCinemaId(value);
+              setPage(1);
+            }}>
+              <SelectTrigger className="h-11 border-purple-200 focus:ring-purple-500">
+                <SelectValue placeholder="All Cinemas" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Cinemas</SelectItem>
+                {cinemas.map((cinema) => (
+                  <SelectItem key={cinema.id} value={cinema.id}>
+                    {cinema.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Booking Status Filter */}
+          <div className="space-y-2">
+            <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">📋 Booking Status</label>
+            <Select value={filterStatus} onValueChange={(value) => {
+              setFilterStatus(value);
+              setPage(1);
+            }}>
+              <SelectTrigger className="h-11 border-purple-200 focus:ring-purple-500">
+                <SelectValue placeholder="All Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value={BookingStatusEnum.PENDING}>⏳ Pending</SelectItem>
+                <SelectItem value={BookingStatusEnum.CONFIRMED}>✅ Confirmed</SelectItem>
+                <SelectItem value={BookingStatusEnum.CANCELLED}>❌ Cancelled</SelectItem>
+                <SelectItem value={BookingStatusEnum.EXPIRED}>⏱️ Expired</SelectItem>
+                <SelectItem value={BookingStatusEnum.COMPLETED}>🎬 Completed</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Payment Status Filter */}
+          <div className="space-y-2">
+            <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">💳 Payment Status</label>
+            <Select value={filterPaymentStatus} onValueChange={(value) => {
+              setFilterPaymentStatus(value);
+              setPage(1);
+            }}>
+              <SelectTrigger className="h-11 border-purple-200 focus:ring-purple-500">
+                <SelectValue placeholder="All Payment" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Payment</SelectItem>
+                <SelectItem value={PaymentStatusEnum.PENDING}>⏳ Pending</SelectItem>
+                <SelectItem value={PaymentStatusEnum.PROCESSING}>⚙️ Processing</SelectItem>
+                <SelectItem value={PaymentStatusEnum.COMPLETED}>✅ Completed</SelectItem>
+                <SelectItem value={PaymentStatusEnum.FAILED}>❌ Failed</SelectItem>
+                <SelectItem value={PaymentStatusEnum.REFUNDED}>🔄 Refunded</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Start Date Filter */}
+          <div className="space-y-2">
+            <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">📅 Start Date</label>
+            <Input
+              type="date"
+              value={filterStartDate}
+              onChange={(e) => {
+                setFilterStartDate(e.target.value);
+                setPage(1);
+              }}
+              className="h-11 border-purple-200 focus:ring-purple-500"
+            />
+          </div>
+
+          {/* End Date Filter */}
+          <div className="space-y-2">
+            <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">📅 End Date</label>
+            <Input
+              type="date"
+              value={filterEndDate}
+              onChange={(e) => {
+                setFilterEndDate(e.target.value);
+                setPage(1);
+              }}
+              className="h-11 border-purple-200 focus:ring-purple-500"
+            />
+          </div>
+        </div>
+
+        {/* Active Filter Chips */}
+        {(filterCinemaId !== 'all' || filterStatus !== 'all' || filterPaymentStatus !== 'all' || filterStartDate || filterEndDate) && (
+          <div className="flex flex-wrap gap-2 pt-3 border-t border-purple-200/50">
+            {filterCinemaId !== 'all' && (
+              <div className="inline-flex items-center gap-2 px-3 py-1 bg-white rounded-full border border-purple-200 shadow-sm">
+                <span className="text-xs font-medium text-gray-700">
+                  🏢 {cinemas.find(c => c.id === filterCinemaId)?.name}
+                </span>
+                <button
+                  onClick={() => {
+                    setFilterCinemaId('all');
+                    setPage(1);
+                  }}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  ✕
+                </button>
+              </div>
+            )}
+            {filterStatus !== 'all' && (
+              <div className="inline-flex items-center gap-2 px-3 py-1 bg-white rounded-full border border-purple-200 shadow-sm">
+                <span className="text-xs font-medium text-gray-700">
+                  📋 {filterStatus.charAt(0) + filterStatus.slice(1).toLowerCase()}
+                </span>
+                <button
+                  onClick={() => {
+                    setFilterStatus('all');
+                    setPage(1);
+                  }}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  ✕
+                </button>
+              </div>
+            )}
+            {filterPaymentStatus !== 'all' && (
+              <div className="inline-flex items-center gap-2 px-3 py-1 bg-white rounded-full border border-purple-200 shadow-sm">
+                <span className="text-xs font-medium text-gray-700">
+                  💳 {filterPaymentStatus.charAt(0) + filterPaymentStatus.slice(1).toLowerCase()}
+                </span>
+                <button
+                  onClick={() => {
+                    setFilterPaymentStatus('all');
+                    setPage(1);
+                  }}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  ✕
+                </button>
+              </div>
+            )}
+            {filterStartDate && (
+              <div className="inline-flex items-center gap-2 px-3 py-1 bg-white rounded-full border border-purple-200 shadow-sm">
+                <span className="text-xs font-medium text-gray-700">📅 From {filterStartDate}</span>
+                <button
+                  onClick={() => {
+                    setFilterStartDate('');
+                    setPage(1);
+                  }}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  ✕
+                </button>
+              </div>
+            )}
+            {filterEndDate && (
+              <div className="inline-flex items-center gap-2 px-3 py-1 bg-white rounded-full border border-purple-200 shadow-sm">
+                <span className="text-xs font-medium text-gray-700">📅 To {filterEndDate}</span>
+                <button
+                  onClick={() => {
+                    setFilterEndDate('');
+                    setPage(1);
+                  }}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  ✕
+                </button>
+              </div>
+            )}
+            <button
+              onClick={handleClearFilters}
+              className="text-xs font-medium text-purple-600 hover:text-purple-700 transition-colors ml-auto"
+            >
+              Clear All
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Pagination & Sort */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <Filter className="mr-2 h-5 w-5" />
-            Filters
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
-            <div>
-              <Label htmlFor="filter-cinema">Cinema</Label>
-              <Select value={filterCinemaId} onValueChange={(value) => {
-                setFilterCinemaId(value);
-                setPage(1);
-              }}>
-                <SelectTrigger id="filter-cinema">
-                  <SelectValue placeholder="All Cinemas" />
-                </SelectTrigger>
-                <SelectContent>
-                  {cinemas.map((cinema) => (
-                    <SelectItem key={cinema.id} value={cinema.id}>
-                      {cinema.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="filter-status">Booking Status</Label>
-              <Select value={filterStatus} onValueChange={(value) => {
-                setFilterStatus(value);
-                setPage(1);
-              }}>
-                <SelectTrigger id="filter-status">
-                  <SelectValue placeholder="All Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={BookingStatusEnum.PENDING}>Pending</SelectItem>
-                  <SelectItem value={BookingStatusEnum.CONFIRMED}>Confirmed</SelectItem>
-                  <SelectItem value={BookingStatusEnum.CANCELLED}>Cancelled</SelectItem>
-                  <SelectItem value={BookingStatusEnum.EXPIRED}>Expired</SelectItem>
-                  <SelectItem value={BookingStatusEnum.COMPLETED}>Completed</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="filter-payment">Payment Status</Label>
-              <Select value={filterPaymentStatus} onValueChange={(value) => {
-                setFilterPaymentStatus(value);
-                setPage(1);
-              }}>
-                <SelectTrigger id="filter-payment">
-                  <SelectValue placeholder="All Payment" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={PaymentStatusEnum.PENDING}>Pending</SelectItem>
-                  <SelectItem value={PaymentStatusEnum.PROCESSING}>Processing</SelectItem>
-                  <SelectItem value={PaymentStatusEnum.COMPLETED}>Completed</SelectItem>
-                  <SelectItem value={PaymentStatusEnum.FAILED}>Failed</SelectItem>
-                  <SelectItem value={PaymentStatusEnum.REFUNDED}>Refunded</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="filter-start-date">Start Date</Label>
-              <Input
-                id="filter-start-date"
-                type="date"
-                value={filterStartDate}
-                onChange={(e) => {
-                  setFilterStartDate(e.target.value);
-                  setPage(1);
-                }}
-              />
-            </div>
-            <div>
-              <Label htmlFor="filter-end-date">End Date</Label>
-              <Input
-                id="filter-end-date"
-                type="date"
-                value={filterEndDate}
-                onChange={(e) => {
-                  setFilterEndDate(e.target.value);
-                  setPage(1);
-                }}
-              />
-            </div>
+        <CardContent className="pt-6">
+          <div className="flex items-end gap-4">
             <div>
               <Label htmlFor="filter-sort">Sort By</Label>
               <Select value={sortBy} onValueChange={(value: 'created_at' | 'final_amount' | 'expires_at') => setSortBy(value)}>
@@ -375,29 +475,15 @@ export default function ReservationsPage() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex items-end">
-              <Button
-                variant={sortOrder === 'desc' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc')}
-                className="w-full gap-2"
-              >
-                <ArrowUpDown className="h-4 w-4" />
-                {sortOrder === 'desc' ? 'Newest' : 'Oldest'}
-              </Button>
-            </div>
-            {hasActiveFilters && (
-              <div className="flex items-end">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleClearFilters}
-                  className="w-full"
-                >
-                  Clear Filters
-                </Button>
-              </div>
-            )}
+            <Button
+              variant={sortOrder === 'desc' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc')}
+              className="gap-2"
+            >
+              <ArrowUpDown className="h-4 w-4" />
+              {sortOrder === 'desc' ? 'Newest' : 'Oldest'}
+            </Button>
           </div>
         </CardContent>
       </Card>

@@ -406,118 +406,135 @@ export default function StaffPage() {
         </Button>
       </div>
 
-      {/* Statistics Cards */}
+      {/* Statistics Cards with Modern Gradient Design */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
+        <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200/60 shadow-md hover:shadow-lg transition-shadow">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Total Staff</CardTitle>
+            <CardTitle className="text-sm font-semibold text-purple-700 uppercase tracking-wider">👥 Total Staff</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.total}</div>
-            <p className="text-xs text-gray-500 mt-1">
+            <div className="text-3xl font-bold text-purple-900">{stats.total}</div>
+            <p className="text-xs text-purple-600 mt-2 font-medium">
               {stats.active} active · {stats.inactive} inactive
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200/60 shadow-md hover:shadow-lg transition-shadow">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Employment Type</CardTitle>
+            <CardTitle className="text-sm font-semibold text-blue-700 uppercase tracking-wider">💼 Employment Type</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.fullTime}</div>
-            <p className="text-xs text-gray-500 mt-1">
+            <div className="text-3xl font-bold text-blue-900">{stats.fullTime}</div>
+            <p className="text-xs text-blue-600 mt-2 font-medium">
               {stats.fullTime} full-time · {stats.partTime} part-time
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-200/60 shadow-md hover:shadow-lg transition-shadow">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Key Positions</CardTitle>
+            <CardTitle className="text-sm font-semibold text-yellow-700 uppercase tracking-wider">📍 Key Positions</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.positions.manager}</div>
-            <p className="text-xs text-gray-500 mt-1">
-              {stats.positions.manager} managers · {stats.positions.ticketClerk} ticket clerks
+            <div className="text-3xl font-bold text-yellow-900">{stats.positions.manager}</div>
+            <p className="text-xs text-yellow-600 mt-2 font-medium">
+              {stats.positions.manager} managers · {stats.positions.ticketClerk} clerks
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200/60 shadow-md hover:shadow-lg transition-shadow">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Salary Expense</CardTitle>
+            <CardTitle className="text-sm font-semibold text-emerald-700 uppercase tracking-wider">💰 Salary Expense</CardTitle>
           </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">₫{(stats.totalSalaryExpense / 1000000).toFixed(2)}M</div>
-              <p className="text-xs text-gray-500 mt-1">
-                Avg: ₫{(stats.avgSalary / 1000000).toFixed(2)}M per person
-              </p>
-            </CardContent>
+          <CardContent>
+            <div className="text-3xl font-bold text-emerald-900">₫{(stats.totalSalaryExpense / 1000000).toFixed(2)}M</div>
+            <p className="text-xs text-emerald-600 mt-2 font-medium">
+              Avg: ₫{(stats.avgSalary / 1000000).toFixed(2)}M per person
+            </p>
+          </CardContent>
         </Card>
       </div>
 
-      {/* Filters */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center">
-              <Filter className="mr-2 h-5 w-5" />
-              Filters
-              {(filterCinemaId !== 'all' || filterStatus !== 'all') && (
-                <Badge variant="secondary" className="ml-2">
-                  {[filterCinemaId !== 'all', filterStatus !== 'all'].filter(Boolean).length} Active
-                </Badge>
-              )}
-            </CardTitle>
-            {(filterCinemaId !== 'all' || filterStatus !== 'all') && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setFilterCinemaId('all');
-                  setFilterStatus('all');
-                }}
-              >
-                Clear All
-              </Button>
+      {/* Modern Filter Container */}
+      <div className="p-4 bg-gradient-to-r from-purple-50 via-blue-50 to-pink-50 rounded-lg border border-purple-200/50 shadow-sm">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Cinema Filter */}
+          <div className="space-y-2">
+            <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">🏢 Cinema</label>
+            <Select value={filterCinemaId} onValueChange={setFilterCinemaId}>
+              <SelectTrigger className="h-11 border-purple-200 focus:ring-purple-500">
+                <SelectValue placeholder="All Cinemas" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Cinemas</SelectItem>
+                {cinemas.map((cinema) => (
+                  <SelectItem key={cinema.id} value={cinema.id}>
+                    {cinema.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Status Filter */}
+          <div className="space-y-2">
+            <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">✅ Status</label>
+            <Select value={filterStatus} onValueChange={setFilterStatus}>
+              <SelectTrigger className="h-11 border-purple-200 focus:ring-purple-500">
+                <SelectValue placeholder="All Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="ACTIVE">✅ Active</SelectItem>
+                <SelectItem value="INACTIVE">❌ Inactive</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        {/* Active Filter Chips */}
+        {(filterCinemaId !== 'all' || filterStatus !== 'all') && (
+          <div className="flex flex-wrap gap-2 pt-3 border-t border-purple-200/50">
+            {filterCinemaId !== 'all' && (
+              <div className="inline-flex items-center gap-2 px-3 py-1 bg-white rounded-full border border-purple-200 shadow-sm">
+                <span className="text-xs font-medium text-gray-700">
+                  🏢 {cinemas.find(c => c.id === filterCinemaId)?.name}
+                </span>
+                <button
+                  onClick={() => setFilterCinemaId('all')}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  ✕
+                </button>
+              </div>
             )}
+            {filterStatus !== 'all' && (
+              <div className="inline-flex items-center gap-2 px-3 py-1 bg-white rounded-full border border-purple-200 shadow-sm">
+                <span className="text-xs font-medium text-gray-700">
+                  ✅ {filterStatus === 'ACTIVE' ? 'Active' : 'Inactive'}
+                </span>
+                <button
+                  onClick={() => setFilterStatus('all')}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  ✕
+                </button>
+              </div>
+            )}
+            <button
+              onClick={() => {
+                setFilterCinemaId('all');
+                setFilterStatus('all');
+              }}
+              className="text-xs font-medium text-purple-600 hover:text-purple-700 transition-colors ml-auto"
+            >
+              Clear All
+            </button>
           </div>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <Label htmlFor="filter-cinema">Cinema</Label>
-              <Select value={filterCinemaId} onValueChange={setFilterCinemaId}>
-                <SelectTrigger id="filter-cinema">
-                  <SelectValue placeholder="All Cinemas" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Cinemas</SelectItem>
-                  {cinemas.map((cinema) => (
-                    <SelectItem key={cinema.id} value={cinema.id}>
-                      {cinema.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="filter-status">Status</Label>
-              <Select value={filterStatus} onValueChange={setFilterStatus}>
-                <SelectTrigger id="filter-status">
-                  <SelectValue placeholder="All Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="ACTIVE">Active</SelectItem>
-                  <SelectItem value="INACTIVE">Inactive</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+        )}
+      </div>
 
       {/* Staff Table */}
       <Card>

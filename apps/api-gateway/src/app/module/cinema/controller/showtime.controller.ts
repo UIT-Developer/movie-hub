@@ -45,6 +45,12 @@ export class ShowtimeController {
     return this.showtimeService.getShowtimeSeats(showtimeId, userId);
   }
 
+  @Get(':id')
+  @UseGuards(ClerkAuthGuard)
+  getShowtime(@Param('id') showtimeId: string) {
+    return this.showtimeService.getShowtime(showtimeId);
+  }
+
   @Get('showtime/:showtimeId/ttl')
   @UseGuards(ClerkAuthGuard)
   getSessionTTL(

@@ -124,17 +124,19 @@ export class ConcessionService {
     const concession = await this.prisma.concessions.update({
       where: { id },
       data: {
-        name: dto.name,
-        name_en: dto.nameEn,
-        description: dto.description,
-        category: dto.category,
-        price: dto.price,
-        image_url: dto.imageUrl,
-        available: dto.available,
-        inventory: dto.inventory,
-        cinema_id: dto.cinemaId,
-        nutrition_info: dto.nutritionInfo,
-        allergens: dto.allergens,
+        ...(dto.name !== undefined && { name: dto.name }),
+        ...(dto.nameEn !== undefined && { name_en: dto.nameEn }),
+        ...('description' in dto && { description: dto.description }),
+        ...(dto.category !== undefined && { category: dto.category }),
+        ...(dto.price !== undefined && { price: dto.price }),
+        ...(dto.imageUrl !== undefined && { image_url: dto.imageUrl }),
+        ...(dto.available !== undefined && { available: dto.available }),
+        ...(dto.inventory !== undefined && { inventory: dto.inventory }),
+        ...(dto.cinemaId !== undefined && { cinema_id: dto.cinemaId }),
+        ...('nutritionInfo' in dto && {
+          nutrition_info: dto.nutritionInfo,
+        }),
+        ...('allergens' in dto && { allergens: dto.allergens }),
       },
     });
 

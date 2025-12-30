@@ -25,6 +25,11 @@ export class ShowtimeController {
     return this.showtimeService.getShowtimes(filter);
   }
 
+  @MessagePattern(CinemaMessage.SHOWTIME.GET_SHOWTIME)
+  getShowtime(@Payload() showtimeId: string) {
+    return this.showtimeService.getShowtimeById(showtimeId);
+  }
+
   @MessagePattern(CinemaMessage.CINEMA.GET_SHOWTIME)
   getMovieShowtimesAtCinema(
     @Payload()

@@ -299,11 +299,14 @@ export interface CinemasGroupedResponse {
 export interface Showtime {
   id: string;
   movieId: string;
+  movieTitle?: string; // Backend provides this in list endpoint
   movie?: Movie;
-  movieReleaseId: string; // Backend requires this
+  movieReleaseId?: string; // Backend list endpoint doesn't return this, only detail endpoint does
   cinemaId: string;
+  cinemaName?: string; // Backend provides this
   cinema?: Cinema;
   hallId: string;
+  hallName?: string; // Backend provides this
   hall?: Hall;
   startTime: string; // ISO datetime or 'yyyy-MM-dd HH:mm:ss'
   endTime?: string;
@@ -311,6 +314,7 @@ export interface Showtime {
   language: string; // Backend uses string, not enum
   subtitles?: string[]; // Backend has subtitles field
   availableSeats?: number;
+  totalSeats?: number; // Backend provides this
   status?: string;
   createdAt?: string | Date;
   updatedAt?: string | Date;

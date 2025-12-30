@@ -20,7 +20,7 @@ import {
 } from '@movie-hub/shacdn-ui/select';
 import { Button } from '@movie-hub/shacdn-ui/button';
 import { useToast } from '../../_libs/use-toast';
-import { useCreateShowtime, useUpdateShowtime, useMovieReleases } from '@/libs/api';
+import { useCreateShowtime, useUpdateShowtime, useShowtime, useMovieReleases } from '@/libs/api';
 import type { Showtime, Movie, Cinema, Hall, CreateShowtimeRequest } from '@/libs/api/types';
 import { FormatEnum } from '@movie-hub/shared-types/cinema/enum';
 
@@ -49,11 +49,10 @@ export default function ShowtimeDialog({
 }: ShowtimeDialogProps) {
   const createShowtime = useCreateShowtime();
   const updateShowtime = useUpdateShowtime();
-  // NOTE: useShowtime endpoint doesn't exist in BE yet (GET /api/v1/showtimes/:id not implemented).
-  // Using editingShowtime from props instead, which comes from the list and already has movieId/movieReleaseId.
-  // Once BE implements the detail endpoint, can uncomment below to fetch full details:
-  // const { data: fullShowtimeDetail } = useShowtime(editingShowtime?.id || '');
-  const fullShowtimeDetail = null; // Placeholder until BE endpoint exists
+  // Fetch full showtime detail from API when editing (if showtime ID provided)
+  const { data: fetchedShowtimeDetail } = useShowtime(editingShowtime?.id || null);
+  // Use fetched detail if available, otherwise fall back to editingShowtime from props
+  const fullShowtimeDetail = fetchedShowtimeDetail || editingShowtime;
   const [formData, setFormData] = useState<CreateShowtimeRequest>({
     movieId: '',
     movieReleaseId: '',
@@ -293,12 +292,13 @@ export default function ShowtimeDialog({
                 </SelectTrigger>
                 <SelectContent>
                   {formData.movieId && (() => {
-                    // Get all releases for this movie (including ACTIVE, UPCOMING, EXPIRED)
-                    const releases = movieReleases.filter(r => r.movieId === formData.movieId);
-                    console.log('[ShowtimeDialog] Filtering releases for movieId:', {
+                    // movieReleases already contains only releases for formData.movieId
+                    // (fetched via useMovieReleases with { movieId: formData.movieId })
+                    // No need to filter - just use the data directly
+                    const releases = movieReleases;
+                    console.log('[ShowtimeDialog] Releases for movieId:', {
                       movieId: formData.movieId,
-                      totalAvailable: movieReleases.length,
-                      forThisMovie: releases.length,
+                      availableReleases: releases.length,
                       releases: releases.map(r => ({ id: r.id, status: r.status })),
                     });
                     if (releases.length === 0) {

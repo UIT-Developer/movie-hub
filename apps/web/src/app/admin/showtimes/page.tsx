@@ -248,14 +248,30 @@ export default function ShowtimesPage() {
           </Card>
         ) : (
           Object.entries(groupedShowtimes).map(([movieId, movieShowtimes]) => {
-            const movie = moviesAdmin.find((m) => m.id === movieId);
-            // Debug log for Unknown Movie issue
-            if (!movie) {
-              console.warn(`[ShowtimesPage] Movie not found for movieId: ${movieId}. Available movies:`, moviesAdmin.map(m => m.id));
+            // Try to get movieTitle from showtime response (BE provides this if movie-service call succeeds)
+            let movieTitle = movieShowtimes[0]?.movieTitle;
+            
+            // Fallback: if movieTitle not in showtime response, look up from movies array
+            if (!movieTitle) {
+              const movie = moviesAdmin.find((m) => m.id === movieId);
+              movieTitle = movie?.title;
             }
-            // Get movieTitle from showtime if available (some showtimes might have movieTitle)
-            // Or fall back to moviesAdmin lookup
-            const movieTitle = movie?.title || movieShowtimes[0]?.movie?.title || `Unknown Movie (${movieId})`;
+            
+            // Final fallback if movie not found in either place
+            if (!movieTitle) {
+              movieTitle = `Unknown Movie (${movieId})`;
+            }
+            
+            const movie = moviesAdmin.find((m) => m.id === movieId);
+            
+            // Log if title had to fallback (helps identify if BE is returning movieTitle)
+            if (!movieShowtimes[0]?.movieTitle && movie?.title) {
+              console.log('[ShowtimesPage] Using movie title from movies API (BE movieTitle was null)', {
+                movieId,
+                movieTitle: movie.title,
+              });
+            }
+            
             return (
               <Card key={movieId}>
                 <CardHeader>
@@ -265,9 +281,13 @@ export default function ShowtimesPage() {
                       {movieShowtimes.length} sessions
                     </Badge>
                   </CardTitle>
-                  <CardDescription>
-                    {movie?.runtime} mins · {movie?.ageRating}
-                  </CardDescription>
+                  {movie && (
+                    <CardDescription>
+                      {movie.runtime && `${movie.runtime} mins`}
+                      {movie.ageRating && movie.runtime && ' · '}
+                      {movie.ageRating}
+                    </CardDescription>
+                  )}
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

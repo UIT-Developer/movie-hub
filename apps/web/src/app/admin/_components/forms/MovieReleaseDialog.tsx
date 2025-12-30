@@ -22,8 +22,14 @@ import {
 } from '@movie-hub/shacdn-ui/select';
 import { Button } from '@movie-hub/shacdn-ui/button';
 import { useToast } from '../../_libs/use-toast';
-import { useCreateMovieRelease, useUpdateMovieRelease } from '@/libs/api';
+import { useCreateMovieRelease, useUpdateMovieRelease, useMovieRelease } from '@/libs/api';
 import type { Movie, MovieRelease } from '@/libs/api/types';
+
+// Helper to validate UUID format
+const isValidUUID = (id: string): boolean => {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(id);
+};
 
 interface MovieReleaseDialogProps {
   open: boolean;
@@ -44,6 +50,8 @@ export default function MovieReleaseDialog({
 }: MovieReleaseDialogProps) {
   const createMovieRelease = useCreateMovieRelease();
   const updateMovieRelease = useUpdateMovieRelease();
+  const { data: fetchedReleaseDetail } = useMovieRelease(editingRelease?.id || null);
+  const fullReleaseDetail = fetchedReleaseDetail || editingRelease;
   const [formData, setFormData] = useState({
     movieId: '',
     startDate: '',
@@ -53,7 +61,7 @@ export default function MovieReleaseDialog({
   const { toast } = useToast();
 
   useEffect(() => {
-    if (editingRelease) {
+    if (fullReleaseDetail) {
       // Helper to format date - handle both string and Date objects
       const formatDate = (date: string | Date | undefined): string => {
         if (!date) return '';
@@ -70,11 +78,11 @@ export default function MovieReleaseDialog({
       };
 
       setFormData({
-        // Fall back to editingRelease.movie?.id when movieId missing from BE
-        movieId: editingRelease.movieId || editingRelease.movie?.id || '',
-        startDate: formatDate(editingRelease.startDate),
-        endDate: formatDate(editingRelease.endDate),
-        note: editingRelease.note || '',
+        // Fall back to fullReleaseDetail.movie?.id when movieId missing from BE
+        movieId: fullReleaseDetail.movieId || fullReleaseDetail.movie?.id || '',
+        startDate: formatDate(fullReleaseDetail.startDate),
+        endDate: formatDate(fullReleaseDetail.endDate),
+        note: fullReleaseDetail.note || '',
       });
     } else if (preSelectedMovieId) {
       // Pre-fill movieId when opening from Movies page
@@ -92,7 +100,7 @@ export default function MovieReleaseDialog({
         note: '',
       });
     }
-  }, [editingRelease, preSelectedMovieId, open]);
+  }, [fullReleaseDetail, preSelectedMovieId, open]);
 
   const resetForm = () => {
     setFormData({
@@ -113,38 +121,62 @@ export default function MovieReleaseDialog({
       return;
     }
 
+    // Validate movieId is a proper UUID format
+    if (!isValidUUID(formData.movieId)) {
+      toast({
+        title: 'Validation Error',
+        description: 'Invalid movie ID format. Please select a valid movie from the dropdown.',
+        variant: 'destructive',
+      });
+      console.warn('[MovieReleaseDialog] Invalid movieId format:', formData.movieId);
+      return;
+    }
+
     try {
       // Build payloads: create requires movieId, update should not change relation
-      const basePayload = {
+      const basePayload: Record<string, string | undefined> = {
         // Send ISO timestamps to avoid backend parsing ambiguity
         startDate: new Date(formData.startDate).toISOString(),
         endDate: new Date(formData.endDate).toISOString(),
-        note: formData.note || undefined, // note is optional in backend
       };
+
+      // Only add note if it has value (BE schema is strict, rejects undefined)
+      if (formData.note && formData.note.trim()) {
+        basePayload.note = formData.note;
+      }
 
       const createPayload = { movieId: formData.movieId, ...basePayload };
 
-      // Temporary debug log: inspect payload before submit
-      console.log('[MovieReleaseDialog] submit payload (create):', createPayload);
-      console.log('[MovieReleaseDialog] submit payload (update):', basePayload);
+      // Detailed debug log: inspect payload before submit
+      console.log('[MovieReleaseDialog] Form data:', formData);
+      console.log('[MovieReleaseDialog] Parsed dates:');
+      console.log('  startDate input:', formData.startDate);
+      console.log('  startDate ISO:', basePayload.startDate);
+      console.log('  endDate input:', formData.endDate);
+      console.log('  endDate ISO:', basePayload.endDate);
+      console.log('[MovieReleaseDialog] Note field:', formData.note, '-> will include:', !!basePayload.note);
+      console.log('[MovieReleaseDialog] Final payload (create):', JSON.stringify(createPayload, null, 2));
+      console.log('[MovieReleaseDialog] Final payload (update):', JSON.stringify(basePayload, null, 2));
 
-      if (editingRelease) {
+      if (fullReleaseDetail) {
         // For update, omit movieId to avoid backend validation rejecting relation changes
-        await updateMovieRelease.mutateAsync({ id: editingRelease.id, data: basePayload });
+        await updateMovieRelease.mutateAsync({ id: fullReleaseDetail.id, data: basePayload });
       } else {
+        console.log('[MovieReleaseDialog] Sending CREATE request with:', createPayload);
         await createMovieRelease.mutateAsync(createPayload);
       }
 
       onOpenChange(false);
       resetForm();
       onSuccess?.();
-    } catch {
+    } catch (error) {
+      console.error('[MovieReleaseDialog] Catch block error:', error);
       // Error toast already shown by mutation hooks
     }
   };
 
-  const selectedId = formData.movieId || editingRelease?.movieId || '';
-  const selectedMovie = movies.find((m) => m.id === selectedId) || editingRelease?.movie;
+  const selectedId = formData.movieId || fullReleaseDetail?.movieId || '';
+  const selectedMovie = movies.find((m) => m.id === selectedId) || fullReleaseDetail?.movie;
   const selectedLabel = selectedMovie
     ? `${selectedMovie.title} (${selectedMovie.runtime} mins)`
     : (selectedId ? `Movie (${selectedId})` : undefined);
@@ -154,14 +186,19 @@ export default function MovieReleaseDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>{editingRelease ? 'Edit Release' : 'Add New Release'}</DialogTitle>
+          <DialogTitle>{fullReleaseDetail ? 'Edit Release' : 'Add New Release'}</DialogTitle>
           <DialogDescription>
-            {editingRelease ? 'Update release schedule details' : 'Create a new movie release schedule'}
+            {fullReleaseDetail ? 'Update release schedule details' : 'Create a new movie release schedule'}
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="space-y-2">
             <Label htmlFor="movieId">Movie *</Label>
+            {movies.length === 0 ? (
+              <div className="text-sm text-red-600 p-2 border border-red-300 rounded bg-red-50">
+                No movies available. Please add movies first before creating releases.
+              </div>
+            ) : (
             <Select
               value={selectedId}
               onValueChange={(value) => {
@@ -179,9 +216,9 @@ export default function MovieReleaseDialog({
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
-                {editingRelease && !movies.find(m => m.id === editingRelease.movieId) && (
-                  <SelectItem key={`injected-${editingRelease.movieId}`} value={editingRelease.movieId}>
-                    {editingRelease.movie ? `${editingRelease.movie.title} (${editingRelease.movie.runtime} mins) - Current` : `Movie (${editingRelease.movieId}) - Current`}
+                {fullReleaseDetail && !movies.find(m => m.id === fullReleaseDetail.movieId) && (
+                  <SelectItem key={`injected-${fullReleaseDetail.movieId}`} value={fullReleaseDetail.movieId}>
+                    {fullReleaseDetail.movie ? `${fullReleaseDetail.movie.title} (${fullReleaseDetail.movie.runtime} mins) - Current` : `Movie (${fullReleaseDetail.movieId}) - Current`}
                   </SelectItem>
                 )}
                 {movies.map((movie) => (
@@ -191,6 +228,7 @@ export default function MovieReleaseDialog({
                 ))}
               </SelectContent>
             </Select>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -243,7 +281,8 @@ export default function MovieReleaseDialog({
           </Button>
           <Button
             onClick={handleSubmit}
-            className="bg-gradient-to-r from-purple-600 to-pink-600"
+            disabled={!formData.movieId || !formData.startDate || !formData.endDate || (movies.length === 0 && !fullReleaseDetail)}
+            className="bg-gradient-to-r from-purple-600 to-pink-600 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {editingRelease ? 'Update Release' : 'Create Release'}
           </Button>

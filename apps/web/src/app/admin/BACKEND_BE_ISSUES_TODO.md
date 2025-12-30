@@ -5,6 +5,140 @@ Tập hợp các lỗi của backend liên quan đến module Movie Releases mà
 
 ---
 
+## Issue: POST /api/v1/showtimes/batch — Returns 500 "Unexpected error" (CRITICAL)
+
+**Status**: 🔴 BLOCKING — Admin cannot create batch showtimes
+
+**Endpoint**: `POST /api/v1/showtimes/batch`
+
+**Error**: HTTP 500 with message "Unexpected error"
+
+**Problem (ngắn):**
+- FE sends batch showtimes request but BE returns 500 error
+- Error message is generic "Unexpected error" with no details
+- Root cause: **Missing Zod validation in API gateway** - data validation is not happening before passing to cinema-service
+- FE correctly sends `startDate` and `endDate` as strings in YYYY-MM-DD format, but BE expects Date objects (after Zod transformation)
+- Without validation, cinema-service receives strings and tries to process them as Dates, causing failure
+
+Chi tiết kỹ thuật / files BE cần sửa:
+
+**File 1**: `apps/api-gateway/src/app/module/cinema/controller/showtime.controller.ts` (lines 69-73)
+
+**Current Problematic Code**:
+```typescript
+@Post('/batch')
+@UseGuards(ClerkAuthGuard)
+createBatchShowtimes(@Body() body: BatchCreateShowtimesInput) {
+  // ❌ NO VALIDATION! Just TypeScript type annotation
+  return this.showtimeService.createBatchShowtimes(body);
+}
+```
+
+**Problem**: `@Body() body: BatchCreateShowtimesInput` is just a type annotation. No Zod validation happens. Data comes in as strings but code expects Dates.
+
+**Solution**: Add ZodValidationPipe to validate and transform the request:
+
+```typescript
+import { ZodValidationPipe } from '@nestjs/zod';
+import { batchCreateShowtimesSchema } from '@movie-hub/shared-types';
+
+@Post('/batch')
+@UseGuards(ClerkAuthGuard)
+createBatchShowtimes(
+  @Body(new ZodValidationPipe(batchCreateShowtimesSchema)) 
+  body: BatchCreateShowtimesInput
+) {
+  return this.showtimeService.createBatchShowtimes(body);
+}
+```
+
+**File 2**: `apps/cinema-service/src/app/showtime/showtime-command.service.ts` (lines 99-215)
+
+**Current Problematic Code**: The catch block on line 215:
+```typescript
+catch (e) {
+  throw new RpcException(e);
+}
+```
+
+**Problem**: 
+- No error logging - error details are lost
+- Wraps all errors (including validation errors) as RpcException with generic message
+- Makes it impossible to debug what actually failed
+
+**Solution**: Add proper error logging and handling:
+
+```typescript
+catch (e) {
+  // Log the actual error for debugging
+  console.error('[BatchCreateShowtimes] Error:', {
+    error: e instanceof Error ? e.message : String(e),
+    stack: e instanceof Error ? e.stack : undefined,
+    input: {
+      movieId, movieReleaseId, cinemaId, hallId,
+      startDate, endDate, timeSlots, repeatType
+    }
+  });
+  throw new RpcException(e);
+}
+```
+
+**Also fix `fetchMovieAndRelease` method** (lines 343-372):
+- Current catch block silently catches all errors and throws generic message
+- Add logging to see what actually failed
+
+```typescript
+catch (error) {
+  console.error('[FetchMovieAndRelease] Failed:', {
+    movieId,
+    movieReleaseId,
+    error: error instanceof Error ? error.message : String(error)
+  });
+  throw new BadRequestException('Cannot fetch movie or release');
+}
+```
+
+**Impact**:
+- Admin Batch Showtimes feature completely broken
+- Users cannot create multiple showtimes at once
+- **This is a critical blocker** for showtime management
+
+**FE Workaround**:
+- Currently showing generic "Unexpected error" toast
+- No way for users to know what went wrong
+- Users must create showtimes one-by-one using the single showtime creation form as workaround
+
+**Test After Fix**:
+1. Try creating batch with valid data
+   ```json
+   {
+     "movieId": "valid-uuid",
+     "movieReleaseId": "valid-uuid",
+     "cinemaId": "valid-uuid",
+     "hallId": "valid-uuid",
+     "startDate": "2025-12-31",
+     "endDate": "2026-01-05",
+     "timeSlots": ["09:00", "14:00", "19:00", "22:00"],
+     "repeatType": "DAILY",
+     "weekdays": [],
+     "format": "2D",
+     "language": "vi",
+     "subtitles": ["vi"]
+   }
+   ```
+2. Should return 200/201 with list of created showtimes
+3. Try with invalid date format to verify validation works
+4. Check logs see proper error messages
+
+**Notes for BE team**:
+- NestJS has `@nestjs/zod` package for Zod validation pipes
+- Need to apply validation to ALL endpoints that accept body data
+- Similar issue might exist on other POST/PATCH endpoints
+- Add comprehensive error logging to help debugging
+- Test microservice communication timeout (if movie-service is slow, calls might timeout and return generic errors)
+
+---
+
 ## Issue: Concessions Update Returns 500 Error (CRITICAL)
 
 **Status**: 🔴 BLOCKING — Admin cannot edit concession items

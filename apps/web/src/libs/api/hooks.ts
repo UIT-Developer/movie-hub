@@ -376,10 +376,10 @@ export const useShowtimes = (filters?: ShowtimeFiltersParams) => {
   });
 };
 
-export const useShowtime = (id: string) => {
+export const useShowtime = (id: string | null) => {
   return useQuery({
-    queryKey: queryKeys.showtimes.detail(id),
-    queryFn: () => showtimesApi.getById(id),
+    queryKey: queryKeys.showtimes.detail(id || ''),
+    queryFn: () => showtimesApi.getById(id!),
     enabled: !!id,
   });
 };
@@ -431,6 +431,22 @@ export const useBatchCreateShowtimes = () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.showtimes.lists() });
       toast.success('Showtimes created successfully');
     },
+    onError: (error: unknown) => {
+      // Log error for debugging
+      if (error instanceof Error) {
+        console.error('[useBatchCreateShowtimes] Error:', {
+          message: error.message,
+          stack: error.stack,
+        });
+      } else if (typeof error === 'object' && error !== null) {
+        const errObj = error as Record<string, unknown>;
+        console.error('[useBatchCreateShowtimes] Error:', {
+          message: errObj.message,
+          status: errObj.status,
+          response: errObj.response,
+        });
+      }
+    },
   });
 };
 
@@ -446,10 +462,10 @@ export const useMovieReleases = (params?: { cinemaId?: string; movieId?: string 
   });
 };
 
-export const useMovieRelease = (id: string) => {
+export const useMovieRelease = (id: string | null) => {
   return useQuery({
-    queryKey: queryKeys.movieReleases.detail(id),
-    queryFn: () => movieReleasesApi.getById(id),
+    queryKey: queryKeys.movieReleases.detail(id || ''),
+    queryFn: () => movieReleasesApi.getById(id!),
     enabled: !!id,
   });
 };
@@ -501,14 +517,32 @@ export const useCreateMovieRelease = () => {
     },
     onError: (error: unknown) => {
       // If error was wrapped by api-client, it may include status and responseData
-      const errAny = error as any;
-      const status = errAny?.status;
-      const responseData = errAny?.responseData;
+      const errAny = error as Record<string, unknown>;
+      const status = errAny.status as number | undefined;
+      const responseData = errAny.responseData as Record<string, unknown> | undefined;
+      const errors = responseData?.errors as Array<Record<string, string>> | undefined;
+
+      // Build detailed error message from validation errors
+      let detailMsg = '';
+      if (Array.isArray(errors) && errors.length > 0) {
+        const errorDetails = errors.map((e) => `${e.field || 'field'}: ${e.message || e.code || 'invalid'}`).join(', ');
+        detailMsg = `Validation: ${errorDetails}`;
+      } else if (responseData?.message) {
+        detailMsg = String(responseData.message);
+      }
 
       // Show concise toast with status, and log full details to console
-      const toastMsg = status ? `${errAny?.message} (status: ${status})` : errAny?.message || 'Failed to create movie release';
+      const toastMsg = detailMsg || (status ? `${String(errAny.message)} (status: ${status})` : String(errAny.message) || 'Failed to create movie release');
       toast.error(toastMsg);
-      console.error('[MovieRelease] create error details:', { status, responseData, raw: errAny?.raw || errAny });
+      
+      // Log everything for debugging
+      console.error('[MovieRelease] create error:', { 
+        status, 
+        message: errAny.message,
+        errors,
+        responseData, 
+        raw: errAny.raw || errAny 
+      });
     },
   });
 };

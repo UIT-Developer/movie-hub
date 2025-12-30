@@ -168,8 +168,54 @@ export default function BatchShowtimesPage() {
       return;
     }
 
+    // Validate date format (YYYY-MM-DD)
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!dateRegex.test(formData.startDate)) {
+      toast({
+        title: 'Validation Error',
+        description: 'Start date must be in YYYY-MM-DD format',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!dateRegex.test(formData.endDate)) {
+      toast({
+        title: 'Validation Error',
+        description: 'End date must be in YYYY-MM-DD format',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Validate time format (HH:mm)
+    const timeRegex = /^\d{2}:\d{2}$/;
+    for (const time of formData.timeSlots) {
+      if (!timeRegex.test(time)) {
+        toast({
+          title: 'Validation Error',
+          description: `Invalid time format: ${time}. Must be HH:mm`,
+          variant: 'destructive',
+        });
+        return;
+      }
+    }
+
+    // Validate date range
+    const startDate = new Date(formData.startDate);
+    const endDate = new Date(formData.endDate);
+    if (startDate > endDate) {
+      toast({
+        title: 'Validation Error',
+        description: 'Start date cannot be after end date',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     try {
       setLoading(true);
+      
       // Convert admin form shape to API request shape
       // BE expects startDate/endDate at root level, not in dateRange wrapper
       const apiRequest = {
@@ -177,15 +223,17 @@ export default function BatchShowtimesPage() {
         movieReleaseId: formData.movieReleaseId,
         cinemaId: formData.cinemaId,
         hallId: formData.hallId,
-        startDate: formData.startDate,      // Unwrap from dateRange
-        endDate: formData.endDate,          // Unwrap from dateRange
-        timeSlots: formData.timeSlots,
+        startDate: formData.startDate,      // String in YYYY-MM-DD format
+        endDate: formData.endDate,          // String in YYYY-MM-DD format
+        timeSlots: formData.timeSlots,      // Array of HH:mm strings
         repeatType: formData.repeatType,    // Add required field for BE
         weekdays: formData.weekdays || [],  // Add required field for BE
         format: formData.format as unknown as ApiShowtimeFormat,
         language: formData.language,
         subtitles: formData.subtitles || [],
       };
+
+      console.log('[BatchShowtimes] Submitting request with data:', apiRequest);
 
       const response = await batchCreateMutation.mutateAsync(apiRequest as ApiBatchCreateRequest);
       // The backend returns an array of created showtimes (Showtime[]). Normalize to BatchCreateResponse
@@ -222,8 +270,49 @@ export default function BatchShowtimesPage() {
         title: 'Success',
         description: `Created ${normalized.createdCount} showtimes`,
       });
-    } catch {
-      // Error toast already shown by mutation hook
+    } catch (error) {
+      console.error('[BatchShowtimes] Submission error:', error);
+      
+      // Extract error message from different error formats
+      let errorMessage = 'Failed to create showtimes';
+      let statusCode: number | undefined;
+      
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (typeof error === 'object' && error !== null) {
+        const err = error as any;
+        
+        // Check for API response error
+        if (err.response?.data?.message) {
+          errorMessage = err.response.data.message;
+          statusCode = err.response?.status;
+        } else if (err.message) {
+          errorMessage = err.message;
+        }
+        
+        // Log detailed error info for debugging
+        console.error('[BatchShowtimes] Detailed error info:', {
+          statusCode: err.response?.status,
+          errorCode: err.code,
+          message: err.message,
+          responseData: err.response?.data,
+          requestData: formData,
+        });
+      }
+      
+      // Show detailed error to user
+      let displayMessage = errorMessage;
+      if (statusCode === 400) {
+        displayMessage = `Validation error: ${errorMessage}`;
+      } else if (statusCode === 500) {
+        displayMessage = `Server error (500): ${errorMessage}. Check browser console for more details.`;
+      }
+      
+      toast({
+        title: 'Error',
+        description: displayMessage,
+        variant: 'destructive',
+      });
     } finally {
       setLoading(false);
     }

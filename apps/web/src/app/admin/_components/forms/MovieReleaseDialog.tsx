@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, startTransition } from 'react';
+import { Calendar as CalendarIcon } from 'lucide-react';
 import {
   Dialog,
   DialogContent,

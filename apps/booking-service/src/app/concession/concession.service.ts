@@ -126,17 +126,17 @@ export class ConcessionService {
       data: {
         ...(dto.name !== undefined && { name: dto.name }),
         ...(dto.nameEn !== undefined && { name_en: dto.nameEn }),
-        ...(dto.description !== undefined && { description: dto.description }),
+        ...('description' in dto && { description: dto.description }),
         ...(dto.category !== undefined && { category: dto.category }),
         ...(dto.price !== undefined && { price: dto.price }),
         ...(dto.imageUrl !== undefined && { image_url: dto.imageUrl }),
         ...(dto.available !== undefined && { available: dto.available }),
         ...(dto.inventory !== undefined && { inventory: dto.inventory }),
         ...(dto.cinemaId !== undefined && { cinema_id: dto.cinemaId }),
-        ...(dto.nutritionInfo !== undefined && {
+        ...('nutritionInfo' in dto && {
           nutrition_info: dto.nutritionInfo,
         }),
-        ...(dto.allergens !== undefined && { allergens: dto.allergens }),
+        ...('allergens' in dto && { allergens: dto.allergens }),
       },
     });
 

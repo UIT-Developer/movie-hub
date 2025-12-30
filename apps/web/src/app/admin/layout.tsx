@@ -32,25 +32,62 @@ import { useClerk, useUser } from '@clerk/nextjs';
 import { RequireAdminClerkAuth } from '@/components/require-admin-clerk-auth';
 import PageWrapper from '@/components/providers/page-wrapper';
 
-const menuItems = [
-  { icon: LayoutDashboard, label: 'Dashboard', href: '/admin', disabled: false },
-  { icon: Building2, label: 'Cinemas', href: '/admin/cinemas', disabled: false },
-  { icon: DoorOpen, label: 'Halls', href: '/admin/halls', disabled: false },
-  { icon: Wrench, label: 'Seat Status', href: '/admin/seat-status', disabled: false },
-  { icon: Film, label: 'Movies', href: '/admin/movies', disabled: false },
-  { icon: Tag, label: 'Genres', href: '/admin/genres', disabled: false },
-  { icon: Calendar, label: 'Movie Releases', href: '/admin/movie-releases', disabled: false },
-  { icon: Calendar, label: 'Showtimes', href: '/admin/showtimes', disabled: false },
-  { icon: Eye, label: 'Showtime Seats', href: '/admin/showtime-seats', disabled: false },
-  { icon: Zap, label: 'Batch Showtimes', href: '/admin/batch-showtimes', disabled: false },
-  { icon: DollarSign, label: 'Ticket Pricing', href: '/admin/ticket-pricing', disabled: false },
-  { icon: ShoppingBag, label: 'Concessions', href: '/admin/concessions', disabled: false },
-  { icon: Ticket, label: 'Reservations', href: '/admin/reservations', disabled: false },
-  { icon: MessageSquare, label: 'Reviews', href: '/admin/reviews', disabled: false },
-  { icon: Users, label: 'Staff', href: '/admin/staff', disabled: false },
-  { icon: BarChart3, label: 'Reports', href: '/admin/reports', disabled: false },
-  { icon: Settings, label: 'Settings', href: '/admin/settings', disabled: false },
+const menuSections = [
+  {
+    label: 'Main',
+    items: [
+      { icon: LayoutDashboard, label: 'Dashboard', href: '/admin', disabled: false },
+    ]
+  },
+  {
+    label: 'Facilities & Infrastructure',
+    items: [
+      { icon: Building2, label: 'Cinemas', href: '/admin/cinemas', disabled: false },
+      { icon: DoorOpen, label: 'Halls', href: '/admin/halls', disabled: false },
+      { icon: Wrench, label: 'Seat Status', href: '/admin/seat-status', disabled: false },
+    ]
+  },
+  {
+    label: 'Content Management',
+    items: [
+      { icon: Film, label: 'Movies', href: '/admin/movies', disabled: false },
+      { icon: Tag, label: 'Genres', href: '/admin/genres', disabled: false },
+      { icon: Calendar, label: 'Movie Releases', href: '/admin/movie-releases', disabled: false },
+    ]
+  },
+  {
+    label: 'Showtime Management',
+    items: [
+      { icon: Calendar, label: 'Showtimes', href: '/admin/showtimes', disabled: false },
+      { icon: Eye, label: 'Showtime Seats', href: '/admin/showtime-seats', disabled: false },
+      { icon: Zap, label: 'Batch Showtimes', href: '/admin/batch-showtimes', disabled: false },
+    ]
+  },
+  {
+    label: 'Revenue & Sales',
+    items: [
+      { icon: DollarSign, label: 'Ticket Pricing', href: '/admin/ticket-pricing', disabled: false },
+      { icon: ShoppingBag, label: 'Concessions', href: '/admin/concessions', disabled: false },
+      { icon: Ticket, label: 'Reservations', href: '/admin/reservations', disabled: false },
+    ]
+  },
+  {
+    label: 'Customer Relations',
+    items: [
+      { icon: MessageSquare, label: 'Reviews', href: '/admin/reviews', disabled: false },
+    ]
+  },
+  {
+    label: 'Administration',
+    items: [
+      { icon: Users, label: 'Staff', href: '/admin/staff', disabled: false },
+      { icon: BarChart3, label: 'Reports', href: '/admin/reports', disabled: false },
+      { icon: Settings, label: 'Settings', href: '/admin/settings', disabled: false },
+    ]
+  },
 ];
+
+const menuItems = menuSections.flatMap((section) => section.items);
 
 export default function AdminLayout({
   children,
@@ -100,76 +137,95 @@ function AdminLayoutContent({
       {/* Sidebar */}
       <aside
         className={cn(
-          'fixed left-0 top-0 z-40 h-screen transition-all duration-300 bg-white border-r',
+          'fixed left-0 top-0 z-40 h-screen transition-all duration-300 bg-gradient-to-b from-slate-900 to-slate-800 border-r border-slate-700',
           sidebarOpen ? 'w-64' : 'w-20'
         )}
       >
-        <div className="flex h-16 items-center justify-between px-4 border-b">
+        {/* Header */}
+        <div className="flex h-16 items-center justify-between px-4 border-b border-slate-700">
           {sidebarOpen && (
             <Link href="/admin">
-              <h1 className="text-xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-                Cinema Admin
-              </h1>
+              <div className="flex items-center gap-2">
+                <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center text-white font-bold text-sm">
+                  🎬
+                </div>
+                <h1 className="text-lg font-bold bg-gradient-to-r from-purple-300 to-pink-300 bg-clip-text text-transparent">
+                  Cinema
+                </h1>
+              </div>
             </Link>
           )}
           <Button
             variant="ghost"
             size="icon"
+            className="text-slate-300 hover:text-white hover:bg-slate-700"
             onClick={() => setSidebarOpen(!sidebarOpen)}
           >
             <Menu className="h-5 w-5" />
           </Button>
         </div>
 
-        <ScrollArea className="h-[calc(100vh-4rem)] px-3 py-4">
-          <nav className="space-y-1">
-            {menuItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = pathname === item.href || 
-                              (item.href !== '/admin' && pathname.startsWith(item.href + '/'));
-              
-              return (
-                <Link 
-                  key={item.href} 
-                  href={item.disabled ? '#' : item.href}
-                  onClick={(e) => item.disabled && e.preventDefault()}
-                >
-                  <div
-                    className={cn(
-                      'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all',
-                      item.disabled 
-                        ? 'bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 cursor-not-allowed'
-                        : 'hover:bg-purple-50 hover:text-purple-600 cursor-pointer',
-                      isActive && !item.disabled
-                        ? 'bg-gradient-to-r from-purple-50 to-pink-50 text-purple-600 shadow-sm'
-                        : !item.disabled && 'text-gray-700'
-                    )}
-                  >
-                    <Icon className="h-5 w-5 flex-shrink-0" />
-                    {sidebarOpen && (
-                      <div className="flex items-center gap-2 flex-1">
-                        <span>{item.label}</span>
-                        {item.disabled && (
-                          <span className="text-[10px] bg-amber-200 text-amber-800 px-1.5 py-0.5 rounded font-semibold">
-                            NO API
-                          </span>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </Link>
-              );
-            })}
+        <ScrollArea className="h-[calc(100vh-4rem)]">
+          <nav className="px-3 py-6 space-y-6">
+            {menuSections.map((section, idx) => (
+              <div key={`section-${idx}`}>
+                {sidebarOpen && (
+                  <h3 className="px-3 mb-3 text-xs font-bold text-slate-400 uppercase tracking-widest">
+                    {section.label}
+                  </h3>
+                )}
+                <div className="space-y-1">
+                  {section.items.map((item) => {
+                    const Icon = item.icon;
+                    const isActive = pathname === item.href || 
+                                    (item.href !== '/admin' && pathname.startsWith(item.href + '/'));
+                    
+                    return (
+                      <Link 
+                        key={item.href} 
+                        href={item.disabled ? '#' : item.href}
+                        onClick={(e) => item.disabled && e.preventDefault()}
+                        className="block"
+                      >
+                        <div
+                          className={cn(
+                            'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200',
+                            item.disabled 
+                              ? 'bg-amber-900/20 text-amber-300 border border-amber-800/30 hover:bg-amber-900/30 cursor-not-allowed'
+                              : isActive
+                              ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg shadow-purple-500/30'
+                              : 'text-slate-300 hover:text-white hover:bg-slate-700/50 cursor-pointer'
+                          )}
+                        >
+                          <Icon className="h-5 w-5 flex-shrink-0" />
+                          {sidebarOpen && (
+                            <div className="flex items-center gap-2 flex-1 min-w-0">
+                              <span className="truncate">{item.label}</span>
+                              {item.disabled && (
+                                <span className="text-[10px] bg-amber-800 text-amber-100 px-1.5 py-0.5 rounded font-bold flex-shrink-0">
+                                  NO API
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
           </nav>
 
-          <div className="mt-6 pt-6 border-t">
+          {/* Logout Button */}
+          <div className="px-3 py-6 border-t border-slate-700">
             <Button
               variant="ghost"
-              className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
+              className="w-full justify-start text-red-400 hover:text-red-300 hover:bg-red-950/30"
               onClick={handleLogout}
             >
-              <LogOut className="h-5 w-5 mr-3" />
-              {sidebarOpen && <span>Logout</span>}
+              <LogOut className="h-5 w-5 flex-shrink-0" />
+              {sidebarOpen && <span className="ml-3">Logout</span>}
             </Button>
           </div>
         </ScrollArea>

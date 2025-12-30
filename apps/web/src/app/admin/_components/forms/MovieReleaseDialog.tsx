@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, startTransition } from 'react';
-import { Calendar as CalendarIcon } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -23,7 +22,7 @@ import {
 import { Button } from '@movie-hub/shacdn-ui/button';
 import { useToast } from '../../_libs/use-toast';
 import { useCreateMovieRelease, useUpdateMovieRelease, useMovieRelease } from '@/libs/api';
-import type { Movie, MovieRelease } from '@/libs/api/types';
+import type { Movie, MovieRelease, CreateMovieReleaseRequest } from '@/libs/api/types';
 
 // Helper to validate UUID format
 const isValidUUID = (id: string): boolean => {
@@ -145,7 +144,12 @@ export default function MovieReleaseDialog({
         basePayload.note = formData.note;
       }
 
-      const createPayload = { movieId: formData.movieId, ...basePayload };
+      const createPayload: CreateMovieReleaseRequest = {
+        movieId: formData.movieId,
+        startDate: basePayload.startDate || '',
+        endDate: basePayload.endDate || '',
+        note: basePayload.note,
+      };
 
       // Detailed debug log: inspect payload before submit
       console.log('[MovieReleaseDialog] Form data:', formData);
@@ -201,7 +205,7 @@ export default function MovieReleaseDialog({
             ) : (
             <Select
               value={selectedId}
-              onValueChange={(value) => {
+              onValueChange={(value: string) => {
                 // Use startTransition to schedule a low-priority state update
                 // which avoids synchronous unmounts of portal children
                 startTransition(() => {
@@ -238,7 +242,7 @@ export default function MovieReleaseDialog({
                 id="startDate"
                 type="date"
                 value={formData.startDate}
-                onChange={(e) =>
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                   setFormData({ ...formData, startDate: e.target.value })
                 }
               />
@@ -249,7 +253,7 @@ export default function MovieReleaseDialog({
                 id="endDate"
                 type="date"
                 value={formData.endDate}
-                onChange={(e) =>
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                   setFormData({ ...formData, endDate: e.target.value })
                 }
               />
@@ -261,7 +265,7 @@ export default function MovieReleaseDialog({
             <Textarea
               id="note"
               value={formData.note}
-              onChange={(e) =>
+              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
                 setFormData({ ...formData, note: e.target.value })
               }
               placeholder="e.g., Phát hành dịp Tết Nguyên Đán 2025"

@@ -26,6 +26,7 @@ import type {
   UpdateShowtimeRequest,
   ShowtimeFiltersParams,
   BatchCreateShowtimesRequest,
+  MovieRelease,
   CreateMovieReleaseRequest,
   UpdateMovieReleaseRequest,
   UpdateTicketPricingRequest,
@@ -379,7 +380,10 @@ export const useShowtimes = (filters?: ShowtimeFiltersParams) => {
 export const useShowtime = (id: string | null) => {
   return useQuery({
     queryKey: queryKeys.showtimes.detail(id || ''),
-    queryFn: () => showtimesApi.getById(id!),
+    queryFn: () => {
+      if (!id) throw new Error('ID is required');
+      return showtimesApi.getById(id);
+    },
     enabled: !!id,
   });
 };
@@ -432,20 +436,36 @@ export const useBatchCreateShowtimes = () => {
       toast.success('Showtimes created successfully');
     },
     onError: (error: unknown) => {
-      // Log error for debugging
+      // Properly extract error details from various error types
+      let errorInfo: Record<string, unknown> = {};
+      
       if (error instanceof Error) {
-        console.error('[useBatchCreateShowtimes] Error:', {
+        errorInfo = {
           message: error.message,
-          stack: error.stack,
-        });
+          name: error.name,
+        };
+        
+        // Check if it's an axios error
+        const axiosErr = error as unknown as Record<string, unknown>;
+        if (axiosErr.response && typeof axiosErr.response === 'object') {
+          const resp = axiosErr.response as Record<string, unknown>;
+          errorInfo.status = resp.status;
+          errorInfo.data = resp.data;
+          if (resp.data && typeof resp.data === 'object') {
+            const respData = resp.data as Record<string, unknown>;
+            if (respData.message && typeof respData.message === 'string') {
+              errorInfo.message = respData.message;
+            }
+          }
+        } else if (axiosErr.request) {
+          errorInfo.message = 'No response from server';
+          errorInfo.request = true;
+        }
       } else if (typeof error === 'object' && error !== null) {
-        const errObj = error as Record<string, unknown>;
-        console.error('[useBatchCreateShowtimes] Error:', {
-          message: errObj.message,
-          status: errObj.status,
-          response: errObj.response,
-        });
+        errorInfo = error as Record<string, unknown>;
       }
+      
+      console.error('[useBatchCreateShowtimes] Mutation error:', errorInfo);
     },
   });
 };
@@ -465,7 +485,10 @@ export const useMovieReleases = (params?: { cinemaId?: string; movieId?: string 
 export const useMovieRelease = (id: string | null) => {
   return useQuery({
     queryKey: queryKeys.movieReleases.detail(id || ''),
-    queryFn: () => movieReleasesApi.getById(id!),
+    queryFn: () => {
+      if (!id) throw new Error('ID is required');
+      return movieReleasesApi.getById(id);
+    },
     enabled: !!id,
   });
 };
@@ -475,38 +498,38 @@ export const useCreateMovieRelease = () => {
 
   return useMutation({
     mutationFn: (data: CreateMovieReleaseRequest) => movieReleasesApi.create(data),
-    onSuccess: async (created, variables) => {
+    onSuccess: async (created, variables: CreateMovieReleaseRequest) => {
       // Invalidate general lists, then try to fetch releases for the affected movie
       queryClient.invalidateQueries({ queryKey: queryKeys.movieReleases.lists() });
       toast.success('Movie release created successfully');
 
       try {
-        const movieId = (variables as any)?.movieId;
+        const movieId = variables?.movieId;
         if (movieId) {
           const releases = await movieReleasesApi.getAll({ movieId });
 
           // Try to find the created release by id or by matching dates
-          const createdId = (created as any)?.id;
+          const createdId = (created as unknown as Record<string, unknown>)?.id as string | undefined;
           const found = Array.isArray(releases)
-            ? releases.find((r: any) => r.id === createdId) || releases.find((r: any) => r.startDate === (created as any)?.startDate && r.endDate === (created as any)?.endDate)
+            ? releases.find((r: MovieRelease) => r.id === createdId) || releases.find((r: MovieRelease) => r.startDate === (created as unknown as Record<string, unknown>)?.startDate && r.endDate === (created as unknown as Record<string, unknown>)?.endDate)
             : null;
 
           if (found) {
             // Update list cache for the specific movieId list key
             const listKey = queryKeys.movieReleases.list({ movieId });
-            queryClient.setQueryData(listKey, (old: any) => {
+            queryClient.setQueryData(listKey, (old: unknown) => {
               // If we don't have an old array, use fetched releases
               if (!Array.isArray(old)) return releases;
               // Merge ensuring dedup by id
-              const byId = new Map<string, any>();
+              const byId = new Map<string, MovieRelease>();
               for (const it of [...old, ...releases]) {
-                if (it && it.id) byId.set(it.id, it);
+                if (it && (it as unknown as MovieRelease).id) byId.set((it as unknown as MovieRelease).id, it as unknown as MovieRelease);
               }
               return Array.from(byId.values());
             });
 
             // Ensure detail cache exists for the created release
-            if (found.id) {
+            if ((found as MovieRelease).id) {
               queryClient.setQueryData(queryKeys.movieReleases.detail(found.id), found);
             }
           }
@@ -560,20 +583,20 @@ export const useUpdateMovieRelease = () => {
 
       try {
         // After update, refetch releases for the movie and update cache for the updated item
-        const movieId = (variables as any)?.data?.movieId;
+        const movieId = (variables.data as Record<string, unknown>)?.movieId as string | undefined;
         const updatedId = variables.id;
         if (movieId) {
           const releases = await movieReleasesApi.getAll({ movieId });
           if (Array.isArray(releases)) {
-            const found = releases.find((r: any) => r.id === updatedId);
+            const found = releases.find((r: MovieRelease) => r.id === updatedId);
             if (found) {
               // Update specific list cache and detail cache
               const listKey = queryKeys.movieReleases.list({ movieId });
-              queryClient.setQueryData(listKey, (old: any) => {
+              queryClient.setQueryData(listKey, (old: unknown) => {
                 if (!Array.isArray(old)) return releases;
-                const byId = new Map<string, any>();
+                const byId = new Map<string, MovieRelease>();
                 for (const it of [...old, ...releases]) {
-                  if (it && it.id) byId.set(it.id, it);
+                  if (it && (it as MovieRelease).id) byId.set((it as MovieRelease).id, it as MovieRelease);
                 }
                 return Array.from(byId.values());
               });
@@ -587,12 +610,12 @@ export const useUpdateMovieRelease = () => {
       }
     },
     onError: (error: unknown) => {
-      const errAny = error as any;
-      const status = errAny?.status;
-      const responseData = errAny?.responseData;
-      const toastMsg = status ? `${errAny?.message} (status: ${status})` : errAny?.message || 'Failed to update movie release';
+      const errInfo = error as Record<string, unknown>;
+      const status = errInfo?.status;
+      const responseData = errInfo?.responseData;
+      const toastMsg = status ? `${errInfo?.message} (status: ${status})` : (errInfo?.message as string) || 'Failed to update movie release';
       toast.error(toastMsg);
-      console.error('[MovieRelease] update error details:', { status, responseData, raw: errAny?.raw || errAny });
+      console.error('[MovieRelease] update error details:', { status, responseData, raw: (errInfo?.raw || errInfo) });
     },
   });
 };

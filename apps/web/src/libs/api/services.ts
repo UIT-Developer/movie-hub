@@ -11,7 +11,6 @@ import type {
   CreateCinemaRequest,
   UpdateCinemaRequest,
   CinemaFiltersParams,
-  GetCinemasResponse,
   Hall,
   CreateHallRequest,
   UpdateHallRequest,
@@ -22,7 +21,6 @@ import type {
   UpdateShowtimeRequest,
   ShowtimeFiltersParams,
   BatchCreateShowtimesRequest,
-  ShowtimeSeat,
   ShowtimeSeatResponse,
   MovieRelease,
   CreateMovieReleaseRequest,
@@ -141,7 +139,7 @@ export const hallsApi = {
             cinemaId: hall.cinemaId || cinema.id,
           }));
           result[cinema.id] = { cinema, halls: hallsWithCinemaId };
-        } catch (error) {
+        } catch {
           // Skip if error fetching halls for this cinema
           result[cinema.id] = { cinema, halls: [] };
         }
@@ -232,7 +230,7 @@ export const movieReleasesApi = {
     
     // Otherwise, fetch all movies and then fetch releases for each
     // (Workaround for missing GET /api/v1/movie-releases endpoint)
-    let movies: any[] = [];
+    let movies: Movie[] = [];
     
     try {
       movies = await moviesApi.getAll();
@@ -259,7 +257,7 @@ export const movieReleasesApi = {
           movie, // Include full movie object
         }));
         allReleases.push(...enrichedReleases);
-      } catch (error) {
+      } catch {
         // Skip if error fetching for this movie
         console.warn(`[MovieReleasesAPI] Failed to fetch releases for movie ${movie.id}`);
       }
@@ -334,12 +332,12 @@ export const bookingsApi = {
   // Admin: Get all bookings with filters
   getAll: (params?: BookingFiltersParams) => {
     // Clean params to remove undefined, empty strings, and "all" sentinel values
-    const cleanParams: Record<string, any> = {};
+    const cleanParams: Record<string, string | number | boolean> = {};
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
         // Skip undefined, null, empty strings, and "all" sentinel values
         if (value !== undefined && value !== null && value !== '' && value !== 'all') {
-          cleanParams[key] = value;
+          cleanParams[key] = value as string | number | boolean;
         }
       });
     }

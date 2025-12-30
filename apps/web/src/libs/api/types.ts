@@ -749,7 +749,7 @@ export interface Concession {
   available: boolean;
   inventory?: number;
   cinemaId?: string;
-  nutritionInfo?: Record<string, any>;
+  nutritionInfo?: Record<string, string | number | boolean>;
   allergens?: string[];
   createdAt?: string | Date;
   updatedAt?: string | Date;
@@ -765,7 +765,7 @@ export interface CreateConcessionRequest {
   available?: boolean;
   inventory?: number;
   cinemaId?: string;
-  nutritionInfo?: Record<string, any>;
+  nutritionInfo?: Record<string, string | number | boolean>;
   allergens?: string[];
 }
 
@@ -779,7 +779,7 @@ export interface UpdateConcessionRequest {
   available?: boolean;
   inventory?: number;
   cinemaId?: string;
-  nutritionInfo?: Record<string, any>;
+  nutritionInfo?: Record<string, string | number | boolean>;
   allergens?: string[];
 }
 

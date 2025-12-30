@@ -266,8 +266,28 @@ export const movieReleasesApi = {
     return allReleases;
   },
 
-  getById: (id: string) =>
-    api.get<MovieRelease>(`/api/v1/movie-releases/${id}`).catch(() => null),
+  getById: async (id: string): Promise<MovieRelease | null> => {
+    try {
+      const release = await api.get<MovieRelease>(`/api/v1/movie-releases/${id}`);
+      
+      // Enrich with movie data if movieId is present and movie is not already loaded
+      if (release && release.movieId && !release.movie) {
+        try {
+          const movie = await moviesApi.getById(release.movieId);
+          if (movie) {
+            return { ...release, movie };
+          }
+        } catch {
+          // If movie fetch fails, return release without movie data
+          console.warn(`[MovieReleasesAPI] Failed to fetch movie details for release ${id}`);
+        }
+      }
+      
+      return release;
+    } catch {
+      return null;
+    }
+  },
 
   create: (data: CreateMovieReleaseRequest) =>
     api.post<MovieRelease>('/api/v1/movie-releases', data),

@@ -432,10 +432,10 @@ export interface MovieRelease {
 }
 
 export interface CreateMovieReleaseRequest {
-  movieId?: string; // Optional per BE DTO
+  movieId: string; // REQUIRED - matching BE
   cinemaId?: string; // Backend schema doesn't have cinemaId in create request
   startDate: string | Date;
-  endDate: string | Date;
+  endDate?: string | Date; // OPTIONAL - matching BE
   note?: string; // Optional per BE DTO
 }
 

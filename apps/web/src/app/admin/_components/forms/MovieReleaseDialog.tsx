@@ -22,7 +22,8 @@ import {
 import { Button } from '@movie-hub/shacdn-ui/button';
 import { useToast } from '../../_libs/use-toast';
 import { useCreateMovieRelease, useUpdateMovieRelease, useMovieRelease } from '@/libs/api';
-import type { Movie, MovieRelease, CreateMovieReleaseRequest } from '@/libs/api/types';
+import { moviesApi } from '@/libs/api/services';
+import type { Movie, MovieRelease, CreateMovieReleaseRequest, UpdateMovieReleaseRequest } from '@/libs/api/types';
 
 // Helper to validate UUID format
 const isValidUUID = (id: string): boolean => {
@@ -57,7 +58,33 @@ export default function MovieReleaseDialog({
     endDate: '',
     note: '',
   });
+  // Track enriched movie data separately to ensure consistent display
+  const [enrichedMovie, setEnrichedMovie] = useState<Movie | null>(null);
   const { toast } = useToast();
+
+  // When fetchedReleaseDetail changes and has movieId, fetch the full movie details if not already loaded
+  useEffect(() => {
+    if (fetchedReleaseDetail?.movieId && !fetchedReleaseDetail?.movie && !enrichedMovie) {
+      // Fetch movie details to enrich the release
+      (async () => {
+        try {
+          const movie = await moviesApi.getById(fetchedReleaseDetail.movieId);
+          if (movie) {
+            setEnrichedMovie(movie);
+          }
+        } catch (error) {
+          console.warn('[MovieReleaseDialog] Failed to fetch movie details:', error);
+        }
+      })();
+    }
+  }, [fetchedReleaseDetail?.movieId, fetchedReleaseDetail?.movie, enrichedMovie]);
+
+  // Reset enriched movie when dialog closes or editingRelease changes
+  useEffect(() => {
+    if (!open || !editingRelease) {
+      setEnrichedMovie(null);
+    }
+  }, [open, editingRelease]);
 
   useEffect(() => {
     if (fullReleaseDetail) {
@@ -110,11 +137,20 @@ export default function MovieReleaseDialog({
     });
   };
 
+  // Calculate selectedMovie: prioritize enrichedMovie -> fullReleaseDetail.movie -> movies list lookup
+  const selectedId = formData.movieId || fullReleaseDetail?.movieId || '';
+  const selectedMovie = enrichedMovie || fullReleaseDetail?.movie || movies.find((m) => m.id === selectedId);
+  const selectedLabel = selectedMovie
+    ? `${selectedMovie.title} (${selectedMovie.runtime} mins)`
+    : (selectedId ? `Movie (${selectedId})` : undefined);
+  const isMovieDisabled = !!preSelectedMovieId;
+
   const handleSubmit = async () => {
-    if (!formData.movieId || !formData.startDate || !formData.endDate) {
+    // Validate: movieId and startDate are required, endDate is optional
+    if (!formData.movieId || !formData.startDate) {
       toast({
         title: 'Validation Error',
-        description: 'Please fill in all required fields',
+        description: 'Please fill in all required fields: Movie, Start Date',
         variant: 'destructive',
       });
       return;
@@ -133,38 +169,38 @@ export default function MovieReleaseDialog({
 
     try {
       // Build payloads: create requires movieId, update should not change relation
-      const basePayload: Record<string, string | undefined> = {
-        // Send ISO timestamps to avoid backend parsing ambiguity
-        startDate: new Date(formData.startDate).toISOString(),
-        endDate: new Date(formData.endDate).toISOString(),
-      };
-
-      // Only add note if it has value (BE schema is strict, rejects undefined)
-      if (formData.note && formData.note.trim()) {
-        basePayload.note = formData.note;
-      }
+      const startDateISO = new Date(formData.startDate).toISOString();
+      const endDateISO = formData.endDate ? new Date(formData.endDate).toISOString() : undefined;
+      const noteValue = formData.note && formData.note.trim() ? formData.note : undefined;
 
       const createPayload: CreateMovieReleaseRequest = {
         movieId: formData.movieId,
-        startDate: basePayload.startDate || '',
-        endDate: basePayload.endDate || '',
-        note: basePayload.note,
+        startDate: startDateISO,
+        ...(endDateISO && { endDate: endDateISO }),
+        ...(noteValue && { note: noteValue }),
+      };
+
+      // For update, include movieId (BE requires it for validation)
+      const updatePayload: UpdateMovieReleaseRequest = {
+        movieId: formData.movieId,
+        startDate: startDateISO,
+        ...(endDateISO && { endDate: endDateISO }),
+        ...(noteValue && { note: noteValue }),
       };
 
       // Detailed debug log: inspect payload before submit
       console.log('[MovieReleaseDialog] Form data:', formData);
       console.log('[MovieReleaseDialog] Parsed dates:');
-      console.log('  startDate input:', formData.startDate);
-      console.log('  startDate ISO:', basePayload.startDate);
+      console.log('  startDate ISO:', startDateISO);
       console.log('  endDate input:', formData.endDate);
-      console.log('  endDate ISO:', basePayload.endDate);
-      console.log('[MovieReleaseDialog] Note field:', formData.note, '-> will include:', !!basePayload.note);
+      console.log('  endDate ISO:', endDateISO);
+      console.log('[MovieReleaseDialog] Note field:', formData.note, '-> will include:', !!noteValue);
       console.log('[MovieReleaseDialog] Final payload (create):', JSON.stringify(createPayload, null, 2));
-      console.log('[MovieReleaseDialog] Final payload (update):', JSON.stringify(basePayload, null, 2));
+      console.log('[MovieReleaseDialog] Final payload (update):', JSON.stringify(updatePayload, null, 2));
 
       if (fullReleaseDetail) {
-        // For update, omit movieId to avoid backend validation rejecting relation changes
-        await updateMovieRelease.mutateAsync({ id: fullReleaseDetail.id, data: basePayload });
+        // For update, include all fields including movieId
+        await updateMovieRelease.mutateAsync({ id: fullReleaseDetail.id, data: updatePayload });
       } else {
         console.log('[MovieReleaseDialog] Sending CREATE request with:', createPayload);
         await createMovieRelease.mutateAsync(createPayload);
@@ -178,13 +214,6 @@ export default function MovieReleaseDialog({
       // Error toast already shown by mutation hooks
     }
   };
-
-  const selectedId = formData.movieId || fullReleaseDetail?.movieId || '';
-  const selectedMovie = movies.find((m) => m.id === selectedId) || fullReleaseDetail?.movie;
-  const selectedLabel = selectedMovie
-    ? `${selectedMovie.title} (${selectedMovie.runtime} mins)`
-    : (selectedId ? `Movie (${selectedId})` : undefined);
-  const isMovieDisabled = !!preSelectedMovieId;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -248,7 +277,7 @@ export default function MovieReleaseDialog({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="endDate">End Date *</Label>
+              <Label htmlFor="endDate">End Date (Optional)</Label>
               <Input
                 id="endDate"
                 type="date"
@@ -285,7 +314,7 @@ export default function MovieReleaseDialog({
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={!formData.movieId || !formData.startDate || !formData.endDate || (movies.length === 0 && !fullReleaseDetail)}
+            disabled={!formData.movieId || !formData.startDate || (movies.length === 0 && !fullReleaseDetail)}
             className="bg-gradient-to-r from-purple-600 to-pink-600 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {editingRelease ? 'Update Release' : 'Create Release'}

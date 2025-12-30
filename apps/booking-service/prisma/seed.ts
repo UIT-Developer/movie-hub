@@ -1,11 +1,41 @@
-import { PrismaClient, BookingStatus, PaymentStatus, PaymentMethod, TicketStatus, ConcessionCategory, PromotionType, LoyaltyTier, LoyaltyTransactionType } from '../generated/prisma';
+import { createHash } from 'crypto';
+import {
+  PrismaClient,
+  BookingStatus,
+  PaymentStatus,
+  PaymentMethod,
+  TicketStatus,
+  ConcessionCategory,
+  PromotionType,
+  LoyaltyTier,
+  LoyaltyTransactionType,
+  RefundStatus,
+} from '../generated/prisma';
 
 const prisma = new PrismaClient();
+
+const toUuid = (seed: string) => {
+  const h = createHash('md5').update(seed).digest('hex');
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20, 32)}`;
+};
+
+const refs = {
+  showtime: toUuid('bbbb1111-0000-0000-0000-000000000001-2025-12-30-18:30-11111111-1111-1111-1111-111111111111'),
+  seatA1: toUuid('seat-bbbb1111-0000-0000-0000-000000000001-A-1'),
+  seatA2: toUuid('seat-bbbb1111-0000-0000-0000-000000000001-A-2'),
+  seatB1: toUuid('seat-bbbb1111-0000-0000-0000-000000000002-B-1'),
+  booking1: toUuid('booking-dune2-1'),
+  booking2: toUuid('booking-insideout2-1'),
+  users: {
+    admin: 'user-admin-001',
+    customer1: 'user-customer-001',
+    customer2: 'user-customer-002',
+  },
+};
 
 async function main() {
   console.log('🌱 Seeding Booking Service database...');
 
-  // Clear existing data in correct order
   await prisma.loyaltyTransactions.deleteMany();
   await prisma.loyaltyAccounts.deleteMany();
   await prisma.refunds.deleteMany();
@@ -16,262 +46,216 @@ async function main() {
   await prisma.promotions.deleteMany();
   await prisma.concessions.deleteMany();
 
-  // Create Concessions
   const concessions = [
     {
       name: 'Bắp rang bơ lớn',
       name_en: 'Large Popcorn',
-      description: 'Bắp rang bơ thơm ngon, kích cỡ lớn',
+      description: 'Bắp rang bơ thơm, size lớn',
       category: ConcessionCategory.FOOD,
       price: 60000,
-      image_url: 'https://example.com/popcorn-large.jpg',
+      image_url: 'https://image.tmdb.org/t/p/w500/5xoQ94rRB4dq2YCPo11PLff0Eno.jpg',
       available: true,
-      inventory: 100,
-      allergens: ['Butter', 'Corn'],
-    },
-    {
-      name: 'Bắp rang bơ vừa',
-      name_en: 'Medium Popcorn',
-      description: 'Bắp rang bơ thơm ngon, kích cỡ vừa',
-      category: ConcessionCategory.FOOD,
-      price: 45000,
-      image_url: 'https://example.com/popcorn-medium.jpg',
-      available: true,
-      inventory: 150,
+      inventory: 120,
       allergens: ['Butter', 'Corn'],
     },
     {
       name: 'Coca Cola lớn',
       name_en: 'Large Coca Cola',
-      description: 'Nước ngọt Coca Cola size lớn',
+      description: 'Nước ngọt Coca Cola ly lớn',
       category: ConcessionCategory.DRINK,
       price: 40000,
-      image_url: 'https://example.com/coke-large.jpg',
+      image_url: 'https://image.tmdb.org/t/p/w500/egWLRPbiEM5Qn2ATqNn7qY5T2bQ.jpg',
       available: true,
       inventory: 200,
       allergens: [],
     },
     {
-      name: 'Combo 1 - Bắp + Nước',
-      name_en: 'Combo 1 - Popcorn + Drink',
-      description: '1 bắp vừa + 1 nước ngọt size vừa',
+      name: 'Combo Couple',
+      name_en: 'Couple Combo',
+      description: '2 bắp lớn + 2 nước lớn',
       category: ConcessionCategory.COMBO,
-      price: 75000,
-      image_url: 'https://example.com/combo1.jpg',
+      price: 150000,
+      image_url: 'https://image.tmdb.org/t/p/w500/6w5TTI9fyYQntKR3HjU28WSLhdC.jpg',
       available: true,
       inventory: 80,
       allergens: ['Butter', 'Corn'],
     },
-    {
-      name: 'Combo Couple',
-      name_en: 'Couple Combo',
-      description: '2 bắp lớn + 2 nước ngọt lớn',
-      category: ConcessionCategory.COMBO,
-      price: 150000,
-      image_url: 'https://example.com/combo-couple.jpg',
-      available: true,
-      inventory: 50,
-      allergens: ['Butter', 'Corn'],
-    },
-    {
-      name: 'Hotdog',
-      name_en: 'Hotdog',
-      description: 'Xúc xích nướng kẹp bánh mì',
-      category: ConcessionCategory.FOOD,
-      price: 35000,
-      image_url: 'https://example.com/hotdog.jpg',
-      available: true,
-      inventory: 60,
-      allergens: ['Gluten', 'Pork'],
-    },
   ];
 
   await prisma.concessions.createMany({ data: concessions });
-  console.log(`✅ Created ${concessions.length} concession items`);
 
-  // Create Promotions
-  const now = new Date();
-  const oneMonthLater = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-  
+  const now = new Date('2025-12-20T00:00:00+07:00');
+  const oneMonthLater = new Date('2026-01-20T00:00:00+07:00');
+
   const promotions = [
     {
-      code: 'WELCOME10',
-      name: 'Welcome Discount',
-      description: 'Giảm 10% cho khách hàng mới',
+      code: 'TET2026',
+      name: 'Ưu đãi Tết 2026',
+      description: 'Giảm 15% cho đơn vé từ 200.000đ',
       type: PromotionType.PERCENTAGE,
-      value: 10,
-      min_purchase: 100000,
-      max_discount: 50000,
+      value: 15,
+      min_purchase: 200000,
+      max_discount: 70000,
       valid_from: now,
       valid_to: oneMonthLater,
       usage_limit: 1000,
-      usage_per_user: 1,
-      current_usage: 45,
+      usage_per_user: 2,
+      current_usage: 0,
       applicable_for: ['tickets'],
       active: true,
     },
     {
-      code: 'WEEKEND20',
-      name: 'Weekend Special',
-      description: 'Giảm 20% vào cuối tuần',
-      type: PromotionType.PERCENTAGE,
-      value: 20,
-      min_purchase: 200000,
-      max_discount: 100000,
-      valid_from: now,
-      valid_to: oneMonthLater,
-      usage_limit: 500,
-      usage_per_user: 2,
-      current_usage: 123,
-      applicable_for: ['tickets', 'concessions'],
-      conditions: { day_of_week: ['Saturday', 'Sunday'] },
-      active: true,
-    },
-    {
       code: 'COMBO50K',
-      name: 'Combo Discount',
-      description: 'Giảm 50,000đ khi mua combo',
+      name: 'Giảm combo 50K',
+      description: 'Giảm 50.000đ cho combo Couple',
       type: PromotionType.FIXED_AMOUNT,
       value: 50000,
-      min_purchase: 150000,
+      min_purchase: 120000,
+      max_discount: 50000,
       valid_from: now,
       valid_to: oneMonthLater,
-      usage_limit: 200,
+      usage_limit: 300,
       usage_per_user: 3,
-      current_usage: 67,
+      current_usage: 0,
       applicable_for: ['concessions'],
       active: true,
     },
   ];
 
   await prisma.promotions.createMany({ data: promotions });
-  console.log(`✅ Created ${promotions.length} promotions`);
 
-  // Note: user_id, showtime_id, and seat_id are references to other microservices
-  // These don't have foreign keys as they're in different databases
-  // In a real scenario, these would be fetched from cinema-service via API
-  const sampleUserIds = [
-    'user_507f1f77bcf86cd799439011', // Sample clerk user IDs
-    'user_507f1f77bcf86cd799439012',
-    'user_507f1f77bcf86cd799439013',
-  ];
-
-  // Sample showtime and seat IDs (would normally come from cinema-service)
-  const { randomUUID } = await import('crypto');
-  const sampleShowtimeId = randomUUID();
-  const sampleSeatIds = [randomUUID(), randomUUID(), randomUUID()];
-
-  // Create Loyalty Accounts
   const loyaltyAccounts = [
-    {
-      user_id: sampleUserIds[0],
-      current_points: 2500,
-      tier: LoyaltyTier.GOLD,
-      total_spent: 5000000,
-    },
-    {
-      user_id: sampleUserIds[1],
-      current_points: 500,
-      tier: LoyaltyTier.BRONZE,
-      total_spent: 800000,
-    },
-    {
-      user_id: sampleUserIds[2],
-      current_points: 1200,
-      tier: LoyaltyTier.SILVER,
-      total_spent: 2000000,
-    },
+    { user_id: refs.users.customer1, current_points: 1500, tier: LoyaltyTier.SILVER, total_spent: 3200000 },
+    { user_id: refs.users.customer2, current_points: 600, tier: LoyaltyTier.BRONZE, total_spent: 1200000 },
   ];
 
   for (const account of loyaltyAccounts) {
-    const created = await prisma.loyaltyAccounts.create({
-      data: account,
-    });
-
-    // Create some loyalty transactions
+    const created = await prisma.loyaltyAccounts.create({ data: account });
     await prisma.loyaltyTransactions.createMany({
       data: [
-        {
-          loyalty_account_id: created.id,
-          points: 500,
-          type: LoyaltyTransactionType.EARN,
-          description: 'Earned from booking',
-        },
-        {
-          loyalty_account_id: created.id,
-          points: -100,
-          type: LoyaltyTransactionType.REDEEM,
-          description: 'Redeemed for discount',
-        },
+        { loyalty_account_id: created.id, points: 300, type: LoyaltyTransactionType.EARN, description: 'Thưởng đặt vé' },
+        { loyalty_account_id: created.id, points: -100, type: LoyaltyTransactionType.REDEEM, description: 'Dùng điểm giảm giá' },
       ],
     });
   }
 
-  console.log(`✅ Created ${loyaltyAccounts.length} loyalty accounts with transactions`);
-
-  // Create Sample Bookings
-  const sampleBookingCode = () => `BK${Date.now()}${Math.floor(Math.random() * 1000)}`;
-  
-  const booking1 = await prisma.bookings.create({
-    data: {
-      booking_code: sampleBookingCode(),
-      user_id: sampleUserIds[0],
-      showtime_id: sampleShowtimeId,
-      customer_name: 'Nguyễn Văn A',
-      customer_email: 'nguyenvana@example.com',
+  const bookings = [
+    {
+      id: refs.booking1,
+      booking_code: 'BK-20251230-IMAX-01',
+      user_id: refs.users.customer1,
+      showtime_id: refs.showtime,
+      customer_name: 'Nguyễn Văn An',
+      customer_email: 'an.nguyen@example.com',
       customer_phone: '0901234567',
-      subtotal: 200000,
-      discount: 20000,
-      points_used: 100,
-      points_discount: 10000,
-      final_amount: 170000,
-      promotion_code: 'WELCOME10',
+      subtotal: 320000,
+      discount: 48000,
+      points_used: 300,
+      points_discount: 30000,
+      final_amount: 242000,
+      promotion_code: 'TET2026',
       status: BookingStatus.CONFIRMED,
       payment_status: PaymentStatus.COMPLETED,
     },
+    {
+      id: refs.booking2,
+      booking_code: 'BK-20251231-STD-02',
+      user_id: refs.users.customer2,
+      showtime_id: toUuid('bbbb1111-0000-0000-0000-000000000002-2025-12-31-21:15-22222222-2222-2222-2222-222222222222'),
+      customer_name: 'Trần Thị Bình',
+      customer_email: 'binh.tran@example.com',
+      customer_phone: '0938123456',
+      subtotal: 180000,
+      discount: 0,
+      points_used: 0,
+      points_discount: 0,
+      final_amount: 180000,
+      status: BookingStatus.CONFIRMED,
+      payment_status: PaymentStatus.PROCESSING,
+    },
+  ];
+
+  await prisma.bookings.createMany({ data: bookings });
+
+  await prisma.bookingConcessions.createMany({
+    data: [
+      {
+        booking_id: refs.booking1,
+        concession_id: (await prisma.concessions.findFirst({ where: { name: 'Combo Couple' } }))!.id,
+        quantity: 1,
+        unit_price: 150000,
+        total_price: 100000,
+      },
+    ],
   });
 
-  // Create Tickets for booking1
   await prisma.tickets.createMany({
     data: [
       {
-        booking_id: booking1.id,
-        seat_id: sampleSeatIds[0],
-        ticket_code: `TK${Date.now()}001`,
-        qr_code: 'QR_CODE_DATA_1',
-        barcode: 'BARCODE_001',
+        booking_id: refs.booking1,
+        seat_id: refs.seatA1,
+        ticket_code: 'TK-IMAX-A1',
+        qr_code: 'QR-IMAX-A1',
+        barcode: 'BC-IMAX-A1',
         ticket_type: 'ADULT',
-        price: 90000,
+        price: 160000,
         status: TicketStatus.VALID,
       },
       {
-        booking_id: booking1.id,
-        seat_id: sampleSeatIds[1],
-        ticket_code: `TK${Date.now()}002`,
-        qr_code: 'QR_CODE_DATA_2',
-        barcode: 'BARCODE_002',
+        booking_id: refs.booking1,
+        seat_id: refs.seatA2,
+        ticket_code: 'TK-IMAX-A2',
+        qr_code: 'QR-IMAX-A2',
+        barcode: 'BC-IMAX-A2',
         ticket_type: 'ADULT',
-        price: 90000,
+        price: 160000,
+        status: TicketStatus.VALID,
+      },
+      {
+        booking_id: refs.booking2,
+        seat_id: refs.seatB1,
+        ticket_code: 'TK-STD-B1',
+        qr_code: 'QR-STD-B1',
+        barcode: 'BC-STD-B1',
+        ticket_type: 'ADULT',
+        price: 180000,
         status: TicketStatus.VALID,
       },
     ],
   });
 
-  // Create Payment for booking1
-  await prisma.payments.create({
+  await prisma.payments.createMany({
+    data: [
+      {
+        booking_id: refs.booking1,
+        amount: 242000,
+        payment_method: PaymentMethod.MOMO,
+        status: PaymentStatus.COMPLETED,
+        transaction_id: 'TXN-IMAX-001',
+        provider_transaction_id: 'MOMO_12345678',
+        paid_at: new Date('2025-12-29T10:00:00Z'),
+      },
+      {
+        booking_id: refs.booking2,
+        amount: 180000,
+        payment_method: PaymentMethod.VNPAY,
+        status: PaymentStatus.PROCESSING,
+        transaction_id: 'TXN-STD-002',
+        provider_transaction_id: 'VNPAY_987654',
+      },
+    ],
+  });
+
+  await prisma.refunds.create({
     data: {
-      booking_id: booking1.id,
-      amount: 170000,
-      payment_method: PaymentMethod.MOMO,
-      status: PaymentStatus.COMPLETED,
-      transaction_id: `TXN${Date.now()}001`,
-      provider_transaction_id: 'MOMO_12345678',
-      paid_at: new Date(),
+      payment_id: (await prisma.payments.findFirst({ where: { booking_id: refs.booking2 } }))!.id,
+      amount: 180000,
+      reason: 'Khách hàng đổi suất chiếu',
+      status: RefundStatus.PENDING,
     },
   });
 
-  console.log('✅ Created sample bookings with tickets and payments');
-  console.log('🎉 Booking Service database seeding completed!');
+  console.log('✅ Seeded concessions, promotions, loyalty, bookings, tickets, payments, refunds, booking concessions');
 }
 
 main()

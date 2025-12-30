@@ -1,304 +1,150 @@
-import { PrismaClient, AgeRating, LanguageOption, Format } from '../generated/prisma';
+import { createHash } from 'crypto';
+import fs from 'fs';
+import path from 'path';
+import { PrismaClient, AgeRating, LanguageOption } from '../generated/prisma';
 
 const prisma = new PrismaClient();
 
-async function main() {
-  console.log('🌱 Seeding Movie Service database...');
+type RawMovie = {
+  id: number;
+  title: string;
+  original_title?: string;
+  overview?: string;
+  poster_path?: string;
+  backdrop_path?: string;
+  runtime?: number;
+  release_date?: string;
+  release_dates?: string[];
+  original_language?: string;
+  spoken_languages?: string;
+  production_countries?: string;
+  trailerUrl?: string;
+  director?: string;
+  cast?: { name: string; profileUrl?: string }[];
+  genres?: { id: number; name: string }[];
+};
 
-  // Clear existing data
+const toUuid = (seed: string) => {
+  const h = createHash('md5').update(seed).digest('hex');
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
+};
+
+const parseDate = (value?: string): Date | null => {
+  if (!value) return null;
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? null : d;
+};
+
+const normalizeLanguages = (value?: string): string[] => {
+  if (!value) return [];
+  return value
+    .split(/[\\/,|]/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+};
+
+const inferAgeRating = (genreNames: string[]): AgeRating => {
+  const lower = genreNames.map((g) => g.toLowerCase());
+  if (lower.some((g) => g.includes('kinh dị') || g.includes('horror'))) return AgeRating.T18;
+  if (lower.some((g) => g.includes('hoạt hình') || g.includes('gia đình'))) return AgeRating.P;
+  return AgeRating.T13;
+};
+
+const inferLanguageType = (originalLanguage?: string): LanguageOption => {
+  return originalLanguage?.toLowerCase() === 'vi' ? LanguageOption.ORIGINAL : LanguageOption.SUBTITLE;
+};
+
+const loadMovies = (): RawMovie[] => {
+  const dataPath = path.join(__dirname, 'data.json');
+  const raw = fs.readFileSync(dataPath, 'utf-8');
+  const parsed = JSON.parse(raw);
+  return parsed.movies ?? [];
+};
+
+async function main() {
+  console.log('🌱 Seeding Movie Service database from TMDB snapshot (data.json)...');
+
+  await prisma.review.deleteMany();
   await prisma.movieGenre.deleteMany();
   await prisma.movieRelease.deleteMany();
   await prisma.movie.deleteMany();
   await prisma.genre.deleteMany();
 
-  // Create Genres
-  const genres = await Promise.all([
-    prisma.genre.create({ data: { name: 'Action' } }),
-    prisma.genre.create({ data: { name: 'Adventure' } }),
-    prisma.genre.create({ data: { name: 'Comedy' } }),
-    prisma.genre.create({ data: { name: 'Drama' } }),
-    prisma.genre.create({ data: { name: 'Horror' } }),
-    prisma.genre.create({ data: { name: 'Sci-Fi' } }),
-    prisma.genre.create({ data: { name: 'Thriller' } }),
-    prisma.genre.create({ data: { name: 'Romance' } }),
-    prisma.genre.create({ data: { name: 'Animation' } }),
-    prisma.genre.create({ data: { name: 'Fantasy' } }),
-  ]);
+  const moviesRaw = loadMovies();
 
-  console.log(`✅ Created ${genres.length} genres`);
+  const allGenreNames = Array.from(
+    new Set(
+      moviesRaw.flatMap((m) => (m.genres ?? []).map((g) => g.name).filter(Boolean))
+    )
+  );
 
-  // Create Movies
-  // Create Movies
-  const movies = [
-    {
-      title: 'Avengers: Endgame',
-      originalTitle: 'Avengers: Endgame',
-      overview:
-        "After the devastating events of Avengers: Infinity War, the remaining Avengers assemble once more to reverse Thanos' actions and restore balance to the universe.",
-      posterUrl:
-        'https://image.tmdb.org/t/p/w500/or06FN3Dka5tukK1e9sl16pB3iy.jpg',
-      trailerUrl: 'https://www.youtube.com/watch?v=TcMBFSGVi1c',
-      backdropUrl:
-        'https://image.tmdb.org/t/p/original/7RyHsO4yDXtBv1zUU3mTpHeQ0d5.jpg',
-      runtime: 181,
-      releaseDate: new Date('2019-04-24'),
-      ageRating: AgeRating.T13,
-      originalLanguage: 'en',
-      spokenLanguages: ['en'],
-      productionCountry: 'United States',
-      languageType: LanguageOption.SUBTITLE,
-      director: 'Anthony Russo, Joe Russo',
-      cast: [
-        { name: 'Robert Downey Jr.', character: 'Tony Stark / Iron Man' },
-        { name: 'Chris Evans', character: 'Steve Rogers / Captain America' },
-        {
-          name: 'Scarlett Johansson',
-          character: 'Natasha Romanoff / Black Widow',
-        },
-      ],
-      genreIds: [genres[0].id, genres[1].id, genres[5].id], // Action, Adventure, Sci-Fi
-    },
-    {
-      title: 'The Batman',
-      originalTitle: 'The Batman',
-      overview:
-        'In his second year of fighting crime, Batman uncovers corruption in Gotham City that connects to his own family while hunting a sadistic serial killer known as the Riddler.',
-      posterUrl:
-        'https://image.tmdb.org/t/p/w500/74xTEgt7R36Fpooo50r9T25onhq.jpg',
-      trailerUrl: 'https://www.youtube.com/watch?v=mqqft2x_Aa4',
-      backdropUrl:
-        'https://image.tmdb.org/t/p/original/gG9fTyDL03fiKnOpf2tr01sncnt.jpg',
-      runtime: 176,
-      releaseDate: new Date('2022-03-01'),
-      ageRating: AgeRating.T16,
-      originalLanguage: 'en',
-      spokenLanguages: ['en'],
-      productionCountry: 'United States',
-      languageType: LanguageOption.SUBTITLE,
-      director: 'Matt Reeves',
-      cast: [
-        { name: 'Robert Pattinson', character: 'Bruce Wayne / Batman' },
-        { name: 'Zoë Kravitz', character: 'Selina Kyle / Catwoman' },
-        { name: 'Paul Dano', character: 'Edward Nashton / Riddler' },
-      ],
-      genreIds: [genres[0].id, genres[3].id, genres[6].id], // Action, Drama, Thriller
-    },
-    {
-      title: 'Spider-Man: No Way Home',
-      originalTitle: 'Spider-Man: No Way Home',
-      overview:
-        "After Peter Parker's identity is revealed, he asks Doctor Strange for help, but the spell goes wrong and opens the multiverse, bringing villains from other realities.",
-      posterUrl:
-        'https://image.tmdb.org/t/p/w500/1g0dhYtq4irTY1GPXvft6k4YLjm.jpg',
-      trailerUrl: 'https://www.youtube.com/watch?v=JfVOs4VSpmA',
-      backdropUrl:
-        'https://image.tmdb.org/t/p/original/iQFcwSGbZXMkeyKrxbPnwnRo5fl.jpg',
-      runtime: 148,
-      releaseDate: new Date('2021-12-15'),
-      ageRating: AgeRating.T13,
-      originalLanguage: 'en',
-      spokenLanguages: ['en'],
-      productionCountry: 'United States',
-      languageType: LanguageOption.SUBTITLE,
-      director: 'Jon Watts',
-      cast: [
-        { name: 'Tom Holland', character: 'Peter Parker / Spider-Man' },
-        { name: 'Zendaya', character: 'MJ' },
-        { name: 'Benedict Cumberbatch', character: 'Doctor Strange' },
-      ],
-      genreIds: [genres[0].id, genres[1].id, genres[5].id], // Action, Adventure, Sci-Fi
-    },
-    {
-      title: 'Mai',
-      originalTitle: 'Mai',
-      overview:
-        'A Vietnamese romantic drama about a massage therapist whose life changes after she becomes entangled in the dangerous world of a mysterious customer.',
-      // TODO: thay bằng poster chính thức khi bạn có URL ảnh thật
-      posterUrl: 'https://example.com/mai-poster.jpg',
-      trailerUrl: 'https://www.youtube.com/watch?v=example',
-      backdropUrl: 'https://example.com/mai-backdrop.jpg',
-      runtime: 131,
-      releaseDate: new Date('2024-02-10'),
-      ageRating: AgeRating.T18,
-      originalLanguage: 'vi',
-      spokenLanguages: ['vi'],
-      productionCountry: 'Vietnam',
-      languageType: LanguageOption.ORIGINAL,
-      director: 'Trấn Thành',
-      cast: [
-        { name: 'Phương Anh Đào', character: 'Mai' },
-        { name: 'Tuấn Trần', character: 'Dương' },
-      ],
-      genreIds: [genres[3].id, genres[7].id], // Drama, Romance
-    },
+  const genres = await Promise.all(allGenreNames.map((name) => prisma.genre.create({ data: { name } })));
+  const genreByName = Object.fromEntries(genres.map((g) => [g.name, g.id]));
 
-    // ====== MOVIES MỚI – DÙNG ẢNH THẬT TỪ TMDB ======
+  for (const m of moviesRaw) {
+    const genreNames = (m.genres ?? []).map((g) => g.name).filter(Boolean);
 
-    {
-      title: 'Inception',
-      originalTitle: 'Inception',
-      overview:
-        'A skilled thief who steals secrets through dream-sharing technology is given a chance at redemption if he can successfully plant an idea into a target’s subconscious.',
-      posterUrl:
-        'https://image.tmdb.org/t/p/w500/9gk7adHYeDvHkCSEqAvQNLV5Uge.jpg',
-      trailerUrl: 'https://www.youtube.com/watch?v=YoHD9XEInc0',
-      backdropUrl:
-        'https://image.tmdb.org/t/p/original/s3TBrRGB1iav7gFOCNx3H31MoES.jpg',
-      runtime: 148,
-      releaseDate: new Date('2010-07-16'),
-      ageRating: AgeRating.T13,
-      originalLanguage: 'en',
-      spokenLanguages: ['en'],
-      productionCountry: 'United States',
-      languageType: LanguageOption.SUBTITLE,
-      director: 'Christopher Nolan',
-      cast: [
-        { name: 'Leonardo DiCaprio', character: 'Dom Cobb' },
-        { name: 'Joseph Gordon-Levitt', character: 'Arthur' },
-        { name: 'Elliot Page', character: 'Ariadne' },
-      ],
-      genreIds: [genres[0].id, genres[5].id, genres[6].id], // Action, Sci-Fi, Thriller
-    },
-    {
-      title: 'Interstellar',
-      originalTitle: 'Interstellar',
-      overview:
-        'A team of explorers travels through a wormhole in space in an attempt to ensure humanity’s survival as Earth becomes uninhabitable.',
-      posterUrl:
-        'https://image.tmdb.org/t/p/w500/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg',
-      trailerUrl: 'https://www.youtube.com/watch?v=zSWdZVtXT7E',
-      // dùng lại poster làm backdrop tạm để tránh 404
-      backdropUrl:
-        'https://image.tmdb.org/t/p/original/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg',
-      runtime: 169,
-      releaseDate: new Date('2014-11-07'),
-      ageRating: AgeRating.T13,
-      originalLanguage: 'en',
-      spokenLanguages: ['en'],
-      productionCountry: 'United States',
-      languageType: LanguageOption.SUBTITLE,
-      director: 'Christopher Nolan',
-      cast: [
-        { name: 'Matthew McConaughey', character: 'Cooper' },
-        { name: 'Anne Hathaway', character: 'Brand' },
-        { name: 'Jessica Chastain', character: 'Murph' },
-      ],
-      genreIds: [genres[5].id, genres[3].id, genres[1].id], // Sci-Fi, Drama, Adventure
-    },
-    {
-      title: 'Joker',
-      originalTitle: 'Joker',
-      overview:
-        'A mentally troubled stand-up comedian slowly descends into madness and becomes the infamous criminal known as the Joker in a gritty reimagining of the character.',
-      posterUrl:
-        'https://image.tmdb.org/t/p/w500/udDclJoHjfjb8Ekgsd4FDteOkCU.jpg',
-      trailerUrl: 'https://www.youtube.com/watch?v=zAGVQLHvwOY',
-      backdropUrl:
-        'https://image.tmdb.org/t/p/original/udDclJoHjfjb8Ekgsd4FDteOkCU.jpg',
-      runtime: 122,
-      releaseDate: new Date('2019-10-04'),
-      ageRating: AgeRating.T18,
-      originalLanguage: 'en',
-      spokenLanguages: ['en'],
-      productionCountry: 'United States',
-      languageType: LanguageOption.SUBTITLE,
-      director: 'Todd Phillips',
-      cast: [
-        { name: 'Joaquin Phoenix', character: 'Arthur Fleck / Joker' },
-        { name: 'Robert De Niro', character: 'Murray Franklin' },
-        { name: 'Zazie Beetz', character: 'Sophie Dumond' },
-      ],
-      genreIds: [genres[3].id, genres[6].id], // Drama, Thriller
-    },
-    {
-      title: 'Zootopia',
-      originalTitle: 'Zootopia',
-      overview:
-        'In a city of anthropomorphic animals, a rookie bunny cop and a cynical fox con artist must work together to uncover a conspiracy.',
-      posterUrl:
-        'https://image.tmdb.org/t/p/w500/hlK0e0wAQ3VLuJcsfIYPvb4JVud.jpg',
-      trailerUrl: 'https://www.youtube.com/watch?v=jWM0ct-OLsM',
-      backdropUrl:
-        'https://image.tmdb.org/t/p/original/hlK0e0wAQ3VLuJcsfIYPvb4JVud.jpg',
-      runtime: 108,
-      releaseDate: new Date('2016-03-04'),
-      ageRating: AgeRating.T13,
-      originalLanguage: 'en',
-      spokenLanguages: ['en'],
-      productionCountry: 'United States',
-      languageType: LanguageOption.SUBTITLE,
-      director: 'Byron Howard, Rich Moore',
-      cast: [
-        { name: 'Ginnifer Goodwin', character: 'Judy Hopps (voice)' },
-        { name: 'Jason Bateman', character: 'Nick Wilde (voice)' },
-        { name: 'Idris Elba', character: 'Chief Bogo (voice)' },
-      ],
-      genreIds: [genres[8].id, genres[2].id, genres[1].id], // Animation, Comedy, Adventure
-    },
-    {
-      title: 'Inside Out',
-      originalTitle: 'Inside Out',
-      overview:
-        'Growing up can be a bumpy road, and it is no exception for Riley, who is guided by her five core emotions as her family moves to a new city.',
-      posterUrl:
-        'https://image.tmdb.org/t/p/w500/aAmfIX3TT40zUHGcCKrlOZRKC7u.jpg',
-      trailerUrl: 'https://www.youtube.com/watch?v=yRUAzGQ3nSY',
-      backdropUrl:
-        'https://image.tmdb.org/t/p/original/aAmfIX3TT40zUHGcCKrlOZRKC7u.jpg',
-      runtime: 95,
-      releaseDate: new Date('2015-06-19'),
-      ageRating: AgeRating.T13,
-      originalLanguage: 'en',
-      spokenLanguages: ['en'],
-      productionCountry: 'United States',
-      languageType: LanguageOption.SUBTITLE,
-      director: 'Pete Docter, Ronnie Del Carmen',
-      cast: [
-        { name: 'Amy Poehler', character: 'Joy (voice)' },
-        { name: 'Phyllis Smith', character: 'Sadness (voice)' },
-        { name: 'Bill Hader', character: 'Fear (voice)' },
-      ],
-      genreIds: [genres[8].id, genres[2].id, genres[3].id], // Animation, Comedy, Drama
-    },
-  ];
+    const movieId = toUuid(`movie-${m.id}`);
+    const releaseId = toUuid(`release-${m.id}`);
 
-  for (const movieData of movies) {
-    const { genreIds, ...movieInfo } = movieData;
+    const parsedReleaseDate = parseDate(m.release_date);
+    const releaseDate = parsedReleaseDate ?? parseDate(m.release_dates?.[0]) ?? new Date();
+    const releaseStart = parseDate(m.release_dates?.[0]) ?? releaseDate;
+    const releaseEnd = parseDate(m.release_dates?.slice(-1)[0]);
+
+    const spokenLanguages = normalizeLanguages(m.spoken_languages);
+    if (!spokenLanguages.length && m.original_language) spokenLanguages.push(m.original_language);
+    const cast = (m.cast ?? []).map((c) => ({
+      name: c.name ?? 'N/A',
+      profileUrl: c.profileUrl ?? '',
+    }));
 
     const movie = await prisma.movie.create({
       data: {
-        ...movieInfo,
-        cast: movieInfo.cast as any,
+        id: movieId,
+        title: m.title,
+        originalTitle: m.original_title ?? m.title,
+        overview: m.overview || 'Đang cập nhật.',
+        posterUrl: m.poster_path ?? '',
+        trailerUrl: m.trailerUrl ?? '',
+        backdropUrl: m.backdrop_path ?? '',
+        runtime: m.runtime ?? 0,
+        releaseDate,
+        ageRating: inferAgeRating(genreNames),
+        originalLanguage: m.original_language ?? '',
+        spokenLanguages,
+        productionCountry: m.production_countries ?? '',
+        languageType: inferLanguageType(m.original_language),
+        director: m.director ?? 'Đang cập nhật',
+        cast,
       },
     });
 
-    // Create MovieGenre relations
-    await Promise.all(
-      genreIds.map((genreId) =>
-        prisma.movieGenre.create({
-          data: {
-            movieId: movie.id,
-            genreId: genreId,
-          },
-        })
-      )
-    );
+    const genreIds = genreNames
+      .map((name) => genreByName[name])
+      .filter(Boolean);
 
-    // Create MovieRelease
+    if (genreIds.length > 0) {
+      await prisma.movieGenre.createMany({
+        data: genreIds.map((genreId) => ({
+          movieId: movie.id,
+          genreId,
+        })),
+      });
+    }
+
     await prisma.movieRelease.create({
       data: {
+        id: releaseId,
         movieId: movie.id,
-        startDate: movieInfo.releaseDate,
-        endDate: new Date(
-          new Date(movieInfo.releaseDate).getTime() + 90 * 24 * 60 * 60 * 1000
-        ), // 90 days
-        note: 'Theatrical release',
+        startDate: releaseStart,
+        endDate: releaseEnd ?? null,
+        note: m.release_dates?.length ? `Lịch phát hành: ${m.release_dates.join(', ')}` : null,
       },
     });
   }
 
-  console.log(`✅ Created ${movies.length} movies with genres and releases`);
-  console.log('🎉 Movie Service database seeding completed!');
+  console.log(`✅ Seeded ${moviesRaw.length} phim từ dữ liệu TMDB vào movies/movie_releases/movie_genres`);
 }
 
 main()

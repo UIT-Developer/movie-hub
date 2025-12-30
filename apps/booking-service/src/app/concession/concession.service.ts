@@ -129,10 +129,10 @@ export class ConcessionService {
         ...('description' in dto && { description: dto.description }),
         ...(dto.category !== undefined && { category: dto.category }),
         ...(dto.price !== undefined && { price: dto.price }),
-        ...(dto.imageUrl !== undefined && { image_url: dto.imageUrl }),
+        ...('imageUrl' in dto && { image_url: dto.imageUrl }),
         ...(dto.available !== undefined && { available: dto.available }),
-        ...(dto.inventory !== undefined && { inventory: dto.inventory }),
-        ...(dto.cinemaId !== undefined && { cinema_id: dto.cinemaId }),
+        ...('inventory' in dto && { inventory: dto.inventory }),
+        ...('cinemaId' in dto && { cinema_id: dto.cinemaId }),
         ...('nutritionInfo' in dto && {
           nutrition_info: dto.nutritionInfo,
         }),

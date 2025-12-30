@@ -106,6 +106,54 @@ export class ShowtimeService {
     };
   }
 
+  async getShowtimeById(showtimeId: string) {
+    const showtime = await this.prisma.showtimes.findUnique({
+      where: { id: showtimeId },
+      select: {
+        id: true,
+        movie_id: true,
+        movie_release_id: true,
+        cinema_id: true,
+        hall_id: true,
+        start_time: true,
+        end_time: true,
+        format: true,
+        language: true,
+        subtitles: true,
+        available_seats: true,
+        total_seats: true,
+        status: true,
+        created_at: true,
+        updated_at: true,
+      },
+    });
+
+    if (!showtime) {
+      throw new NotFoundException('Showtime not found');
+    }
+
+    return {
+      data: {
+        id: showtime.id,
+        movieId: showtime.movie_id,
+        movieReleaseId: showtime.movie_release_id,
+        cinemaId: showtime.cinema_id,
+        hallId: showtime.hall_id,
+        startTime: showtime.start_time,
+        endTime: showtime.end_time,
+        format: showtime.format as FormatEnum,
+        language: showtime.language,
+        subtitles: showtime.subtitles ?? [],
+        availableSeats: showtime.available_seats,
+        totalSeats: showtime.total_seats,
+        status: showtime.status as ShowtimeStatusEnum,
+        createdAt: showtime.created_at,
+        updatedAt: showtime.updated_at,
+      },
+      message: 'Fetch showtime successfully',
+    };
+  }
+
   /**
    * 📅 Lấy danh sách suất chiếu của 1 phim tại 1 rạp (có cache)
    */

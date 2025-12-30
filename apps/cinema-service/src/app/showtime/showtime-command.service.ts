@@ -54,6 +54,10 @@ export class ShowtimeCommandService {
         movieReleaseId
       );
 
+      if (!release) {
+        throw new BadRequestException('Movie release is required');
+      }
+
       const start = new Date(startTime);
       const end = new Date(
         start.getTime() + movie.runtime * 60000 + 15 * 60000
@@ -67,7 +71,7 @@ export class ShowtimeCommandService {
       const showtime = await this.prisma.showtimes.create({
         data: {
           movie_id: movie.id,
-          movie_release_id: release?.id ?? null,
+            movie_release_id: release.id,
           cinema_id: cinemaId,
           hall_id: hallId,
           start_time: start,
@@ -117,6 +121,10 @@ export class ShowtimeCommandService {
         movieId,
         movieReleaseId
       );
+
+      if (!release) {
+        throw new BadRequestException('Movie release is required');
+      }
 
       if (release) {
         if (
@@ -181,7 +189,7 @@ export class ShowtimeCommandService {
         const st = await this.prisma.showtimes.create({
           data: {
             movie_id: movie.id,
-            movie_release_id: release?.id ?? null,
+            movie_release_id: release.id,
             cinema_id: cinemaId,
             hall_id: hallId,
             start_time: c.start,

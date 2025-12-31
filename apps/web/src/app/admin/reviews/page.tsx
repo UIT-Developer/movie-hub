@@ -163,7 +163,7 @@ export default function ReviewsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">\u0110\u00e1nh gi\u00e1</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Đánh Giá</h1>
           <p className="text-gray-500 mt-1">Quản lý bình luận và xếp hạng phim</p>
         </div>
       </div>
@@ -172,48 +172,48 @@ export default function ReviewsPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200/60 shadow-md hover:shadow-lg transition-shadow">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-semibold text-purple-700 uppercase tracking-wider">⭐ Total Reviews</CardTitle>
+            <CardTitle className="text-sm font-semibold text-purple-700 uppercase tracking-wider">⭐ Tổng Bình Luận</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-purple-900">{stats.total}</div>
             <p className="text-xs text-purple-600 mt-2 font-medium">
-              Avg: {stats.avgRating} / 5 stars
+              Trung bình: {stats.avgRating} / 5 sao
             </p>
           </CardContent>
         </Card>
 
         <Card className="bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-200/60 shadow-md hover:shadow-lg transition-shadow">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-semibold text-yellow-700 uppercase tracking-wider">⭐⭐⭐⭐⭐ 5 Stars</CardTitle>
+            <CardTitle className="text-sm font-semibold text-yellow-700 uppercase tracking-wider">⭐⭐⭐⭐⭐ 5 Sao</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-yellow-900">{stats.fiveStars}</div>
             <p className="text-xs text-yellow-600 mt-2 font-medium">
-              {stats.total > 0 ? ((stats.fiveStars / stats.total) * 100).toFixed(0) : 0}% of reviews
+              {stats.total > 0 ? ((stats.fiveStars / stats.total) * 100).toFixed(0) : 0}% bình luận
             </p>
           </CardContent>
         </Card>
 
         <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200/60 shadow-md hover:shadow-lg transition-shadow">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-semibold text-blue-700 uppercase tracking-wider">⭐⭐⭐⭐ 4 Stars</CardTitle>
+            <CardTitle className="text-sm font-semibold text-blue-700 uppercase tracking-wider">⭐⭐⭐⭐ 4 Sao</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-blue-900">{stats.fourStars}</div>
             <p className="text-xs text-blue-600 mt-2 font-medium">
-              {stats.total > 0 ? ((stats.fourStars / stats.total) * 100).toFixed(0) : 0}% of reviews
+              {stats.total > 0 ? ((stats.fourStars / stats.total) * 100).toFixed(0) : 0}% bình luận
             </p>
           </CardContent>
         </Card>
 
         <Card className="bg-gradient-to-br from-red-50 to-red-100 border-red-200/60 shadow-md hover:shadow-lg transition-shadow">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-semibold text-red-700 uppercase tracking-wider">⚠️ Low Ratings (1-2⭐)</CardTitle>
+            <CardTitle className="text-sm font-semibold text-red-700 uppercase tracking-wider">⚠️ Đánh Giá Thấp (1-2⭐)</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-red-900">{stats.oneStars + stats.twoStars}</div>
             <p className="text-xs text-red-600 mt-2 font-medium">
-              Need attention
+              Cần chú ý
             </p>
           </CardContent>
         </Card>
@@ -224,16 +224,16 @@ export default function ReviewsPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {/* Movie Filter */}
           <div className="space-y-2">
-            <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">🎬 Movie</label>
+            <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">🎬 Phim</label>
             <Select value={filterMovieId} onValueChange={(value) => {
               setFilterMovieId(value);
               setPage(1);
             }}>
               <SelectTrigger className="h-11 border-purple-200 focus:ring-purple-500">
-                <SelectValue placeholder="All Movies" />
+                <SelectValue placeholder="Tất Cả Phim" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Movies</SelectItem>
+                <SelectItem value="all">Tất Cả Phim</SelectItem>
                 {movies.map((movie) => (
                   <SelectItem key={movie.id} value={movie.id}>
                     {movie.title}
@@ -245,28 +245,28 @@ export default function ReviewsPage() {
 
           {/* Rating Filter */}
           <div className="space-y-2">
-            <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">⭐ Rating</label>
+            <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">⭐ Đánh Giá</label>
             <Select value={filterRating} onValueChange={(value) => {
               setFilterRating(value);
               setPage(1);
             }}>
               <SelectTrigger className="h-11 border-purple-200 focus:ring-purple-500">
-                <SelectValue placeholder="All Ratings" />
+                <SelectValue placeholder="Tất Cả Đánh Giá" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Ratings</SelectItem>
-                <SelectItem value="5">⭐⭐⭐⭐⭐ 5 Stars</SelectItem>
-                <SelectItem value="4">⭐⭐⭐⭐ 4 Stars</SelectItem>
-                <SelectItem value="3">⭐⭐⭐ 3 Stars</SelectItem>
-                <SelectItem value="2">⭐⭐ 2 Stars</SelectItem>
-                <SelectItem value="1">⭐ 1 Star</SelectItem>
+                <SelectItem value="all">Tất Cả Đánh Giá</SelectItem>
+                <SelectItem value="5">⭐⭐⭐⭐⭐ 5 Sao</SelectItem>
+                <SelectItem value="4">⭐⭐⭐⭐ 4 Sao</SelectItem>
+                <SelectItem value="3">⭐⭐⭐ 3 Sao</SelectItem>
+                <SelectItem value="2">⭐⭐ 2 Sao</SelectItem>
+                <SelectItem value="1">⭐ 1 Sao</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           {/* Start Date */}
           <div className="space-y-2">
-            <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">📅 Start Date</label>
+            <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">📅 Ngày Bắt Đầu</label>
             <Input
               type="date"
               value={filterStartDate}
@@ -280,7 +280,7 @@ export default function ReviewsPage() {
 
           {/* End Date */}
           <div className="space-y-2">
-            <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">📅 End Date</label>
+            <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">📅 Ngày Kết Thúc</label>
             <Input
               type="date"
               value={filterEndDate}
@@ -358,7 +358,7 @@ export default function ReviewsPage() {
               onClick={handleClearFilters}
               className="text-xs font-medium text-purple-600 hover:text-purple-700 transition-colors ml-auto"
             >
-              Clear All
+              Xóa Tất Cả
             </button>
           </div>
         )}
@@ -367,33 +367,33 @@ export default function ReviewsPage() {
       {/* Reviews Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Reviews</CardTitle>
+          <CardTitle>Bình Luận</CardTitle>
           <CardDescription>
-            {enrichedReviews.length} review{enrichedReviews.length !== 1 ? 's' : ''} found
+            {enrichedReviews.length} bình luận được tìm thấy
           </CardDescription>
         </CardHeader>
         <CardContent>
           {loading ? (
             <div className="text-center py-12">
               <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-purple-600 border-r-transparent"></div>
-              <p className="mt-4 text-gray-500">Loading reviews...</p>
+              <p className="mt-4 text-gray-500">Đang tải bình luận...</p>
             </div>
           ) : enrichedReviews.length === 0 ? (
             <div className="text-center py-16">
               <Star className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-500">No reviews found with current filters.</p>
+              <p className="text-gray-500">Không tìm thấy bình luận với bộ lọc hiện tại.</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Rating</TableHead>
-                    <TableHead>Movie</TableHead>
-                    <TableHead>Reviewer</TableHead>
-                    <TableHead>Comment</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Actions</TableHead>
+                    <TableHead>Đánh Giá</TableHead>
+                    <TableHead>Phim</TableHead>
+                    <TableHead>Người Bình Luận</TableHead>
+                    <TableHead>Bình Luận</TableHead>
+                    <TableHead>Ngày</TableHead>
+                    <TableHead>Hành Động</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -416,7 +416,7 @@ export default function ReviewsPage() {
                             size="sm"
                             onClick={() => handleViewDetail(review.id)}
                             className="h-8 w-8 p-0"
-                            title="View details"
+                            title="Xem chi tiết"
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
@@ -428,7 +428,7 @@ export default function ReviewsPage() {
                               setDeleteDialogOpen(true);
                             }}
                             className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
-                            title="Delete review"
+                            title="Xóa bình luận"
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -447,7 +447,7 @@ export default function ReviewsPage() {
       <Dialog open={detailDialogOpen} onOpenChange={setDetailDialogOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Review Details</DialogTitle>
+            <DialogTitle>Chi Tiết Bình Luận</DialogTitle>
             <DialogDescription>Xem thông tin bình luận đầy đủ</DialogDescription>
           </DialogHeader>
 
@@ -455,7 +455,7 @@ export default function ReviewsPage() {
             <div className="space-y-4">
               {/* Rating */}
               <div>
-                <Label className="text-sm text-gray-500">Rating</Label>
+                <Label className="text-sm text-gray-500">Đánh Giá</Label>
                 <div className="flex items-center gap-3 mt-1">
                   {renderStars(selectedReview.rating || 0)}
                   <span className="font-bold text-lg">{selectedReview.rating}/5</span>
@@ -465,22 +465,22 @@ export default function ReviewsPage() {
               {/* Movie & Title */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label className="text-sm text-gray-500">Movie</Label>
+                  <Label className="text-sm text-gray-500">Phim</Label>
                   <p className="font-medium">{selectedReview.movieTitle}</p>
                 </div>
                 <div>
-                  <Label className="text-sm text-gray-500">Title</Label>
+                  <Label className="text-sm text-gray-500">Tiêu Đề</Label>
                   <p className="font-medium">{selectedReview.title}</p>
                 </div>
               </div>
 
               {/* Reviewer Info */}
               <div className="border-t pt-4">
-                <h3 className="font-semibold mb-2">Reviewer Information</h3>
+                <h3 className="font-semibold mb-2">Thông Tin Người Bình Luận</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label className="text-sm text-gray-500">Name</Label>
-                    <p>{selectedReview.userName || 'Anonymous'}</p>
+                    <Label className="text-sm text-gray-500">Tên</Label>
+                    <p>{selectedReview.userName || 'Ẩn Dành'}</p>
                   </div>
                   <div>
                     <Label className="text-sm text-gray-500">Email</Label>
@@ -491,14 +491,14 @@ export default function ReviewsPage() {
 
               {/* Review Content */}
               <div className="border-t pt-4">
-                <h3 className="font-semibold mb-2">Review</h3>
+                <h3 className="font-semibold mb-2">Bình Luận</h3>
                 <p className="text-gray-700 whitespace-pre-wrap">{selectedReview.content}</p>
               </div>
 
               {/* Helpful Count */}
               {selectedReview.helpfulCount !== undefined && (
                 <div className="border-t pt-4">
-                  <Label className="text-sm text-gray-500">Helpful Votes</Label>
+                  <Label className="text-sm text-gray-500">Phiếu Bổ Ích</Label>
                   <p className="font-medium">{selectedReview.helpfulCount}</p>
                 </div>
               )}
@@ -506,12 +506,12 @@ export default function ReviewsPage() {
               {/* Timestamps */}
               <div className="border-t pt-4 text-sm text-gray-500">
                 <div className="flex justify-between">
-                  <span>Created:</span>
+                  <span>Tạo Lúc:</span>
                   <span>{formatDate(selectedReview.createdAt)}</span>
                 </div>
                 {selectedReview.updatedAt && (
                   <div className="flex justify-between">
-                    <span>Updated:</span>
+                    <span>Cập Nhật Lúc:</span>
                     <span>{formatDate(selectedReview.updatedAt)}</span>
                   </div>
                 )}
@@ -527,10 +527,10 @@ export default function ReviewsPage() {
                 setDeleteDialogOpen(true);
               }}
             >
-              Delete Review
+              Xóa Bình Luận
             </Button>
             <Button variant="outline" onClick={() => setDetailDialogOpen(false)}>
-              Close
+              Đóng
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -540,22 +540,22 @@ export default function ReviewsPage() {
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Xóa đánh giá</DialogTitle>
+            <DialogTitle>Xóa Bình Luận</DialogTitle>
             <DialogDescription>
-              Bạn có chắc muốn xóa đánh giá này không? Hành động này không thể hoàn tác.
+              Bạn có chắc muốn xóa bình luận này không? Hành động này không thể hoàn tác.
             </DialogDescription>
           </DialogHeader>
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
-              Hủy
+              Hủy Bỏ
             </Button>
             <Button
               variant="destructive"
               onClick={handleDeleteReview}
               disabled={deleteReview.isPending}
             >
-              {deleteReview.isPending ? 'Đang xóa...' : 'Xóa'}
+              {deleteReview.isPending ? 'Đang Xóa...' : 'Xóa'}
             </Button>
           </DialogFooter>
         </DialogContent>

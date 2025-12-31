@@ -3,7 +3,7 @@
 export const dynamic = 'force-dynamic';
 
 import { useState } from 'react';
-import { Plus, Pencil, Trash2, ShoppingBag, Filter, Package, AlertCircle } from 'lucide-react';
+import { Plus, Pencil, Trash2, ShoppingBag, Package, AlertCircle } from 'lucide-react';
 import { Button } from '@movie-hub/shacdn-ui/button';
 import {
   Card,
@@ -29,7 +29,6 @@ import {
 import { Label } from '@movie-hub/shacdn-ui/label';
 import { Input } from '@movie-hub/shacdn-ui/input';
 import { Textarea } from '@movie-hub/shacdn-ui/textarea';
-import { Badge } from '@movie-hub/shacdn-ui/badge';
 import { useToast } from '../_libs/use-toast';
 import {
   useConcessions,
@@ -54,6 +53,8 @@ const CATEGORIES: { value: ConcessionCategory | string; label: string; icon: str
 
 export default function ConcessionsPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string>('');
   const [editingConcession, setEditingConcession] = useState<Concession | null>(null);
   const [filterCinemaId, setFilterCinemaId] = useState<string>('all');
   const [filterCategory, setFilterCategory] = useState<string>('all');
@@ -90,8 +91,8 @@ export default function ConcessionsPage() {
   // Show error toast if query fails
   if (error) {
     toast({
-      title: 'Error',
-      description: 'Failed to fetch concessions',
+      title: 'Lỗi',
+      description: 'Không thể tải danh sách mặt hàng',
       variant: 'destructive',
     });
   }
@@ -100,8 +101,8 @@ export default function ConcessionsPage() {
     // Validate required fields
     if (!formData.name.trim()) {
       toast({
-        title: 'Error',
-        description: 'Name is required',
+        title: 'Lỗi',
+        description: 'Tên là bắt buộc',
         variant: 'destructive',
       });
       return;
@@ -109,8 +110,8 @@ export default function ConcessionsPage() {
 
     if (formData.price < 0) {
       toast({
-        title: 'Error',
-        description: 'Price cannot be negative',
+        title: 'Lỗi',
+        description: 'Giá không thể âm',
         variant: 'destructive',
       });
       return;
@@ -118,8 +119,8 @@ export default function ConcessionsPage() {
 
     if (formData.inventory !== undefined && formData.inventory < 0) {
       toast({
-        title: 'Error',
-        description: 'Inventory cannot be negative',
+        title: 'Lỗi',
+        description: 'Tồn kho không thể âm',
         variant: 'destructive',
       });
       return;
@@ -180,14 +181,21 @@ export default function ConcessionsPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Bạn có chắc muốn xóa mặt hàng này không?')) {
-      return;
-    }
+    setDeleteConfirmId(id);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteConfirmId) return;
 
     try {
-      await deleteConcession.mutateAsync(id);
+      await deleteConcession.mutateAsync(deleteConfirmId);
+      setDeleteDialogOpen(false);
+      setDeleteConfirmId('');
     } catch {
       // Error toast already shown by mutation hook
+      setDeleteDialogOpen(false);
+      setDeleteConfirmId('');
     }
   };
 
@@ -285,12 +293,12 @@ export default function ConcessionsPage() {
         {/* Inventory Value Card */}
         <Card className="bg-gradient-to-br from-pink-50 to-pink-100 border-pink-200/60 shadow-md hover:shadow-lg transition-shadow">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-semibold text-pink-700 uppercase tracking-wider">💰 Inventory Value</CardTitle>
+            <CardTitle className="text-sm font-semibold text-pink-700 uppercase tracking-wider">💰 Giá Trị Tồn Kho</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-pink-900">₫{(stats.totalValue / 1000).toFixed(1)}K</div>
             <p className="text-xs text-pink-600 mt-2 font-medium">
-              Total stock value
+              Giá trị tồn kho toàn bộ
             </p>
           </CardContent>
         </Card>
@@ -298,12 +306,12 @@ export default function ConcessionsPage() {
         {/* Average Price Card */}
         <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200/60 shadow-md hover:shadow-lg transition-shadow">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-semibold text-emerald-700 uppercase tracking-wider">💵 Average Price</CardTitle>
+            <CardTitle className="text-sm font-semibold text-emerald-700 uppercase tracking-wider">💵 Giá Trung Bình</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-emerald-900">₫{(stats.avgPrice / 1000).toFixed(1)}K</div>
             <p className="text-xs text-emerald-600 mt-2 font-medium">
-              Per item
+              Mỗi mặt hàng
             </p>
           </CardContent>
         </Card>
@@ -314,13 +322,13 @@ export default function ConcessionsPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3">
           {/* Cinema Filter */}
           <div className="space-y-2">
-            <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">🏢 Cinema</label>
+            <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">🏢 Rạp</label>
             <Select value={filterCinemaId} onValueChange={setFilterCinemaId}>
               <SelectTrigger className="h-11 border-purple-200 focus:ring-purple-500">
-                <SelectValue placeholder="All Cinemas" />
+                <SelectValue placeholder="Tất Cả Rạp" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Cinemas</SelectItem>
+                <SelectItem value="all">Tất Cả Rạp</SelectItem>
                 {cinemas.map((cinema) => (
                   <SelectItem key={cinema.id} value={cinema.id}>
                     {cinema.name}
@@ -332,13 +340,13 @@ export default function ConcessionsPage() {
 
           {/* Category Filter */}
           <div className="space-y-2">
-            <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">🎯 Category</label>
+            <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">🎯 Danh Mục</label>
             <Select value={filterCategory} onValueChange={setFilterCategory}>
               <SelectTrigger className="h-11 border-purple-200 focus:ring-purple-500">
-                <SelectValue placeholder="All Categories" />
+                <SelectValue placeholder="Tất Cả Danh Mục" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
+                <SelectItem value="all">Tất Cả Danh Mục</SelectItem>
                 {CATEGORIES.map((cat) => (
                   <SelectItem key={cat.value} value={cat.value}>
                     {cat.icon} {cat.label}
@@ -350,15 +358,15 @@ export default function ConcessionsPage() {
 
           {/* Availability Filter */}
           <div className="space-y-2">
-            <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">✅ Availability</label>
+            <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">✅ Tính Sẵn Có</label>
             <Select value={filterAvailable} onValueChange={setFilterAvailable}>
               <SelectTrigger className="h-11 border-purple-200 focus:ring-purple-500">
-                <SelectValue placeholder="All" />
+                <SelectValue placeholder="Tất Cả" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Items</SelectItem>
-                <SelectItem value="true">✅ Available</SelectItem>
-                <SelectItem value="false">❌ Unavailable</SelectItem>
+                <SelectItem value="all">Tất Cả Mặt Hàng</SelectItem>
+                <SelectItem value="true">✅ Sẵn Có</SelectItem>
+                <SelectItem value="false">❌ Không Sẵn Có</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -396,7 +404,7 @@ export default function ConcessionsPage() {
             {filterAvailable !== 'all' && (
               <div className="inline-flex items-center gap-2 px-3 py-1 bg-white rounded-full border border-purple-200 shadow-sm">
                 <span className="text-xs font-medium text-gray-700">
-                  {filterAvailable === 'true' ? '✅ Available' : '❌ Unavailable'}
+                  {filterAvailable === 'true' ? '✅ Sẵn Có' : '❌ Không Sẵn Có'}
                 </span>
                 <button
                   onClick={() => setFilterAvailable('all')}
@@ -414,7 +422,7 @@ export default function ConcessionsPage() {
               }}
               className="text-xs font-medium text-purple-600 hover:text-purple-700 transition-colors ml-auto"
             >
-              Clear All
+              Xóa Tất Cả
             </button>
           </div>
         )}
@@ -424,9 +432,9 @@ export default function ConcessionsPage() {
       <div>
         <div className="mb-4 flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-bold">Concession Items</h2>
+            <h2 className="text-xl font-bold">Mặt Hàng Bổ Sung</h2>
             <p className="text-sm text-gray-600">
-              {concessions.length} item{concessions.length !== 1 ? 's' : ''} available
+              {concessions.length} mặt hàng sẵn có
             </p>
           </div>
         </div>
@@ -434,12 +442,12 @@ export default function ConcessionsPage() {
         {loading ? (
           <div className="text-center py-12">
             <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-purple-600 border-r-transparent"></div>
-            <p className="mt-4 text-gray-500">Loading concessions...</p>
+            <p className="mt-4 text-gray-500">Đang tải mặt hàng bổ sung...</p>
           </div>
         ) : concessions.length === 0 ? (
           <div className="text-center py-16 bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg border border-purple-100">
             <ShoppingBag className="h-16 w-16 text-purple-300 mx-auto mb-4" />
-            <p className="text-gray-600 mb-4 font-medium">No concession items found.</p>
+            <p className="text-gray-600 mb-4 font-medium">Không tìm thấy mặt hàng bổ sung.</p>
             <Button
               onClick={() => {
                 resetForm();
@@ -448,7 +456,7 @@ export default function ConcessionsPage() {
               className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
             >
               <Plus className="mr-2 h-4 w-4" />
-              Add First Item
+              Thêm Mặt Hàng Đầu Tiên
             </Button>
           </div>
         ) : (
@@ -486,16 +494,16 @@ export default function ConcessionsPage() {
                       {isOutOfStock ? (
                         <div className="bg-red-500 text-white px-2.5 py-1 rounded-full text-xs font-semibold flex items-center gap-1 shadow-lg">
                           <AlertCircle className="h-3.5 w-3.5" />
-                          Out of Stock
+                          Hết Hàng
                         </div>
                       ) : isLowStock ? (
                         <div className="bg-orange-500 text-white px-2.5 py-1 rounded-full text-xs font-semibold flex items-center gap-1 shadow-lg">
                           <AlertCircle className="h-3.5 w-3.5" />
-                          Low Stock
+                          Hàng Sắp Hết
                         </div>
                       ) : (
                         <div className="bg-green-500 text-white px-2.5 py-1 rounded-full text-xs font-semibold shadow-lg">
-                          In Stock
+                          Còn Hàng
                         </div>
                       )}
                     </div>
@@ -510,7 +518,7 @@ export default function ConcessionsPage() {
                     {/* Availability Indicator */}
                     {!concession.available && (
                       <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                        <span className="text-white font-bold text-lg">Unavailable</span>
+                        <span className="text-white font-bold text-lg">Không Sẵn Có</span>
                       </div>
                     )}
                   </div>
@@ -536,16 +544,16 @@ export default function ConcessionsPage() {
                         <span className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
                           ₫{(concession.price / 1000).toFixed(0)}K
                         </span>
-                        <span className="text-xs text-gray-500">Price</span>
+                        <span className="text-xs text-gray-500">Giá</span>
                       </div>
                     </div>
 
                     {/* Inventory Bar */}
                     <div className="pt-1">
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs font-semibold text-gray-700">Stock</span>
+                        <span className="text-xs font-semibold text-gray-700">Tồn Kho</span>
                         <span className="text-xs font-bold text-gray-900">
-                          {concession.inventory || 0} units
+                          {concession.inventory || 0} chiếc
                         </span>
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
@@ -586,7 +594,7 @@ export default function ConcessionsPage() {
                         ))}
                         {concession.allergens.length > 2 && (
                           <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full">
-                            +{concession.allergens.length - 2} more
+                            +{concession.allergens.length - 2} cái khác
                           </span>
                         )}
                       </div>
@@ -602,7 +610,7 @@ export default function ConcessionsPage() {
                       className="flex-1 text-purple-600 hover:text-purple-700 hover:bg-purple-50 border-purple-200"
                     >
                       <Pencil className="h-4 w-4 mr-1" />
-                      Edit
+                      Chỉnh Sửa
                     </Button>
                     <Button
                       variant="outline"
@@ -611,7 +619,7 @@ export default function ConcessionsPage() {
                       className="flex-1 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
                     >
                       <Trash2 className="h-4 w-4 mr-1" />
-                      Delete
+                      Xóa
                     </Button>
                   </div>
                 </div>
@@ -626,10 +634,10 @@ export default function ConcessionsPage() {
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              {editingConcession ? 'Edit Concession Item' : 'Add Concession Item'}
+              {editingConcession ? 'Chỉnh Sửa Mặt Hàng' : 'Thêm Mặt Hàng Bổ Sung'}
             </DialogTitle>
             <DialogDescription>
-              {editingConcession ? 'Update concession item information' : 'Add a new concession item to the system'}
+              {editingConcession ? 'Cập nhật thông tin mặt hàng' : 'Thêm mặt hàng bổ sung mới vào hệ thống'}
             </DialogDescription>
           </DialogHeader>
 
@@ -637,42 +645,42 @@ export default function ConcessionsPage() {
             {/* Name */}
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="name" className="text-right">
-                Name *
+                Tên *
               </Label>
               <Input
                 id="name"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 className="col-span-3"
-                placeholder="e.g., Popcorn Large"
+                placeholder="Ví dụ: Ngô Lắn"
               />
             </div>
 
             {/* Name English */}
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="nameEn" className="text-right">
-                Name (EN)
+                Tên (Anh)
               </Label>
               <Input
                 id="nameEn"
                 value={formData.nameEn}
                 onChange={(e) => setFormData({ ...formData, nameEn: e.target.value })}
                 className="col-span-3"
-                placeholder="Optional English name"
+                placeholder="Tên tiếng Anh tùy chọn"
               />
             </div>
 
             {/* Description */}
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="description" className="text-right">
-                Description
+                Mô Tả
               </Label>
               <Textarea
                 id="description"
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 className="col-span-3"
-                placeholder="Item description"
+                placeholder="Mô tả mặt hàng"
                 rows={3}
               />
             </div>
@@ -680,7 +688,7 @@ export default function ConcessionsPage() {
             {/* Category & Price */}
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="category" className="text-right">
-                Category *
+                Danh Mục *
               </Label>
               <div className="col-span-3 grid grid-cols-2 gap-4">
                 <Select
@@ -688,7 +696,7 @@ export default function ConcessionsPage() {
                   onValueChange={(value) => setFormData({ ...formData, category: value })}
                 >
                   <SelectTrigger id="category">
-                    <SelectValue placeholder="Select category" />
+                    <SelectValue placeholder="Chọn danh mục" />
                   </SelectTrigger>
                   <SelectContent>
                     {CATEGORIES.map((cat) => (
@@ -703,7 +711,7 @@ export default function ConcessionsPage() {
                   type="number"
                   value={formData.price || ''}
                   onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })}
-                  placeholder="Price (₫)"
+                  placeholder="Giá (₫)"
                   min="0"
                 />
               </div>
@@ -712,7 +720,7 @@ export default function ConcessionsPage() {
             {/* Image URL */}
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="imageUrl" className="text-right">
-                Image URL
+                URL Hình ảnh
               </Label>
               <Input
                 id="imageUrl"
@@ -726,7 +734,7 @@ export default function ConcessionsPage() {
             {/* Cinema */}
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="cinemaId" className="text-right">
-                Cinema
+                Rạp
               </Label>
               <div className="col-span-3">
                 <Select
@@ -734,10 +742,10 @@ export default function ConcessionsPage() {
                   onValueChange={(value) => setFormData({ ...formData, cinemaId: value === 'all' ? '' : value })}
                 >
                   <SelectTrigger id="cinemaId">
-                    <SelectValue placeholder="All cinemas (leave empty)" />
+                    <SelectValue placeholder="Tất cả rạp (thẮa trống)" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Cinemas</SelectItem>
+                    <SelectItem value="all">Tất Cả Rạp</SelectItem>
                     {cinemas.map((cinema) => (
                       <SelectItem key={cinema.id} value={cinema.id}>
                         {cinema.name}
@@ -746,7 +754,7 @@ export default function ConcessionsPage() {
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-gray-500 mt-1">
-                  Leave as &quot;All Cinemas&quot; to make available in all cinemas
+                  Để trắng &quot;Tất Cả Rạp&quot; để có sẵn trong tất cả rạp
                 </p>
               </div>
             </div>
@@ -754,7 +762,7 @@ export default function ConcessionsPage() {
             {/* Inventory & Available */}
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="inventory" className="text-right">
-                Inventory
+                Tồn Kho
               </Label>
               <div className="col-span-3 grid grid-cols-2 gap-4">
                 <Input
@@ -762,7 +770,7 @@ export default function ConcessionsPage() {
                   type="number"
                   value={formData.inventory || ''}
                   onChange={(e) => setFormData({ ...formData, inventory: parseInt(e.target.value) || 0 })}
-                  placeholder="Stock quantity"
+                  placeholder="Số lượng tồn kho"
                   min="0"
                 />
                 <div className="flex items-center gap-2">
@@ -774,7 +782,7 @@ export default function ConcessionsPage() {
                     className="rounded border-gray-300"
                   />
                   <Label htmlFor="available" className="cursor-pointer">
-                    Available for sale
+                    Sẵn có để bán
                   </Label>
                 </div>
               </div>
@@ -783,7 +791,7 @@ export default function ConcessionsPage() {
             {/* Allergens */}
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="allergens" className="text-right">
-                Allergens
+                Chất Gây Dị Ứng
               </Label>
               <Input
                 id="allergens"
@@ -793,7 +801,7 @@ export default function ConcessionsPage() {
                   allergens: e.target.value.split(',').map(s => s.trim()).filter(Boolean)
                 })}
                 className="col-span-3"
-                placeholder="e.g., nuts, dairy, gluten (comma separated)"
+                placeholder="Ví dụ: hạt, sữa, lúa mì (phân tách bằng dấu phẩy)"
               />
             </div>
           </div>
@@ -806,14 +814,44 @@ export default function ConcessionsPage() {
                 resetForm();
               }}
             >
-              Cancel
+              Hủy Bỏ
             </Button>
             <Button
               onClick={handleSubmit}
               className="bg-gradient-to-r from-purple-600 to-pink-600"
               disabled={createConcession.isPending || updateConcession.isPending || !formData.name.trim() || formData.price < 0}
             >
-              {createConcession.isPending || updateConcession.isPending ? 'Saving...' : 'Save'}
+              {createConcession.isPending || updateConcession.isPending ? 'Đang Lưu...' : 'Lưu'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Xác Nhận Xóa</DialogTitle>
+            <DialogDescription>
+              Bạn có chắc muốn xóa mặt hàng này không? Hành động này không thể hoàn tác.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setDeleteDialogOpen(false);
+                setDeleteConfirmId('');
+              }}
+            >
+              Hủy Bỏ
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmDelete}
+              disabled={deleteConcession.isPending}
+            >
+              {deleteConcession.isPending ? 'Đang Xóa...' : 'Xóa'}
             </Button>
           </DialogFooter>
         </DialogContent>

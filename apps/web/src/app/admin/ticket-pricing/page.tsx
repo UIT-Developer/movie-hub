@@ -44,7 +44,7 @@ export default function TicketPricingPage() {
   const { toast } = useToast();
 
   // API hooks
-  const { data: cinemasData = [], isLoading: cinemasLoading, isError: cinemasError } = useCinemas();
+  const { data: cinemasData = [], isError: cinemasError } = useCinemas();
   const cinemas = cinemasData || [];
   const { data: hallsData = [], isLoading: hallsLoading, isError: hallsError } = useHallsByCinema(selectedCinemaId);
   const halls = hallsData || [];
@@ -81,8 +81,8 @@ export default function TicketPricingPage() {
       const newPrice = parseInt(editPrice);
       if (isNaN(newPrice) || newPrice <= 0) {
         toast({
-          title: 'Invalid Price',
-          description: 'Please enter a valid price greater than 0',
+          title: 'Giá Không Hợp Lệ',
+          description: 'Vui lòng nhập giá hợp lệ lớn hơn 0',
           variant: 'destructive',
         });
         return;
@@ -91,15 +91,15 @@ export default function TicketPricingPage() {
       await updatePricing.mutateAsync({ id: pricingId, data: { price: newPrice } });
 
       toast({
-        title: 'Success',
-        description: `Ticket pricing updated to ${formatPrice(newPrice)}`,
+        title: 'Thành Công',
+        description: `Giá vé đã được cập nhật thành ${formatPrice(newPrice)}`,
       });
 
       cancelEdit();
     } catch (error) {
       toast({
-        title: 'Update Failed',
-        description: error instanceof Error ? error.message : 'Failed to update ticket pricing. Please try again.',
+        title: 'Cập Nhật Thất Bại',
+        description: error instanceof Error ? error.message : 'Không thể cập nhật giá vé. Vui lòng thử lại.',
         variant: 'destructive',
       });
     }
@@ -315,12 +315,12 @@ export default function TicketPricingPage() {
                   <div>
                     <h3 className="font-bold text-lg">{selectedHall?.name}</h3>
                     <p className="text-sm text-gray-600">
-                      {selectedCinema?.name} • {selectedHall?.capacity} seats • {selectedHall?.type}
+                      {selectedCinema?.name} • {selectedHall?.capacity} ghế • {selectedHall?.type}
                     </p>
                   </div>
                 </div>
                 <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200">
-                  {pricings.length} Pricing Rules
+                  {pricings.length} Luật Giá
                 </Badge>
               </div>
             </CardContent>
@@ -345,7 +345,7 @@ export default function TicketPricingPage() {
                       <div>
                         <CardTitle className="text-lg">{seatType}</CardTitle>
                         <CardDescription>
-                          Pricing for {seatType.toLowerCase()} seats
+                          Định giá cho ghế {seatType.toLowerCase()}
                         </CardDescription>
                       </div>
                     </div>
@@ -364,12 +364,12 @@ export default function TicketPricingPage() {
                             {editingId === pricing.id ? (
                               <div className="space-y-3">
                                 <div>
-                                  <label className="text-sm text-gray-600 mb-1 block">Price (VND)</label>
+                                  <label className="text-sm text-gray-600 mb-1 block">Giá (VND)</label>
                                   <Input
                                     type="number"
                                     value={editPrice}
                                     onChange={(e) => setEditPrice(e.target.value)}
-                                    placeholder="Enter price"
+                                    placeholder="Nhập giá"
                                     className="text-lg font-bold"
                                     autoFocus
                                     min="1"
@@ -407,7 +407,7 @@ export default function TicketPricingPage() {
                                     disabled={updatePricing.isPending}
                                   >
                                     <X className="h-4 w-4 mr-1" />
-                                    Hủy
+                                    Hủy Bỏ
                                   </Button>
                                 </div>
                               </div>
@@ -423,7 +423,7 @@ export default function TicketPricingPage() {
                                   className="w-full"
                                 >
                                   <Edit2 className="h-3 w-3 mr-1" />
-                                  Edit Price
+                                  Chỉnh Sửa Giá
                                 </Button>
                               </div>
                             )}
@@ -437,32 +437,32 @@ export default function TicketPricingPage() {
             })}
           </div>
 
-          {/* Legend */}
+          {/* Chú Thích */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Day Type Information</CardTitle>
+              <CardTitle className="text-lg">Thông Tin Loại Ngày</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-lg border border-blue-200">
                   <Calendar className="h-8 w-8 text-blue-600" />
                   <div>
-                    <p className="font-semibold text-blue-900">📅 WEEKDAY</p>
-                    <p className="text-sm text-blue-700">Monday - Friday</p>
+                    <p className="font-semibold text-blue-900">📅 Thứ Hai - Thứ Sáu</p>
+                    <p className="text-sm text-blue-700">Thứ Hai đến Thứ Sáu</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3 p-4 bg-purple-50 rounded-lg border border-purple-200">
                   <Calendar className="h-8 w-8 text-purple-600" />
                   <div>
-                    <p className="font-semibold text-purple-900">🎉 WEEKEND</p>
-                    <p className="text-sm text-purple-700">Saturday - Sunday</p>
+                    <p className="font-semibold text-purple-900">🎉 Thứ Bảy - Chủ Nhật</p>
+                    <p className="text-sm text-purple-700">Thứ Bảy và Chủ Nhật</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3 p-4 bg-amber-50 rounded-lg border border-amber-200">
                   <Sparkles className="h-8 w-8 text-amber-600" />
                   <div>
-                    <p className="font-semibold text-amber-900">✨ HOLIDAY</p>
-                    <p className="text-sm text-amber-700">Public holidays</p>
+                    <p className="font-semibold text-amber-900">✨ Ngày Lễ Công Cộng</p>
+                    <p className="text-sm text-amber-700">Các ngày lễ công cộng</p>
                   </div>
                 </div>
               </div>

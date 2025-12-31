@@ -3,7 +3,7 @@
 export const dynamic = 'force-dynamic';
 
 import { useState, useMemo } from 'react';
-import { Eye, Filter, CheckCircle, Clock, Calendar, ArrowUpDown } from 'lucide-react';
+import { Eye, CheckCircle, Clock, Calendar, ArrowUpDown } from 'lucide-react';
 import { Button } from '@movie-hub/shacdn-ui/button';
 import {
   Card,
@@ -161,8 +161,6 @@ export default function ReservationsPage() {
     setPage(1);
   };
 
-  const hasActiveFilters = filterCinemaId !== 'all' || filterStatus !== 'all' || filterPaymentStatus !== 'all' || filterShowtimeId || filterStartDate || filterEndDate;
-
   const getStatusBadgeColor = (status: BookingStatus) => {
     switch (status) {
       case BookingStatusEnum.CONFIRMED:
@@ -218,7 +216,7 @@ export default function ReservationsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Đ\u1eb7t ch\u1ed7</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Đặt Chỗ</h1>
           <p className="text-gray-500 mt-1">Quản lý đặt vé và đặt chỗ rạp</p>
         </div>
       </div>
@@ -227,36 +225,36 @@ export default function ReservationsPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200/60 shadow-md hover:shadow-lg transition-shadow">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-semibold text-purple-700 uppercase tracking-wider">📊 Total Reservations</CardTitle>
+            <CardTitle className="text-sm font-semibold text-purple-700 uppercase tracking-wider">� Tổng Đặt Chỗ</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-purple-900">{stats.total}</div>
             <p className="text-xs text-purple-600 mt-2 font-medium">
-              {stats.confirmed} confirmed · {stats.pending} pending
+              {stats.confirmed} đã xác nhận · {stats.pending} chờ xử lý
             </p>
           </CardContent>
         </Card>
 
         <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200/60 shadow-md hover:shadow-lg transition-shadow">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-semibold text-blue-700 uppercase tracking-wider">💰 Total Revenue</CardTitle>
+            <CardTitle className="text-sm font-semibold text-blue-700 uppercase tracking-wider">💰 Tổng Doanh Thu</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-blue-900">{formatPrice(stats.totalRevenue)}</div>
             <p className="text-xs text-blue-600 mt-2 font-medium">
-              Avg: {formatPrice(stats.avgBookingValue)} per booking
+              Trung bình: {formatPrice(stats.avgBookingValue)} mỗi đơn
             </p>
           </CardContent>
         </Card>
 
         <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200/60 shadow-md hover:shadow-lg transition-shadow">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-semibold text-emerald-700 uppercase tracking-wider">✅ Completed</CardTitle>
+            <CardTitle className="text-sm font-semibold text-emerald-700 uppercase tracking-wider">✅ Hoàn Thành</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-emerald-900">{stats.completed}</div>
             <p className="text-xs text-emerald-600 mt-2 font-medium">
-              Successfully completed
+              Hoàn thành thành công
             </p>
           </CardContent>
         </Card>
@@ -279,16 +277,16 @@ export default function ReservationsPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
           {/* Cinema Filter */}
           <div className="space-y-2">
-            <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">🏢 Cinema</label>
+            <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">� Rạp</label>
             <Select value={filterCinemaId} onValueChange={(value) => {
               setFilterCinemaId(value);
               setPage(1);
             }}>
               <SelectTrigger className="h-11 border-purple-200 focus:ring-purple-500">
-                <SelectValue placeholder="All Cinemas" />
+                <SelectValue placeholder="Tất Cả Rạp" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Cinemas</SelectItem>
+                <SelectItem value="all">Tất Cả Rạp</SelectItem>
                 {cinemas.map((cinema) => (
                   <SelectItem key={cinema.id} value={cinema.id}>
                     {cinema.name}
@@ -300,49 +298,49 @@ export default function ReservationsPage() {
 
           {/* Booking Status Filter */}
           <div className="space-y-2">
-            <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">📋 Booking Status</label>
+            <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">📋 Trạng Thái Đặt Vé</label>
             <Select value={filterStatus} onValueChange={(value) => {
               setFilterStatus(value);
               setPage(1);
             }}>
               <SelectTrigger className="h-11 border-purple-200 focus:ring-purple-500">
-                <SelectValue placeholder="All Status" />
+                <SelectValue placeholder="Tất Cả Trạng Thái" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value={BookingStatusEnum.PENDING}>⏳ Pending</SelectItem>
-                <SelectItem value={BookingStatusEnum.CONFIRMED}>✅ Confirmed</SelectItem>
-                <SelectItem value={BookingStatusEnum.CANCELLED}>❌ Cancelled</SelectItem>
-                <SelectItem value={BookingStatusEnum.EXPIRED}>⏱️ Expired</SelectItem>
-                <SelectItem value={BookingStatusEnum.COMPLETED}>🎬 Completed</SelectItem>
+                <SelectItem value="all">Tất Cả Trạng Thái</SelectItem>
+                <SelectItem value={BookingStatusEnum.PENDING}>⏳ Chờ Xử Lý</SelectItem>
+                <SelectItem value={BookingStatusEnum.CONFIRMED}>✅ Đã Xác Nhận</SelectItem>
+                <SelectItem value={BookingStatusEnum.CANCELLED}>❌ Đã Hủy</SelectItem>
+                <SelectItem value={BookingStatusEnum.EXPIRED}>⏱️ Đã Hết Hạn</SelectItem>
+                <SelectItem value={BookingStatusEnum.COMPLETED}>🎬 Hoàn Thành</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           {/* Payment Status Filter */}
           <div className="space-y-2">
-            <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">💳 Payment Status</label>
+            <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">💳 Trạng Thái Thanh Toán</label>
             <Select value={filterPaymentStatus} onValueChange={(value) => {
               setFilterPaymentStatus(value);
               setPage(1);
             }}>
               <SelectTrigger className="h-11 border-purple-200 focus:ring-purple-500">
-                <SelectValue placeholder="All Payment" />
+                <SelectValue placeholder="Tất Cả Thanh Toán" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Payment</SelectItem>
-                <SelectItem value={PaymentStatusEnum.PENDING}>⏳ Pending</SelectItem>
-                <SelectItem value={PaymentStatusEnum.PROCESSING}>⚙️ Processing</SelectItem>
-                <SelectItem value={PaymentStatusEnum.COMPLETED}>✅ Completed</SelectItem>
-                <SelectItem value={PaymentStatusEnum.FAILED}>❌ Failed</SelectItem>
-                <SelectItem value={PaymentStatusEnum.REFUNDED}>🔄 Refunded</SelectItem>
+                <SelectItem value="all">Tất Cả Thanh Toán</SelectItem>
+                <SelectItem value={PaymentStatusEnum.PENDING}>⏳ Chờ Xử Lý</SelectItem>
+                <SelectItem value={PaymentStatusEnum.PROCESSING}>⚙️ Đang Xử Lý</SelectItem>
+                <SelectItem value={PaymentStatusEnum.COMPLETED}>✅ Hoàn Thành</SelectItem>
+                <SelectItem value={PaymentStatusEnum.FAILED}>❌ Thất Bại</SelectItem>
+                <SelectItem value={PaymentStatusEnum.REFUNDED}>🔄 Đã Hoàn Tiền</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           {/* Start Date Filter */}
           <div className="space-y-2">
-            <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">📅 Start Date</label>
+            <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">📅 Ngày Bắt Đầu</label>
             <Input
               type="date"
               value={filterStartDate}
@@ -356,7 +354,7 @@ export default function ReservationsPage() {
 
           {/* End Date Filter */}
           <div className="space-y-2">
-            <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">📅 End Date</label>
+            <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">📅 Ngày Kết Thúc</label>
             <Input
               type="date"
               value={filterEndDate}
@@ -452,7 +450,7 @@ export default function ReservationsPage() {
               onClick={handleClearFilters}
               className="text-xs font-medium text-purple-600 hover:text-purple-700 transition-colors ml-auto"
             >
-              Clear All
+              Xóa Tất Cả
             </button>
           </div>
         )}
@@ -463,15 +461,15 @@ export default function ReservationsPage() {
         <CardContent className="pt-6">
           <div className="flex items-end gap-4">
             <div>
-              <Label htmlFor="filter-sort">Sort By</Label>
+              <Label htmlFor="filter-sort">Sắp Xếp Theo</Label>
               <Select value={sortBy} onValueChange={(value: 'created_at' | 'final_amount' | 'expires_at') => setSortBy(value)}>
                 <SelectTrigger id="filter-sort">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="created_at">Created Date</SelectItem>
-                  <SelectItem value="final_amount">Amount</SelectItem>
-                  <SelectItem value="expires_at">Expiration</SelectItem>
+                  <SelectItem value="created_at">Ngày Tạo</SelectItem>
+                  <SelectItem value="final_amount">Số Tiền</SelectItem>
+                  <SelectItem value="expires_at">Thời Hạn</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -482,7 +480,7 @@ export default function ReservationsPage() {
               className="gap-2"
             >
               <ArrowUpDown className="h-4 w-4" />
-              {sortOrder === 'desc' ? 'Newest' : 'Oldest'}
+              {sortOrder === 'desc' ? 'Mới Nhất' : 'Cũ Nhất'}
             </Button>
           </div>
         </CardContent>
@@ -491,36 +489,36 @@ export default function ReservationsPage() {
       {/* Bookings Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Reservations</CardTitle>
+          <CardTitle>Đặt Chỗ</CardTitle>
           <CardDescription>
-            {bookings.length} reservation{bookings.length !== 1 ? 's' : ''} found
+            {bookings.length} đơn đặt chỗ được tìm thấy
           </CardDescription>
         </CardHeader>
         <CardContent>
           {loading ? (
             <div className="text-center py-12">
               <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-purple-600 border-r-transparent"></div>
-              <p className="mt-4 text-gray-500">Loading reservations...</p>
+              <p className="mt-4 text-gray-500">Đang tải đặt chỗ...</p>
             </div>
           ) : bookings.length === 0 ? (
             <div className="text-center py-16">
               <Calendar className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-500">No reservations found with current filters.</p>
+              <p className="text-gray-500">Không tìm thấy đặt chỗ với bộ lọc hiện tại.</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Booking Code</TableHead>
-                    <TableHead>Movie</TableHead>
-                    <TableHead>Cinema</TableHead>
-                    <TableHead>Showtime</TableHead>
-                    <TableHead>Seats</TableHead>
-                    <TableHead>Amount</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Created</TableHead>
-                    <TableHead>Actions</TableHead>
+                    <TableHead>Mã Đặt</TableHead>
+                    <TableHead>Phim</TableHead>
+                    <TableHead>Rạp</TableHead>
+                    <TableHead>Suất Chiếu</TableHead>
+                    <TableHead>Ghế</TableHead>
+                    <TableHead>Số Tiền</TableHead>
+                    <TableHead>Trạng Thái</TableHead>
+                    <TableHead>Tạo Lúc</TableHead>
+                    <TableHead>Hành Động</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -545,7 +543,7 @@ export default function ReservationsPage() {
                             size="sm"
                             onClick={() => handleViewDetail(booking.id)}
                             className="h-8 w-8 p-0"
-                            title="View details"
+                            title="Xem chi tiết"
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
@@ -555,7 +553,7 @@ export default function ReservationsPage() {
                               size="sm"
                               onClick={() => handleConfirm(booking.id)}
                               className="h-8 w-8 p-0 text-green-600 hover:text-green-700"
-                              title="Confirm booking"
+                              title="Xác nhận đặt vé"
                             >
                               <CheckCircle className="h-4 w-4" />
                             </Button>
@@ -565,7 +563,7 @@ export default function ReservationsPage() {
                             size="sm"
                             onClick={() => openStatusDialog(booking.id, booking.status)}
                             className="h-8 w-8 p-0"
-                            title="Change status"
+                            title="Đổi trạng thái"
                           >
                             <Clock className="h-4 w-4" />
                           </Button>
@@ -584,25 +582,25 @@ export default function ReservationsPage() {
       <Dialog open={detailDialogOpen} onOpenChange={setDetailDialogOpen}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Booking Details</DialogTitle>
-            <DialogDescription>Xem thông tin đặt đầy đủ</DialogDescription>
+            <DialogTitle>Chi Tiết Đặt Vé</DialogTitle>
+            <DialogDescription>Xem thông tin đặt vé đầy đủ</DialogDescription>
           </DialogHeader>
 
           {detailLoading ? (
             <div className="text-center py-12">
               <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-purple-600 border-r-transparent"></div>
-              <p className="mt-4 text-gray-500">Loading details...</p>
+              <p className="mt-4 text-gray-500">Đang tải chi tiết...</p>
             </div>
           ) : bookingDetail ? (
             <div className="space-y-4">
               {/* Basic Info */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label className="text-sm text-gray-500">Booking Code</Label>
+                  <Label className="text-sm text-gray-500">Mã Đặt Vé</Label>
                   <p className="font-medium">{bookingDetail.bookingCode}</p>
                 </div>
                 <div>
-                  <Label className="text-sm text-gray-500">Status</Label>
+                  <Label className="text-sm text-gray-500">Trạng Thái</Label>
                   <div>
                     <Badge className={getStatusBadgeColor(bookingDetail.status)}>
                       {bookingDetail.status}
@@ -617,29 +615,29 @@ export default function ReservationsPage() {
               {/* Movie & Cinema Info */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label className="text-sm text-gray-500">Movie</Label>
+                  <Label className="text-sm text-gray-500">Phim</Label>
                   <p className="font-medium">{bookingDetail.movieTitle}</p>
                 </div>
                 <div>
-                  <Label className="text-sm text-gray-500">Cinema</Label>
+                  <Label className="text-sm text-gray-500">Rạp</Label>
                   <p className="font-medium">{bookingDetail.cinemaName}</p>
                 </div>
                 <div>
-                  <Label className="text-sm text-gray-500">Hall</Label>
+                  <Label className="text-sm text-gray-500">Phòng</Label>
                   <p className="font-medium">{bookingDetail.hallName}</p>
                 </div>
                 <div>
-                  <Label className="text-sm text-gray-500">Showtime</Label>
+                  <Label className="text-sm text-gray-500">Suất Chiếu</Label>
                   <p className="font-medium">{formatDate(bookingDetail.startTime)}</p>
                 </div>
               </div>
 
               {/* Customer Info */}
               <div className="border-t pt-4">
-                <h3 className="font-semibold mb-2">Customer Information</h3>
+                <h3 className="font-semibold mb-2">Thông Tin Khách Hàng</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label className="text-sm text-gray-500">Name</Label>
+                    <Label className="text-sm text-gray-500">Tên</Label>
                     <p>{bookingDetail.customerName}</p>
                   </div>
                   <div>
@@ -648,7 +646,7 @@ export default function ReservationsPage() {
                   </div>
                   {bookingDetail.customerPhone && (
                     <div>
-                      <Label className="text-sm text-gray-500">Phone</Label>
+                      <Label className="text-sm text-gray-500">Số Điện Thoại</Label>
                       <p>{bookingDetail.customerPhone}</p>
                     </div>
                   )}
@@ -657,7 +655,7 @@ export default function ReservationsPage() {
 
               {/* Seats */}
               <div className="border-t pt-4">
-                <h3 className="font-semibold mb-2">Seats</h3>
+                <h3 className="font-semibold mb-2">Ghế</h3>
                 <div className="grid grid-cols-3 gap-2">
                   {bookingDetail.seats && bookingDetail.seats.map((seat, idx: number) => (
                     <div key={idx} className="border p-2 rounded text-sm">
@@ -672,7 +670,7 @@ export default function ReservationsPage() {
               {/* Concessions */}
               {bookingDetail.concessions && bookingDetail.concessions.length > 0 && (
                 <div className="border-t pt-4">
-                  <h3 className="font-semibold mb-2">Concessions</h3>
+                  <h3 className="font-semibold mb-2">Mặt Hàng Bổ Sung</h3>
                   {bookingDetail.concessions.map((item, idx: number) => (
                     <div key={idx} className="flex justify-between py-1 text-sm">
                       <span>{item.name} x {item.quantity}</span>
@@ -684,31 +682,31 @@ export default function ReservationsPage() {
 
               {/* Pricing */}
               <div className="border-t pt-4">
-                <h3 className="font-semibold mb-2">Pricing</h3>
+                <h3 className="font-semibold mb-2">Định Giá</h3>
                 <div className="space-y-1 text-sm">
                   <div className="flex justify-between">
-                    <span>Subtotal</span>
+                    <span>Cộng Tiền</span>
                     <span className="font-medium">{formatPrice(bookingDetail.subtotal || 0)}</span>
                   </div>
                   {bookingDetail.discount && bookingDetail.discount > 0 && (
                     <div className="flex justify-between text-green-600">
-                      <span>Discount</span>
+                      <span>Giảm Giá</span>
                       <span>-{formatPrice(bookingDetail.discount)}</span>
                     </div>
                   )}
                   {bookingDetail.pointsUsed && bookingDetail.pointsUsed > 0 && (
                     <div className="flex justify-between text-blue-600">
-                      <span>Points Discount ({bookingDetail.pointsUsed} pts)</span>
+                      <span>Giảm Giá Điểm ({bookingDetail.pointsUsed} điểm)</span>
                       <span>-{formatPrice(bookingDetail.pointsDiscount || 0)}</span>
                     </div>
                   )}
                   {bookingDetail.promotionCode && (
                     <div className="flex justify-between text-purple-600 py-1">
-                      <span>Promo: {bookingDetail.promotionCode}</span>
+                      <span>Khuyến Mãi: {bookingDetail.promotionCode}</span>
                     </div>
                   )}
                   <div className="flex justify-between font-bold text-base border-t pt-2 mt-2">
-                    <span>Total Amount</span>
+                    <span>Tổng Tiền</span>
                     <span className="text-green-600">{formatPrice(bookingDetail.finalAmount || bookingDetail.totalAmount || 0)}</span>
                   </div>
                 </div>
@@ -717,28 +715,28 @@ export default function ReservationsPage() {
               {/* Timestamps */}
               <div className="border-t pt-4 text-sm text-gray-500">
                 <div className="flex justify-between">
-                  <span>Created:</span>
+                  <span>Tạo Lúc:</span>
                   <span>{formatDate(bookingDetail.createdAt)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Updated:</span>
+                  <span>Cập Nhật Lúc:</span>
                   <span>{formatDate(bookingDetail.updatedAt)}</span>
                 </div>
                 {bookingDetail.expiresAt && (
                   <div className="flex justify-between">
-                    <span>Expires:</span>
+                    <span>Hết Hạn:</span>
                     <span>{formatDate(bookingDetail.expiresAt)}</span>
                   </div>
                 )}
                 {bookingDetail.cancelledAt && (
                   <div className="flex justify-between text-red-600">
-                    <span>Đã hủy:</span>
+                    <span>Đã Hủy:</span>
                     <span>{formatDate(bookingDetail.cancelledAt)}</span>
                   </div>
                 )}
                 {bookingDetail.cancellationReason && (
                   <div className="mt-2">
-                    <Label className="text-sm">Lý do hủy:</Label>
+                    <Label className="text-sm">Lý Do Hủy:</Label>
                     <p className="text-red-600">{bookingDetail.cancellationReason}</p>
                   </div>
                 )}
@@ -752,17 +750,17 @@ export default function ReservationsPage() {
                 onClick={() => handleConfirm(bookingDetail.id)}
                 className="bg-green-600 hover:bg-green-700"
               >
-                Confirm Booking
+                Xác Nhận Đặt Vé
               </Button>
             )}
             <Button
               variant="outline"
               onClick={() => bookingDetail && openStatusDialog(bookingDetail.id, bookingDetail.status)}
             >
-              Change Status
+              Thay Đổi Trạng Thái
             </Button>
             <Button variant="outline" onClick={() => setDetailDialogOpen(false)}>
-              Close
+              Đóng
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -772,13 +770,13 @@ export default function ReservationsPage() {
       <Dialog open={statusDialogOpen} onOpenChange={setStatusDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Cập nhật trạng thái đặt đặt</DialogTitle>
-            <DialogDescription>Change the booking status and provide a reason</DialogDescription>
+            <DialogTitle>Thay Đổi Trạng Thái Đặt Vé</DialogTitle>
+            <DialogDescription>Đổi trạng thái đặt vé và cung cấp lý do</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
             <div>
-              <Label htmlFor="new-status">New Status</Label>
+              <Label htmlFor="new-status">Trạng Thái Mới</Label>
               <Select
                 value={statusUpdate.status}
                 onValueChange={(value: BookingStatus) =>
@@ -786,20 +784,20 @@ export default function ReservationsPage() {
                 }
               >
                 <SelectTrigger id="new-status">
-                  <SelectValue placeholder="Select status" />
+                  <SelectValue placeholder="Chọn trạng thái" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="PENDING">Chờ xử lý</SelectItem>
-                  <SelectItem value="CONFIRMED">Xác nhận</SelectItem>
-                  <SelectItem value="CANCELLED">Đã hủy</SelectItem>
-                  <SelectItem value="EXPIRED">Hết hạn</SelectItem>
-                  <SelectItem value="COMPLETED">Hoàn thành</SelectItem>
+                  <SelectItem value="PENDING">Chờ Xử Lý</SelectItem>
+                  <SelectItem value="CONFIRMED">Đã Xác Nhận</SelectItem>
+                  <SelectItem value="CANCELLED">Đã Hủy</SelectItem>
+                  <SelectItem value="EXPIRED">Đã Hết Hạn</SelectItem>
+                  <SelectItem value="COMPLETED">Hoàn Thành</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div>
-              <Label htmlFor="reason">Lý do (tùy chọn)</Label>
+              <Label htmlFor="reason">Lý Do (Tùy Chọn)</Label>
               <Input
                 id="reason"
                 value={statusUpdate.reason}
@@ -811,14 +809,14 @@ export default function ReservationsPage() {
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setStatusDialogOpen(false)}>
-              Hủy
+              Hủy Bỏ
             </Button>
             <Button
               onClick={handleUpdateStatus}
               className="bg-gradient-to-r from-purple-600 to-pink-600"
               disabled={updateStatus.isPending}
             >
-              {updateStatus.isPending ? 'Đang cập nhật...' : 'Cập nhật trạng thái'}
+              {updateStatus.isPending ? 'Đang Cập Nhật...' : 'Cập Nhật Trạng Thái'}
             </Button>
           </DialogFooter>
         </DialogContent>

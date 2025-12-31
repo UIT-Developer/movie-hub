@@ -3,7 +3,7 @@
 export const dynamic = 'force-dynamic';
 
 import { useState } from 'react';
-import { Plus, Pencil, Trash2, Users, Filter } from 'lucide-react';
+import { Plus, Pencil, Trash2, Users } from 'lucide-react';
 import { Button } from '@movie-hub/shacdn-ui/button';
 import {
   Card,
@@ -76,8 +76,8 @@ const WORK_TYPES: { value: string; label: string }[] = [
 
 const SHIFT_TYPES: { value: string; label: string }[] = [
   { value: 'MORNING', label: 'Sáng' },
-  { value: 'AFTERNOON', label: 'Chi\u1ec1u' },
-  { value: 'NIGHT', label: '\u0110\u00eam' },
+  { value: 'AFTERNOON', label: 'Chiều' },
+  { value: 'NIGHT', label: 'Đêm' },
 ];
 
 // Helper function to format date for input type="date"
@@ -136,6 +136,8 @@ const ensureUUIDFormat = (cinemaId: string): string => {
 
 export default function StaffPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string>('');
   const [editingStaff, setEditingStaff] = useState<Staff | null>(null);
   const [filterCinemaId, setFilterCinemaId] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
@@ -172,8 +174,8 @@ export default function StaffPage() {
   // Show error toast if query fails
   if (error) {
     toast({
-      title: 'Error',
-      description: 'Failed to fetch staff',
+      title: 'Lỗi',
+      description: 'Không thể tải danh sách nhân viên',
       variant: 'destructive',
     });
   }
@@ -182,8 +184,8 @@ export default function StaffPage() {
     // Validate required fields
     if (!formData.fullName.trim()) {
       toast({
-        title: 'Error',
-        description: 'Full name is required',
+        title: 'Lỗi',
+        description: 'Họ tên là bắt buộc',
         variant: 'destructive',
       });
       return;
@@ -191,8 +193,8 @@ export default function StaffPage() {
 
     if (!formData.email.trim()) {
       toast({
-        title: 'Error',
-        description: 'Email is required',
+        title: 'Lỗi',
+        description: 'Email là bắt buộc',
         variant: 'destructive',
       });
       return;
@@ -200,8 +202,8 @@ export default function StaffPage() {
 
     if (!formData.phone.trim() || formData.phone.trim().length < 9) {
       toast({
-        title: 'Error',
-        description: 'Phone number must be at least 9 characters',
+        title: 'Lỗi',
+        description: 'Số điện thoại phải có ít nhất 9 ký tự',
         variant: 'destructive',
       });
       return;
@@ -209,8 +211,8 @@ export default function StaffPage() {
 
     if (!formData.cinemaId && !editingStaff) {
       toast({
-        title: 'Error',
-        description: 'Cinema is required',
+        title: 'Lỗi',
+        description: 'Rạp chiếu phim là bắt buộc',
         variant: 'destructive',
       });
       return;
@@ -218,8 +220,8 @@ export default function StaffPage() {
 
     if (!formData.dob) {
       toast({
-        title: 'Error',
-        description: 'Date of birth is required',
+        title: 'Lỗi',
+        description: 'Ngày sinh là bắt buộc',
         variant: 'destructive',
       });
       return;
@@ -227,8 +229,8 @@ export default function StaffPage() {
 
     if (!formData.hireDate) {
       toast({
-        title: 'Error',
-        description: 'Hire date is required',
+        title: 'Lỗi',
+        description: 'Ngày tuyển dụng là bắt buộc',
         variant: 'destructive',
       });
       return;
@@ -236,8 +238,8 @@ export default function StaffPage() {
 
     if (formData.salary < 0) {
       toast({
-        title: 'Error',
-        description: 'Salary cannot be negative',
+        title: 'Lỗi',
+        description: 'Lương không thể âm',
         variant: 'destructive',
       });
       return;
@@ -251,8 +253,8 @@ export default function StaffPage() {
 
       if (!dobDate || isNaN(dobDate.getTime())) {
         toast({
-          title: 'Error',
-          description: 'Invalid date of birth format',
+          title: 'Lỗi',
+          description: 'Định dạng ngày sinh không hợp lệ',
           variant: 'destructive',
         });
         return;
@@ -260,8 +262,8 @@ export default function StaffPage() {
 
       if (!hireDateDate || isNaN(hireDateDate.getTime())) {
         toast({
-          title: 'Error',
-          description: 'Invalid hire date format',
+          title: 'Lỗi',
+          description: 'Định dạng ngày tuyển dụng không hợp lệ',
           variant: 'destructive',
         });
         return;
@@ -325,12 +327,17 @@ export default function StaffPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Bạn có chắc muốn xóa nhân viên này không?')) {
-      return;
-    }
+    setDeleteConfirmId(id);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteConfirmId) return;
 
     try {
-      await deleteStaff.mutateAsync(id);
+      await deleteStaff.mutateAsync(deleteConfirmId);
+      setDeleteDialogOpen(false);
+      setDeleteConfirmId('');
     } catch {
       // Error toast already shown by mutation hook
     }
@@ -391,7 +398,7 @@ export default function StaffPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Staff Management</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Quản Lý Nhân Viên</h1>
           <p className="text-gray-500 mt-1">Quản lý nhân viên và nhân viên rạp</p>
         </div>
         <Button
@@ -402,7 +409,7 @@ export default function StaffPage() {
           className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
         >
           <Plus className="mr-2 h-4 w-4" />
-          Add Staff Member
+          Thêm Nhân Viên
         </Button>
       </div>
 
@@ -410,48 +417,48 @@ export default function StaffPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200/60 shadow-md hover:shadow-lg transition-shadow">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-semibold text-purple-700 uppercase tracking-wider">👥 Total Staff</CardTitle>
+            <CardTitle className="text-sm font-semibold text-purple-700 uppercase tracking-wider">👥 Tổng Nhân Viên</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-purple-900">{stats.total}</div>
             <p className="text-xs text-purple-600 mt-2 font-medium">
-              {stats.active} active · {stats.inactive} inactive
+              {stats.active} hoạt động · {stats.inactive} không hoạt động
             </p>
           </CardContent>
         </Card>
 
         <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200/60 shadow-md hover:shadow-lg transition-shadow">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-semibold text-blue-700 uppercase tracking-wider">💼 Employment Type</CardTitle>
+            <CardTitle className="text-sm font-semibold text-blue-700 uppercase tracking-wider">💼 Loại Lao Động</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-blue-900">{stats.fullTime}</div>
             <p className="text-xs text-blue-600 mt-2 font-medium">
-              {stats.fullTime} full-time · {stats.partTime} part-time
+              {stats.fullTime} toàn thời · {stats.partTime} bán thời
             </p>
           </CardContent>
         </Card>
 
         <Card className="bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-200/60 shadow-md hover:shadow-lg transition-shadow">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-semibold text-yellow-700 uppercase tracking-wider">📍 Key Positions</CardTitle>
+            <CardTitle className="text-sm font-semibold text-yellow-700 uppercase tracking-wider">📍 Vị Trí Quan Trọng</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-yellow-900">{stats.positions.manager}</div>
             <p className="text-xs text-yellow-600 mt-2 font-medium">
-              {stats.positions.manager} managers · {stats.positions.ticketClerk} clerks
+              {stats.positions.manager} quản lý · {stats.positions.ticketClerk} nhân viên bán vé
             </p>
           </CardContent>
         </Card>
 
         <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200/60 shadow-md hover:shadow-lg transition-shadow">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-semibold text-emerald-700 uppercase tracking-wider">💰 Salary Expense</CardTitle>
+            <CardTitle className="text-sm font-semibold text-emerald-700 uppercase tracking-wider">💰 Chi Phí Lương</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-emerald-900">₫{(stats.totalSalaryExpense / 1000000).toFixed(2)}M</div>
             <p className="text-xs text-emerald-600 mt-2 font-medium">
-              Avg: ₫{(stats.avgSalary / 1000000).toFixed(2)}M per person
+              Bình quân: ₫{(stats.avgSalary / 1000000).toFixed(2)}M/người
             </p>
           </CardContent>
         </Card>
@@ -462,13 +469,13 @@ export default function StaffPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Cinema Filter */}
           <div className="space-y-2">
-            <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">🏢 Cinema</label>
+            <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">🏢 Rạp Chiếu Phim</label>
             <Select value={filterCinemaId} onValueChange={setFilterCinemaId}>
               <SelectTrigger className="h-11 border-purple-200 focus:ring-purple-500">
-                <SelectValue placeholder="All Cinemas" />
+                <SelectValue placeholder="Tất Cả Rạp" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Cinemas</SelectItem>
+                <SelectItem value="all">Tất Cả Rạp</SelectItem>
                 {cinemas.map((cinema) => (
                   <SelectItem key={cinema.id} value={cinema.id}>
                     {cinema.name}
@@ -480,15 +487,15 @@ export default function StaffPage() {
 
           {/* Status Filter */}
           <div className="space-y-2">
-            <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">✅ Status</label>
+            <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">✅ Trạng Thái</label>
             <Select value={filterStatus} onValueChange={setFilterStatus}>
               <SelectTrigger className="h-11 border-purple-200 focus:ring-purple-500">
-                <SelectValue placeholder="All Status" />
+                <SelectValue placeholder="Tất Cả Trạng Thái" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="ACTIVE">✅ Active</SelectItem>
-                <SelectItem value="INACTIVE">❌ Inactive</SelectItem>
+                <SelectItem value="all">Tất Cả Trạng Thái</SelectItem>
+                <SelectItem value="ACTIVE">✅ Hoạt Động</SelectItem>
+                <SelectItem value="INACTIVE">❌ Không Hoạt Động</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -513,7 +520,7 @@ export default function StaffPage() {
             {filterStatus !== 'all' && (
               <div className="inline-flex items-center gap-2 px-3 py-1 bg-white rounded-full border border-purple-200 shadow-sm">
                 <span className="text-xs font-medium text-gray-700">
-                  ✅ {filterStatus === 'ACTIVE' ? 'Active' : 'Inactive'}
+                  ✅ {filterStatus === 'ACTIVE' ? 'Hoạt Động' : 'Không Hoạt Động'}
                 </span>
                 <button
                   onClick={() => setFilterStatus('all')}
@@ -530,7 +537,7 @@ export default function StaffPage() {
               }}
               className="text-xs font-medium text-purple-600 hover:text-purple-700 transition-colors ml-auto"
             >
-              Clear All
+              Xóa Tất Cả
             </button>
           </div>
         )}
@@ -539,21 +546,21 @@ export default function StaffPage() {
       {/* Staff Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Staff Members</CardTitle>
+          <CardTitle>Danh Sách Nhân Viên</CardTitle>
           <CardDescription>
-            {staff.length} staff member{staff.length !== 1 ? 's' : ''} in total
+            {staff.length} nhân viên tổng cộng
           </CardDescription>
         </CardHeader>
         <CardContent>
           {loading ? (
             <div className="text-center py-12">
               <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-purple-600 border-r-transparent"></div>
-              <p className="mt-4 text-gray-500">Loading staff...</p>
+              <p className="mt-4 text-gray-500">Đang tải nhân viên...</p>
             </div>
           ) : staff.length === 0 ? (
             <div className="text-center py-16">
               <Users className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-500 mb-4">No staff members found.</p>
+              <p className="text-gray-500 mb-4">Không tìm thấy nhân viên.</p>
               <Button
                 onClick={() => {
                   resetForm();
@@ -562,7 +569,7 @@ export default function StaffPage() {
                 className="bg-gradient-to-r from-purple-600 to-pink-600"
               >
                 <Plus className="mr-2 h-4 w-4" />
-                Add First Staff Member
+                Thêm Nhân Viên Đầu Tiên
               </Button>
             </div>
           ) : (
@@ -570,14 +577,14 @@ export default function StaffPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Full Name</TableHead>
+                    <TableHead>Họ Tên</TableHead>
                     <TableHead>Email</TableHead>
-                    <TableHead>Phone</TableHead>
-                    <TableHead>Position</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Work Type</TableHead>
-                    <TableHead>Salary</TableHead>
-                    <TableHead>Actions</TableHead>
+                    <TableHead>Số Điện Thoại</TableHead>
+                    <TableHead>Vị Trí</TableHead>
+                    <TableHead>Trạng Thái</TableHead>
+                    <TableHead>Loại Công Việc</TableHead>
+                    <TableHead>Lương</TableHead>
+                    <TableHead>Hành Động</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -591,7 +598,7 @@ export default function StaffPage() {
                       </TableCell>
                       <TableCell>
                         <Badge className={getStatusBadgeColor(staffMember.status)}>
-                          {staffMember.status}
+                          {staffMember.status === 'ACTIVE' ? 'Hoạt Động' : 'Không Hoạt Động'}
                         </Badge>
                       </TableCell>
                       <TableCell>
@@ -626,15 +633,45 @@ export default function StaffPage() {
         </CardContent>
       </Card>
 
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Xác Nhận Xóa</DialogTitle>
+            <DialogDescription>
+              Bạn có chắc muốn xóa nhân viên này không? Hành động này không thể hoàn tác.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setDeleteDialogOpen(false);
+                setDeleteConfirmId('');
+              }}
+            >
+              Hủy Bỏ
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmDelete}
+              disabled={deleteStaff.isPending}
+            >
+              {deleteStaff.isPending ? 'Đang xóa...' : 'Xóa'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Create/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              {editingStaff ? 'Edit Staff Member' : 'Add Staff Member'}
+              {editingStaff ? 'Chỉnh Sửa Nhân Viên' : 'Thêm Nhân Viên'}
             </DialogTitle>
             <DialogDescription>
-              {editingStaff ? 'Update staff member information' : 'Add a new staff member to the cinema'}
+              {editingStaff ? 'Cập nhật thông tin nhân viên' : 'Thêm nhân viên mới vào rạp'}
             </DialogDescription>
           </DialogHeader>
 
@@ -642,7 +679,7 @@ export default function StaffPage() {
             {/* Cinema */}
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="cinema" className="text-right">
-                Cinema *
+                Rạp Chiếu Phim *
               </Label>
               <div className="col-span-3">
                 <Select
@@ -651,7 +688,7 @@ export default function StaffPage() {
                   disabled={!!editingStaff}
                 >
                   <SelectTrigger id="cinema">
-                    <SelectValue placeholder="Select cinema" />
+                    <SelectValue placeholder="Chọn rạp" />
                   </SelectTrigger>
                   <SelectContent>
                     {cinemas.map((cinema) => (
@@ -667,7 +704,7 @@ export default function StaffPage() {
             {/* Full Name */}
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="fullName" className="text-right">
-                Full Name *
+                Họ Tên *
               </Label>
               <Input
                 id="fullName"
@@ -695,17 +732,17 @@ export default function StaffPage() {
             {/* Phone */}
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="phone" className="text-right">
-                Phone *
+                Số Điện Thoại *
               </Label>
               <div className="col-span-3">
                 <Input
                   id="phone"
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  placeholder="Min 9 characters"
+                  placeholder="Tối thiểu 9 ký tự"
                 />
                 {formData.phone && formData.phone.length < 9 && (
-                  <p className="text-xs text-red-500 mt-1">Phone must be at least 9 characters</p>
+                  <p className="text-xs text-red-500 mt-1">Số điện thoại phải có ít nhất 9 ký tự</p>
                 )}
               </div>
             </div>
@@ -713,7 +750,7 @@ export default function StaffPage() {
             {/* Gender & DOB */}
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="gender" className="text-right">
-                Gender
+                Giới Tính
               </Label>
               <div className="col-span-3 grid grid-cols-2 gap-4">
                 <Select
@@ -721,11 +758,11 @@ export default function StaffPage() {
                   onValueChange={(value) => setFormData({ ...formData, gender: value })}
                 >
                   <SelectTrigger id="gender">
-                    <SelectValue placeholder="Select gender" />
+                    <SelectValue placeholder="Chọn giới tính" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="MALE">Male</SelectItem>
-                    <SelectItem value="FEMALE">Female</SelectItem>
+                    <SelectItem value="MALE">Nam</SelectItem>
+                    <SelectItem value="FEMALE">Nữ</SelectItem>
                   </SelectContent>
                 </Select>
                 <Input
@@ -733,6 +770,7 @@ export default function StaffPage() {
                   type="date"
                   value={formData.dob}
                   onChange={(e) => setFormData({ ...formData, dob: e.target.value })}
+                  placeholder="Ngày sinh"
                 />
               </div>
             </div>
@@ -740,7 +778,7 @@ export default function StaffPage() {
             {/* Position */}
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="position" className="text-right">
-                Position
+                Vị Trí
               </Label>
               <div className="col-span-3">
                 <Select
@@ -748,7 +786,7 @@ export default function StaffPage() {
                   onValueChange={(value) => setFormData({ ...formData, position: value })}
                 >
                   <SelectTrigger id="position">
-                    <SelectValue placeholder="Select position" />
+                    <SelectValue placeholder="Chọn vị trí" />
                   </SelectTrigger>
                   <SelectContent>
                     {POSITIONS.map((pos) => (
@@ -764,7 +802,7 @@ export default function StaffPage() {
             {/* Status */}
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="status" className="text-right">
-                Status
+                Trạng Thái
               </Label>
               <div className="col-span-3">
                 <Select
@@ -772,11 +810,11 @@ export default function StaffPage() {
                   onValueChange={(value) => setFormData({ ...formData, status: value })}
                 >
                   <SelectTrigger id="status">
-                    <SelectValue placeholder="Select status" />
+                    <SelectValue placeholder="Chọn trạng thái" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="ACTIVE">Active</SelectItem>
-                    <SelectItem value="INACTIVE">Inactive</SelectItem>
+                    <SelectItem value="ACTIVE">Hoạt Động</SelectItem>
+                    <SelectItem value="INACTIVE">Không Hoạt Động</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -785,7 +823,7 @@ export default function StaffPage() {
             {/* Work Type */}
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="workType" className="text-right">
-                Work Type
+                Loại Công Việc
               </Label>
               <div className="col-span-3">
                 <Select
@@ -793,7 +831,7 @@ export default function StaffPage() {
                   onValueChange={(value) => setFormData({ ...formData, workType: value })}
                 >
                   <SelectTrigger id="workType">
-                    <SelectValue placeholder="Select work type" />
+                    <SelectValue placeholder="Chọn loại công việc" />
                   </SelectTrigger>
                   <SelectContent>
                     {WORK_TYPES.map((type) => (
@@ -809,7 +847,7 @@ export default function StaffPage() {
             {/* Shift Type */}
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="shiftType" className="text-right">
-                Shift Type
+                Ca Làm Việc
               </Label>
               <div className="col-span-3">
                 <Select
@@ -817,7 +855,7 @@ export default function StaffPage() {
                   onValueChange={(value) => setFormData({ ...formData, shiftType: value })}
                 >
                   <SelectTrigger id="shiftType">
-                    <SelectValue placeholder="Select shift type" />
+                    <SelectValue placeholder="Chọn ca làm việc" />
                   </SelectTrigger>
                   <SelectContent>
                     {SHIFT_TYPES.map((shift) => (
@@ -833,14 +871,14 @@ export default function StaffPage() {
             {/* Salary */}
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="salary" className="text-right">
-                Salary *
+                Lương *
               </Label>
               <Input
                 id="salary"
                 type="number"
                 value={formData.salary || ''}
                 onChange={(e) => setFormData({ ...formData, salary: parseFloat(e.target.value) || 0 })}
-                placeholder="e.g., 10000000"
+                placeholder="Ví dụ: 10000000"
                 className="col-span-3"
                 min="0"
               />
@@ -849,7 +887,7 @@ export default function StaffPage() {
             {/* Hire Date */}
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="hireDate" className="text-right">
-                Hire Date
+                Ngày Tuyển Dụng
               </Label>
               <Input
                 id="hireDate"
@@ -869,14 +907,14 @@ export default function StaffPage() {
                 resetForm();
               }}
             >
-              Cancel
+              Hủy Bỏ
             </Button>
             <Button
               onClick={handleSubmit}
               className="bg-gradient-to-r from-purple-600 to-pink-600"
               disabled={createStaff.isPending || updateStaff.isPending || !formData.fullName.trim() || !formData.email.trim() || !formData.phone.trim() || formData.phone.length < 9 || !formData.dob || !formData.hireDate || formData.salary < 0}
             >
-              {createStaff.isPending || updateStaff.isPending ? 'Saving...' : 'Save'}
+              {createStaff.isPending || updateStaff.isPending ? 'Đang lưu...' : 'Lưu'}
             </Button>
           </DialogFooter>
         </DialogContent>

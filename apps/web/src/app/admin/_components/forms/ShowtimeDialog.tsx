@@ -95,7 +95,7 @@ export default function ShowtimeDialog({
       if (releaseExists) {
         setFormData(prev => ({
           ...prev,
-          movieReleaseId: editingShowtime.movieReleaseId,
+          movieReleaseId: editingShowtime.movieReleaseId || '',
         }));
       } else {
         console.warn('[ShowtimeDialog] movieReleaseId not found in releases list:', editingShowtime.movieReleaseId);
@@ -224,19 +224,19 @@ export default function ShowtimeDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{editingShowtime ? 'Edit Showtime' : 'Add New Showtime'}</DialogTitle>
+          <DialogTitle>{editingShowtime ? 'Chỉnh sửa suất chiếu' : 'Thêm suất chiếu mới'}</DialogTitle>
           <DialogDescription>
-            {editingShowtime ? 'Update showtime details' : 'Schedule a new movie showtime'}
+            {editingShowtime ? 'Cập nhật chi tiết suất chiếu' : 'Lịch chiếu phim mới'}
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
           {/* Movie */}
           <div className="space-y-2">
-            <Label htmlFor="movie">Movie *</Label>
+            <Label htmlFor="movie">Phim *</Label>
             {isMovieDisabled ? (
               <Input
                 id="movie"
-                value={selectedMovie ? `${selectedMovie.title} (${selectedMovie.runtime} mins)` : (formData.movieId || 'No movie selected')}
+                value={selectedMovie ? `${selectedMovie.title} (${selectedMovie.runtime} phút)` : (formData.movieId || 'Chưa chọn phim')}
                 disabled
                 className="bg-gray-50"
               />
@@ -252,14 +252,14 @@ export default function ShowtimeDialog({
                 }}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select movie">
-                    {selectedMovie ? `${selectedMovie.title} (${selectedMovie.runtime} mins)` : undefined}
+                  <SelectValue placeholder="Chọn phim">
+                    {selectedMovie ? `${selectedMovie.title} (${selectedMovie.runtime} phút)` : undefined}
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {movies.map((movie) => (
                     <SelectItem key={movie.id} value={movie.id}>
-                      {movie.title} ({movie.runtime} mins)
+                      {movie.title} ({movie.runtime} phút)
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -269,7 +269,7 @@ export default function ShowtimeDialog({
 
           {/* Movie Release ID */}
           <div className="space-y-2">
-            <Label htmlFor="movieReleaseId">Movie Release ID *</Label>
+            <Label htmlFor="movieReleaseId">ID Phát hành phim *</Label>
             {isReleaseDisabled ? (
               <Input
                 id="movieReleaseId"
@@ -286,7 +286,7 @@ export default function ShowtimeDialog({
                 disabled={!formData.movieId}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select movie release">
+                  <SelectValue placeholder="Chọn phát hành phim">
                     {selectedRelease ? `${new Date(selectedRelease.startDate).toLocaleDateString()} → ${new Date(selectedRelease.endDate).toLocaleDateString()}` : undefined}
                   </SelectValue>
                 </SelectTrigger>
@@ -302,7 +302,7 @@ export default function ShowtimeDialog({
                       releases: releases.map(r => ({ id: r.id, status: r.status })),
                     });
                     if (releases.length === 0) {
-                      return <div className="px-2 py-1.5 text-sm text-gray-500">No releases available</div>;
+                      return <div className="px-2 py-1.5 text-sm text-gray-500">Không có phát hành nào</div>;
                     }
                     return releases.map((release) => (
                       <SelectItem key={release.id} value={release.id}>
@@ -317,7 +317,7 @@ export default function ShowtimeDialog({
 
           {/* Cinema */}
           <div className="space-y-2">
-            <Label htmlFor="cinema">Cinema *</Label>
+            <Label htmlFor="cinema">Rạp Chiếu Phim *</Label>
             <Select
               value={formData.cinemaId}
               onValueChange={(value) => {
@@ -325,7 +325,7 @@ export default function ShowtimeDialog({
               }}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Select cinema" />
+                <SelectValue placeholder="Chọn rạp" />
               </SelectTrigger>
               <SelectContent>
                 {cinemas.map((cinema) => (
@@ -339,10 +339,10 @@ export default function ShowtimeDialog({
 
           {/* Hall */}
           <div className="space-y-2">
-            <Label htmlFor="hall">Hall *</Label>
+            <Label htmlFor="hall">Phòng Chiếu *</Label>
             {!formData.cinemaId ? (
               <div className="px-3 py-2 border rounded-md bg-gray-50 text-gray-500 text-sm">
-                Select a cinema first
+                Chọn rạp trước
               </div>
             ) : (
               <Select
@@ -352,7 +352,7 @@ export default function ShowtimeDialog({
                 }
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select hall" />
+                  <SelectValue placeholder="Chọn phòng" />
                 </SelectTrigger>
                 <SelectContent>
                   {halls && halls.length > 0 ? (
@@ -360,12 +360,12 @@ export default function ShowtimeDialog({
                       .filter(hall => hall.cinemaId === formData.cinemaId)
                       .map((hall) => (
                         <SelectItem key={hall.id} value={hall.id}>
-                          {hall.name} ({hall.type}) - {hall.capacity} seats
+                          {hall.name} ({hall.type}) - {hall.capacity} ghế
                         </SelectItem>
                       ))
                   ) : (
                     <div className="p-2 text-sm text-gray-500">
-                      No halls available
+                      Không có phòng nào
                     </div>
                   )}
                 </SelectContent>
@@ -375,7 +375,7 @@ export default function ShowtimeDialog({
 
           {/* Start Time */}
           <div className="space-y-2">
-            <Label htmlFor="startTime">Start Time *</Label>
+            <Label htmlFor="startTime">Thời Gian Bắt Đầu *</Label>
             <Input
               id="startTime"
               type="datetime-local"
@@ -392,7 +392,7 @@ export default function ShowtimeDialog({
           {/* Format & Language */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="format">Format</Label>
+              <Label htmlFor="format">Định dạng</Label>
               <Select
                 value={formData.format}
                 onValueChange={(value) =>
@@ -400,7 +400,7 @@ export default function ShowtimeDialog({
                 }
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select format" />
+                  <SelectValue placeholder="Chọn định dạng" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value={FormatEnum.TWO_D}>2D</SelectItem>
@@ -411,7 +411,7 @@ export default function ShowtimeDialog({
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="language">Language</Label>
+              <Label htmlFor="language">Ngôn ngữ</Label>
               <Select
                 value={formData.language}
                 onValueChange={(value) =>
@@ -419,15 +419,15 @@ export default function ShowtimeDialog({
                 }
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select language" />
+                  <SelectValue placeholder="Chọn ngôn ngữ" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="vi">Vietnamese</SelectItem>
-                  <SelectItem value="en">English</SelectItem>
-                  <SelectItem value="ko">Korean</SelectItem>
-                  <SelectItem value="zh">Chinese</SelectItem>
-                  <SelectItem value="ja">Japanese</SelectItem>
-                  <SelectItem value="th">Thai</SelectItem>
+                  <SelectItem value="vi">Tiếng Việt</SelectItem>
+                  <SelectItem value="en">Tiếng Anh</SelectItem>
+                  <SelectItem value="ko">Tiếng Hàn</SelectItem>
+                  <SelectItem value="zh">Tiếng Trung</SelectItem>
+                  <SelectItem value="ja">Tiếng Nhật</SelectItem>
+                  <SelectItem value="th">Tiếng Thái</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -458,13 +458,13 @@ export default function ShowtimeDialog({
             variant="outline"
             onClick={() => onOpenChange(false)}
           >
-            Cancel
+            Hủy Bỏ
           </Button>
           <Button
             onClick={handleSubmit}
             className="bg-gradient-to-r from-purple-600 to-pink-600"
           >
-            {editingShowtime ? 'Update Showtime' : 'Create Showtime'}
+            {editingShowtime ? 'Cập Nhật Suất Chiếu' : 'Tạo Suất Chiếu'}
           </Button>
         </DialogFooter>
       </DialogContent>

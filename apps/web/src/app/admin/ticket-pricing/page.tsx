@@ -170,23 +170,23 @@ export default function TicketPricingPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
             <DollarSign className="h-8 w-8 text-emerald-600" />
-            Ticket Pricing Management
+            Quản Lý Giá Vé
           </h1>
-          <p className="text-gray-500 mt-1">Manage ticket prices by seat type and day type</p>
+          <p className="text-gray-500 mt-1">Quản lý giá vé theo loại ghế và loại ngày</p>
         </div>
       </div>
 
       {/* Selectors */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Select Hall</CardTitle>
-          <CardDescription>Choose a cinema and hall to manage ticket pricing</CardDescription>
+          <CardTitle className="text-lg">Chọn Phòng</CardTitle>
+          <CardDescription>Chọn rạp và phòng để quản lý giá vé</CardDescription>
         </CardHeader>
         <CardContent>
           {cinemasError && (
             <Alert variant="destructive" className="mb-4">
               <AlertCircle className="h-4 w-4" />
-              <AlertDescription>Failed to load cinemas. Please refresh the page.</AlertDescription>
+              <AlertDescription>Không thể tải rạp. Vui lòng làm mới trang.</AlertDescription>
             </Alert>
           )}
           {/* Modern Filter Container */}
@@ -194,10 +194,10 @@ export default function TicketPricingPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Cinema Selector */}
               <div className="space-y-2">
-                <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">🏢 Cinema</label>
+                <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">🏢 Rạp</label>
                 <Select value={selectedCinemaId} onValueChange={handleCinemaChange}>
                   <SelectTrigger className="h-11 border-purple-200 focus:ring-purple-500">
-                    <SelectValue placeholder="Select cinema" />
+                    <SelectValue placeholder="Chọn rạp" />
                   </SelectTrigger>
                   <SelectContent>
                     {cinemas.map((cinema) => (
@@ -214,33 +214,33 @@ export default function TicketPricingPage() {
 
               {/* Hall Selector */}
               <div className="space-y-2">
-                <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">🚪 Hall</label>
+                <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">🚪 Phòng</label>
                 <Select
                   value={selectedHallId}
                   onValueChange={handleHallChange}
                   disabled={!selectedCinemaId || hallsLoading}
                 >
                   <SelectTrigger className="h-11 border-purple-200 focus:ring-purple-500 disabled:opacity-50">
-                    <SelectValue placeholder={hallsLoading ? "Loading halls..." : "Select hall"} />
+                    <SelectValue placeholder={hallsLoading ? "Đang tải phòng..." : "Chọn phòng"} />
                   </SelectTrigger>
                   <SelectContent>
                     {halls.length === 0 && !hallsLoading && (
                       <div className="px-2 py-1.5 text-sm text-gray-500">
-                        No halls available for this cinema
+                        Không có phòng nào cho rạp này
                       </div>
                     )}
                     {halls.map((hall) => (
                       <SelectItem key={hall.id} value={hall.id}>
                         <div className="flex items-center gap-2">
                           <DoorOpen className="h-4 w-4" />
-                          {hall.name} - {hall.capacity} seats
+                          {hall.name} - {hall.capacity} ghế
                         </div>
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
                 {hallsError && (
-                  <p className="text-sm text-red-500 mt-1">Failed to load halls for this cinema</p>
+                  <p className="text-sm text-red-500 mt-1">Không thể tải phòng cho rạp này</p>
                 )}
               </div>
             </div>
@@ -295,12 +295,12 @@ export default function TicketPricingPage() {
       {loading ? (
         <div className="text-center py-12">
           <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-emerald-600 border-r-transparent"></div>
-          <p className="mt-4 text-gray-500">Loading pricing data...</p>
+          <p className="mt-4 text-gray-500">Đang tải dữ liệu giá vé...</p>
         </div>
       ) : pricingsError ? (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
-          <AlertDescription>Failed to load ticket pricing data. Please try selecting another hall.</AlertDescription>
+          <AlertDescription>Không thể tải dữ liệu giá vé. Vui lòng thử chọn phòng khác.</AlertDescription>
         </Alert>
       ) : selectedHallId && pricings.length > 0 ? (
         <>
@@ -390,12 +390,12 @@ export default function TicketPricingPage() {
                                     {updatePricing.isPending ? (
                                       <>
                                         <div className="h-3 w-3 animate-spin rounded-full border-2 border-white border-r-transparent mr-1"></div>
-                                        Saving...
+                                        Đang lưu...
                                       </>
                                     ) : (
                                       <>
                                         <Check className="h-4 w-4 mr-1" />
-                                        Save
+                                        Lưu
                                       </>
                                     )}
                                   </Button>
@@ -407,7 +407,7 @@ export default function TicketPricingPage() {
                                     disabled={updatePricing.isPending}
                                   >
                                     <X className="h-4 w-4 mr-1" />
-                                    Cancel
+                                    Hủy
                                   </Button>
                                 </div>
                               </div>
@@ -473,15 +473,15 @@ export default function TicketPricingPage() {
         <Card>
           <CardContent className="py-16 text-center">
             <DollarSign className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-500">No ticket pricing rules found for this hall</p>
-            <p className="text-sm text-gray-400 mt-2">Contact support to set up pricing for this hall</p>
+            <p className="text-gray-500">Không tìm thấy quy tắc giá vé nào cho phòng này</p>
+            <p className="text-sm text-gray-400 mt-2">Liên hệ hỗ trợ để thiết lập giá vé cho phòng này</p>
           </CardContent>
         </Card>
       ) : !selectedHallId ? (
         <Card>
           <CardContent className="py-16 text-center">
             <DollarSign className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-500">Select a cinema and hall to manage ticket pricing</p>
+            <p className="text-gray-500">Chọn rạp và phòng để quản lý giá vé</p>
           </CardContent>
         </Card>
       ) : null}

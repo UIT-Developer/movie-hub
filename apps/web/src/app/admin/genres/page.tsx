@@ -28,6 +28,8 @@ import type { Genre } from '@/libs/api/types';
 
 export default function GenresPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [selectedGenreForDelete, setSelectedGenreForDelete] = useState<Genre | null>(null);
   const [editingGenre, setEditingGenre] = useState<Genre | null>(null);
   const [genreSearch, setGenreSearch] = useState('');
   const [formData, setFormData] = useState({
@@ -84,13 +86,18 @@ export default function GenresPage() {
     setDialogOpen(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this genre?')) {
-      return;
-    }
+  const handleDelete = (genre: Genre) => {
+    setSelectedGenreForDelete(genre);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!selectedGenreForDelete) return;
 
     try {
-      await deleteGenre.mutateAsync(id);
+      await deleteGenre.mutateAsync(selectedGenreForDelete.id);
+      setDeleteDialogOpen(false);
+      setSelectedGenreForDelete(null);
     } catch {
       // Error toast already shown by mutation hook
     }
@@ -112,8 +119,8 @@ export default function GenresPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Genres</h1>
-          <p className="text-gray-500 mt-1">Manage movie genres and categories</p>
+          <h1 className="text-3xl font-bold tracking-tight">Thể loại</h1>
+          <p className="text-gray-500 mt-1">Quản lý thể loại và danh mục phim</p>
         </div>
         <Button
           onClick={() => {
@@ -123,21 +130,21 @@ export default function GenresPage() {
           className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
         >
           <Plus className="mr-2 h-4 w-4" />
-          Add Genre
+          Thêm Thể Loại
         </Button>
       </div>
 
       <div className="grid gap-6">
         <Card>
           <CardHeader>
-            <CardTitle>All Genres</CardTitle>
+            <CardTitle>Tất Cả Thể Loại</CardTitle>
             <CardDescription>
-              {filteredGenres.length} of {genres.length} genre{genres.length !== 1 ? 's' : ''} found
+              {filteredGenres.length} trong {genres.length} thể loại được tìm thấy
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Input
-              placeholder="🔍 Search genres by name..."
+              placeholder="🔍 Tìm kiếm thể loại theo tên..."
               value={genreSearch}
               onChange={(e) => setGenreSearch(e.target.value)}
               className="w-full h-11 border-gray-200 focus:border-purple-400 focus:ring-purple-200 mb-6"
@@ -148,13 +155,13 @@ export default function GenresPage() {
         {loading ? (
           <div className="text-center py-12">
             <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-purple-600 border-r-transparent"></div>
-            <p className="mt-4 text-gray-500">Loading genres...</p>
+            <p className="mt-4 text-gray-500">Đang tải thể loại...</p>
           </div>
         ) : genres.length === 0 ? (
           <Card>
             <CardContent className="py-16 text-center">
               <Tag className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-500 mb-4">No genres found. Add your first genre to get started.</p>
+              <p className="text-gray-500 mb-4">Không có thể loại nào. Thêm thể loại đầu tiên để bắt đầu.</p>
               <Button
                 onClick={() => {
                   resetForm();
@@ -163,7 +170,7 @@ export default function GenresPage() {
                 className="bg-gradient-to-r from-purple-600 to-pink-600"
               >
                 <Plus className="mr-2 h-4 w-4" />
-                Add First Genre
+                Thêm Thể Loại Đầu Tiên
               </Button>
             </CardContent>
           </Card>
@@ -171,12 +178,12 @@ export default function GenresPage() {
           <Card>
             <CardContent className="py-16 text-center">
               <Tag className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-500 mb-4">No genres match your search.</p>
+              <p className="text-gray-500 mb-4">Không có thể loại nào khớp với tìm kiếm của bạn.</p>
               <Button
                 variant="outline"
                 onClick={() => setGenreSearch('')}
               >
-                Clear Search
+                Xóa Tìm Kiếm
               </Button>
             </CardContent>
           </Card>
@@ -204,7 +211,7 @@ export default function GenresPage() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => handleDelete(genre.id)}
+                        onClick={() => handleDelete(genre)}
                         className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -228,21 +235,21 @@ export default function GenresPage() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>{editingGenre ? 'Edit Genre' : 'Add New Genre'}</DialogTitle>
+            <DialogTitle>{editingGenre ? 'Chỉnh Sửa Thể Loại' : 'Thêm Thể Loại Mới'}</DialogTitle>
             <DialogDescription>
-              {editingGenre ? 'Update genre details' : 'Create a new movie genre'}
+              {editingGenre ? 'Cập nhật thông tin thể loại' : 'Tạo một thể loại phim mới'}
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Genre Name *</Label>
+              <Label htmlFor="name">Tên Thể Loại *</Label>
               <Input
                 id="name"
                 value={formData.name}
                 onChange={(e) =>
                   setFormData({ ...formData, name: e.target.value })
                 }
-                placeholder="e.g., Action, Horror, Comedy"
+                placeholder="VD: Hành Động, Kinh Dị, Hài Kịch"
                 autoFocus
               />
             </div>
@@ -255,13 +262,42 @@ export default function GenresPage() {
                 resetForm();
               }}
             >
-              Cancel
+              Hủy Bỏ
             </Button>
             <Button
               onClick={handleSubmit}
               className="bg-gradient-to-r from-purple-600 to-pink-600"
             >
-              {editingGenre ? 'Update Genre' : 'Create Genre'}
+              {editingGenre ? 'Cập Nhật Thể Loại' : 'Tạo Thể Loại'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Xác Nhận Xóa</DialogTitle>
+            <DialogDescription>
+              Bạn có chắc muốn xóa thể loại &quot;{selectedGenreForDelete?.name}&quot;? Hành động này không thể hoàn tác.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setDeleteDialogOpen(false);
+                setSelectedGenreForDelete(null);
+              }}
+            >
+              Hủy Bỏ
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmDelete}
+            >
+              Xóa Thể Loại
             </Button>
           </DialogFooter>
         </DialogContent>

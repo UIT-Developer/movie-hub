@@ -105,8 +105,8 @@ export default function ShowtimesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Showtimes</h1>
-          <p className="text-gray-500 mt-1">Manage movie showtimes and schedules</p>
+          <h1 className="text-3xl font-bold tracking-tight">Suất Chiếu</h1>
+          <p className="text-gray-500 mt-1">Quản lý suất chiếu và lịch chiếu</p>
         </div>
         <Button
           onClick={() => {
@@ -116,7 +116,7 @@ export default function ShowtimesPage() {
           className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
         >
           <Plus className="mr-2 h-4 w-4" />
-          Add Showtime
+          Thêm Suất Chiếu
         </Button>
       </div>
 
@@ -127,11 +127,11 @@ export default function ShowtimesPage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {/* Date Picker */}
               <div className="space-y-2">
-                <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">📅 Date</label>
+                <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">📅 Ngày</label>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button className="w-full justify-between h-11 bg-white border border-purple-200 hover:border-purple-300 hover:bg-purple-50 text-left text-black font-medium transition-colors">
-                      {selectedDate ? format(selectedDate, 'MMM dd, yyyy') : 'Select Date'}
+                      {selectedDate ? format(selectedDate, 'dd/MM/yyyy') : 'Chọn Ngày'}
                       <CalendarIcon className="h-4 w-4 text-purple-600" />
                     </Button>
                   </PopoverTrigger>
@@ -149,7 +149,7 @@ export default function ShowtimesPage() {
                         onClick={() => setSelectedDate(new Date())}
                         className="w-full"
                       >
-                        Reset to Today
+                        Đặt Lại Hôm Nay
                       </Button>
                     </div>
                   </PopoverContent>
@@ -158,13 +158,13 @@ export default function ShowtimesPage() {
 
               {/* Cinema Filter */}
               <div className="space-y-2">
-                <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">🏢 Cinema</label>
+                <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">🏢 Rạp Chiếu</label>
                 <Select value={selectedCinemaId} onValueChange={setSelectedCinemaId}>
                   <SelectTrigger className="h-11 bg-white border border-purple-200 hover:border-purple-300 focus:border-purple-400 font-medium">
-                    <SelectValue placeholder="All Cinemas" />
+                    <SelectValue placeholder="Tất Cả Rạp Chiếu" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Cinemas</SelectItem>
+                    <SelectItem value="all">Tất Cả Rạp Chiếu</SelectItem>
                     {cinemas.map((cinema) => (
                       <SelectItem key={cinema.id} value={cinema.id}>
                         {cinema.name}
@@ -176,13 +176,13 @@ export default function ShowtimesPage() {
 
               {/* Movie Filter */}
               <div className="space-y-2">
-                <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">🎬 Movie</label>
+                <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">🎬 Phim</label>
                 <Select value={selectedMovieId} onValueChange={setSelectedMovieId}>
                   <SelectTrigger className="h-11 bg-white border border-purple-200 hover:border-purple-300 focus:border-purple-400 font-medium">
-                    <SelectValue placeholder="All Movies" />
+                    <SelectValue placeholder="Tất Cả Phim" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Movies</SelectItem>
+                    <SelectItem value="all">Tất Cả Phim</SelectItem>
                     {movies.map((movie) => (
                       <SelectItem key={movie.id} value={movie.id}>
                         {movie.title}
@@ -198,13 +198,13 @@ export default function ShowtimesPage() {
               <div className="flex flex-wrap gap-2 pt-3 mt-3 border-t border-purple-200/50">
                 {selectedCinemaId !== 'all' && (
                   <div className="inline-flex items-center gap-2 px-3 py-1 bg-white rounded-full border border-purple-200 shadow-sm">
-                    <span className="text-xs text-gray-600">Cinema: <span className="font-semibold text-purple-700">{cinemas.find(c => c.id === selectedCinemaId)?.name || selectedCinemaId}</span></span>
+                    <span className="text-xs text-gray-600">Rạp: <span className="font-semibold text-purple-700">{cinemas.find(c => c.id === selectedCinemaId)?.name || selectedCinemaId}</span></span>
                     <button onClick={() => setSelectedCinemaId('all')} className="text-purple-400 hover:text-purple-600">✕</button>
                   </div>
                 )}
                 {selectedMovieId !== 'all' && (
                   <div className="inline-flex items-center gap-2 px-3 py-1 bg-white rounded-full border border-purple-200 shadow-sm">
-                    <span className="text-xs text-gray-600">Movie: <span className="font-semibold text-purple-700">{movies.find(m => m.id === selectedMovieId)?.title || selectedMovieId}</span></span>
+                    <span className="text-xs text-gray-600">Phim: <span className="font-semibold text-purple-700">{movies.find(m => m.id === selectedMovieId)?.title || selectedMovieId}</span></span>
                     <button onClick={() => setSelectedMovieId('all')} className="text-purple-400 hover:text-purple-600">✕</button>
                   </div>
                 )}
@@ -215,7 +215,7 @@ export default function ShowtimesPage() {
           {/* Stats Row */}
           <div className="flex items-center justify-between mt-4">
             <div className="text-sm font-medium text-gray-700">
-              <span className="text-purple-600 font-bold">{showtimes.length}</span> showtimes scheduled
+              <span className="text-purple-600 font-bold">{showtimes.length}</span> suất chiếu được lên lịch
             </div>
             {(selectedCinemaId !== 'all' || selectedMovieId !== 'all') && (
               <Button 
@@ -228,7 +228,7 @@ export default function ShowtimesPage() {
                 }}
                 className="border-purple-200 text-purple-700 hover:bg-purple-50 hover:text-purple-800"
               >
-                ✕ Clear All Filters
+                ✕ Xóa Tất Cả Bộ Lọc
               </Button>
             )}
           </div>
@@ -238,12 +238,12 @@ export default function ShowtimesPage() {
       <div className="space-y-4">
         {loading ? (
           <Card>
-            <CardContent className="py-12 text-center">Loading...</CardContent>
+            <CardContent className="py-12 text-center">Đang tải...</CardContent>
           </Card>
         ) : Object.keys(groupedShowtimes).length === 0 ? (
           <Card>
             <CardContent className="py-12 text-center">
-              No showtimes scheduled for this date
+              Không có suất chiếu nào được lên lịch cho ngày này
             </CardContent>
           </Card>
         ) : (
@@ -259,7 +259,7 @@ export default function ShowtimesPage() {
             
             // Final fallback if movie not found in either place
             if (!movieTitle) {
-              movieTitle = `Unknown Movie (${movieId})`;
+              movieTitle = `Phim Không Xác Định (${movieId})`;
             }
             
             const movie = moviesAdmin.find((m) => m.id === movieId);
@@ -278,12 +278,12 @@ export default function ShowtimesPage() {
                   <CardTitle className="flex items-center justify-between">
                     <span>{movieTitle}</span>
                     <Badge variant="secondary">
-                      {movieShowtimes.length} sessions
+                      {movieShowtimes.length} phiên chiếu
                     </Badge>
                   </CardTitle>
                   {movie && (
                     <CardDescription>
-                      {movie.runtime && `${movie.runtime} mins`}
+                      {movie.runtime && `${movie.runtime} phút`}
                       {movie.ageRating && movie.runtime && ' · '}
                       {movie.ageRating}
                     </CardDescription>
@@ -344,7 +344,7 @@ export default function ShowtimesPage() {
 
                               {showtime.availableSeats !== undefined && (
                                 <div className="text-sm text-gray-500">
-                                  {showtime.availableSeats} seats available
+                                  {showtime.availableSeats} ghế còn trống
                                 </div>
                               )}
 

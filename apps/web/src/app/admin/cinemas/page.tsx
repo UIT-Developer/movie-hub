@@ -248,9 +248,9 @@ export default function CinemasPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-            Cinemas
+            Rạp Chiếu Phim
           </h1>
-          <p className="text-gray-500 mt-1">Manage your cinema locations across the system</p>
+          <p className="text-gray-500 mt-1">Quản lý các vị trí rạp chiếu phim của bạn trên toàn hệ thống</p>
         </div>
         <Button
           onClick={() => {
@@ -260,7 +260,7 @@ export default function CinemasPage() {
           className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 shadow-lg"
         >
           <Plus className="mr-2 h-4 w-4" />
-          Add Cinema
+          Thêm Rạp
         </Button>
       </div>
 
@@ -271,7 +271,7 @@ export default function CinemasPage() {
             <div className="relative">
               <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
               <Input
-                placeholder="Search cinemas by name or city..."
+                placeholder="Tìm kiếm rạp theo tên hoặc thành phố..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10 border-purple-200 focus:border-purple-400"
@@ -283,7 +283,7 @@ export default function CinemasPage() {
         <Card className="border-0 shadow-lg bg-gradient-to-br from-purple-600 to-pink-600 text-white">
           <CardContent className="pt-6 text-center">
             <div className="text-3xl font-bold mb-1">{filteredCinemas.length}</div>
-            <p className="text-sm text-white/80">Total Cinemas</p>
+            <p className="text-sm text-white/80">Tổng số Rạp</p>
           </CardContent>
         </Card>
       </div>
@@ -293,13 +293,13 @@ export default function CinemasPage() {
         {loading ? (
           <Card className="col-span-full">
             <CardContent className="py-12 text-center">
-              <div className="animate-pulse text-gray-400">Loading cinemas...</div>
+              <div className="animate-pulse text-gray-400">Đang tải rạp...</div>
             </CardContent>
           </Card>
         ) : filteredCinemas.length === 0 ? (
           <Card className="col-span-full">
             <CardContent className="py-12 text-center text-gray-500">
-              No cinemas found
+              Không tìm thấy rạp
             </CardContent>
           </Card>
         ) : (
@@ -332,7 +332,7 @@ export default function CinemasPage() {
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={() => openEditDialog(cinema)}>
                           <Edit className="mr-2 h-4 w-4" />
-                          Edit
+                          Chỉnh Sửa
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => {
@@ -342,7 +342,7 @@ export default function CinemasPage() {
                           className="text-red-600"
                         >
                           <Trash2 className="mr-2 h-4 w-4" />
-                          Delete
+                          Xóa
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -465,16 +465,16 @@ export default function CinemasPage() {
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              {selectedCinema ? 'Edit Cinema' : 'Add New Cinema'}
+              {selectedCinema ? 'Chỉnh sửa Rạp' : 'Thêm Rạp Mới'}
             </DialogTitle>
             <DialogDescription>
-              Fill in the cinema details below
+              Điền thông tin chi tiết rạp chiếu phim bên dưới
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="name">Cinema Name *</Label>
+                <Label htmlFor="name">Tên Rạp *</Label>
                 <Input
                   id="name"
                   value={formData.name}
@@ -487,7 +487,7 @@ export default function CinemasPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="address">Address *</Label>
+              <Label htmlFor="address">Địa Chỉ *</Label>
               <Input
                 id="address"
                 value={formData.address}
@@ -500,32 +500,32 @@ export default function CinemasPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="city">City *</Label>
+                <Label htmlFor="city">Thành Phố *</Label>
                 <Input
                   id="city"
                   value={formData.city}
                   onChange={(e) =>
                     setFormData({ ...formData, city: e.target.value })
                   }
-                  placeholder="Ho Chi Minh City"
+                  placeholder="Thành phố Hồ Chí Minh"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="district">District</Label>
+                <Label htmlFor="district">Quận/Huyện</Label>
                 <Input
                   id="district"
                   value={formData.district}
                   onChange={(e) =>
                     setFormData({ ...formData, district: e.target.value })
                   }
-                  placeholder="District 1"
+                  placeholder="Quận 1"
                 />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="phone">Phone</Label>
+                <Label htmlFor="phone">Điện Thoại</Label>
                 <Input
                   id="phone"
                   value={formData.phone}
@@ -563,7 +563,7 @@ export default function CinemasPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="latitude">Latitude</Label>
+                <Label htmlFor="latitude">Vĩ Độ</Label>
                 <Input
                   id="latitude"
                   type="number"
@@ -576,7 +576,7 @@ export default function CinemasPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="longitude">Longitude</Label>
+                <Label htmlFor="longitude">Kinh Độ</Label>
                 <Input
                   id="longitude"
                   type="number"
@@ -591,7 +591,7 @@ export default function CinemasPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="timezone">Timezone</Label>
+              <Label htmlFor="timezone">Múi Giờ</Label>
               <Input
                 id="timezone"
                 value={formData.timezone}
@@ -603,7 +603,7 @@ export default function CinemasPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
+              <Label htmlFor="description">Mô Tả</Label>
               <Textarea
                 id="description"
                 value={formData.description}
@@ -616,7 +616,7 @@ export default function CinemasPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="virtualTour360Url">Virtual Tour 360 URL</Label>
+              <Label htmlFor="virtualTour360Url">URL Tour 360 Ảo</Label>
               <Input
                 id="virtualTour360Url"
                 value={formData.virtualTour360Url}
@@ -629,7 +629,7 @@ export default function CinemasPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="amenities">Amenities (comma-separated)</Label>
+                <Label htmlFor="amenities">Tiện Nghi (phân tách bằng dấu phẩy)</Label>
                 <Input
                   id="amenities"
                   value={formData.amenities?.join(', ') || ''}
@@ -640,7 +640,7 @@ export default function CinemasPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="images">Images (comma-separated URLs)</Label>
+                <Label htmlFor="images">Hình Ảnh (URL phân tách bằng dấu phẩy)</Label>
                 <Input
                   id="images"
                   value={formData.images?.join(', ') || ''}
@@ -655,7 +655,7 @@ export default function CinemasPage() {
             <div className="grid grid-cols-3 gap-4">
               {/* Facilities: dynamic key/value list */}
               <div className="space-y-2 flex flex-col">
-                <Label>Facilities</Label>
+                <Label>Cơ Sở Vật Chất</Label>
                 <div className="space-y-2 flex-1">
                   {(Object.entries(formData.facilities || {}) as [string, any][]).map(([key, value], idx) => (
                     <div key={key || idx} className="flex gap-2">
@@ -696,7 +696,7 @@ export default function CinemasPage() {
                           setFormData({ ...formData, facilities: fac });
                         }}
                       >
-                        Remove
+                        Xóa
                       </Button>
                     </div>
                   ))}
@@ -711,16 +711,16 @@ export default function CinemasPage() {
                   className="mt-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700"
                 >
                   <Plus className="mr-2 h-4 w-4" />
-                  Add facility
+                  Thêm Cơ Sở Vật Chất
                 </Button>
               </div>
 
               {/* Operating hours: open/close times */}
               <div className="space-y-2">
-                <Label>Operating Hours</Label>
+                <Label>Giờ Hoạt Động</Label>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <Label className="text-sm">Open</Label>
+                    <Label className="text-sm">Mở Cửa</Label>
                     <Input
                       type="time"
                       value={(formData.operatingHours?.open as string) || ''}
@@ -733,7 +733,7 @@ export default function CinemasPage() {
                     />
                   </div>
                   <div>
-                    <Label className="text-sm">Close</Label>
+                    <Label className="text-sm">Đóng Cửa</Label>
                     <Input
                       type="time"
                       value={(formData.operatingHours?.close as string) || ''}
@@ -750,24 +750,24 @@ export default function CinemasPage() {
 
               {/* Social media: common fields */}
               <div className="space-y-2">
-                <Label>Social Media</Label>
+                <Label>Mạng Xã Hội</Label>
                 <div className="space-y-2">
                   <Input
-                    placeholder="Facebook URL"
+                    placeholder="URL Facebook"
                     value={(formData.socialMedia?.facebook as string) || ''}
                     onChange={(e) =>
                       setFormData({ ...formData, socialMedia: { ...(formData.socialMedia || {}), facebook: e.target.value } })
                     }
                   />
                   <Input
-                    placeholder="Instagram URL"
+                    placeholder="URL Instagram"
                     value={(formData.socialMedia?.instagram as string) || ''}
                     onChange={(e) =>
                       setFormData({ ...formData, socialMedia: { ...(formData.socialMedia || {}), instagram: e.target.value } })
                     }
                   />
                   <Input
-                    placeholder="Twitter / X URL"
+                    placeholder="URL Twitter / X"
                     value={(formData.socialMedia?.twitter as string) || ''}
                     onChange={(e) =>
                       setFormData({ ...formData, socialMedia: { ...(formData.socialMedia || {}), twitter: e.target.value } })
@@ -785,13 +785,13 @@ export default function CinemasPage() {
                 resetForm();
               }}
             >
-              Cancel
+              Hủy bỏ
             </Button>
             <Button
               onClick={handleSubmit}
               className="bg-gradient-to-r from-purple-600 to-pink-600"
             >
-              {selectedCinema ? 'Update' : 'Create'}
+              {selectedCinema ? 'Cập nhật' : 'Tạo'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -801,9 +801,9 @@ export default function CinemasPage() {
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete Cinema</DialogTitle>
+            <DialogTitle>Xóa Rạp</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete {selectedCinema?.name}? This action cannot be undone.
+              Bạn có chắc chắn muốn xóa {selectedCinema?.name}? Hành động này không thể hoàn tác.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -811,13 +811,13 @@ export default function CinemasPage() {
               variant="outline"
               onClick={() => setDeleteDialogOpen(false)}
             >
-              Cancel
+              Hủy bỏ
             </Button>
             <Button
               variant="destructive"
               onClick={handleDelete}
             >
-              Delete
+              Xóa
             </Button>
           </DialogFooter>
         </DialogContent>

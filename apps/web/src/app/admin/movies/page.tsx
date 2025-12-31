@@ -222,42 +222,42 @@ export default function MoviesPage() {
   const handleSubmit = async () => {
     // Validate required fields
     if (!formData.title?.trim()) {
-      setValidationErrorMessage('Title is required');
+      setValidationErrorMessage('Tiêu đề là bắt buộc');
       setValidationErrorOpen(true);
       return;
     }
     if (!formData.overview?.trim()) {
-      setValidationErrorMessage('Overview is required');
+      setValidationErrorMessage('Tóm tắt là bắt buộc');
       setValidationErrorOpen(true);
       return;
     }
     if (!formData.posterUrl?.trim()) {
-      setValidationErrorMessage('Poster URL is required');
+      setValidationErrorMessage('URL Poster là bắt buộc');
       setValidationErrorOpen(true);
       return;
     }
     if (!formData.releaseDate) {
-      setValidationErrorMessage('Release Date is required');
+      setValidationErrorMessage('Ngày phát hành là bắt buộc');
       setValidationErrorOpen(true);
       return;
     }
     if (!formData.runtime || formData.runtime <= 0) {
-      setValidationErrorMessage('Runtime must be greater than 0');
+      setValidationErrorMessage('Thời lượng phải lớn hơn 0');
       setValidationErrorOpen(true);
       return;
     }
     if (!formData.originalLanguage?.trim()) {
-      setValidationErrorMessage('Original Language is required');
+      setValidationErrorMessage('Ngôn ngữ gốc là bắt buộc');
       setValidationErrorOpen(true);
       return;
     }
     if (!formData.director?.trim()) {
-      setValidationErrorMessage('Director is required');
+      setValidationErrorMessage('Đạo diễn là bắt buộc');
       setValidationErrorOpen(true);
       return;
     }
     if (!formData.spokenLanguages || formData.spokenLanguages.length === 0) {
-      setValidationErrorMessage('At least one spoken language is required');
+      setValidationErrorMessage('Ít nhất một ngôn ngữ nói là bắt buộc');
       setValidationErrorOpen(true);
       return;
     }
@@ -508,7 +508,7 @@ export default function MoviesPage() {
     if (!rd) return '';
     if (typeof rd === 'string') return rd.includes('T') ? rd.split('T')[0] : rd;
     if (rd instanceof Date) return rd.toISOString().split('T')[0];
-    try { const d = new Date(rd as any); if (!isNaN(d.getTime())) return d.toISOString().split('T')[0]; } catch { }
+    try { const d = new Date(rd as any); if (!isNaN(d.getTime())) return d.toISOString().split('T')[0]; } catch (e) { /* ignore */ }
     return '';
   })();
 
@@ -516,8 +516,8 @@ export default function MoviesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Movies</h1>
-          <p className="text-gray-500 mt-1">Manage your movie catalog</p>
+          <h1 className="text-3xl font-bold tracking-tight">Phim</h1>
+          <p className="text-gray-500 mt-1">Quản lý danh mục phim của bạn</p>
         </div>
         <Button
           onClick={() => {
@@ -527,7 +527,7 @@ export default function MoviesPage() {
           className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
         >
           <Plus className="mr-2 h-4 w-4" />
-          Add Movie
+          Thêm phim
         </Button>
       </div>
 
@@ -539,7 +539,7 @@ export default function MoviesPage() {
             <div className="relative">
               <Search className="absolute left-4 top-3.5 h-5 w-5 text-purple-600" />
               <Input
-                placeholder="🔍 Search movies by title..."
+                placeholder="🔍 Tìm kiếm phim theo tên..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-12 bg-white border border-purple-200 rounded-lg shadow-sm h-11 focus:border-purple-400 focus:ring-purple-200 font-medium"
@@ -550,29 +550,29 @@ export default function MoviesPage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {/* Status filter */}
               <div>
-                <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2 block">📊 Status</label>
+                <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2 block">📊 Trạng Thái</label>
                 <Select value={selectedStatus} onValueChange={setSelectedStatus}>
                   <SelectTrigger className="h-10 bg-white border border-purple-200 hover:border-purple-300 focus:border-purple-400 font-medium">
-                    <SelectValue placeholder="All Status" />
+                    <SelectValue placeholder="Tất Cả Trạng Thái" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="NOW_SHOWING">Now Showing</SelectItem>
-                    <SelectItem value="COMING_SOON">Coming Soon</SelectItem>
-                    <SelectItem value="ENDED">Ended</SelectItem>
+                    <SelectItem value="all">Tất Cả Trạng Thái</SelectItem>
+                    <SelectItem value="NOW_SHOWING">Đang Chiếu</SelectItem>
+                    <SelectItem value="COMING_SOON">Sắp Tới</SelectItem>
+                    <SelectItem value="ENDED">Đã Kết Thúc</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               {/* Age rating filter */}
               <div>
-                <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2 block">🎫 Age Rating</label>
+                <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2 block">🎫 Xếp Hạng Tuổi</label>
                 <Select value={selectedRating} onValueChange={setSelectedRating}>
                   <SelectTrigger className="h-10 bg-white border border-purple-200 hover:border-purple-300 focus:border-purple-400 font-medium">
-                    <SelectValue placeholder="All Ratings" />
+                    <SelectValue placeholder="Tất Cả Xếp Hạng" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Ratings</SelectItem>
+                    <SelectItem value="all">Tất Cả Xếp Hạng</SelectItem>
                     <SelectItem value="P">P</SelectItem>
                     <SelectItem value="K">K</SelectItem>
                     <SelectItem value="T13">T13</SelectItem>
@@ -585,18 +585,18 @@ export default function MoviesPage() {
 
               {/* Genres Multi-select (compact) */}
               <div>
-                <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2 block">🎬 Genres</label>
+                <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2 block">🎬 Thể Loại</label>
                 <div className="border border-purple-200 rounded-lg bg-white p-2 max-h-40 overflow-y-auto shadow-sm">
                   <div className="mb-2">
                     <Input
-                      placeholder="Search..."
+                      placeholder="Tìm kiếm..."
                       value={genreSearch}
                       onChange={(e) => setGenreSearch(e.target.value)}
                       className="px-2 py-1 h-8 text-xs border-gray-200"
                     />
                   </div>
                   {filteredGenres.length === 0 ? (
-                    <p className="text-xs text-gray-500 p-2">No genres</p>
+                    <p className="text-xs text-gray-500 p-2">Không có thể loại</p>
                   ) : (
                     <div className="space-y-1">
                       {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
@@ -634,25 +634,25 @@ export default function MoviesPage() {
               <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-purple-200/50">
                 {searchQuery && (
                   <div className="inline-flex items-center gap-2 px-3 py-1 bg-white rounded-full border border-purple-200 shadow-sm">
-                    <span className="text-xs text-gray-600">Search: <span className="font-semibold text-purple-700">{searchQuery}</span></span>
+                  <span className="text-xs text-gray-600">Tìm kiếm: <span className="font-semibold text-purple-700">{searchQuery}</span></span>
                     <button onClick={() => setSearchQuery('')} className="text-purple-400 hover:text-purple-600">✕</button>
                   </div>
                 )}
                 {selectedStatus !== 'all' && (
                   <div className="inline-flex items-center gap-2 px-3 py-1 bg-white rounded-full border border-purple-200 shadow-sm">
-                    <span className="text-xs text-gray-600">Status: <span className="font-semibold text-purple-700">{selectedStatus}</span></span>
+                    <span className="text-xs text-gray-600">Trạng Thái: <span className="font-semibold text-purple-700">{selectedStatus}</span></span>
                     <button onClick={() => setSelectedStatus('all')} className="text-purple-400 hover:text-purple-600">✕</button>
                   </div>
                 )}
                 {selectedRating !== 'all' && (
                   <div className="inline-flex items-center gap-2 px-3 py-1 bg-white rounded-full border border-purple-200 shadow-sm">
-                    <span className="text-xs text-gray-600">Rating: <span className="font-semibold text-purple-700">{selectedRating}</span></span>
+                    <span className="text-xs text-gray-600">Xếp Hạng: <span className="font-semibold text-purple-700">{selectedRating}</span></span>
                     <button onClick={() => setSelectedRating('all')} className="text-purple-400 hover:text-purple-600">✕</button>
                   </div>
                 )}
                 {selectedGenreIds.length > 0 && (
                   <div className="inline-flex items-center gap-2 px-3 py-1 bg-white rounded-full border border-purple-200 shadow-sm">
-                    <span className="text-xs text-gray-600">Genres: <span className="font-semibold text-purple-700">{selectedGenreIds.length}</span></span>
+                    <span className="text-xs text-gray-600">Thể loại: <span className="font-semibold text-purple-700">{selectedGenreIds.length}</span></span>
                     <button onClick={() => setSelectedGenreIds([])} className="text-purple-400 hover:text-purple-600">✕</button>
                   </div>
                 )}
@@ -668,7 +668,7 @@ export default function MoviesPage() {
                   }}
                   className="border-purple-200 text-purple-700 hover:bg-purple-50 hover:text-purple-800 ml-auto"
                 >
-                  ✕ Clear All
+                  ✕ Xóa Tất Cả
                 </Button>
               </div>
             )}
@@ -678,9 +678,9 @@ export default function MoviesPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {loading ? (
-          <div className="col-span-full text-center py-12">Loading...</div>
+          <div className="col-span-full text-center py-12">Đang tải...</div>
         ) : displayedMovies.length === 0 ? (
-          <div className="col-span-full text-center py-12">No movies found</div>
+          <div className="col-span-full text-center py-12">Không tìm thấy phim nào</div>
         ) : (
           displayedMovies.map((movie) => (
             <Card
@@ -716,13 +716,13 @@ export default function MoviesPage() {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-48">
                       <DropdownMenuItem onClick={() => openEditDialog(movie)} className="cursor-pointer">
-                        <Edit className="mr-2 h-4 w-4" /> Edit Movie
+                        <Edit className="mr-2 h-4 w-4" /> Chỉnh sửa phim
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => { setSelectedMovieIdForRelease(movie.id); setAddReleaseDialogOpen(true); }} className="cursor-pointer">
-                        <Calendar className="mr-2 h-4 w-4" /> Schedule Release
+                        <Calendar className="mr-2 h-4 w-4" /> Lịch phát hành
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => { setSelectedMovie(movie); setDeleteDialogOpen(true); }} className="text-red-600 cursor-pointer">
-                        <Trash2 className="mr-2 h-4 w-4" /> Delete Movie
+                        <Trash2 className="mr-2 h-4 w-4" /> X\u00f3a phim
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -734,19 +734,19 @@ export default function MoviesPage() {
                     <div className="w-full max-w-xl bg-black/60 rounded-lg p-4 text-center text-white shadow-2xl mx-4 overflow-y-auto" style={{ maxHeight: '70%' }}>
                       {ensureArray(movie.cast).length > 0 && (
                         <div className="mb-2">
-                            <p className="text-xs text-yellow-300 font-semibold mb-1 uppercase tracking-wider">Cast</p>
+                            <p className="text-xs text-yellow-300 font-semibold mb-1 uppercase tracking-wider">Di\u1ec5n vi\u00ean</p>
                           <p className="text-sm">{ensureArray(movie.cast).slice(0,6).map(a => typeof a === 'object' && a && 'name' in a ? (a as { name?: string }).name : String(a)).filter(Boolean).join(', ')}</p>
                         </div>
                       )}
                       {getMovieGenreNames(movie).length > 0 && (
                         <div className="mb-2">
-                          <p className="text-xs text-yellow-300 font-semibold mb-1 uppercase tracking-wider">Genres</p>
+                          <p className="text-xs text-yellow-300 font-semibold mb-1 uppercase tracking-wider">Thể loại</p>
                           <p className="text-sm">{getMovieGenreNames(movie).join(', ')}</p>
                         </div>
                       )}
                       {ensureArray(movie.spokenLanguages).length > 0 && (
                         <div>
-                          <p className="text-xs text-yellow-300 font-semibold mb-1 uppercase tracking-wider">Languages</p>
+                          <p className="text-xs text-yellow-300 font-semibold mb-1 uppercase tracking-wider">Ngôn ngữ</p>
                           <p className="text-sm">{ensureArray(movie.spokenLanguages).join(', ')}</p>
                         </div>
                       )}
@@ -762,7 +762,7 @@ export default function MoviesPage() {
                     <p className="text-sm text-gray-700"><span className="font-semibold">🎬 {movie.displayDirector}</span></p>
                   </div>
                 )}
-                <p className="text-sm text-gray-600 line-clamp-3 mb-4 flex-1">{movie.displayOverview ? movie.displayOverview : 'No description available'}</p>
+                <p className="text-sm text-gray-600 line-clamp-3 mb-4 flex-1">{movie.displayOverview ? movie.displayOverview : 'Không có mô tả'}</p>
                 <div className="flex items-center justify-between text-xs bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg p-3 border border-gray-200 mt-auto">
                   <div className="flex items-center gap-1.5"><span className="text-base">⏱</span><span className="font-semibold text-gray-800">{movie.runtime} min</span></div>
                   <div className="w-px h-5 bg-gray-300" />
@@ -779,53 +779,53 @@ export default function MoviesPage() {
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              {selectedMovie ? 'Edit Movie' : 'Add New Movie'}
+              {selectedMovie ? 'Chỉnh sửa phim' : 'Thêm phim mới'}
             </DialogTitle>
             <DialogDescription>
-              Fill in the movie details below
+              Điền thông tin chi tiết về phim dưới đây
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="title">Title *</Label>
+              <Label htmlFor="title">Tiêu Đề *</Label>
               <Input
                 id="title"
                 value={formData.title}
                 onChange={(e) =>
                   setFormData({ ...formData, title: e.target.value })
                 }
-                placeholder="Avatar: The Way of Water"
+                placeholder="Avatar: Dòng Nước"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="originalTitle">Original Title *</Label>
+              <Label htmlFor="originalTitle">Tiêu Đề Gốc *</Label>
               <Input
                 id="originalTitle"
                 value={formData.originalTitle}
                 onChange={(e) =>
                   setFormData({ ...formData, originalTitle: e.target.value })
                 }
-                placeholder="Original title..."
+                placeholder="Avatar: The Way of Water"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="overview">Overview *</Label>
+              <Label htmlFor="overview">Mô Tả *</Label>
               <Textarea
                 id="overview"
                 value={formData.overview}
                 onChange={(e) =>
                   setFormData({ ...formData, overview: e.target.value })
                 }
-                placeholder="Enter movie overview..."
+                placeholder="Nhập mô tả phim..."
                 rows={4}
               />
             </div>
 
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="posterUrl">Poster URL *</Label>
+                <Label htmlFor="posterUrl">URL Poster *</Label>
                 <Input
                   id="posterUrl"
                   value={formData.posterUrl}
@@ -836,7 +836,7 @@ export default function MoviesPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="backdropUrl">Backdrop URL *</Label>
+                <Label htmlFor="backdropUrl">URL Hình Nền *</Label>
                 <Input
                   id="backdropUrl"
                   value={formData.backdropUrl}
@@ -847,7 +847,7 @@ export default function MoviesPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="trailerUrl">Trailer URL *</Label>
+                <Label htmlFor="trailerUrl">URL Trailer *</Label>
                 <Input
                   id="trailerUrl"
                   value={formData.trailerUrl}
@@ -861,7 +861,7 @@ export default function MoviesPage() {
 
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="runtime">Runtime (mins) *</Label>
+                <Label htmlFor="runtime">Thời Lượng (phút) *</Label>
                 <Input
                   id="runtime"
                   type="number"
@@ -873,7 +873,7 @@ export default function MoviesPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="ageRating">Age Rating *</Label>
+                <Label htmlFor="ageRating">Xếp Hạng Tuổi *</Label>
                 <Select
                   value={formData.ageRating}
                   onValueChange={(value) =>
@@ -893,7 +893,7 @@ export default function MoviesPage() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="releaseDate">Release Date *</Label>
+                <Label htmlFor="releaseDate">Ngày Phát Hành *</Label>
                 <Input
                   id="releaseDate"
                   type="date"
@@ -907,7 +907,7 @@ export default function MoviesPage() {
 
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="originalLanguage">Original Language *</Label>
+                <Label htmlFor="originalLanguage">Ngôn Ngữ Gốc *</Label>
                 <Input
                   id="originalLanguage"
                   value={formData.originalLanguage}
@@ -918,7 +918,7 @@ export default function MoviesPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="languageType">Language Type *</Label>
+                <Label htmlFor="languageType">Loại Ngôn Ngữ *</Label>
                 <Select
                   value={formData.languageType}
                   onValueChange={(value) =>
@@ -938,7 +938,7 @@ export default function MoviesPage() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="productionCountry">Production Country *</Label>
+                <Label htmlFor="productionCountry">Nước Sản Xuất *</Label>
                 <Input
                   id="productionCountry"
                   value={formData.productionCountry}
@@ -952,7 +952,7 @@ export default function MoviesPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="director">Director *</Label>
+                <Label htmlFor="director">Đạo Diễn *</Label>
                 <Input
                   id="director"
                   value={formData.director}
@@ -963,7 +963,7 @@ export default function MoviesPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="spokenLanguages">Spoken Languages * (comma-separated)</Label>
+                <Label htmlFor="spokenLanguages">Ngôn Ngữ Phát Âm * (cách nhau bằng dấu phẩy)</Label>
                 <Input
                   id="spokenLanguages"
                   value={formData.spokenLanguages?.join(', ') || 'en'}
@@ -979,7 +979,7 @@ export default function MoviesPage() {
             </div>
 
             <div className="space-y-2">
-              <Label>Cast (Diễn viên) *</Label>
+              <Label>Diễn Viên *</Label>
               <div className="space-y-2">
                 {(formData.cast || []).map((actor, index) => (
                   <div key={index} className="flex gap-2">
@@ -990,7 +990,7 @@ export default function MoviesPage() {
                         newCast[index] = { ...newCast[index], name: e.target.value };
                         setFormData({ ...formData, cast: newCast });
                       }}
-                      placeholder="Actor name"
+                      placeholder="Tên diễn viên"
                       className="flex-1"
                     />
                     <Input
@@ -1000,7 +1000,7 @@ export default function MoviesPage() {
                         newCast[index] = { ...newCast[index], character: e.target.value };
                         setFormData({ ...formData, cast: newCast });
                       }}
-                      placeholder="Character name (optional)"
+                      placeholder="Tên vai (tùy chọn)"
                       className="flex-1"
                     />
                     <Button
@@ -1029,13 +1029,13 @@ export default function MoviesPage() {
                   className="w-full"
                 >
                   <Plus className="mr-2 h-4 w-4" />
-                  Add Cast Member
+                  Thêm Diễn Viên
                 </Button>
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label>Genres *</Label>
+              <Label>Thể Loại *</Label>
               <div className="flex flex-wrap gap-2">
                 {genres.map((genre) => (
                   <Button
@@ -1066,13 +1066,13 @@ export default function MoviesPage() {
                 resetForm();
               }}
             >
-              Cancel
+              Hủy
             </Button>
             <Button
               onClick={handleSubmit}
               className="bg-gradient-to-r from-purple-600 to-pink-600"
             >
-              {selectedMovie ? 'Update' : 'Create'}
+              {selectedMovie ? 'Cập nhật' : 'Tạo'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1082,17 +1082,17 @@ export default function MoviesPage() {
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete Movie</DialogTitle>
+            <DialogTitle>Xóa phim</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete &quot;{selectedMovie?.title}&quot;?
+              Bạn có chắc muốn xóa &quot;{selectedMovie?.title}&quot; không?
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
-              Cancel
+              Hủy
             </Button>
             <Button variant="destructive" onClick={handleDelete}>
-              Delete
+              Xóa
             </Button>
           </DialogFooter>
         </DialogContent>

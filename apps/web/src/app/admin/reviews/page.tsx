@@ -163,8 +163,8 @@ export default function ReviewsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Reviews</h1>
-          <p className="text-gray-500 mt-1">Manage movie reviews and ratings</p>
+          <h1 className="text-3xl font-bold tracking-tight">\u0110\u00e1nh gi\u00e1</h1>
+          <p className="text-gray-500 mt-1">Quản lý bình luận và xếp hạng phim</p>
         </div>
       </div>
 
@@ -448,7 +448,7 @@ export default function ReviewsPage() {
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Review Details</DialogTitle>
-            <DialogDescription>View complete review information</DialogDescription>
+            <DialogDescription>Xem thông tin bình luận đầy đủ</DialogDescription>
           </DialogHeader>
 
           {selectedReview ? (
@@ -540,22 +540,22 @@ export default function ReviewsPage() {
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete Review</DialogTitle>
+            <DialogTitle>Xóa đánh giá</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete this review? This action cannot be undone.
+              Bạn có chắc muốn xóa đánh giá này không? Hành động này không thể hoàn tác.
             </DialogDescription>
           </DialogHeader>
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
-              Cancel
+              Hủy
             </Button>
             <Button
               variant="destructive"
               onClick={handleDeleteReview}
               disabled={deleteReview.isPending}
             >
-              {deleteReview.isPending ? 'Deleting...' : 'Delete'}
+              {deleteReview.isPending ? 'Đang xóa...' : 'Xóa'}
             </Button>
           </DialogFooter>
         </DialogContent>

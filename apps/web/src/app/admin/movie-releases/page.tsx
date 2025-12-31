@@ -16,6 +16,14 @@ import {
 } from '@movie-hub/shacdn-ui/card';
 import { Input } from '@movie-hub/shacdn-ui/input';
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@movie-hub/shacdn-ui/dialog';
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -45,6 +53,8 @@ import { MoreVertical } from 'lucide-react';
 export default function MovieReleasesPage() {
   const router = useRouter();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [selectedReleaseForDelete, setSelectedReleaseForDelete] = useState<MovieRelease | null>(null);
   const [showtimeDialogOpen, setShowtimeDialogOpen] = useState(false);
   const [editingRelease, setEditingRelease] = useState<MovieRelease | null>(null);
   const [selectedReleaseForShowtime, setSelectedReleaseForShowtime] = useState<MovieRelease | null>(null);
@@ -75,13 +85,18 @@ export default function MovieReleasesPage() {
     setDialogOpen(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this release?')) {
-      return;
-    }
+  const handleDelete = (release: MovieRelease) => {
+    setDeleteDialogOpen(true);
+    setSelectedReleaseForDelete(release);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!selectedReleaseForDelete) return;
 
     try {
-      await deleteRelease.mutateAsync(id);
+      await deleteRelease.mutateAsync(selectedReleaseForDelete.id);
+      setDeleteDialogOpen(false);
+      setSelectedReleaseForDelete(null);
     } catch {
       // Error toast already shown by mutation hook
     }
@@ -165,8 +180,8 @@ export default function MovieReleasesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Movie Releases</h1>
-          <p className="text-gray-500 mt-1">Manage movie release schedules</p>
+          <h1 className="text-3xl font-bold tracking-tight">Phát Hành Phim</h1>
+          <p className="text-gray-500 mt-1">Quản lý lịch phát hành phim</p>
         </div>
         <Button
           onClick={() => {
@@ -176,16 +191,16 @@ export default function MovieReleasesPage() {
           className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
         >
           <Plus className="mr-2 h-4 w-4" />
-          Add Release
+          Thêm Phát Hành
         </Button>
       </div>
 
       <div className="grid gap-6">
         <Card>
           <CardHeader>
-            <CardTitle>All Releases</CardTitle>
+            <CardTitle>Tất Cả Phát Hành</CardTitle>
             <CardDescription>
-              {filteredReleases.length} of {releases.length} release schedule{releases.length !== 1 ? 's' : ''}
+              {filteredReleases.length} trong {releases.length} lịch phát hành
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -194,9 +209,9 @@ export default function MovieReleasesPage() {
               <div className="flex items-end gap-3">
                 {/* Search Input */}
                 <div className="flex-1 min-w-0">
-                  <label className="text-xs font-medium text-gray-600 mb-2 block">Search</label>
+                  <label className="text-xs font-medium text-gray-600 mb-2 block">Tìm Kiếm</label>
                   <Input
-                    placeholder="🔍 Search by movie name..."
+                    placeholder="🔍 Tìm kiếm theo tên phim..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="w-full h-10 border-purple-200 focus:border-purple-400 focus:ring-purple-200 bg-white"
@@ -205,23 +220,23 @@ export default function MovieReleasesPage() {
 
                 {/* Status Select */}
                 <div className="w-48 flex-shrink-0">
-                  <label className="text-xs font-medium text-gray-600 mb-2 block">Status</label>
+                  <label className="text-xs font-medium text-gray-600 mb-2 block">Trạng Thái</label>
                   <Select value={selectedStatus} onValueChange={setSelectedStatus}>
                     <SelectTrigger className="h-10 border-purple-200 focus:border-purple-400 bg-white">
-                      <SelectValue placeholder="All Status" />
+                      <SelectValue placeholder="Tất Cả Trạng Thái" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All Status</SelectItem>
-                      <SelectItem value="active">Active</SelectItem>
-                      <SelectItem value="upcoming">Upcoming</SelectItem>
-                      <SelectItem value="ended">Ended</SelectItem>
+                      <SelectItem value="all">Tất Cả Trạng Thái</SelectItem>
+                      <SelectItem value="active">Đang Hoạt Động</SelectItem>
+                      <SelectItem value="upcoming">Sắp Tới</SelectItem>
+                      <SelectItem value="ended">Đã Kết Thúc</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 {/* From Date */}
                 <div className="w-40 flex-shrink-0">
-                  <label className="text-xs font-medium text-gray-600 mb-2 block">From Date</label>
+                  <label className="text-xs font-medium text-gray-600 mb-2 block">Từ Ngày</label>
                   <Input
                     type="date"
                     value={dateFrom}
@@ -232,7 +247,7 @@ export default function MovieReleasesPage() {
 
                 {/* To Date */}
                 <div className="w-40 flex-shrink-0">
-                  <label className="text-xs font-medium text-gray-600 mb-2 block">To Date</label>
+                  <label className="text-xs font-medium text-gray-600 mb-2 block">Đến Ngày</label>
                   <Input
                     type="date"
                     value={dateTo}
@@ -387,7 +402,7 @@ export default function MovieReleasesPage() {
                             className="cursor-pointer"
                           >
                             <Pencil className="mr-2 h-4 w-4 text-blue-600" />
-                            <span>Edit Release</span>
+                            <span>Sửa phát hành</span>
                           </DropdownMenuItem>
                           
                           <DropdownMenuSub>
@@ -404,8 +419,8 @@ export default function MovieReleasesPage() {
                                   const status = getReleaseStatus(release);
                                   if (status === 'ended') {
                                     toast({
-                                      title: 'Cannot Add Showtime',
-                                      description: 'Cannot create showtime for ended release',
+                                      title: 'Không Thể Thêm Lịch Chiếu',
+                                      description: 'Không thể tạo lịch chiếu cho phát hành đã kết thúc',
                                       variant: 'destructive',
                                     });
                                     return;
@@ -416,15 +431,15 @@ export default function MovieReleasesPage() {
                                 className="cursor-pointer"
                               >
                                 <Clock className="mr-2 h-4 w-4 text-green-600" />
-                                <span>Single Showtime</span>
+                                <span>Lịch Chiếu Riêng</span>
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 onClick={() => {
                                   const status = getReleaseStatus(release);
                                   if (status === 'ended') {
                                     toast({
-                                      title: 'Cannot Create Batch',
-                                      description: 'Cannot create batch showtimes for ended release',
+                                      title: 'Không Thể Tạo Lịch Chiếu Hàng Loạt',
+                                      description: 'Không thể tạo lịch chiếu hàng loạt cho phát hành đã kết thúc',
                                       variant: 'destructive',
                                     });
                                     return;
@@ -435,18 +450,18 @@ export default function MovieReleasesPage() {
                                 className="cursor-pointer"
                               >
                                 <Zap className="mr-2 h-4 w-4 text-orange-600" />
-                                <span>Batch Showtimes</span>
+                                <span>Lịch Chiếu Hàng Loạt</span>
                               </DropdownMenuItem>
                             </DropdownMenuSubContent>
                           </DropdownMenuSub>
                           
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
-                            onClick={() => handleDelete(release.id)}
+                            onClick={() => handleDelete(release)}
                             className="cursor-pointer text-red-600 focus:text-red-600"
                           >
                             <Trash2 className="mr-2 h-4 w-4" />
-                            <span>Delete</span>
+                            <span>Xóa</span>
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -495,7 +510,7 @@ export default function MovieReleasesPage() {
                     <div className="relative">
                       <div className="absolute -left-1 top-0 w-1 h-full bg-gradient-to-b from-purple-400 to-pink-400 rounded-full" />
                       <div className="pl-4">
-                        <p className="text-xs text-gray-500 font-medium mb-1">📝 DESCRIPTION</p>
+                        <p className="text-xs text-gray-500 font-medium mb-1">📝 MÔ TẢ</p>
                         <p className="text-sm text-gray-700 leading-relaxed line-clamp-2">
                           {release.note}
                         </p>
@@ -541,12 +556,41 @@ export default function MovieReleasesPage() {
         preSelectedReleaseId={selectedReleaseForShowtime?.id}
         onSuccess={() => {
           toast({
-            title: 'Success',
-            description: 'Showtime created successfully',
+            title: 'Thành công',
+            description: 'Lịch chiếu được tạo thành công',
           });
           refetchReleases();
         }}
       />
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Xác Nhận Xóa</DialogTitle>
+            <DialogDescription>
+              Bạn có chắc muốn xóa phát hành &quot;{selectedReleaseForDelete?.note || 'N/A'}&quot;? Hành động này không thể hoàn tác.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setDeleteDialogOpen(false);
+                setSelectedReleaseForDelete(null);
+              }}
+            >
+              Hủy Bỏ
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmDelete}
+            >
+              Xóa Phát Hành
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

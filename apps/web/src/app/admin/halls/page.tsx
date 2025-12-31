@@ -188,8 +188,8 @@ export default function HallsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Halls (Auditoriums)</h1>
-          <p className="text-gray-500 mt-1">Manage cinema halls and screening rooms</p>
+          <h1 className="text-3xl font-bold tracking-tight">Phòng Chiếu (Phòng Phát Hành)</h1>
+          <p className="text-gray-500 mt-1">Quản lý các phòng chiếu phim và phòng lên phim</p>
         </div>
         <Button
           onClick={() => {
@@ -199,7 +199,7 @@ export default function HallsPage() {
           className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
         >
           <Plus className="mr-2 h-4 w-4" />
-          Add Hall
+          Thêm Phòng
         </Button>
       </div>
 
@@ -210,11 +210,11 @@ export default function HallsPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Search Input */}
               <div>
-                <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2 block">🔍 Search</label>
+                <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2 block">🔍 Tìm Kiếm</label>
                 <div className="relative">
                   <Search className="absolute left-3 top-3 h-4 w-4 text-purple-600" />
                   <Input
-                    placeholder="Search halls by name..."
+                    placeholder="Tìm kiếm phòng theo tên..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="pl-10 h-11 bg-white border border-purple-200 focus:border-purple-400 focus:ring-purple-200 font-medium"
@@ -224,13 +224,13 @@ export default function HallsPage() {
 
               {/* Cinema Filter */}
               <div>
-                <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2 block">🏢 Cinema</label>
+                <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2 block">🏢 Rạp</label>
                 <Select value={selectedCinemaId} onValueChange={setSelectedCinemaId}>
                   <SelectTrigger className="h-11 bg-white border border-purple-200 hover:border-purple-300 focus:border-purple-400 font-medium">
-                    <SelectValue placeholder="All Cinemas" />
+                    <SelectValue placeholder="Tất Cả Rạp" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Cinemas</SelectItem>
+                    <SelectItem value="all">Tất Cả Rạp</SelectItem>
                     {cinemas.map((cinema) => (
                       <SelectItem key={cinema.id} value={cinema.id}>
                         {cinema.name}
@@ -275,16 +275,16 @@ export default function HallsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>All Halls ({filteredHalls.length})</CardTitle>
+          <CardTitle>Tất Cả Phòng ({filteredHalls.length})</CardTitle>
           <CardDescription>
-            Halls organized by cinema location
+            Các phòng được tổ chức theo vị trí rạp
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-8">
           {loading ? (
-            <div className="text-center py-8">Loading...</div>
+            <div className="text-center py-8">Đang tải...</div>
           ) : Object.keys(groupedFilteredHalls).length === 0 ? (
-            <div className="text-center py-8">No halls found</div>
+            <div className="text-center py-8">Không tìm thấy phòng</div>
           ) : (
             Object.entries(groupedFilteredHalls).map(([cinemaId, cinemaHalls]) => {
               const cinema = cinemas.find((c) => c.id === cinemaId);
@@ -326,7 +326,7 @@ export default function HallsPage() {
                               <DropdownMenuContent align="end">
                                 <DropdownMenuItem onClick={() => openEditDialog(hall)}>
                                   <Edit className="mr-2 h-4 w-4" />
-                                  Edit
+                                  Chỉnh sửa
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
                                   onClick={() => {
@@ -336,7 +336,7 @@ export default function HallsPage() {
                                   className="text-red-600"
                                 >
                                   <Trash2 className="mr-2 h-4 w-4" />
-                                  Delete
+                                  Xóa
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
@@ -344,24 +344,24 @@ export default function HallsPage() {
 
                           <div className="space-y-2 text-sm">
                             <div className="flex items-center justify-between">
-                              <span className="text-gray-600">Capacity</span>
-                              <span className="font-semibold">{hall.capacity} seats</span>
+                              <span className="text-gray-600">Sức Chứa</span>
+                              <span className="font-semibold">{hall.capacity} ghế</span>
                             </div>
                             <div className="flex items-center justify-between">
-                              <span className="text-gray-600">Rows</span>
-                              <span className="font-semibold">{hall.rows} rows</span>
+                              <span className="text-gray-600">Hàng</span>
+                              <span className="font-semibold">{hall.rows} hàng</span>
                             </div>
                             <div className="pt-2 border-t">
-                              <div className="text-gray-600 mb-1">Screen</div>
-                              <div className="font-medium">{hall.screenType || 'Standard'}</div>
+                              <div className="text-gray-600 mb-1">Màn Hình</div>
+                              <div className="font-medium">{hall.screenType || 'Tiêu Chuẩn'}</div>
                             </div>
                             <div>
-                              <div className="text-gray-600 mb-1">Audio</div>
-                              <div className="font-medium">{hall.soundSystem || 'Standard Audio'}</div>
+                              <div className="text-gray-600 mb-1">Âm Thanh</div>
+                              <div className="font-medium">{hall.soundSystem || 'Âm Thanh Tiêu Chuẩn'}</div>
                             </div>
                             {hall.features && hall.features.length > 0 && (
                               <div>
-                                <div className="text-gray-600 mb-1">Features</div>
+                                <div className="text-gray-600 mb-1">Tính Năng</div>
                                 <div className="flex flex-wrap gap-1">
                                   {hall.features.map((feature, idx) => (
                                     <Badge key={idx} variant="outline" className="text-xs">
@@ -393,15 +393,15 @@ export default function HallsPage() {
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>
-              {selectedHall ? 'Edit Hall' : 'Add New Hall'}
+              {selectedHall ? 'Chỉnh sửa Phòng' : 'Thêm Phòng Mới'}
             </DialogTitle>
             <DialogDescription>
-              Fill in the hall details below
+              Điền thông tin chi tiết phòng bên dưới
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="cinema">Cinema *</Label>
+              <Label htmlFor="cinema">Rạp Chiếu Phim *</Label>
               <Select
                 value={formData.cinemaId}
                 onValueChange={(value) =>
@@ -409,7 +409,7 @@ export default function HallsPage() {
                 }
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select cinema" />
+                  <SelectValue placeholder="Chọn rạp" />
                 </SelectTrigger>
                 <SelectContent>
                   {cinemas.map((cinema) => (
@@ -423,18 +423,18 @@ export default function HallsPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="name">Hall Name *</Label>
+                <Label htmlFor="name">Tên Phòng *</Label>
                 <Input
                   id="name"
                   value={formData.name}
                   onChange={(e) =>
                     setFormData({ ...formData, name: e.target.value })
                   }
-                  placeholder="Hall 1"
+                  placeholder="Phòng 1"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="type">Type *</Label>
+                <Label htmlFor="type">Loại *</Label>
                 <Select
                   value={formData.type}
                   onValueChange={(value: HallType) =>
@@ -445,7 +445,7 @@ export default function HallsPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value={HallTypeEnum.STANDARD}>Standard</SelectItem>
+                    <SelectItem value={HallTypeEnum.STANDARD}>Tiêu Chuẩn</SelectItem>
                     <SelectItem value={HallTypeEnum.PREMIUM}>Premium</SelectItem>
                     <SelectItem value={HallTypeEnum.IMAX}>IMAX</SelectItem>
                     <SelectItem value={HallTypeEnum.FOUR_DX}>4DX</SelectItem>
@@ -456,7 +456,7 @@ export default function HallsPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="screenType">Screen Type</Label>
+                <Label htmlFor="screenType">Loại Màn Hình</Label>
                 <Input
                   id="screenType"
                   value={formData.screenType}
@@ -467,7 +467,7 @@ export default function HallsPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="soundSystem">Sound System</Label>
+                <Label htmlFor="soundSystem">Hệ Thống Âm Thanh</Label>
                 <Input
                   id="soundSystem"
                   value={formData.soundSystem}
@@ -480,7 +480,7 @@ export default function HallsPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="layoutType">Layout Type</Label>
+              <Label htmlFor="layoutType">Loại Bố Trí</Label>
               <Select
                 value={formData.layoutType}
                 onValueChange={(value) =>
@@ -491,9 +491,9 @@ export default function HallsPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={LayoutTypeEnum.STANDARD}>Standard</SelectItem>
-                  <SelectItem value={LayoutTypeEnum.DUAL_AISLE}>Dual Aisle</SelectItem>
-                  <SelectItem value={LayoutTypeEnum.STADIUM}>Stadium</SelectItem>
+                  <SelectItem value={LayoutTypeEnum.STANDARD}>Tiêu Chuẩn</SelectItem>
+                  <SelectItem value={LayoutTypeEnum.DUAL_AISLE}>Hai Lối Đi</SelectItem>
+                  <SelectItem value={LayoutTypeEnum.STADIUM}>Sân Vận Động</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -501,24 +501,24 @@ export default function HallsPage() {
             {selectedHall && (
               <div className="grid grid-cols-2 gap-4 p-3 bg-gray-50 rounded border">
                 <div>
-                  <Label className="text-xs text-gray-600">Capacity</Label>
-                  <div className="text-lg font-semibold">{selectedHall.capacity} seats</div>
+                  <Label className="text-xs text-gray-600">Sức Chứa</Label>
+                  <div className="text-lg font-semibold">{selectedHall.capacity} ghế</div>
                 </div>
                 <div>
-                  <Label className="text-xs text-gray-600">Rows</Label>
-                  <div className="text-lg font-semibold">{selectedHall.rows} rows</div>
+                  <Label className="text-xs text-gray-600">Hàng</Label>
+                  <div className="text-lg font-semibold">{selectedHall.rows} hàng</div>
                 </div>
               </div>
             )}
 
             <div className="space-y-2">
-              <Label>Features (Optional)</Label>
+              <Label>Tính Năng (Tùy Chọn)</Label>
               <Input
                 value={(formData.features || []).join(', ')}
                 onChange={(e) =>
                   setFormData({ ...formData, features: e.target.value.split(',').map(f => f.trim()).filter(Boolean) })
                 }
-                placeholder="3D, ATMOS, Wheelchair access (comma-separated)"
+                placeholder="3D, ATMOS, Wheelchair access (ngăn cách bằng dấu phẩy)"
               />
             </div>
           </div>
@@ -530,13 +530,13 @@ export default function HallsPage() {
                 resetForm();
               }}
             >
-              Cancel
+              Hủy bỏ
             </Button>
             <Button
               onClick={handleSubmit}
               className="bg-gradient-to-r from-purple-600 to-pink-600"
             >
-              {selectedHall ? 'Update' : 'Create'}
+              {selectedHall ? 'Cập nhật' : 'Tạo'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -546,17 +546,17 @@ export default function HallsPage() {
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete Hall</DialogTitle>
+            <DialogTitle>Xóa Phòng</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete &quot;{selectedHall?.name}&quot;?
+              Bạn có chắc chắn muốn xóa &quot;{selectedHall?.name}&quot;?
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
-              Cancel
+              Hủy bỏ
             </Button>
             <Button variant="destructive" onClick={handleDelete}>
-              Delete
+              Xóa
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -566,7 +566,7 @@ export default function HallsPage() {
       <Dialog open={validationErrorOpen} onOpenChange={setValidationErrorOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Validation Error</DialogTitle>
+            <DialogTitle>Lỗi Xác Thực</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-gray-600">{validationErrorMessage}</p>
           <DialogFooter>

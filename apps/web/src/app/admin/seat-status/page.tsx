@@ -90,8 +90,8 @@ export default function SeatStatusPage() {
       } else {
         // Fallback: if BE doesn't return seatMap, show error (BE issue)
         toast({
-          title: 'Warning',
-          description: 'Hall seatMap not available from backend. Please check with admin.',
+          title: 'Cảnh báo',
+          description: 'Không có sơ đồ ghế từ backend. Vui lòng kiểm tra với quản trị hệ thống.',
           variant: 'destructive',
         });
         return;
@@ -108,8 +108,8 @@ export default function SeatStatusPage() {
       });
     } catch {
       toast({
-        title: 'Error',
-        description: 'Failed to fetch hall details',
+        title: 'Lỗi',
+        description: 'Không tải được chi tiết phòng',
         variant: 'destructive',
       });
     } finally {
@@ -134,8 +134,8 @@ export default function SeatStatusPage() {
       }
 
       toast({
-        title: 'Success',
-        description: 'Seat status updated successfully',
+        title: 'Thành Công',
+        description: 'Cập nhật trạng thái ghế thành công',
       });
     } catch {
       // Error toast already shown by mutation hook
@@ -212,26 +212,26 @@ export default function SeatStatusPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
             <Wrench className="h-8 w-8 text-orange-600" />
-            Seat Status Management
+            Quản Lý Trạng Thái Ghế
           </h1>
-          <p className="text-gray-500 mt-1">Monitor and manage seat conditions across all halls</p>
+          <p className="text-gray-500 mt-1">Giám sát và quản lý tình trạng ghế trên tất cả phòng</p>
         </div>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Select Hall</CardTitle>
-          <CardDescription>Choose a cinema and hall to view and manage seat status</CardDescription>
+          <CardTitle className="text-lg">Chọn Phòng</CardTitle>
+          <CardDescription>Chọn rạp và phòng để xem và quản lý trạng thái ghế</CardDescription>
         </CardHeader>
         <CardContent>
           {/* Modern Filter Container */}
           <div className="p-4 bg-gradient-to-r from-purple-50 via-blue-50 to-pink-50 rounded-lg border border-purple-200/50 shadow-sm">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2 block">🏢 Cinema</label>
+                <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2 block">🏢 Rạp</label>
                 <Select value={selectedCinemaId} onValueChange={setSelectedCinemaId}>
                   <SelectTrigger className="h-11 bg-white border border-purple-200 hover:border-purple-300 focus:border-purple-400 font-medium">
-                    <SelectValue placeholder="Select cinema" />
+                    <SelectValue placeholder="Chọn rạp" />
                   </SelectTrigger>
                   <SelectContent>
                     {cinemas.map((cinema) => (
@@ -247,14 +247,14 @@ export default function SeatStatusPage() {
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2 block">🚪 Hall</label>
+                <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2 block">🚪 Phòng</label>
                 <Select
                   value={selectedHallId}
                   onValueChange={handleHallChange}
                   disabled={!selectedCinemaId}
                 >
                   <SelectTrigger className="h-11 bg-white border border-purple-200 hover:border-purple-300 focus:border-purple-400 font-medium disabled:opacity-50">
-                    <SelectValue placeholder="Select hall" />
+                    <SelectValue placeholder="Chọn phòng" />
                   </SelectTrigger>
                   <SelectContent>
                     {halls.map((hall) => (
@@ -276,7 +276,7 @@ export default function SeatStatusPage() {
       {loading ? (
         <div className="text-center py-12">
           <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-purple-600 border-r-transparent"></div>
-          <p className="mt-4 text-gray-500">Loading hall details...</p>
+          <p className="mt-4 text-gray-500">Đang tải chi tiết phòng...</p>
         </div>
       ) : hallDetail ? (
         <>
@@ -284,7 +284,7 @@ export default function SeatStatusPage() {
             <Card className="border-2 border-purple-200 bg-purple-50">
               <CardContent className="pt-6">
                 <div className="text-center">
-                  <p className="text-sm font-medium text-gray-600">Total Seats</p>
+                  <p className="text-sm font-medium text-gray-600">Tổng Số Ghế</p>
                   <p className="text-3xl font-bold text-purple-600 mt-2">{hallDetail.seats.length}</p>
                 </div>
               </CardContent>
@@ -295,7 +295,7 @@ export default function SeatStatusPage() {
                 <div className="text-center">
                   <div className="flex items-center justify-center gap-2">
                     <CheckCircle2 className="h-5 w-5 text-green-600" />
-                    <p className="text-sm font-medium text-gray-600">Active</p>
+                    <p className="text-sm font-medium text-gray-600">Hoạt Động</p>
                   </div>
                   <p className="text-3xl font-bold text-green-600 mt-2">{statusCounts.ACTIVE}</p>
                 </div>
@@ -307,7 +307,7 @@ export default function SeatStatusPage() {
                 <div className="text-center">
                   <div className="flex items-center justify-center gap-2">
                     <XCircle className="h-5 w-5 text-red-600" />
-                    <p className="text-sm font-medium text-gray-600">Broken</p>
+                    <p className="text-sm font-medium text-gray-600">Bị Hỏng</p>
                   </div>
                   <p className="text-3xl font-bold text-red-600 mt-2">{statusCounts.BROKEN}</p>
                 </div>
@@ -319,7 +319,7 @@ export default function SeatStatusPage() {
                 <div className="text-center">
                   <div className="flex items-center justify-center gap-2">
                     <Wrench className="h-5 w-5 text-orange-600" />
-                    <p className="text-sm font-medium text-gray-600">Maintenance</p>
+                    <p className="text-sm font-medium text-gray-600">Bảo Trì</p>
                   </div>
                   <p className="text-3xl font-bold text-orange-600 mt-2">{statusCounts.MAINTENANCE}</p>
                 </div>
@@ -331,23 +331,23 @@ export default function SeatStatusPage() {
             <CardHeader>
               <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div>
-                  <CardTitle>{hallDetail.name} - Seat Layout</CardTitle>
+                  <CardTitle>{hallDetail.name} - Bố Trí Ghế</CardTitle>
                   <CardDescription>
-                    {selectedCinema?.name} • {hallDetail.type} • {hallDetail.capacity} seats
+                    {selectedCinema?.name} • {hallDetail.type} • {hallDetail.capacity} ghế
                   </CardDescription>
                 </div>
                 {/* Modern Filter Section */}
                 <div className="p-3 bg-gradient-to-r from-orange-50 to-orange-100 rounded-lg border border-orange-200/50 shadow-sm">
-                  <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2 block">🔍 Filter Seats</label>
+                  <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2 block">🔍 Lọc Ghế</label>
                   <Select value={filterStatus} onValueChange={(v: string) => setFilterStatus(v as typeof filterStatus)}>
                     <SelectTrigger className="w-full md:w-48 h-10 bg-white border border-orange-200 hover:border-orange-300 focus:border-orange-400 font-medium">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="ALL">All Seats</SelectItem>
-                      <SelectItem value={SeatStatusEnum.ACTIVE}>✅ Active Only</SelectItem>
-                      <SelectItem value={SeatStatusEnum.BROKEN}>❌ Broken Only</SelectItem>
-                      <SelectItem value={SeatStatusEnum.MAINTENANCE}>🔧 Maintenance Only</SelectItem>
+                      <SelectItem value="ALL">Tất Cả Ghế</SelectItem>
+                      <SelectItem value={SeatStatusEnum.ACTIVE}>✅ Chỉ Hoạt Động</SelectItem>
+                      <SelectItem value={SeatStatusEnum.BROKEN}>❌ Chỉ Bị Hỏng</SelectItem>
+                      <SelectItem value={SeatStatusEnum.MAINTENANCE}>🔧 Chỉ Bảo Trì</SelectItem>
                     </SelectContent>
                   </Select>
                   {filterStatus !== 'ALL' && (
@@ -473,19 +473,19 @@ export default function SeatStatusPage() {
                 </div>
 
                 <div>
-                  <p className="text-sm font-medium text-gray-700 mb-3">Physical Status (Background Color)</p>
+                  <p className="text-sm font-medium text-gray-700 mb-3">Trạng Thái Vật Lý (Màu Nền)</p>
                   <div className="flex flex-wrap gap-4">
                     <div className="flex items-center gap-2">
-                      <div className="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center text-white font-bold shadow-md">1</div>
-                      <span className="text-sm">Active (Working)</span>
+                      <div className="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center text-white font-bold shadow-md"></div>
+                      <span className="text-sm">Hoạt Động</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <div className="w-10 h-10 rounded-xl bg-rose-600 flex items-center justify-center text-white text-2xl opacity-70 shadow-md">✕</div>
-                      <span className="text-sm">Broken (Not Usable)</span>
+                      <span className="text-sm">Bị Hỏng</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <div className="w-10 h-10 rounded-xl bg-amber-400 flex items-center justify-center text-white text-2xl opacity-70 shadow-md">🔧</div>
-                      <span className="text-sm">Maintenance (Repairing)</span>
+                      <span className="text-sm">Bảo Trì</span>
                     </div>
                   </div>
                 </div>
@@ -497,7 +497,7 @@ export default function SeatStatusPage() {
         <Card>
           <CardContent className="py-16 text-center">
             <DoorOpen className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-500">Select a cinema and hall to view seat status</p>
+            <p className="text-gray-500">Chọn một rạp và phòng để xem trạng thái ghế</p>
           </CardContent>
         </Card>
       )}

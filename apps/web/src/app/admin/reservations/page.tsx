@@ -218,8 +218,8 @@ export default function ReservationsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Reservations</h1>
-          <p className="text-gray-500 mt-1">Manage cinema bookings and reservations</p>
+          <h1 className="text-3xl font-bold tracking-tight">Đ\u1eb7t ch\u1ed7</h1>
+          <p className="text-gray-500 mt-1">Quản lý đặt vé và đặt chỗ rạp</p>
         </div>
       </div>
 
@@ -263,7 +263,7 @@ export default function ReservationsPage() {
 
         <Card className="bg-gradient-to-br from-pink-50 to-pink-100 border-pink-200/60 shadow-md hover:shadow-lg transition-shadow">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-semibold text-pink-700 uppercase tracking-wider">🪑 Seats Booked</CardTitle>
+            <CardTitle className="text-sm font-semibold text-pink-700 uppercase tracking-wider">🪑 Ghế đã đặt</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-pink-900">{stats.totalSeats}</div>
@@ -585,7 +585,7 @@ export default function ReservationsPage() {
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Booking Details</DialogTitle>
-            <DialogDescription>View complete booking information</DialogDescription>
+            <DialogDescription>Xem thông tin đặt đầy đủ</DialogDescription>
           </DialogHeader>
 
           {detailLoading ? (
@@ -732,13 +732,13 @@ export default function ReservationsPage() {
                 )}
                 {bookingDetail.cancelledAt && (
                   <div className="flex justify-between text-red-600">
-                    <span>Cancelled:</span>
+                    <span>Đã hủy:</span>
                     <span>{formatDate(bookingDetail.cancelledAt)}</span>
                   </div>
                 )}
                 {bookingDetail.cancellationReason && (
                   <div className="mt-2">
-                    <Label className="text-sm">Cancellation Reason:</Label>
+                    <Label className="text-sm">Lý do hủy:</Label>
                     <p className="text-red-600">{bookingDetail.cancellationReason}</p>
                   </div>
                 )}
@@ -772,7 +772,7 @@ export default function ReservationsPage() {
       <Dialog open={statusDialogOpen} onOpenChange={setStatusDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Update Booking Status</DialogTitle>
+            <DialogTitle>Cập nhật trạng thái đặt đặt</DialogTitle>
             <DialogDescription>Change the booking status and provide a reason</DialogDescription>
           </DialogHeader>
 
@@ -789,36 +789,36 @@ export default function ReservationsPage() {
                   <SelectValue placeholder="Select status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="PENDING">Pending</SelectItem>
-                  <SelectItem value="CONFIRMED">Confirmed</SelectItem>
-                  <SelectItem value="CANCELLED">Cancelled</SelectItem>
-                  <SelectItem value="EXPIRED">Expired</SelectItem>
-                  <SelectItem value="COMPLETED">Completed</SelectItem>
+                  <SelectItem value="PENDING">Chờ xử lý</SelectItem>
+                  <SelectItem value="CONFIRMED">Xác nhận</SelectItem>
+                  <SelectItem value="CANCELLED">Đã hủy</SelectItem>
+                  <SelectItem value="EXPIRED">Hết hạn</SelectItem>
+                  <SelectItem value="COMPLETED">Hoàn thành</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div>
-              <Label htmlFor="reason">Reason (optional)</Label>
+              <Label htmlFor="reason">Lý do (tùy chọn)</Label>
               <Input
                 id="reason"
                 value={statusUpdate.reason}
                 onChange={(e) => setStatusUpdate({ ...statusUpdate, reason: e.target.value })}
-                placeholder="Enter reason for status change"
+                placeholder="Nhập lý do thay đổi trạng thái"
               />
             </div>
           </div>
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setStatusDialogOpen(false)}>
-              Cancel
+              Hủy
             </Button>
             <Button
               onClick={handleUpdateStatus}
               className="bg-gradient-to-r from-purple-600 to-pink-600"
               disabled={updateStatus.isPending}
             >
-              {updateStatus.isPending ? 'Updating...' : 'Update Status'}
+              {updateStatus.isPending ? 'Đang cập nhật...' : 'Cập nhật trạng thái'}
             </Button>
           </DialogFooter>
         </DialogContent>

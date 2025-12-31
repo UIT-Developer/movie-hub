@@ -149,8 +149,8 @@ export default function MovieReleaseDialog({
     // Validate: movieId and startDate are required, endDate is optional
     if (!formData.movieId || !formData.startDate) {
       toast({
-        title: 'Validation Error',
-        description: 'Please fill in all required fields: Movie, Start Date',
+        title: 'Lỗi xác thực',
+        description: 'Vui lòng điền tất cả trường bắt buộc: Phim, Ngày bắt đầu',
         variant: 'destructive',
       });
       return;
@@ -159,8 +159,8 @@ export default function MovieReleaseDialog({
     // Validate movieId is a proper UUID format
     if (!isValidUUID(formData.movieId)) {
       toast({
-        title: 'Validation Error',
-        description: 'Invalid movie ID format. Please select a valid movie from the dropdown.',
+        title: 'Lỗi Xác Thực',
+        description: 'Định dạng ID phim không hợp lệ. Vui lòng chọn một phim hợp lệ từ danh sách.',
         variant: 'destructive',
       });
       console.warn('[MovieReleaseDialog] Invalid movieId format:', formData.movieId);
@@ -219,19 +219,19 @@ export default function MovieReleaseDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>{fullReleaseDetail ? 'Edit Release' : 'Add New Release'}</DialogTitle>
+          <DialogTitle>{fullReleaseDetail ? 'Chỉnh sửa phát hành' : 'Thêm phát hành mới'}</DialogTitle>
           <DialogDescription>
-            {fullReleaseDetail ? 'Update release schedule details' : 'Create a new movie release schedule'}
+            {fullReleaseDetail ? 'Cập nhật chi tiết lịch phát hành' : 'Tạo lịch phát hành phim mới'}
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="space-y-2">
-            <Label htmlFor="movieId">Movie *</Label>
+            <Label htmlFor="movieId">Phim *</Label>
             {movies.length === 0 ? (
               <div className="text-sm text-red-600 p-2 border border-red-300 rounded bg-red-50">
-                No movies available. Please add movies first before creating releases.
+                Không có phim khả dụng. Vui lòng thêm phim trước khi tạo phát hành.
               </div>
-            ) : (
+            ) : ( 
             <Select
               value={selectedId}
               onValueChange={(value: string) => {
@@ -244,19 +244,19 @@ export default function MovieReleaseDialog({
               disabled={isMovieDisabled}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Select movie">
+                <SelectValue placeholder="Chọn phim">
                   {selectedLabel}
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {fullReleaseDetail && !movies.find(m => m.id === fullReleaseDetail.movieId) && (
                   <SelectItem key={`injected-${fullReleaseDetail.movieId}`} value={fullReleaseDetail.movieId}>
-                    {fullReleaseDetail.movie ? `${fullReleaseDetail.movie.title} (${fullReleaseDetail.movie.runtime} mins) - Current` : `Movie (${fullReleaseDetail.movieId}) - Current`}
+                    {fullReleaseDetail.movie ? `${fullReleaseDetail.movie.title} (${fullReleaseDetail.movie.runtime} phút) - Hiện tại` : `Phim (${fullReleaseDetail.movieId}) - Hiện tại`}
                   </SelectItem>
                 )}
                 {movies.map((movie) => (
                   <SelectItem key={movie.id} value={movie.id}>
-                    {movie.title} ({movie.runtime} mins)
+                    {movie.title} ({movie.runtime} phút)
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -266,7 +266,7 @@ export default function MovieReleaseDialog({
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="startDate">Start Date *</Label>
+              <Label htmlFor="startDate">Ngày Bắt Đầu *</Label>
               <Input
                 id="startDate"
                 type="date"
@@ -277,7 +277,7 @@ export default function MovieReleaseDialog({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="endDate">End Date (Optional)</Label>
+              <Label htmlFor="endDate">Ngày Kết Thúc (Tùy Chọn)</Label>
               <Input
                 id="endDate"
                 type="date"
@@ -290,14 +290,14 @@ export default function MovieReleaseDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="note">Note</Label>
+            <Label htmlFor="note">Ghi Chú</Label>
             <Textarea
               id="note"
               value={formData.note}
               onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
                 setFormData({ ...formData, note: e.target.value })
               }
-              placeholder="e.g., Phát hành dịp Tết Nguyên Đán 2025"
+              placeholder="VD: Phát hành dịp Tết Nguyên Đán 2025"
               rows={3}
             />
           </div>
@@ -310,14 +310,14 @@ export default function MovieReleaseDialog({
               resetForm();
             }}
           >
-            Cancel
+            Hủy Bỏ
           </Button>
           <Button
             onClick={handleSubmit}
             disabled={!formData.movieId || !formData.startDate || (movies.length === 0 && !fullReleaseDetail)}
             className="bg-gradient-to-r from-purple-600 to-pink-600 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {editingRelease ? 'Update Release' : 'Create Release'}
+            {editingRelease ? 'Cập Nhật Phát Hành' : 'Tạo Phát Hành'}
           </Button>
         </DialogFooter>
       </DialogContent>

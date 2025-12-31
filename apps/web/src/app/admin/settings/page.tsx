@@ -222,7 +222,7 @@ export default function SettingsPage() {
     } catch {
       toast({
         title: 'Error',
-        description: 'Failed to save settings. Please try again.',
+        description: 'Lưu cài đặt thất bại. Vui lòng thử lại.',
         variant: 'destructive',
       });
     } finally {
@@ -254,7 +254,7 @@ export default function SettingsPage() {
       await new Promise((resolve) => setTimeout(resolve, 1000));
       toast({
         title: 'Password Changed',
-        description: 'Your password has been updated successfully.',
+        description: 'Mật khẩu của bạn đã được cập nhật thành công.',
       });
       setCurrentPassword('');
       setNewPassword('');
@@ -311,16 +311,16 @@ export default function SettingsPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
             <Settings className="h-8 w-8 text-gray-600" />
-            Settings
+            Cài đặt
           </h1>
           <p className="text-gray-500 mt-1">
-            Manage your account and application preferences
+            Quản lý tài khoản của bạn và các tùy chọn ứng dụng
           </p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={exportSettings}>
             <Download className="h-4 w-4 mr-2" />
-            Export Settings
+            Xuất Cài đặt
           </Button>
         </div>
       </div>
@@ -329,27 +329,27 @@ export default function SettingsPage() {
         <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="profile" className="flex items-center gap-2">
             <User className="h-4 w-4" />
-            <span className="hidden sm:inline">Profile</span>
+            <span className="hidden sm:inline">Hồ Sơ</span>
           </TabsTrigger>
           <TabsTrigger value="notifications" className="flex items-center gap-2">
             <Bell className="h-4 w-4" />
-            <span className="hidden sm:inline">Notifications</span>
+            <span className="hidden sm:inline">Thông Báo</span>
           </TabsTrigger>
           <TabsTrigger value="security" className="flex items-center gap-2">
             <Shield className="h-4 w-4" />
-            <span className="hidden sm:inline">Security</span>
+            <span className="hidden sm:inline">Bảo Mật</span>
           </TabsTrigger>
           <TabsTrigger value="system" className="flex items-center gap-2">
             <Database className="h-4 w-4" />
-            <span className="hidden sm:inline">System</span>
+            <span className="hidden sm:inline">Hệ Thống</span>
           </TabsTrigger>
           <TabsTrigger value="billing" className="flex items-center gap-2">
             <CreditCard className="h-4 w-4" />
-            <span className="hidden sm:inline">Billing</span>
+            <span className="hidden sm:inline">Thanh Toán</span>
           </TabsTrigger>
           <TabsTrigger value="appearance" className="flex items-center gap-2">
             <Palette className="h-4 w-4" />
-            <span className="hidden sm:inline">Appearance</span>
+            <span className="hidden sm:inline">Giao Diện</span>
           </TabsTrigger>
         </TabsList>
 
@@ -359,7 +359,7 @@ export default function SettingsPage() {
             <CardHeader>
               <CardTitle>Profile Information</CardTitle>
               <CardDescription>
-                Update your personal information and preferences
+                Cập nhật thông tin cá nhân và tùy chọn
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -398,7 +398,7 @@ export default function SettingsPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email Address</Label>
+                  <Label htmlFor="email">Địa chỉ Email</Label>
                   <Input
                     id="email"
                     type="email"
@@ -495,7 +495,7 @@ export default function SettingsPage() {
                   ) : (
                     <Save className="h-4 w-4 mr-2" />
                   )}
-                  Save Changes
+                  Lưu thay đổi
                 </Button>
               </div>
             </CardContent>
@@ -724,7 +724,7 @@ export default function SettingsPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="confirmPassword">Confirm New Password</Label>
+                  <Label htmlFor="confirmPassword">Xác nhận mật khẩu mới</Label>
                   <Input
                     id="confirmPassword"
                     type={showPassword ? 'text' : 'password'}

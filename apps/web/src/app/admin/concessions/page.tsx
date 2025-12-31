@@ -46,10 +46,10 @@ import type {
 } from '@/libs/api/types';
 
 const CATEGORIES: { value: ConcessionCategory | string; label: string; icon: string }[] = [
-  { value: 'FOOD', label: 'Food', icon: '🍿' },
-  { value: 'DRINK', label: 'Drink', icon: '🥤' },
+  { value: 'FOOD', label: 'Thức Ăn', icon: '🍿' },
+  { value: 'DRINK', label: 'Đồ Uống', icon: '🥤' },
   { value: 'COMBO', label: 'Combo', icon: '🍔' },
-  { value: 'MERCHANDISE', label: 'Merchandise', icon: '🎁' },
+  { value: 'MERCHANDISE', label: 'Hàng Hóa', icon: '🎁' },
 ];
 
 export default function ConcessionsPage() {
@@ -180,7 +180,7 @@ export default function ConcessionsPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this concession?')) {
+    if (!confirm('Bạn có chắc muốn xóa mặt hàng này không?')) {
       return;
     }
 
@@ -239,8 +239,8 @@ export default function ConcessionsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Concessions Management</h1>
-          <p className="text-gray-500 mt-1">Manage food, drinks, and merchandise items</p>
+          <h1 className="text-3xl font-bold tracking-tight">Quản Lý Bán Hàng Bổ Sung</h1>
+          <p className="text-gray-500 mt-1">Quản lý thức ăn, đồ uống và hàng hóa</p>
         </div>
         <Button
           onClick={() => {
@@ -250,7 +250,7 @@ export default function ConcessionsPage() {
           className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
         >
           <Plus className="mr-2 h-4 w-4" />
-          Add Concession Item
+          Thêm Mặt Hàng
         </Button>
       </div>
 
@@ -259,12 +259,12 @@ export default function ConcessionsPage() {
         {/* Total Items Card */}
         <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200/60 shadow-md hover:shadow-lg transition-shadow">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-semibold text-purple-700 uppercase tracking-wider">📦 Total Items</CardTitle>
+            <CardTitle className="text-sm font-semibold text-purple-700 uppercase tracking-wider">📦 Tổng Mặt Hàng</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-purple-900">{stats.total}</div>
             <p className="text-xs text-purple-600 mt-2 font-medium">
-              {stats.available} available · {stats.unavailable} unavailable
+              {stats.available} có sẵn · {stats.unavailable} không có sẵn
             </p>
           </CardContent>
         </Card>
@@ -272,7 +272,7 @@ export default function ConcessionsPage() {
         {/* Category Breakdown Card */}
         <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200/60 shadow-md hover:shadow-lg transition-shadow">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-semibold text-blue-700 uppercase tracking-wider">🎯 By Category</CardTitle>
+            <CardTitle className="text-sm font-semibold text-blue-700 uppercase tracking-wider">🎯 Theo Loại</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-blue-900">{stats.food + stats.drink + stats.combo + stats.merchandise}</div>

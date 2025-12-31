@@ -58,26 +58,26 @@ import type {
 } from '@/libs/api/types';
 
 const POSITIONS: { value: string; label: string }[] = [
-  { value: 'CINEMA_MANAGER', label: 'Cinema Manager' },
-  { value: 'ASSISTANT_MANAGER', label: 'Assistant Manager' },
-  { value: 'TICKET_CLERK', label: 'Ticket Clerk' },
-  { value: 'CONCESSION_STAFF', label: 'Concession Staff' },
-  { value: 'USHER', label: 'Usher' },
-  { value: 'PROJECTIONIST', label: 'Projectionist' },
-  { value: 'CLEANER', label: 'Cleaner' },
-  { value: 'SECURITY', label: 'Security' },
+  { value: 'CINEMA_MANAGER', label: 'Quản lý rạp chiếu phim' },
+  { value: 'ASSISTANT_MANAGER', label: 'Trợ lý quản lý' },
+  { value: 'TICKET_CLERK', label: 'Nhân viên bán vé' },
+  { value: 'CONCESSION_STAFF', label: 'Nhân viên bán đồ ăn' },
+  { value: 'USHER', label: 'Hướng dẫn khách' },
+  { value: 'PROJECTIONIST', label: 'Chiếu phim' },
+  { value: 'CLEANER', label: 'Nhân viên vệ sinh' },
+  { value: 'SECURITY', label: 'Bảo vệ' },
 ];
 
 const WORK_TYPES: { value: string; label: string }[] = [
-  { value: 'FULL_TIME', label: 'Full Time' },
-  { value: 'PART_TIME', label: 'Part Time' },
-  { value: 'CONTRACT', label: 'Contract' },
+  { value: 'FULL_TIME', label: 'Toàn thời gian' },
+  { value: 'PART_TIME', label: 'Bán thời gian' },
+  { value: 'CONTRACT', label: 'Hợp đồng' },
 ];
 
 const SHIFT_TYPES: { value: string; label: string }[] = [
-  { value: 'MORNING', label: 'Morning' },
-  { value: 'AFTERNOON', label: 'Afternoon' },
-  { value: 'NIGHT', label: 'Night' },
+  { value: 'MORNING', label: 'Sáng' },
+  { value: 'AFTERNOON', label: 'Chi\u1ec1u' },
+  { value: 'NIGHT', label: '\u0110\u00eam' },
 ];
 
 // Helper function to format date for input type="date"
@@ -325,7 +325,7 @@ export default function StaffPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this staff member?')) {
+    if (!confirm('Bạn có chắc muốn xóa nhân viên này không?')) {
       return;
     }
 
@@ -392,7 +392,7 @@ export default function StaffPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Staff Management</h1>
-          <p className="text-gray-500 mt-1">Manage cinema staff and employees</p>
+          <p className="text-gray-500 mt-1">Quản lý nhân viên và nhân viên rạp</p>
         </div>
         <Button
           onClick={() => {

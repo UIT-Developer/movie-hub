@@ -34,55 +34,55 @@ import PageWrapper from '@/components/providers/page-wrapper';
 
 const menuSections = [
   {
-    label: 'Main',
+    label: 'Chính',
     items: [
-      { icon: LayoutDashboard, label: 'Dashboard', href: '/admin', disabled: false },
+      { icon: LayoutDashboard, label: 'Bảng điều khiển', href: '/admin', disabled: false },
     ]
   },
   {
-    label: 'Facilities & Infrastructure',
+    label: 'Cơ sở vật chất',
     items: [
-      { icon: Building2, label: 'Cinemas', href: '/admin/cinemas', disabled: false },
-      { icon: DoorOpen, label: 'Halls', href: '/admin/halls', disabled: false },
-      { icon: Wrench, label: 'Seat Status', href: '/admin/seat-status', disabled: false },
+      { icon: Building2, label: 'Rạp chiếu phim', href: '/admin/cinemas', disabled: false },
+      { icon: DoorOpen, label: 'Phòng chiếu', href: '/admin/halls', disabled: false },
+      { icon: Wrench, label: 'Trạng thái ghế', href: '/admin/seat-status', disabled: false },
     ]
   },
   {
-    label: 'Content Management',
+    label: 'Quản lý nội dung',
     items: [
-      { icon: Film, label: 'Movies', href: '/admin/movies', disabled: false },
-      { icon: Tag, label: 'Genres', href: '/admin/genres', disabled: false },
-      { icon: Calendar, label: 'Movie Releases', href: '/admin/movie-releases', disabled: false },
+      { icon: Film, label: 'Phim', href: '/admin/movies', disabled: false },
+      { icon: Tag, label: 'Thể loại', href: '/admin/genres', disabled: false },
+      { icon: Calendar, label: 'Phát hành phim', href: '/admin/movie-releases', disabled: false },
     ]
   },
   {
-    label: 'Showtime Management',
+    label: 'Quản lý suất chiếu',
     items: [
-      { icon: Calendar, label: 'Showtimes', href: '/admin/showtimes', disabled: false },
-      { icon: Eye, label: 'Showtime Seats', href: '/admin/showtime-seats', disabled: false },
-      { icon: Zap, label: 'Batch Showtimes', href: '/admin/batch-showtimes', disabled: false },
+      { icon: Calendar, label: 'Suất chiếu', href: '/admin/showtimes', disabled: false },
+      { icon: Eye, label: 'Ghế suất chiếu', href: '/admin/showtime-seats', disabled: false },
+      { icon: Zap, label: 'Suất chiếu hàng loạt', href: '/admin/batch-showtimes', disabled: false },
     ]
   },
   {
-    label: 'Revenue & Sales',
+    label: 'Doanh thu & Bán hàng',
     items: [
-      { icon: DollarSign, label: 'Ticket Pricing', href: '/admin/ticket-pricing', disabled: false },
-      { icon: ShoppingBag, label: 'Concessions', href: '/admin/concessions', disabled: false },
-      { icon: Ticket, label: 'Reservations', href: '/admin/reservations', disabled: false },
+      { icon: DollarSign, label: 'Định giá vé', href: '/admin/ticket-pricing', disabled: false },
+      { icon: ShoppingBag, label: 'Đồ ăn', href: '/admin/concessions', disabled: false },
+      { icon: Ticket, label: 'Đặt chỗ', href: '/admin/reservations', disabled: false },
     ]
   },
   {
-    label: 'Customer Relations',
+    label: 'Quan hệ khách hàng',
     items: [
-      { icon: MessageSquare, label: 'Reviews', href: '/admin/reviews', disabled: false },
+      { icon: MessageSquare, label: 'Đánh giá', href: '/admin/reviews', disabled: false },
     ]
   },
   {
-    label: 'Administration',
+    label: 'Quản lý',
     items: [
-      { icon: Users, label: 'Staff', href: '/admin/staff', disabled: false },
-      { icon: BarChart3, label: 'Reports', href: '/admin/reports', disabled: false },
-      { icon: Settings, label: 'Settings', href: '/admin/settings', disabled: false },
+      { icon: Users, label: 'Nhân viên', href: '/admin/staff', disabled: false },
+      { icon: BarChart3, label: 'Báo cáo', href: '/admin/reports', disabled: false },
+      { icon: Settings, label: 'Cài đặt', href: '/admin/settings', disabled: false },
     ]
   },
 ];
@@ -225,7 +225,7 @@ function AdminLayoutContent({
               onClick={handleLogout}
             >
               <LogOut className="h-5 w-5 flex-shrink-0" />
-              {sidebarOpen && <span className="ml-3">Logout</span>}
+              {sidebarOpen && <span className="ml-3">Đăng xuất</span>}
             </Button>
           </div>
         </ScrollArea>
@@ -246,7 +246,7 @@ function AdminLayoutContent({
                 {menuItems.find((item) => 
                   pathname === item.href || 
                   (item.href !== '/admin' && pathname.startsWith(item.href))
-                )?.label || 'Dashboard'}
+                )?.label || 'Bảng điều khiển'}
               </h2>
             </div>
             <div className="flex items-center gap-2">

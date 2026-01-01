@@ -12,7 +12,7 @@ import {
 import { ServiceResult } from '@movie-hub/shared-types/common';
 import { HallMapper } from './hall.mapper';
 import { AutoPricingGenerator } from './pricing-ticket-template';
-import { SeatStatus } from '../../../generated/prisma';
+import { CinemaStatus, SeatStatus } from '../../../generated/prisma';
 import { RpcException } from '@nestjs/microservices';
 import { PrismaClientKnownRequestError } from '../../../generated/prisma/runtime/library';
 
@@ -66,7 +66,7 @@ export class HallService {
           );
         }
 
-        if (cinema.status !== 'ACTIVE') {
+        if (cinema.status !== CinemaStatus.ACTIVE) {
           throw new RpcException({
             summary: 'Cinema inactive',
             statusCode: 409,

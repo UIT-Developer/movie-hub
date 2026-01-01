@@ -61,8 +61,8 @@ export class CinemaMapper {
       operatingHours: parseJsonToRecord(cinema.operating_hours),
       socialMedia: parseJsonToRecord(cinema.social_media),
       timezone: cinema.timezone,
-      createdAt: cinema.created_at,
-      updatedAt: cinema.updated_at,
+      createdAt: new Date(cinema.created_at.getTime() + 7 * 60 * 60 * 1000),
+      updatedAt: new Date(cinema.updated_at.getTime() + 7 * 60 * 60 * 1000),
     };
   }
 }

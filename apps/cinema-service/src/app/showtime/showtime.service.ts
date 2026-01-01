@@ -48,10 +48,12 @@ export class ShowtimeService {
 
     if (date) {
       where.start_time = {
-        gte: new Date(`${date}T00:00:00.000Z`),
-        lt: new Date(`${date}T23:59:59.999Z`),
+        gte: new Date(`${date}T00:00:00.000`),
+        lt: new Date(`${date}T23:59:59.999`),
       };
     }
+
+    console.log('ShowtimeService.getShowtimes - where:', where);
 
     const showtimes = await this.prisma.showtimes.findMany({
       where,
@@ -61,6 +63,8 @@ export class ShowtimeService {
         cinema: true,
       },
     });
+
+    console.log('ShowtimeService.getShowtimes - found showtimes:', showtimes);
 
     // ===== 1. Gom unique movieIds =====
     const movieIds = [...new Set(showtimes.map((s) => s.movie_id))];
@@ -90,8 +94,8 @@ export class ShowtimeService {
         hallId: showtime.hall_id,
         hallName: showtime.hall.name,
         format: showtime.format as FormatEnum,
-        startTime: showtime.start_time,
-        endTime: showtime.end_time,
+        startTime: new Date(showtime.start_time.getTime() + 7 * 60 * 60 * 1000),
+        endTime: new Date(showtime.end_time.getTime() + 7 * 60 * 60 * 1000),
         language: showtime.language,
         subtitles: showtime.subtitles ?? [],
         availableSeats: showtime.available_seats,
@@ -109,23 +113,6 @@ export class ShowtimeService {
   async getShowtimeById(showtimeId: string) {
     const showtime = await this.prisma.showtimes.findUnique({
       where: { id: showtimeId },
-      select: {
-        id: true,
-        movie_id: true,
-        movie_release_id: true,
-        cinema_id: true,
-        hall_id: true,
-        start_time: true,
-        end_time: true,
-        format: true,
-        language: true,
-        subtitles: true,
-        available_seats: true,
-        total_seats: true,
-        status: true,
-        created_at: true,
-        updated_at: true,
-      },
     });
 
     if (!showtime) {
@@ -133,23 +120,7 @@ export class ShowtimeService {
     }
 
     return {
-      data: {
-        id: showtime.id,
-        movieId: showtime.movie_id,
-        movieReleaseId: showtime.movie_release_id,
-        cinemaId: showtime.cinema_id,
-        hallId: showtime.hall_id,
-        startTime: showtime.start_time,
-        endTime: showtime.end_time,
-        format: showtime.format as FormatEnum,
-        language: showtime.language,
-        subtitles: showtime.subtitles ?? [],
-        availableSeats: showtime.available_seats,
-        totalSeats: showtime.total_seats,
-        status: showtime.status as ShowtimeStatusEnum,
-        createdAt: showtime.created_at,
-        updatedAt: showtime.updated_at,
-      },
+      data: ShowtimeMapper.toShowtimDetailResponse(showtime),
       message: 'Fetch showtime successfully',
     };
   }
@@ -166,15 +137,15 @@ export class ShowtimeService {
 
     const data = await this.realtimeService.getOrSetCache(
       cacheKey,
-      3600,
+      60,
       async () => {
         const showtimes = await this.prisma.showtimes.findMany({
           where: {
             cinema_id: cinemaId,
             movie_id: movieId,
             start_time: {
-              gte: new Date(`${query.date}T00:00:00.000Z`),
-              lt: new Date(`${query.date}T23:59:59.999Z`),
+              gte: new Date(`${query.date}T00:00:00.000`),
+              lt: new Date(`${query.date}T23:59:59.999`),
             },
             status: ShowtimeStatus.SELLING,
           },
@@ -203,8 +174,8 @@ export class ShowtimeService {
       cinema_id: cinemaId,
       movie_id: movieId,
       start_time: {
-        gte: new Date(`${date}T00:00:00.000Z`),
-        lt: new Date(`${date}T23:59:59.999Z`),
+        gte: new Date(`${date}T00:00:00.000`),
+        lt: new Date(`${date}T23:59:59.999`),
       },
     };
 
@@ -248,7 +219,7 @@ export class ShowtimeService {
     const showtimeCacheKey = `showtime:detail:${showtimeId}`;
     const showtime = await this.realtimeService.getOrSetCache(
       showtimeCacheKey,
-      3600 * 6,
+      60,
       async () => {
         const data = await this.prisma.showtimes.findUnique({
           where: { id: showtimeId },
@@ -263,7 +234,7 @@ export class ShowtimeService {
     const seatsCacheKey = `hall:${showtime.hall_id}:seats`;
     const seats = await this.realtimeService.getOrSetCache(
       seatsCacheKey,
-      3600 * 12,
+      60,
       async () => {
         return this.prisma.seats.findMany({
           where: { hall_id: showtime.hall_id },
@@ -276,7 +247,7 @@ export class ShowtimeService {
     const ticketPricingCacheKey = `ticketPricing:${showtime.hall_id}:${showtime.day_type}`;
     const ticketPricings = await this.realtimeService.getOrSetCache(
       ticketPricingCacheKey,
-      3600 * 6,
+      60,
       async () => {
         return this.prisma.ticketPricing.findMany({
           where: {

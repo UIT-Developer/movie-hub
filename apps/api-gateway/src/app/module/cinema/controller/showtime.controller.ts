@@ -9,6 +9,7 @@ import {
   Query,
   UseGuards,
   UseInterceptors,
+  UsePipes,
 } from '@nestjs/common';
 import { ShowtimeService } from '../service/showtime.service';
 import { TransformInterceptor } from '../../../common/interceptor/transform.interceptor';
@@ -17,10 +18,13 @@ import { CurrentUserId } from '../../../common/decorator/current-user-id.decorat
 import {
   AdminShowtimeFilterDTO,
   BatchCreateShowtimesInput,
+  batchCreateShowtimesSchema,
   CreateShowtimeRequest,
+  createShowtimeSchema,
   UpdateSeatStatusRequest,
   UpdateShowtimeRequest,
 } from '@movie-hub/shared-types';
+import { ZodValidationPipe } from 'nestjs-zod';
 
 @Controller({
   version: '1',
@@ -68,6 +72,7 @@ export class ShowtimeController {
 
   @Post('/batch')
   @UseGuards(ClerkAuthGuard)
+  @UsePipes(new ZodValidationPipe(batchCreateShowtimesSchema))
   createBatchShowtimes(@Body() body: BatchCreateShowtimesInput) {
     return this.showtimeService.createBatchShowtimes(body);
   }

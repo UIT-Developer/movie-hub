@@ -1,20 +1,13 @@
 // cinema.service.ts
-import {
-  Injectable,
-  BadRequestException,
-  NotFoundException,
-  Inject,
-} from '@nestjs/common';
-import { firstValueFrom, throwError } from 'rxjs';
+import { Injectable, NotFoundException, Inject } from '@nestjs/common';
+import { firstValueFrom } from 'rxjs';
 import { PrismaService } from '../prisma.service';
 import {
   BatchCreateShowtimeResponse,
   BatchCreateShowtimesInput,
   CreateShowtimeRequest,
   MovieServiceMessage,
-  ResourceNotFoundException,
   ShowtimeDetailResponse,
-  ShowtimeInfoDto,
   UpdateShowtimeRequest,
 } from '@movie-hub/shared-types';
 import { DayType, Format, ShowtimeStatus } from '../../../generated/prisma';
@@ -54,6 +47,15 @@ export class ShowtimeCommandService {
         movieReleaseId
       );
 
+      if (!release) {
+        throw new RpcException({
+          summary: 'Movie release is required',
+          statusCode: 409,
+          code: 'MOVIE_RELEASE_REQUIRED',
+          message: 'Movie release is required',
+        });
+      }
+
       const start = new Date(startTime);
       const end = new Date(
         start.getTime() + movie.runtime * 60000 + 15 * 60000
@@ -67,7 +69,7 @@ export class ShowtimeCommandService {
       const showtime = await this.prisma.showtimes.create({
         data: {
           movie_id: movie.id,
-          movie_release_id: release?.id ?? null,
+          movie_release_id: release.id,
           cinema_id: cinemaId,
           hall_id: hallId,
           start_time: start,
@@ -118,14 +120,23 @@ export class ShowtimeCommandService {
         movieReleaseId
       );
 
+      if (!release) {
+        throw new RpcException({
+          summary: 'Movie release is required',
+          statusCode: 409,
+          code: 'MOVIE_RELEASE_REQUIRED',
+          message: 'Movie release is required',
+        });
+      }
+
       if (release) {
-        if (
-          new Date(startDate) < release.startDate ||
-          new Date(endDate) > release.endDate
-        ) {
-          throw new BadRequestException(
-            'Showtimes must be within the movie release period'
-          );
+        if (startDate < release.startDate || endDate > release.endDate) {
+          throw new RpcException({
+            summary: 'Movie release period violation',
+            statusCode: 409,
+            code: 'MOVIE_RELEASE_PERIOD_VIOLATION',
+            message: 'Showtimes must be within the movie release period',
+          });
         }
       }
 
@@ -181,7 +192,7 @@ export class ShowtimeCommandService {
         const st = await this.prisma.showtimes.create({
           data: {
             movie_id: movie.id,
-            movie_release_id: release?.id ?? null,
+            movie_release_id: release.id,
             cinema_id: cinemaId,
             hall_id: hallId,
             start_time: c.start,
@@ -227,9 +238,12 @@ export class ShowtimeCommandService {
       where: { showtime_id: id },
     });
     if (hasReservation > 0 && (dto.startTime || dto.hallId)) {
-      throw new BadRequestException(
-        'Cannot update time or hall because reservations exist'
-      );
+      throw new RpcException({
+        summary: 'Cannot update showtime with reservations',
+        statusCode: 409,
+        code: 'SHOWTIME_WITH_RESERVATIONS',
+        message: 'Cannot update showtime with existing reservations',
+      });
     }
 
     // lấy runtime
@@ -257,7 +271,12 @@ export class ShowtimeCommandService {
         },
       });
       if (conflict)
-        throw new BadRequestException(`Conflict with showtime ${conflict.id}`);
+        throw new RpcException({
+          summary: `Conflict with showtime ${conflict.id}`,
+          statusCode: 409,
+          code: 'SHOWTIME_CONFLICT',
+          message: `Conflict with showtime ${conflict.id}`,
+        });
     }
 
     const updatedShowtime = await this.prisma.showtimes.update({
@@ -284,7 +303,13 @@ export class ShowtimeCommandService {
     const showtime = await this.prisma.showtimes.findUnique({
       where: { id },
     });
-    if (!showtime) throw new NotFoundException('Showtime not found');
+    if (!showtime)
+      throw new RpcException({
+        summary: 'Showtime not found',
+        statusCode: 404,
+        code: 'SHOWTIME_NOT_FOUND',
+        message: 'Showtime not found',
+      });
 
     const hasReservation = await this.prisma.seatReservations.count({
       where: { showtime_id: id },
@@ -327,9 +352,12 @@ export class ShowtimeCommandService {
       },
     });
     if (overlap)
-      throw new BadRequestException(
-        'This hall already has a showtime in that time range'
-      );
+      throw new RpcException({
+        summary: `Conflict with showtime ${overlap.id}`,
+        statusCode: 409,
+        code: 'SHOWTIME_CONFLICT',
+        message: `Conflict with showtime ${overlap.id}`,
+      });
   }
 
   private async fetchMovieAndRelease(movieId: string, movieReleaseId?: string) {
@@ -352,13 +380,29 @@ export class ShowtimeCommandService {
       const release = releases.find((r) => r.id === movieReleaseId);
 
       // validate movie status / formats nếu muốn
-      if (!movie) throw new NotFoundException('Movie not found');
+      if (!movie)
+        throw new RpcException({
+          summary: 'Movie not found',
+          statusCode: 404,
+          code: 'MOVIE_NOT_FOUND',
+          message: 'Movie not found',
+        });
       if (movieReleaseId && !release)
-        throw new NotFoundException('Movie release not found');
+        throw new RpcException({
+          summary: 'Movie release not found',
+          statusCode: 404,
+          code: 'MOVIE_RELEASE_NOT_FOUND',
+          message: 'Movie release not found',
+        });
 
       return { movie, release };
     } catch {
-      throw new BadRequestException('Cannot fetch movie or release');
+      throw new RpcException({
+        summary: 'Failed to fetch movie or release',
+        statusCode: 500,
+        code: 'FETCH_MOVIE_RELEASE_FAILED',
+        message: 'Could not fetch movie or movie release information',
+      });
     }
   }
 
@@ -381,11 +425,21 @@ export class ShowtimeCommandService {
     ]);
 
     if (!cinema) {
-      throw new ResourceNotFoundException('Cinema', 'id', cinemaId);
+      throw new RpcException({
+        summary: 'Cinema not found',
+        statusCode: 404,
+        code: 'CINEMA_NOT_FOUND',
+        message: 'Cinema not found',
+      });
     }
 
     if (!hall) {
-      throw new ResourceNotFoundException('Hall', 'id', hallId);
+      throw new RpcException({
+        summary: 'Hall not found',
+        statusCode: 404,
+        code: 'HALL_NOT_FOUND',
+        message: 'Hall not found',
+      });
     }
 
     if (cinema.status !== 'ACTIVE') {

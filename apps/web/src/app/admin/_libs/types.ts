@@ -305,7 +305,7 @@ export interface BatchCreateResponse {
 }
 
 // ============================================
-// Seat Status Types  
+// Seat Status Types
 // ============================================
 
 export interface SeatDetail {
@@ -396,7 +396,13 @@ export interface AppearanceSettings {
 // Showtime Seats Types
 // ============================================
 
-export type ReservationStatus = 'AVAILABLE' | 'HELD' | 'RESERVED' | 'SOLD';
+export type ReservationStatus =
+  | 'AVAILABLE'
+  | 'HELD'
+  | 'RESERVED'
+  | 'SOLD'
+  | 'CONFIRMED'
+  | 'CANCELLED';
 
 export interface ShowtimeSeatDetail {
   id: string;

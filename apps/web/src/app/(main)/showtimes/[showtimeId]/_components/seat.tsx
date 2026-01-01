@@ -2,10 +2,11 @@
 
 import { Button } from '@movie-hub/shacdn-ui/button';
 import { SeatTypeEnum } from '@/libs/types/showtime.type';
-import { Accessibility } from 'lucide-react';
+import { Accessibility, Star, Armchair } from 'lucide-react';
+import { cn } from '@movie-hub/shacdn-utils';
 
 interface SeatProps {
-  number: number; // số ghế đầu tiên
+  number: number;
   seatId: string;
   type: SeatTypeEnum;
   isSelected: boolean;
@@ -25,78 +26,78 @@ export const Seat = ({
   isHeld,
   onClick,
 }: SeatProps) => {
+  // Base: Glassmorphic, subtle border, transition
   const baseClass =
-    'rounded-lg border cursor-pointer flex items-center justify-center';
+    'relative flex items-center justify-center transition-all duration-200 p-0 rounded-md border shadow-sm hover:scale-105 active:scale-95 focus:ring-2 focus:ring-primary/20';
+  
+  // Default State Colors (Available)
+  let stateClass = 'bg-card border-white/10 text-muted-foreground hover:border-primary/50 hover:text-primary hover:bg-primary/10';
+  let iconClass = 'w-3 h-3 md:w-4 md:h-4 opacity-70';
 
-  // Kiểu ghế
-  let typeClass = '';
+  // Active States overrides
+  if (isSelected) {
+    stateClass = 'bg-primary border-primary text-primary-foreground shadow-[0_0_15px_-3px_hsl(var(--primary))] z-10 scale-110';
+    iconClass = 'w-3 h-3 md:w-4 md:h-4 opacity-100';
+  } else if (isConfirmed) {
+    stateClass = 'bg-secondary/50 border-transparent text-muted-foreground/30 cursor-not-allowed hover:scale-100 shadow-none';
+  } else if (isDisabled) {
+    stateClass = 'bg-secondary/30 border-transparent opacity-20 cursor-not-allowed hover:scale-100';
+  } else if (isHeld) {
+    stateClass = 'bg-yellow-500/20 border-yellow-500/50 text-yellow-500 animate-pulse cursor-not-allowed';
+  }
+
+  // Type-specific sizing and styling
+  let sizeClass = 'w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 text-[10px] sm:text-xs font-medium';
+  let content = <span className={isSelected ? 'font-bold' : ''}>{number}</span>;
+
   switch (type) {
     case SeatTypeEnum.STANDARD:
-      typeClass = 'w-4 h-4 sm:w-6 sm:h-6 md:w-8 md:h-8 border-rose-500/90';
+      // Standard is default
       break;
 
     case SeatTypeEnum.VIP:
-      typeClass = 'w-4 h-4 sm:w-6 sm:h-6 md:w-8 md:h-8 border-yellow-500';
+       // Gold/Amber accent for VIP if not selected
+      if (!isSelected && !isConfirmed && !isDisabled) {
+        stateClass += ' border-amber-500/40 text-amber-500/80 hover:bg-amber-500/10 hover:border-amber-500';
+      }
+      content = <Star className={iconClass} fill={isSelected ? "currentColor" : "none"} />;
       break;
 
     case SeatTypeEnum.PREMIUM:
-      typeClass =
-        'w-4 h-4 sm:w-6 sm:h-6 md:w-8 md:h-8 border-blue-400 shadow-[0_0_6px_#60a5fa]';
+      if (!isSelected && !isConfirmed && !isDisabled) {
+        stateClass += ' border-sky-500/40 text-sky-500/80 hover:bg-sky-500/10 hover:border-sky-500';
+      }
       break;
 
     case SeatTypeEnum.WHEELCHAIR:
-      typeClass =
-        'w-5 h-5 sm:w-7 sm:h-7 md:w-9 md:h-9 border-cyan-400 flex items-center justify-center text-[10px] md:text-xs';
+      if (!isSelected && !isConfirmed && !isDisabled) {
+        stateClass += ' border-cyan-500/40 text-cyan-500/80 hover:bg-cyan-500/10 hover:border-cyan-500';
+      }
+      content = <Accessibility className={iconClass} />;
       break;
 
     case SeatTypeEnum.COUPLE:
-      typeClass = 'w-8 h-4 sm:w-12 sm:h-6 md:w-16 md:h-8 border-purple-500';
+      sizeClass = 'w-12 h-6 sm:w-16 sm:h-8 md:w-20 md:h-10'; // Double width
+      if (!isSelected && !isConfirmed && !isDisabled) {
+        stateClass += ' border-pink-500/40 text-pink-500/80 hover:bg-pink-500/10 hover:border-pink-500';
+      }
+      content = (
+        <div className="flex items-center gap-1">
+          <Armchair className={iconClass} />
+          <span className="text-[10px] font-bold">{number}</span>
+        </div>
+      );
       break;
   }
 
-  // Trạng thái
-  let stateClass = 'bg-transparent';
-  if (isSelected) stateClass = 'bg-rose-500 text-white';
-  if (isConfirmed)
-    stateClass = 'bg-rose-700 text-neutral-200 cursor-not-allowed';
-  if (isDisabled) stateClass = 'bg-gray-700 cursor-not-allowed';
-  if (isHeld) stateClass = 'bg-neutral-400 animate-pulse cursor-not-allowed';
-
-  // Ghế đôi với nếp gấp
-  if (type === SeatTypeEnum.COUPLE) {
-    return (
-      <Button
-        onClick={() => onClick(seatId)}
-        className={`${baseClass} ${typeClass} ${stateClass} p-0`}
-        disabled={isDisabled || isHeld || isConfirmed}
-      >
-        <div className="flex w-full h-full items-center justify-center">
-          {/* Hiển thị một số duy nhất ở giữa */}
-          <span className="font-semibold">{number}</span>
-        </div>
-      </Button>
-    );
-  }
-   if (type === SeatTypeEnum.WHEELCHAIR) {
-    return (
-      <Button
-        onClick={() => onClick(seatId)}
-        className={`${baseClass} ${typeClass} ${stateClass}`}
-        disabled={isDisabled || isHeld || isConfirmed}
-      >
-        <Accessibility className="w-3 h-3 md:w-4 md:h-4" />
-      </Button>
-    );
-  }
-
-  // Ghế đơn
   return (
     <Button
       onClick={() => onClick(seatId)}
-      className={`${baseClass} ${typeClass} ${stateClass}`}
+      className={`${baseClass} ${sizeClass} ${stateClass}`}
       disabled={isDisabled || isHeld || isConfirmed}
+      variant="ghost" // Override shadcn default solid
     >
-      {number}
+      {content}
     </Button>
   );
 };

@@ -23,14 +23,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html>
+    <html lang="en" className="dark">
       <body className={inter.className}>
         <QueryClientProviders>
           <ClerkProvider
             appearance={{
               theme: 'simple',
               variables: {
-                colorPrimary: '#f43f5e',
+                colorPrimary: '#E11D48',
               },
             }}
             afterSignOutUrl="/"

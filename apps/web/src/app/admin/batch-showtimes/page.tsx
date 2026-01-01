@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Calendar as CalendarIcon, Clock, Film, Building2, Zap, History, ExternalLink } from 'lucide-react';
 import { Button } from '@movie-hub/shacdn-ui/button';
@@ -43,7 +43,7 @@ const TIME_SLOTS = [
   '23:00',
 ];
 
-export default function BatchShowtimesPage() {
+function BatchShowtimesContent() {
   const searchParams = useSearchParams();
   const preSelectedMovieId = searchParams.get('movieId');
   const preSelectedReleaseId = searchParams.get('releaseId');
@@ -792,5 +792,13 @@ export default function BatchShowtimesPage() {
         </Card>
       )}
     </div>
+  );
+}
+
+export default function BatchShowtimesPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <BatchShowtimesContent />
+    </Suspense>
   );
 }

@@ -69,6 +69,22 @@
         "cwd": "apps/cinema-service"
       }
     },
+    "prisma:push": {
+      "cache": false,
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "prisma db push --accept-data-loss",
+        "cwd": "apps/cinema-service"
+      }
+    },
+    "prisma:seed": {
+      "cache": false,
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsx prisma/seed.ts",
+        "cwd": "apps/cinema-service"
+      }
+    },
     "test": {
       "options": {
         "passWithNoTests": true

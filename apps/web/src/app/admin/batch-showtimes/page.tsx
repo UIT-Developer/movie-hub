@@ -74,6 +74,13 @@ const TIME_SLOTS = [
   '23:00',
 ];
 
+const FORMAT_LABELS: Record<string, string> = {
+  'TWO_D': '2D',
+  'THREE_D': '3D',
+  'IMAX': 'IMAX',
+  'FOUR_DX': '4DX',
+};
+
 export default function BatchShowtimesPage() {
   const searchParams = useSearchParams();
   const preSelectedMovieId = searchParams.get('movieId');
@@ -112,7 +119,7 @@ export default function BatchShowtimesPage() {
     timeSlots: [],
     repeatType: 'DAILY',
     weekdays: [],
-    format: '2D',
+    format: 'TWO_D',
     language: 'vi',
     subtitles: [],
   });
@@ -579,10 +586,10 @@ export default function BatchShowtimesPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="2D">2D</SelectItem>
-                      <SelectItem value="3D">3D</SelectItem>
+                      <SelectItem value="TWO_D">2D</SelectItem>
+                      <SelectItem value="THREE_D">3D</SelectItem>
                       <SelectItem value="IMAX">IMAX</SelectItem>
-                      <SelectItem value="4DX">4DX</SelectItem>
+                      <SelectItem value="FOUR_DX">4DX</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -708,7 +715,7 @@ export default function BatchShowtimesPage() {
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-medium text-gray-600">Định Dạng:</span>
                     <Badge className="bg-purple-100 text-purple-700 border-purple-200">
-                      🎬 {formData.format}
+                      🎬 {FORMAT_LABELS[formData.format] || formData.format}
                     </Badge>
                   </div>
 

@@ -216,15 +216,16 @@ async function main() {
     }
   }
 
-  const start = new Date('2025-12-28T00:00:00+07:00');
-  const end = new Date('2026-01-15T00:00:00+07:00');
+  // Use UTC to keep day string stable across environments and match booking seed IDs
+  const start = new Date(Date.UTC(2025, 11, 28)); // 2025-12-28
+  const end = new Date(Date.UTC(2026, 0, 15)); // 2026-01-15
   const movieOrder = [movieRefs.dune2, movieRefs.insideOut2, movieRefs.oppenheimer, movieRefs.gxk];
 
   const showtimesPayload: any[] = [];
   const seatReservationsPayload: any[] = [];
 
-  for (let day = new Date(start); day <= end; day.setDate(day.getDate() + 1)) {
-    const dayStr = day.toISOString().slice(0, 10);
+  for (let day = new Date(start); day <= end; day.setUTCDate(day.getUTCDate() + 1)) {
+    const dayStr = day.toISOString().slice(0, 10); // YYYY-MM-DD in UTC
     const isWeekend = day.getDay() === 0 || day.getDay() === 6;
     const dayType = isWeekend ? DayType.WEEKEND : DayType.WEEKDAY;
 

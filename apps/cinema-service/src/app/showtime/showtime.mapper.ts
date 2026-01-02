@@ -5,15 +5,15 @@ import {
   ShowtimeStatusEnum,
   ShowtimeSummaryResponse,
 } from '@movie-hub/shared-types';
-import { $Enums, DayType, Showtimes } from '../../../generated/prisma/client';
+import { Showtimes } from '../../../generated/prisma/client';
 
 export class ShowtimeMapper {
   static toShowtimeSummaryResponse(entity: Showtimes): ShowtimeSummaryResponse {
     return {
       id: entity.id,
       hallId: entity.hall_id,
-      startTime: entity.start_time,
-      endTime: entity.end_time,
+      startTime: new Date(entity.start_time.getTime() + 7 * 60 * 60 * 1000),
+      endTime: new Date(entity.end_time.getTime() + 7 * 60 * 60 * 1000),
       format: entity.format as FormatEnum,
       // language: entity.language,
       // subtitles: entity.subtitles ?? [],
@@ -35,8 +35,8 @@ export class ShowtimeMapper {
       movieReleaseId: entity.movie_release_id ?? undefined,
       cinemaId: entity.cinema_id,
       hallId: entity.hall_id,
-      startTime: entity.start_time,
-      endTime: entity.end_time,
+      startTime: new Date(entity.start_time.getTime() + 7 * 60 * 60 * 1000),
+      endTime: new Date(entity.end_time.getTime() + 7 * 60 * 60 * 1000),
       format: entity.format as FormatEnum,
       language: entity.language,
       subtitles: entity.subtitles ?? [],
@@ -44,8 +44,8 @@ export class ShowtimeMapper {
       totalSeats: entity.total_seats,
       status: entity.status as ShowtimeStatusEnum,
       dayType: entity.day_type as DayTypeEnum,
-      createdAt: entity.created_at,
-      updatedAt: entity.updated_at,
+      createdAt: new Date(entity.created_at.getTime() + 7 * 60 * 60 * 1000),
+      updatedAt: new Date(entity.updated_at.getTime() + 7 * 60 * 60 * 1000),
     };
   }
 

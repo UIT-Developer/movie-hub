@@ -3,7 +3,7 @@ import {
   StaffQuery,
   UpdateStaffRequest,
 } from '@movie-hub/shared-types';
-import { Body, Controller, Get, Param, Post, Put, Query, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put, Query, UseInterceptors } from '@nestjs/common';
 import { StaffService } from '../service/staff.service';
 import { TransformInterceptor } from '../../../common/interceptor/transform.interceptor';
 
@@ -33,5 +33,10 @@ export class StaffController {
   @Put(':id')
   async update(@Param('id') id: string, @Body() request: UpdateStaffRequest) {
     return this.staffService.update(id, request);
+  }
+
+  @Delete(':id')
+  async remove(@Param('id') id: string) {
+    return this.staffService.remove(id);
   }
 }

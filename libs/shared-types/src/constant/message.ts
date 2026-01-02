@@ -7,6 +7,7 @@ export const UserMessage = {
     CREATED: 'movie.created',
     UPDATED: 'movie.updated',
     GET_DETAIL: 'movie.detail',
+    DELETED: 'movie.deleted',
   },
   CONFIG: {
     GET_LIST: 'config.list',
@@ -72,6 +73,7 @@ export const CinemaMessage = {
     BATCH_CREATE_SHOWTIMES: 'showtime.batch_create_showtimes',
     UPDATE_SHOWTIME: 'showtime.update_showtime',
     DELETE_SHOWTIME: 'showtime.delete_showtime',
+    GET_SHOWTIME: 'showtime.get_showtime',
     GET_SHOWTIME_SEATS: 'showtime.get_showtime_seats',
     GET_SEATS_HELD_BY_USER: 'showtime.get_seats_held_by_user',
     GET_SESSION_TTL: 'showtime.get_session_ttl',

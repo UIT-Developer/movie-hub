@@ -1,3 +1,4 @@
+import { createHash } from 'crypto';
 import {
   PrismaClient,
   CinemaStatus,
@@ -11,14 +12,127 @@ import {
   ShowtimeStatus,
   ReservationStatus,
 } from '../generated/prisma';
-import { randomUUID } from 'crypto';
 
 const prisma = new PrismaClient();
+
+const toUuid = (seed: string) => {
+  const h = createHash('md5').update(seed).digest('hex');
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20, 32)}`;
+};
+
+const movieRefs = {
+  dune2: { movieId: '11111111-1111-1111-1111-111111111111', releaseId: '11111111-aaaa-aaaa-aaaa-aaaaaaaaaaaa', runtime: 166 },
+  insideOut2: { movieId: '22222222-2222-2222-2222-222222222222', releaseId: '22222222-aaaa-aaaa-aaaa-aaaaaaaaaaaa', runtime: 100 },
+  oppenheimer: { movieId: '33333333-3333-3333-3333-333333333333', releaseId: '33333333-aaaa-aaaa-aaaa-aaaaaaaaaaaa', runtime: 180 },
+  gxk: { movieId: '44444444-4444-4444-4444-444444444444', releaseId: '44444444-aaaa-aaaa-aaaa-aaaaaaaaaaaa', runtime: 115 },
+};
+
+const cinemaSeed = [
+  {
+    id: 'aaaa1111-0000-0000-0000-000000000001',
+    name: 'CGV Aeon Tân Phú',
+    address: '30 Bờ Bao Tân Thắng, Sơn Kỳ',
+    city: 'TP. Hồ Chí Minh',
+    district: 'Tân Phú',
+    phone: '028 3620 2000',
+    email: 'tanphu@cgv.vn',
+    website: 'https://www.cgv.vn',
+    latitude: 10.8028,
+    longitude: 106.6171,
+    description: 'Rạp lớn với phòng IMAX và khu premium.',
+    amenities: ['Bãi đỗ xe', 'IMAX', 'Premium Lounge'],
+    facilities: { parking_slots: 320, wheelchair_accessible: true },
+    images: ['https://cdn.galaxycine.vn/media/2023/8/2/cgv-aeon-tan-phu-1_1690945376540.jpg'],
+    rating: 4.6,
+    total_reviews: 2100,
+    operating_hours: { weekday: '09:00-23:00', weekend: '08:00-00:00' },
+    social_media: { facebook: 'cgv.vietnam' },
+    status: CinemaStatus.ACTIVE,
+  },
+  {
+    id: 'aaaa1111-0000-0000-0000-000000000002',
+    name: 'BHD Star Bitexco',
+    address: '2 Hải Triều, Bến Nghé, Quận 1',
+    city: 'TP. Hồ Chí Minh',
+    district: 'Quận 1',
+    phone: '1900 2099',
+    email: 'bitexco@bhdstar.vn',
+    website: 'https://www.bhdstar.vn',
+    latitude: 10.7714,
+    longitude: 106.7041,
+    description: 'Rạp hiện đại trong toà Bitexco, vị trí trung tâm.',
+    amenities: ['Bãi đỗ xe', 'Snack', 'VIP Zone'],
+    facilities: { parking_slots: 120, wheelchair_accessible: true },
+    images: ['https://bhdstar.vn/wp-content/uploads/2023/04/BHD-Bitexco-3-scaled.jpg'],
+    rating: 4.4,
+    total_reviews: 1400,
+    operating_hours: { weekday: '09:00-23:00', weekend: '08:00-00:00' },
+    social_media: { facebook: 'bhdstar' },
+    status: CinemaStatus.ACTIVE,
+  },
+];
+
+const hallSeed = [
+  {
+    id: 'bbbb1111-0000-0000-0000-000000000001',
+    cinemaId: cinemaSeed[0].id,
+    name: 'IMAX 1',
+    type: HallType.IMAX,
+    rows: 6,
+    seatsPerRow: 12,
+    layout: LayoutType.STADIUM,
+    screen: 'IMAX Laser',
+    sound: 'IMAX 12.1',
+  },
+  {
+    id: 'bbbb1111-0000-0000-0000-000000000002',
+    cinemaId: cinemaSeed[0].id,
+    name: 'Standard 2',
+    type: HallType.STANDARD,
+    rows: 6,
+    seatsPerRow: 10,
+    layout: LayoutType.STANDARD,
+    screen: '2K Digital',
+    sound: 'Dolby 7.1',
+  },
+  {
+    id: 'bbbb2222-0000-0000-0000-000000000001',
+    cinemaId: cinemaSeed[1].id,
+    name: 'VIP 1',
+    type: HallType.VIP,
+    rows: 5,
+    seatsPerRow: 10,
+    layout: LayoutType.DUAL_AISLE,
+    screen: '4K Digital',
+    sound: 'Dolby Atmos',
+  },
+  {
+    id: 'bbbb2222-0000-0000-0000-000000000002',
+    cinemaId: cinemaSeed[1].id,
+    name: 'Standard 2',
+    type: HallType.STANDARD,
+    rows: 5,
+    seatsPerRow: 10,
+    layout: LayoutType.STANDARD,
+    screen: '2K Digital',
+    sound: 'Dolby 7.1',
+  },
+];
+
+const slots = [
+  { label: '18:30', hour: 18, minute: 30 },
+  { label: '21:15', hour: 21, minute: 15 },
+];
+
+const bookingRef = {
+  bookingId: toUuid('booking-dune2-1'),
+  showtimeSeed: { date: '2025-12-30', slot: slots[0].label, hallId: hallSeed[0].id, movieId: movieRefs.dune2.movieId },
+  seats: ['A-1', 'A-2'],
+};
 
 async function main() {
   console.log('🌱 Seeding Cinema Service database...');
 
-  // Clear existing data in correct order
   await prisma.seatReservations.deleteMany();
   await prisma.showtimes.deleteMany();
   await prisma.ticketPricing.deleteMany();
@@ -27,756 +141,176 @@ async function main() {
   await prisma.halls.deleteMany();
   await prisma.cinemas.deleteMany();
 
-  console.log('🔄 Cleared existing data');
+  await Promise.all(cinemaSeed.map((c) => prisma.cinemas.create({ data: c })));
 
-  // -----------------------------------------------------------
-  //  🎬 CREATE 8 CINEMAS
-  // -----------------------------------------------------------
-
-const cinemasData = [
-  {
-    name: 'CGV Aeon Tân Phú',
-    address: '30 Bờ Bao Tân Thắng, Sơn Kỳ',
-    city: 'Ho Chi Minh City',
-    district: 'Tân Phú',
-    phone: '028 3620 2000',
-    email: 'tanphu@cgv.vn',
-    website: 'https://www.cgv.vn',
-    latitude: 10.8028,
-    longitude: 106.6171,
-    description:
-      'One of the largest CGV cinemas in Ho Chi Minh City with IMAX and premium auditoriums.',
-    amenities: ['Parking', 'Food Court', 'IMAX', 'Premium Lounge'],
-    facilities: { parking_slots: 300, wheelchair_accessible: true },
-    images: [
-      'https://cdn.galaxycine.vn/media/2023/8/2/cgv-aeon-tan-phu-1_1690945376540.jpg',
-      'https://cdn.galaxycine.vn/media/2023/8/2/cgv-aeon-tan-phu-2_1690945376714.jpg',
-    ],
-    rating: 4.6,
-    total_reviews: 2100,
-    operating_hours: {
-      weekday: '09:00-23:00',
-      weekend: '08:00-00:00',
-    },
-    social_media: { facebook: 'cgv.vn', instagram: 'cgv.vietnam' },
-    status: CinemaStatus.ACTIVE,
-  },
-
-  {
-    name: 'BHD Star Bitexco',
-    address: '2 Hải Triều, Bến Nghé, Quận 1',
-    city: 'Ho Chi Minh City',
-    district: 'Quận 1',
-    phone: '1900 2099',
-    email: 'bitexco@bhdstar.vn',
-    website: 'https://www.bhdstar.vn',
-    latitude: 10.7714,
-    longitude: 106.7041,
-    description:
-      'Modern cinema located inside Bitexco Financial Tower with premium services.',
-    amenities: ['Parking', 'Snacks', 'VIP Zone'],
-    facilities: { parking_slots: 100, wheelchair_accessible: true },
-    images: [
-      'https://bhdstar.vn/wp-content/uploads/2023/04/BHD-Bitexco-3-scaled.jpg',
-    ],
-    rating: 4.4,
-    total_reviews: 1400,
-    operating_hours: {
-      weekday: '09:00-23:00',
-      weekend: '08:00-00:00',
-    },
-    social_media: { facebook: 'bhdstar', instagram: 'bhdstar.vn' },
-    status: CinemaStatus.ACTIVE,
-  },
-
-  {
-    name: 'Galaxy Nguyễn Du',
-    address: '116 Nguyễn Du, Quận 1',
-    city: 'Ho Chi Minh City',
-    district: 'Quận 1',
-    phone: '1900 2220',
-    email: 'nguyendu@galaxycine.vn',
-    website: 'https://www.galaxycine.vn',
-    latitude: 10.7733,
-    longitude: 106.6944,
-    description:
-      'Galaxy Nguyễn Du is one of the most popular cinemas for young audiences.',
-    amenities: ['Parking', 'Food Court'],
-    facilities: { parking_slots: 150, wheelchair_accessible: true },
-    images: [
-      'https://cdn.galaxycine.vn/media/2022/12/13/nguyen-du-2_1670920067780.jpg',
-    ],
-    rating: 4.3,
-    total_reviews: 1750,
-    operating_hours: {
-      weekday: '08:30-23:30',
-      weekend: '08:00-00:30',
-    },
-    social_media: { facebook: 'galaxycine', instagram: 'galaxycine' },
-    status: CinemaStatus.ACTIVE,
-  },
-
-  {
-    name: 'MegaGS Cao Thắng',
-    address: '19 Cao Thắng, Quận 3',
-    city: 'Ho Chi Minh City',
-    district: 'Quận 3',
-    phone: '028 7300 4088',
-    email: 'caothang@megags.vn',
-    website: 'https://www.megags.vn',
-    latitude: 10.7742,
-    longitude: 106.6817,
-    description: 'Cinema with modern auditoriums and attractive ticket prices.',
-    amenities: ['Parking'],
-    facilities: { parking_slots: 80, wheelchair_accessible: true },
-    images: [
-      'https://megagscinemas.vn/wp-content/uploads/2020/10/Slide-3-1.jpg',
-    ],
-    rating: 4.1,
-    total_reviews: 900,
-    operating_hours: {
-      weekday: '09:00-22:30',
-      weekend: '08:00-23:30',
-    },
-    social_media: { facebook: 'megagscinemas' },
-    status: CinemaStatus.ACTIVE,
-  },
-
-  {
-    name: 'Cinestar Hai Bà Trưng',
-    address: '135 Hai Bà Trưng, Quận 1',
-    city: 'Ho Chi Minh City',
-    district: 'Quận 1',
-    phone: '028 6288 8888',
-    email: 'hbt@cinestar.vn',
-    website: 'https://www.cinestar.vn',
-    latitude: 10.7812,
-    longitude: 106.6994,
-    description:
-      'Cinestar offers affordable prices with a modern and friendly environment.',
-    amenities: ['Parking', 'Cafe'],
-    facilities: { parking_slots: 120, wheelchair_accessible: true },
-    images: [
-      'https://cinestar.com.vn/pic/galaxycns/quan1-3-min_1635137614.jpg',
-    ],
-    rating: 4.2,
-    total_reviews: 1100,
-    operating_hours: {
-      weekday: '09:00-23:00',
-      weekend: '08:00-00:00',
-    },
-    social_media: { facebook: 'cinestarvn' },
-    status: CinemaStatus.ACTIVE,
-  },
-
-  {
-    name: 'Lotte Cinema Thủ Đức',
-    address: '216 Võ Văn Ngân, Thủ Đức',
-    city: 'Ho Chi Minh City',
-    district: 'Thủ Đức',
-    phone: '1900 2224',
-    email: 'thuduc@lotte.vn',
-    website: 'https://www.lottecinema.vn',
-    latitude: 10.8534,
-    longitude: 106.7531,
-    description: 'Large Lotte branch with clean facilities and friendly staff.',
-    amenities: ['Parking', 'Food Court', 'Shopping Mall'],
-    facilities: { parking_slots: 250, wheelchair_accessible: true },
-    images: [
-      'https://lottecinemavn.com/media/article/image/lottecine-thuduc.jpg',
-    ],
-    rating: 4.5,
-    total_reviews: 1650,
-    operating_hours: {
-      weekday: '09:00-23:00',
-      weekend: '08:00-00:00',
-    },
-    social_media: { facebook: 'lottecinema', instagram: 'lottecinema' },
-    status: CinemaStatus.ACTIVE,
-  },
-
-  {
-    name: 'CGV Vincom Landmark 81',
-    address: '208 Nguyễn Hữu Cảnh, Bình Thạnh',
-    city: 'Ho Chi Minh City',
-    district: 'Bình Thạnh',
-    phone: '028 3620 2000',
-    email: 'landmark81@cgv.vn',
-    website: 'https://www.cgv.vn',
-    latitude: 10.7945,
-    longitude: 106.7227,
-    description:
-      'Located inside the tallest building in Vietnam, offering luxury IMAX theaters.',
-    amenities: ['Parking', 'IMAX', 'Premium Lounge'],
-    facilities: { parking_slots: 350, wheelchair_accessible: true },
-    images: [
-      'https://cdn.galaxycine.vn/media/2023/8/2/cgv-landmark-81_1690946082438.jpg',
-    ],
-    rating: 4.7,
-    total_reviews: 2300,
-    operating_hours: {
-      weekday: '09:00-23:59',
-      weekend: '08:00-00:30',
-    },
-    social_media: { facebook: 'cgv.vietnam', instagram: 'cgv.vn' },
-    status: CinemaStatus.ACTIVE,
-  },
-
-  {
-    name: 'BHD Star Vincom Thảo Điền',
-    address: '159 Xa Lộ Hà Nội, Thảo Điền',
-    city: 'Ho Chi Minh City',
-    district: 'Thủ Đức',
-    phone: '1900 2099',
-    email: 'thaodien@bhdstar.vn',
-    website: 'https://www.bhdstar.vn',
-    latitude: 10.8031,
-    longitude: 106.7298,
-    description:
-      'Cinema located in Vincom Mega Mall Thảo Điền with modern screen and sound.',
-    amenities: ['Parking', 'Food Court'],
-    facilities: { parking_slots: 200, wheelchair_accessible: true },
-    images: [
-      'https://bhdstar.vn/wp-content/uploads/2023/04/BHD-Thao-Dien-1-scaled.jpg',
-    ],
-    rating: 4.4,
-    total_reviews: 1280,
-    operating_hours: {
-      weekday: '09:00-23:00',
-      weekend: '08:00-00:00',
-    },
-    social_media: { facebook: 'bhdstar', instagram: 'bhdstar.vn' },
-    status: CinemaStatus.ACTIVE,
-  },
-];
-
-
-
-  const cinemas = [];
-  for (const cinema of cinemasData) {
-    const created = await prisma.cinemas.create({ data: cinema });
-    cinemas.push(created);
-  }
-
-  console.log(`🎥 Created ${cinemas.length} cinemas`);
-  // -----------------------------------------------------------
-  //  🎬 CREATE 4 HALLS FOR EACH CINEMA (WITH RANDOM LAYOUT)
-  // -----------------------------------------------------------
-
-  function randomInt(min: number, max: number) {
-    return Math.floor(Math.random() * (max - min + 1)) + min;
-  }
-
-  const hallTypes = [
-    HallType.STANDARD,
-    HallType.VIP,
-    HallType.FOUR_DX,
-    HallType.IMAX,
-  ];
-
-  const allHalls = [];
-
-  for (const cinema of cinemas) {
-    for (let i = 0; i < 4; i++) {
-      const hallType = hallTypes[i]; // FIXED order but applies variety per cinema
-
-      // Random layout by hall type
-      let rows = 10;
-      let seatsPerRow = 14;
-
-      switch (hallType) {
-        case HallType.STANDARD:
-          rows = randomInt(10, 12);
-          seatsPerRow = randomInt(12, 16);
-          break;
-        case HallType.VIP:
-          rows = randomInt(10, 12);
-          seatsPerRow = randomInt(12, 16);
-          break;
-        case HallType.FOUR_DX:
-          rows = randomInt(11, 15);
-          seatsPerRow = randomInt(14, 18);
-          break;
-        case HallType.IMAX:
-          rows = randomInt(12, 16);
-          seatsPerRow = randomInt(16, 20);
-          break;
-      }
-
-      const hall = await prisma.halls.create({
+  await Promise.all(
+    hallSeed.map((h) =>
+      prisma.halls.create({
         data: {
-          cinema_id: cinema.id,
-          name: `${cinema.name} - Hall ${i + 1}`,
-          type: hallType,
-          capacity: rows * seatsPerRow,
-          rows,
-          screen_type:
-            hallType === HallType.IMAX
-              ? 'IMAX Screen'
-              : hallType === HallType.FOUR_DX
-              ? '3D Digital'
-              : 'Standard Digital',
-          sound_system:
-            hallType === HallType.IMAX
-              ? 'IMAX Sound'
-              : hallType === HallType.VIP
-              ? 'Dolby Atmos Premium'
-              : 'Dolby 7.1',
-          features: ['Air Conditioning', 'Cup Holders'],
-          layout_type:
-            hallType === HallType.IMAX
-              ? LayoutType.STADIUM
-              : LayoutType.STANDARD,
+          id: h.id,
+          cinema_id: h.cinemaId,
+          name: h.name,
+          type: h.type,
+          capacity: h.rows * h.seatsPerRow,
+          rows: h.rows,
+          screen_type: h.screen,
+          sound_system: h.sound,
+          features: ['Ghế mềm', 'Giữ chỗ online'],
+          layout_type: h.layout,
           status: HallStatus.ACTIVE,
         },
-      });
+      })
+    )
+  );
 
-      allHalls.push({ ...hall, rows, seatsPerRow });
-    }
-  }
+  const seatsByHall: Record<string, { id: string; type: SeatType }[]> = {};
 
-  console.log(`🎞 Created ${allHalls.length} halls (4 halls per cinema)`);
-
-  // -----------------------------------------------------------
-  //  🎟 GENERATE RANDOM SEATS FOR EACH HALL
-  // -----------------------------------------------------------
-
-  const allSeats = [];
-
-  for (const hall of allHalls) {
-    const { rows, seatsPerRow } = hall;
-
-    for (let r = 0; r < rows; r++) {
-      const rowLetter = String.fromCharCode(65 + r); // A, B, C...
-
-      for (let s = 1; s <= seatsPerRow; s++) {
-        let seatType: SeatType = SeatType.STANDARD;
-
-        // VIP zone (middle block)
-        if (hall.type === HallType.VIP) {
-          if (r >= Math.floor(rows * 0.3) && r <= Math.floor(rows * 0.7)) {
-            if (
-              s >= Math.floor(seatsPerRow * 0.3) &&
-              s <= Math.floor(seatsPerRow * 0.7)
-            ) {
-              seatType = SeatType.VIP;
-            }
-          }
-        }
-
-        // IMAX couple seats (last 2 rows, even positions)
+  for (const hall of hallSeed) {
+    const seats: { id: string; type: SeatType; hall_id: string; row_letter: string; seat_number: number; status: SeatStatus }[] = [];
+    for (let r = 0; r < hall.rows; r++) {
+      const rowLetter = String.fromCharCode(65 + r);
+      for (let s = 1; s <= hall.seatsPerRow; s++) {
+        let type: SeatType = SeatType.STANDARD;
         if (hall.type === HallType.IMAX) {
-          if (r >= rows - 2 && s % 2 === 0) {
-            seatType = SeatType.COUPLE;
-          } else {
-            seatType = SeatType.PREMIUM;
-          }
+          type = r >= hall.rows - 1 && s % 2 === 0 ? SeatType.COUPLE : SeatType.PREMIUM;
+        }
+        if (hall.type === HallType.VIP) {
+          const inCenter = r >= 1 && r <= hall.rows - 2 && s >= 3 && s <= hall.seatsPerRow - 2;
+          type = inCenter ? SeatType.VIP : SeatType.STANDARD;
         }
 
-        // 3D hall occasional premium
-        if (hall.type === HallType.FOUR_DX) {
-          if (r >= rows - 3 && s >= seatsPerRow - 4) {
-            seatType = SeatType.PREMIUM;
-          }
-        }
-
-        allSeats.push({
-          hall_id: hall.id,
-          row_letter: rowLetter,
-          seat_number: s,
-          type: seatType,
-          status: SeatStatus.ACTIVE,
-        });
+        const id = toUuid(`seat-${hall.id}-${rowLetter}-${s}`);
+        seats.push({ id, type, hall_id: hall.id, row_letter: rowLetter, seat_number: s, status: SeatStatus.ACTIVE });
       }
     }
+    seatsByHall[hall.id] = seats.map((s) => ({ id: s.id, type: s.type }));
+    await prisma.seats.createMany({ data: seats });
   }
 
-  await prisma.seats.createMany({ data: allSeats });
+  for (const hall of hallSeed) {
+    const seatTypes = Array.from(new Set(seatsByHall[hall.id].map((s) => s.type)));
+    const price = (seatType: SeatType, isWeekend: boolean) => {
+      if (seatType === SeatType.COUPLE) return isWeekend ? 240000 : 200000;
+      if (seatType === SeatType.PREMIUM) return isWeekend ? 180000 : 150000;
+      if (seatType === SeatType.VIP) return isWeekend ? 160000 : 130000;
+      return isWeekend ? 140000 : 110000;
+    };
 
-  console.log(`🪑 Created ${allSeats.length} seats across all halls`);
-  // -----------------------------------------------------------
-  //  🎬 PART 3 — ASSIGN MOVIES TO EACH CINEMA (3–4 MOVIES)
-  // -----------------------------------------------------------
+    for (const seatType of seatTypes) {
+      await prisma.ticketPricing.create({
+        data: {
+          hall_id: hall.id,
+          seat_type: seatType,
+          day_type: DayType.WEEKDAY,
+          price: price(seatType, false),
+        },
+      });
+      await prisma.ticketPricing.create({
+        data: {
+          hall_id: hall.id,
+          seat_type: seatType,
+          day_type: DayType.WEEKEND,
+          price: price(seatType, true),
+        },
+      });
+    }
+  }
 
-  console.log('🎥 Assigning movies to cinemas...');
+  // Use UTC to keep day string stable across environments and match booking seed IDs
+  const start = new Date(Date.UTC(2025, 11, 28)); // 2025-12-28
+  const end = new Date(Date.UTC(2026, 0, 15)); // 2026-01-15
+  const movieOrder = [movieRefs.dune2, movieRefs.insideOut2, movieRefs.oppenheimer, movieRefs.gxk];
 
-  // List of movies injected manually (from your provided JSON)
-  const movies = [
+  const showtimesPayload: any[] = [];
+  const seatReservationsPayload: any[] = [];
+
+  for (let day = new Date(start); day <= end; day.setUTCDate(day.getUTCDate() + 1)) {
+    const dayStr = day.toISOString().slice(0, 10); // YYYY-MM-DD in UTC
+    const isWeekend = day.getDay() === 0 || day.getDay() === 6;
+    const dayType = isWeekend ? DayType.WEEKEND : DayType.WEEKDAY;
+
+    hallSeed.forEach((hall, hallIndex) => {
+      slots.forEach((slot, slotIndex) => {
+        const movie = movieOrder[(hallIndex + slotIndex + day.getDate()) % movieOrder.length];
+        const showtimeId = toUuid(`${hall.id}-${dayStr}-${slot.label}-${movie.movieId}`);
+
+        const startTime = new Date(`${dayStr}T${String(slot.hour).padStart(2, '0')}:${String(slot.minute).padStart(2, '0')}:00Z`);
+        const endTime = new Date(startTime.getTime() + (movie.runtime + 20) * 60000);
+
+        const reservedSeatIds: string[] = [];
+        const isBookingShow =
+          hall.id === bookingRef.showtimeSeed.hallId &&
+          dayStr === bookingRef.showtimeSeed.date &&
+          slot.label === bookingRef.showtimeSeed.slot &&
+          movie.movieId === bookingRef.showtimeSeed.movieId;
+
+        if (isBookingShow) {
+          bookingRef.seats.forEach((s) => reservedSeatIds.push(toUuid(`seat-${hall.id}-${s}`)));
+        }
+
+        const totalSeats = seatsByHall[hall.id].length;
+        const available = totalSeats - reservedSeatIds.length;
+
+        showtimesPayload.push({
+          id: showtimeId,
+          movie_id: movie.movieId,
+          movie_release_id: movie.releaseId,
+          cinema_id: hall.cinemaId,
+          hall_id: hall.id,
+          start_time: startTime,
+          end_time: endTime,
+          format: hall.type === HallType.IMAX ? Format.IMAX : Format.TWO_D,
+          language: 'vi',
+          subtitles: ['vi'],
+          available_seats: available,
+          total_seats: totalSeats,
+          status: ShowtimeStatus.SELLING,
+          day_type: dayType,
+        });
+
+        reservedSeatIds.forEach((seatId) => {
+          seatReservationsPayload.push({
+            showtime_id: showtimeId,
+            seat_id: seatId,
+            user_id: 'user-customer-001',
+            status: ReservationStatus.CONFIRMED,
+            booking_id: bookingRef.bookingId,
+          });
+        });
+      });
+    });
+  }
+
+  await prisma.showtimes.createMany({ data: showtimesPayload });
+  if (seatReservationsPayload.length) {
+    await prisma.seatReservations.createMany({ data: seatReservationsPayload });
+  }
+
+  const reviews = [
     {
-      id: '0cd278c6-dfd5-41f2-bd85-0f1e9a67fdeb',
-      title: 'Spider-Man: No Way Home',
-      runtime: 148,
-      language_type: 'SUBTITLE',
+      cinema_id: cinemaSeed[0].id,
+      user_id: 'user-customer-001',
+      rating: 5,
+      comment: 'Phòng IMAX màn to, ghế thoải mái, âm thanh rất đã.',
+      verified_visit: true,
     },
     {
-      id: '13915657-7f7c-4dc4-9fb5-f267806b9e4b',
-      title: 'Inside Out',
-      runtime: 95,
-      language_type: 'SUBTITLE',
-    },
-    {
-      id: '20db5080-9282-40ea-8fcd-b474dd905ad7',
-      title: 'The Batman',
-      runtime: 176,
-      language_type: 'SUBTITLE',
-    },
-    {
-      id: '3003df67-5f2d-4160-ab2b-2c662f78c22e',
-      title: 'Zootopia',
-      runtime: 108,
-      language_type: 'SUBTITLE',
-    },
-    {
-      id: '33935342-23da-46a9-971a-189709423717',
-      title: 'Avengers: Endgame',
-      runtime: 181,
-      language_type: 'SUBTITLE',
-    },
-    {
-      id: '4c83a06a-2b66-41ff-9f56-e603232835ef',
-      title: 'Interstellar',
-      runtime: 169,
-      language_type: 'SUBTITLE',
-    },
-    {
-      id: '5d6fb7ff-887f-409b-9162-92be182e20c3',
-      title: 'Inception',
-      runtime: 148,
-      language_type: 'SUBTITLE',
-    },
-    {
-      id: 'ebfa0368-ce63-4096-97b5-ee5da6a911cb',
-      title: 'Joker',
-      runtime: 122,
-      language_type: 'SUBTITLE',
-    },
-    {
-      id: 'f4e044ac-1061-4e5c-bd4c-cebaf949e32c',
-      title: 'Mai',
-      runtime: 131,
-      language_type: 'ORIGINAL',
+      cinema_id: cinemaSeed[1].id,
+      user_id: 'user-customer-002',
+      rating: 4,
+      comment: 'Vị trí trung tâm, mua vé online nhanh nhưng bãi xe hơi đông.',
+      verified_visit: true,
     },
   ];
 
-  // Helper random
-  function pickRandom<T>(arr: T[], count: number): T[] {
-    const shuffled = [...arr].sort(() => 0.5 - Math.random());
-    return shuffled.slice(0, count);
-  }
+  await prisma.cinemaReviews.createMany({ data: reviews });
 
-  // Assign to each cinema 3–4 movies
-  const cinemaMovieMap: Record<string, typeof movies> = {};
-
-  for (const cinema of cinemas) {
-    const numMovies = randomInt(3, 4);
-    cinemaMovieMap[cinema.id] = pickRandom(movies, numMovies);
-  }
-
-  console.log('🎬 Assigned movies to each cinema');
-
-  // -----------------------------------------------------------
-  //  🎞 PART 3B — GENERATE SHOWTIMES FOR 5 DAYS
-  // -----------------------------------------------------------
-
-  console.log('🕒 Generating showtimes...');
-
-  const allShowtimes = [];
-  const daysToGenerate = 5;
-
-  const startHours = [9, 11, 13, 15, 17, 19, 21];
-  const formatsByHall = {
-    STANDARD: [Format.TWO_D],
-    VIP: [Format.TWO_D],
-    FOUR_DX: [Format.THREE_D, Format.TWO_D],
-    IMAX: [Format.IMAX],
-  }as Record<string, Format[]>;
-
-  const languages = ['en', 'vi'];
-
-  for (const cinema of cinemas) {
-    const halls = allHalls.filter((h) => h.cinema_id === cinema.id);
-    const assignedMovies = cinemaMovieMap[cinema.id];
-
-    for (let day = 0; day < daysToGenerate; day++) {
-      const date = new Date();
-      date.setDate(date.getDate() + day);
-
-      const day_type =
-        date.getDay() === 0 || date.getDay() === 6
-          ? DayType.WEEKEND
-          : DayType.WEEKDAY;
-
-      for (const hall of halls) {
-        const movieList = pickRandom(
-          assignedMovies,
-          randomInt(1, assignedMovies.length)
-        );
-
-        for (const movie of movieList) {
-          const numShowtimes = randomInt(3, 5);
-
-      const hallFormats = formatsByHall[hall.type] || [Format.TWO_D];
-
-
-          for (let i = 0; i < numShowtimes; i++) {
-            const startHour = startHours[randomInt(0, startHours.length - 1)];
-
-            const start = new Date(date);
-            start.setHours(startHour, 0, 0, 0);
-
-            const end = new Date(start);
-            end.setMinutes(end.getMinutes() + movie.runtime + 15); // +15 minutes buffer
-
-            const format = hallFormats[randomInt(0, hallFormats.length - 1)];
-
-            const availableSeats = Math.floor(
-              hall.capacity * randomInt(60, 100) * 0.01
-            );
-
-            const status =
-              availableSeats === 0
-                ? ShowtimeStatus.SOLD_OUT
-                : ShowtimeStatus.SELLING;
-
-            allShowtimes.push({
-              movie_id: movie.id,
-              movie_release_id: randomUUID(),
-              cinema_id: cinema.id,
-              hall_id: hall.id,
-              start_time: start,
-              end_time: end,
-              day_type,
-              format,
-              language: languages[randomInt(0, languages.length - 1)],
-              subtitles: movie.language_type === 'SUBTITLE' ? ['vi'] : [],
-              available_seats: availableSeats,
-              total_seats: hall.capacity,
-              status,
-            });
-          }
-        }
-      }
-    }
-  }
-
-  await prisma.showtimes.createMany({ data: allShowtimes });
-
-  console.log(`🎫 Created ${allShowtimes.length} showtimes for 5 days`);
-  // -----------------------------------------------------------
-  //  🎫 PART 4 — TICKET PRICING FOR EACH HALL
-  // -----------------------------------------------------------
-
-  console.log('💰 Creating ticket pricing for halls...');
-
-  const pricingPayload = [];
-
-  for (const hall of allHalls) {
-   const basePrices: Record<
-     HallType,
-     Record<SeatType, { weekday: number; weekend: number; holiday: number }>
-   > = {
-     [HallType.STANDARD]: {
-       [SeatType.STANDARD]: { weekday: 75000, weekend: 90000, holiday: 100000 },
-       [SeatType.VIP]: { weekday: 90000, weekend: 120000, holiday: 140000 },
-       [SeatType.COUPLE]: { weekday: 160000, weekend: 200000, holiday: 230000 },
-       [SeatType.PREMIUM]: {
-         weekday: 110000,
-         weekend: 130000,
-         holiday: 150000,
-       },
-       [SeatType.WHEELCHAIR]: {
-         weekday: 70000,
-         weekend: 90000,
-         holiday: 100000,
-       },
-     },
-
-     [HallType.VIP]: {
-       [SeatType.STANDARD]: {
-         weekday: 90000,
-         weekend: 110000,
-         holiday: 130000,
-       },
-       [SeatType.VIP]: { weekday: 140000, weekend: 170000, holiday: 190000 },
-       [SeatType.COUPLE]: { weekday: 200000, weekend: 240000, holiday: 270000 },
-       [SeatType.PREMIUM]: {
-         weekday: 160000,
-         weekend: 190000,
-         holiday: 220000,
-       },
-       [SeatType.WHEELCHAIR]: {
-         weekday: 85000,
-         weekend: 110000,
-         holiday: 130000,
-       },
-     },
-
-     [HallType.IMAX]: {
-       [SeatType.STANDARD]: {
-         weekday: 150000,
-         weekend: 170000,
-         holiday: 190000,
-       },
-       [SeatType.VIP]: { weekday: 180000, weekend: 210000, holiday: 240000 },
-       [SeatType.COUPLE]: { weekday: 260000, weekend: 300000, holiday: 330000 },
-       [SeatType.PREMIUM]: {
-         weekday: 200000,
-         weekend: 240000,
-         holiday: 270000,
-       },
-       [SeatType.WHEELCHAIR]: {
-         weekday: 140000,
-         weekend: 160000,
-         holiday: 180000,
-       },
-     },
-
-     [HallType.FOUR_DX]: {
-       [SeatType.STANDARD]: {
-         weekday: 170000,
-         weekend: 200000,
-         holiday: 230000,
-       },
-       [SeatType.VIP]: { weekday: 200000, weekend: 230000, holiday: 260000 },
-       [SeatType.COUPLE]: { weekday: 280000, weekend: 320000, holiday: 360000 },
-       [SeatType.PREMIUM]: {
-         weekday: 220000,
-         weekend: 260000,
-         holiday: 300000,
-       },
-       [SeatType.WHEELCHAIR]: {
-         weekday: 150000,
-         weekend: 170000,
-         holiday: 200000,
-       },
-     },
-
-     [HallType.PREMIUM]: {
-       [SeatType.STANDARD]: {
-         weekday: 120000,
-         weekend: 150000,
-         holiday: 170000,
-       },
-       [SeatType.VIP]: { weekday: 160000, weekend: 190000, holiday: 220000 },
-       [SeatType.COUPLE]: { weekday: 230000, weekend: 260000, holiday: 300000 },
-       [SeatType.PREMIUM]: {
-         weekday: 180000,
-         weekend: 210000,
-         holiday: 250000,
-       },
-       [SeatType.WHEELCHAIR]: {
-         weekday: 110000,
-         weekend: 140000,
-         holiday: 160000,
-       },
-     },
-   };
-
-
-    const pricesForHall = basePrices[hall.type];
-
-   for (const seatType of Object.keys(pricesForHall) as SeatType[]) {
-     const p = pricesForHall[seatType];
-
-     pricingPayload.push(
-       {
-         hall_id: hall.id,
-         seat_type: seatType as SeatType,
-         day_type: DayType.WEEKDAY,
-         price: p.weekday,
-       },
-       {
-         hall_id: hall.id,
-         seat_type: seatType as SeatType,
-         day_type: DayType.WEEKEND,
-         price: p.weekend,
-       },
-       {
-         hall_id: hall.id,
-         seat_type: seatType as SeatType,
-         day_type: DayType.HOLIDAY,
-         price: p.holiday,
-       }
-     );
-   }
-  }
-
-  await prisma.ticketPricing.createMany({ data: pricingPayload });
-
-  console.log(`🏷 Created ${pricingPayload.length} ticket pricing entries`);
-  // -----------------------------------------------------------
-  //  🎟 PART 5 — RANDOM SEAT RESERVATIONS
-  // -----------------------------------------------------------
-
-  console.log('🎟 Generating random seat reservations...');
-
-  const showtimesList = await prisma.showtimes.findMany({
-    select: {
-      id: true,
-      hall_id: true,
-      available_seats: true,
-      total_seats: true,
-    },
-  });
-
-  const reservationPayload = [];
-
-  for (const st of showtimesList) {
-    // 10% chance to have reservations
-    if (Math.random() > 0.1) continue;
-
-    const seatsInHall = await prisma.seats.findMany({
-      where: { hall_id: st.hall_id },
-      select: { id: true },
-    });
-
-    const numReserved = randomInt(5, 12);
-    const chosenSeats = pickRandom(seatsInHall, numReserved);
-
-    const statuses = [
-      ReservationStatus.CONFIRMED,
-      ReservationStatus.CONFIRMED,
-      ReservationStatus.CONFIRMED, // 70%
-      ReservationStatus.CONFIRMED, // 20%
-      ReservationStatus.CONFIRMED,
-      ReservationStatus.CANCELLED, // 10%
-    ];
-
-    for (const seat of chosenSeats) {
-      reservationPayload.push({
-        showtime_id: st.id,
-        seat_id: seat.id,
-        user_id: randomUUID(),
-        status: statuses[randomInt(0, statuses.length - 1)],
-        booking_id: randomUUID(),
-      });
-    }
-
-    // Update available seats
-    await prisma.showtimes.update({
-      where: { id: st.id },
-      data: {
-        available_seats: Math.max(0, st.available_seats - numReserved),
-      },
-    });
-  }
-
-  if (reservationPayload.length > 0) {
-    await prisma.seatReservations.createMany({ data: reservationPayload });
-  }
-
-  console.log(`🪑 Created ${reservationPayload.length} seat reservations`);
-
-  // -----------------------------------------------------------
-  //  🎉 FINISHED!
-  // -----------------------------------------------------------
-
-  console.log('🎉 Cinema Service database seeding completed!');
+  console.log('✅ Seeded cinemas, halls, seats, pricing, showtimes (28/12/2025–15/01/2026), và review');
 }
 
 main()
   .catch((e) => {
-    console.error('❌ Error seeding database:', e);
+    console.error('❌ Error seeding cinema database:', e);
     process.exit(1);
   })
   .finally(async () => {

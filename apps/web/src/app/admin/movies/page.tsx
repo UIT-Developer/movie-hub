@@ -966,13 +966,14 @@ export default function MoviesPage() {
                 <Label htmlFor="spokenLanguages">Ngôn Ngữ Phát Âm * (cách nhau bằng dấu phẩy)</Label>
                 <Input
                   id="spokenLanguages"
-                  value={formData.spokenLanguages?.join(', ') || 'en'}
-                  onChange={(e) =>
+                  value={formData.spokenLanguages?.join(', ') ?? ''}
+                  onChange={(e) => {
+                    const languages = e.target.value.split(',').map(s => s.trim()).filter(Boolean);
                     setFormData({ 
                       ...formData, 
-                      spokenLanguages: e.target.value.split(',').map(s => s.trim()).filter(Boolean) 
+                      spokenLanguages: languages.length > 0 ? languages : [] 
                     })
-                  }
+                  }}
                   placeholder="en, vi, zh"
                 />
               </div>

@@ -411,7 +411,7 @@ export default function MovieReleasesPage() {
                               disabled={getReleaseStatus(release) === 'ended'}
                             >
                               <Clock className="mr-2 h-4 w-4 text-purple-600" />
-                              <span>Showtimes</span>
+                              <span>Suất Chiếu</span>
                             </DropdownMenuSubTrigger>
                             <DropdownMenuSubContent>
                               <DropdownMenuItem

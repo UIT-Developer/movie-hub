@@ -273,7 +273,7 @@ export default function ShowtimeDialog({
             {isReleaseDisabled ? (
               <Input
                 id="movieReleaseId"
-                value={selectedRelease ? `${selectedRelease.startDate} → ${selectedRelease.endDate}` : ''}
+                value={selectedRelease ? `${new Date(selectedRelease.startDate).toLocaleDateString()} → ${new Date(selectedRelease.endDate).toLocaleDateString()}` : ''}
                 disabled
                 className="bg-gray-50"
               />

@@ -722,7 +722,7 @@ export default function MoviesPage() {
                         <Calendar className="mr-2 h-4 w-4" /> Lịch phát hành
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => { setSelectedMovie(movie); setDeleteDialogOpen(true); }} className="text-red-600 cursor-pointer">
-                        <Trash2 className="mr-2 h-4 w-4" /> X\u00f3a phim
+                        <Trash2 className="mr-2 h-4 w-4" /> Xóa phim
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -734,7 +734,7 @@ export default function MoviesPage() {
                     <div className="w-full max-w-xl bg-black/60 rounded-lg p-4 text-center text-white shadow-2xl mx-4 overflow-y-auto" style={{ maxHeight: '70%' }}>
                       {ensureArray(movie.cast).length > 0 && (
                         <div className="mb-2">
-                            <p className="text-xs text-yellow-300 font-semibold mb-1 uppercase tracking-wider">Di\u1ec5n vi\u00ean</p>
+                            <p className="text-xs text-yellow-300 font-semibold mb-1 uppercase tracking-wider">Diễn Viên</p>
                           <p className="text-sm">{ensureArray(movie.cast).slice(0,6).map(a => typeof a === 'object' && a && 'name' in a ? (a as { name?: string }).name : String(a)).filter(Boolean).join(', ')}</p>
                         </div>
                       )}

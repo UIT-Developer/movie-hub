@@ -371,7 +371,7 @@ export default function BatchShowtimesPage() {
                   <Input
                     value={
                       movieReleases.find((r: typeof movieReleases[0]) => r.id === formData.movieReleaseId)
-                        ? `${movieReleases.find((r: typeof movieReleases[0]) => r.id === formData.movieReleaseId)?.startDate} → ${movieReleases.find((r: typeof movieReleases[0]) => r.id === formData.movieReleaseId)?.endDate}`
+                        ? `${new Date(movieReleases.find((r: typeof movieReleases[0]) => r.id === formData.movieReleaseId)?.startDate).toLocaleDateString()} → ${new Date(movieReleases.find((r: typeof movieReleases[0]) => r.id === formData.movieReleaseId)?.endDate).toLocaleDateString()}`
                         : 'Đang tải...'
                     }
                     disabled
@@ -391,7 +391,7 @@ export default function BatchShowtimesPage() {
                         .filter((r: typeof movieReleases[0]) => r.movieId === formData.movieId)
                         .map((release: typeof movieReleases[0]) => (
                           <SelectItem key={release.id} value={release.id}>
-                            {typeof release.startDate === 'string' ? release.startDate : new Date(release.startDate).toLocaleDateString()} → {typeof release.endDate === 'string' ? release.endDate : new Date(release.endDate).toLocaleDateString()}
+                            {new Date(release.startDate).toLocaleDateString()} → {new Date(release.endDate).toLocaleDateString()}
                           </SelectItem>
                         ))}
                     </SelectContent>

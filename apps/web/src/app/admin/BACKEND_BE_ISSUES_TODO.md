@@ -1,6 +1,26 @@
+# BACKEND ISSUES - IMPLEMENTATION STATUS
+
+**Last Checked**: January 2, 2026
+
+## Summary of BE Implementation Status:
+
+| Issue | Status | Progress |
+|-------|--------|----------|
+| 1. Showtime Date Filter Off-by-One | ⚠️ PARTIALLY FIXED | Date filter improved but timezone handling still needs work |
+| 2. Delete Staff Member - 500 Error | 🔴 NOT FIXED | DELETE endpoint completely missing |
+| 3. Batch Create Showtimes - 500 Error | ✅ MOSTLY FIXED | Validation added, logging still needed |
+
+---
+
 # Issue: Showtime Date Filter Off-by-One — Showtimes Not Appearing (urgent)
 
-**Status**: 🔴 BLOCKING for Admin FE showtimes filter
+**Status**: ⚠️ PARTIALLY FIXED - Still has timezone ambiguity issues
+
+**BE Implementation Status (checked Jan 2, 2026):**
+- ✅ Date filter now uses `T00:00:00.000` and `T23:59:59.999` without 'Z' suffix (treating as local time)
+- ❌ Create showtime still uses `new Date(startTime)` which relies on browser timezone interpretation
+- ❌ No explicit UTC normalization implemented in create method
+- ⚠️ Issue may persist depending on browser/server timezone differences
 
 **Problem (tóm tắt):**
 - Admin creates showtime with `startTime = "2025-12-31 14:00:00"` (Dec 31, 2025)
@@ -13,23 +33,18 @@
 
 ## Affected Files (BE):
 
-### File 1: `apps/cinema-service/src/app/showtime/showtime.service.ts` (line 41-49)
+### File 1: `apps/cinema-service/src/app/showtime/showtime.service.ts` (line ~48-54)
 
-**Current Problematic Code**:
+**Current Code (PARTIALLY FIXED)**:
 ```typescript
-async getShowtimes(filter: AdminShowtimeFilterDTO) {
-  const { cinemaId, date, movieId, hallId } = filter;
-  const where: Prisma.ShowtimesWhereInput = {};
-  
-  if (date) {
-    where.start_time = {
-      gte: new Date(`${date}T00:00:00.000Z`),     // e.g., "2025-12-31T00:00:00.000Z"
-      lt: new Date(`${date}T23:59:59.999Z`),      // e.g., "2025-12-31T23:59:59.999Z"
-    };
-  }
-  // ...
+if (date) {
+  where.start_time = {
+    gte: new Date(`${date}T00:00:00.000`),  // ⚠️ Changed: Removed 'Z' suffix
+    lt: new Date(`${date}T23:59:59.999`),   // ⚠️ Changed: Removed 'Z' suffix
+  };
 }
 ```
+**Note**: BE removed the 'Z' suffix, treating dates as local time instead of UTC. This is a workaround but doesn't fully solve timezone issues.
 
 **Problem Explanation:**
 
@@ -113,7 +128,14 @@ const start = new Date(Date.UTC(
 
 # Issue: Delete Staff Member — 500 Error (CRITICAL)
 
-**Status**: 🔴 BLOCKING for Admin FE staff management
+**Status**: 🔴 NOT FIXED - Delete endpoint still missing
+
+**BE Implementation Status (checked Jan 2, 2026):**
+- ❌ API Gateway: No `@Delete(':id')` endpoint in `staff.controller.ts`
+- ❌ User Service Controller: No `@MessagePattern(UserMessage.STAFF.DELETED)` handler
+- ❌ User Service: No `delete()` method in `staff.service.ts`
+- ❌ UserMessage enum: No `STAFF.DELETED` constant defined
+- **Conclusion**: DELETE staff functionality is completely unimplemented on BE
 
 **Problem (tóm tắt):**
 - Admin tries to delete a staff member → HTTP 500 "Cannot DELETE /api/v1/staffs/[id]"
@@ -261,18 +283,23 @@ Estimated fix time: 15-20 minutes
 
 ---
 
-# Issue: Batch Create Showtimes  HTTP 500 Unexpected Error (CRITICAL)
+# Issue: Batch Create Showtimes — Detailed Analysis (CRITICAL)
 
-**Status**:  BLOCKING for Admin FE batch showtimes feature
+**Status**: ✅ MOSTLY FIXED - Core validation implemented, logging still needed
 
-**Problem (t�m t?t):**
+**BE Implementation Status (checked Jan 2, 2026):**
+- ✅ Issue #1 FIXED: Zod validation pipe added to API Gateway
+- ❌ Issue #2 NOT FIXED: Still no error logging in catch blocks
+- ⚠️ Issue #3 PARTIAL: Errors return proper RpcException but without logging for debugging
+
+**Problem (tóm tắt):**
 - Admin tries to batch-create showtimes via POST /api/v1/showtimes/batch
 - FE sends correct payload with valid format (dates as YYYY-MM-DD, timeSlots as HH:mm)
 - BE returns HTTP 500 with generic message "Unexpected error"
 - **Root causes**: 
-  1. Missing Zod validation at API gateway
-  2. Error messages masked in cinema-service with no logging
-  3. No proper HTTP status mapping (all errors return 500)
+  1. ✅ FIXED: Missing Zod validation at API gateway (now added)
+  2. ❌ NOT FIXED: Error messages masked in cinema-service with no logging
+  3. ⚠️ PARTIAL: No proper HTTP status mapping (all errors return 500)
 
 ## Affected Endpoint:
 - POST /api/v1/showtimes/batch (endpoint exists but has validation/error handling issues)
@@ -480,3 +507,73 @@ Add console.error() calls in:
 - The FE payload is correct  issue is BE's handling of string dates
 - Estimated fix time: 15-20 minutes (3 small changes)
 - No schema changes needed  just add validation and logging
+
+---
+
+# ✅ VERIFIED FIXES SUMMARY (Checked: Jan 2, 2026)
+
+## 1. Showtime Date Filter (⚠️ PARTIALLY FIXED)
+**Files checked**: 
+- `BE/movie-hub/apps/cinema-service/src/app/showtime/showtime.service.ts` (line 48-54)
+- `BE/movie-hub/apps/cinema-service/src/app/showtime/showtime-command.service.ts` (line 59)
+
+**What was fixed**:
+- ✅ Date filter changed from `${date}T00:00:00.000Z` to `${date}T00:00:00.000` (removed Z suffix)
+- This treats dates as local time instead of UTC
+
+**Still needs work**:
+- ❌ Create showtime still uses `new Date(startTime)` without proper timezone handling (line 59)
+- Recommended: Implement explicit UTC normalization or ISO format requirement
+
+---
+
+## 2. Delete Staff Member (🔴 NOT FIXED)
+**Files checked**:
+- `BE/movie-hub/apps/api-gateway/src/app/module/user/controller/staff.controller.ts`
+- `BE/movie-hub/apps/user-service/src/app/staff/staff.service.ts`
+- `BE/movie-hub/apps/user-service/src/app/staff/staff.controller.ts`
+- `BE/movie-hub/libs/shared-types/src/constant/message.ts`
+
+**Status**: DELETE functionality completely unimplemented
+- ❌ No `@Delete(':id')` endpoint in API Gateway staff controller
+- ❌ No `delete()` method in user-service staff.service.ts
+- ❌ No `@MessagePattern(UserMessage.STAFF.DELETED)` handler in user-service controller
+- ❌ No `STAFF.DELETED` constant in UserMessage enum
+
+**Next steps**: BE team needs to implement full delete flow as outlined in this document
+
+---
+
+## 3. Batch Create Showtimes (✅ MOSTLY FIXED)
+**Files checked**:
+- `BE/movie-hub/apps/api-gateway/src/app/module/cinema/controller/showtime.controller.ts` (line 75)
+- `BE/movie-hub/libs/shared-types/src/cinema/dto/request/showtimeDto/batch-create-showtimes.request.ts`
+- `BE/movie-hub/apps/cinema-service/src/app/showtime/showtime-command.service.ts`
+
+**What was fixed**:
+- ✅ Added `@UsePipes(new ZodValidationPipe(batchCreateShowtimesSchema))` to API Gateway endpoint (line 75)
+- ✅ Zod schema properly uses `.transform((v) => new Date(...))` for date conversion (lines 18-24)
+- ✅ Batch creation logic handles conflicts properly with skip/create arrays
+- ✅ Proper RpcException structure with error codes
+
+**Still needs work**:
+- ❌ No `console.error()` logging in catch blocks (line ~225, ~403)
+- ❌ fetchMovieAndRelease() catches all errors silently (line 403)
+- This makes production debugging impossible
+
+**Recommended next steps**:
+Add logging before throwing exceptions:
+```typescript
+} catch (e) {
+  console.error('[BatchCreateShowtimes] Error:', e);  // Add this
+  throw new RpcException(e);
+}
+```
+
+---
+
+# PRIORITY ACTION ITEMS FOR BE TEAM:
+
+1. **HIGH PRIORITY**: Implement DELETE staff endpoint (Issue #2) - Complete missing functionality
+2. **MEDIUM PRIORITY**: Add error logging to batch showtimes (Issue #3) - 5 min fix for better debugging
+3. **LOW PRIORITY**: Review timezone handling in showtime creation (Issue #1) - Works but could be more robust

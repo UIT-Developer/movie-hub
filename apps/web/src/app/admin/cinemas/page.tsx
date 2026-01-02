@@ -4,7 +4,7 @@
 export const dynamic = 'force-dynamic';
 
 import { useState } from 'react';
-import { Plus, Search, MoreVertical, Edit, Trash2, MapPin, Phone, Mail, Star, Clock, Users } from 'lucide-react';
+import { Plus, Search, MoreVertical, Edit, Trash2, MapPin, Phone, Mail, Star, Clock, Users, ChevronDown } from 'lucide-react';
 import { Button } from '@movie-hub/shacdn-ui/button';
 import { Input } from '@movie-hub/shacdn-ui/input';
 import {
@@ -32,6 +32,18 @@ import { Textarea } from '@movie-hub/shacdn-ui/textarea';
 import { useCinemas, useCreateCinema, useUpdateCinema, useDeleteCinema, useHallsGroupedByCinema } from '@/libs/api';
 import type { CreateCinemaRequest as ApiCreateCinemaRequest } from '@/libs/api';
 import type { Cinema, CreateCinemaRequest } from '@/libs/api/types';
+
+// Preset amenities for quick selection
+const PRESET_AMENITIES = [
+  { name: 'WiFi', defaultValue: 'Miễn phí' },
+  { name: 'Parking', defaultValue: 'Có' },
+  { name: 'ATM', defaultValue: 'Có' },
+  { name: 'Food Court', defaultValue: 'Có' },
+  { name: 'Wheelchair Access', defaultValue: 'Có' },
+  { name: 'Baby Care Room', defaultValue: 'Có' },
+  { name: 'Restroom', defaultValue: 'Sạch sẽ' },
+  { name: 'Concession', defaultValue: 'Bán đầy đủ' },
+] as const;
 
 export default function CinemasPage() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -652,69 +664,99 @@ export default function CinemasPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-4">
-              {/* Facilities: dynamic key/value list */}
-              <div className="space-y-2 flex flex-col">
+            {/* Facilities: dynamic key/value list - Full width */}
+            <div className="space-y-2 flex flex-col col-span-full">
+              <div className="flex items-center justify-between">
                 <Label>Cơ Sở Vật Chất</Label>
-                <div className="space-y-2 flex-1">
-                  {(Object.entries(formData.facilities || {}) as [string, any][]).map(([key, value], idx) => (
-                    <div key={key || idx} className="flex gap-2">
-                      <Input
-                        value={key}
-                        placeholder="key"
-                        onChange={(e) => {
-                          const newKey = e.target.value;
-                          const fac = { ...(formData.facilities || {}) } as Record<string, any>;
-                          // rename key
-                          const val = fac[key];
-                          delete fac[key];
-                          fac[newKey] = val;
-                          setFormData({ ...formData, facilities: fac });
-                        }}
-                      />
-                      <Input
-                        value={value === undefined || value === null ? '' : String(value)}
-                        placeholder="value"
-                        onChange={(e) => {
-                          const fac = { ...(formData.facilities || {}) } as Record<string, any>;
-                          const parsed = (() => {
-                            const v = e.target.value.trim();
-                            if (v === 'true') return true;
-                            if (v === 'false') return false;
-                            const n = Number(v);
-                            return Number.isNaN(n) ? v : n;
-                          })();
-                          fac[key || `key_${idx}`] = parsed;
-                          setFormData({ ...formData, facilities: fac });
-                        }}
-                      />
-                      <Button
-                        variant="ghost"
+                {/* Quick preset amenities dropdown */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="gap-2">
+                      <Plus className="h-4 w-4" />
+                      Chọn Sẵn
+                      <ChevronDown className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    {PRESET_AMENITIES.map((amenity) => (
+                      <DropdownMenuItem
+                        key={amenity.name}
                         onClick={() => {
                           const fac = { ...(formData.facilities || {}) } as Record<string, any>;
-                          delete fac[key];
-                          setFormData({ ...formData, facilities: fac });
+                          // Only add if not already exists
+                          if (!fac[amenity.name]) {
+                            fac[amenity.name] = amenity.defaultValue;
+                            setFormData({ ...formData, facilities: fac });
+                          }
                         }}
                       >
-                        Xóa
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-                <Button
-                  onClick={() => {
-                    const fac = { ...(formData.facilities || {}) } as Record<string, any>;
-                    const newKey = `facility_${Date.now()}`;
-                    fac[newKey] = '';
-                    setFormData({ ...formData, facilities: fac });
-                  }}
-                  className="mt-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700"
-                >
-                  <Plus className="mr-2 h-4 w-4" />
-                  Thêm Cơ Sở Vật Chất
-                </Button>
+                        {amenity.name}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
+              <div className="space-y-2 flex-1">
+                {(Object.entries(formData.facilities || {}) as [string, any][]).map(([key, value], idx) => (
+                  <div key={key || idx} className="grid grid-cols-[2fr_3fr_auto] gap-2 items-end">
+                    <Input
+                      value={key}
+                      placeholder="Ví dụ: WiFi, Parking, ATM, Food Court..."
+                      onChange={(e) => {
+                        const newKey = e.target.value;
+                        const fac = { ...(formData.facilities || {}) } as Record<string, any>;
+                        // rename key
+                        const val = fac[key];
+                        delete fac[key];
+                        fac[newKey] = val;
+                        setFormData({ ...formData, facilities: fac });
+                      }}
+                    />
+                    <Input
+                      value={value === undefined || value === null ? '' : String(value)}
+                      placeholder="Ví dụ: Có, Không, 10, Miễn phí..."
+                      onChange={(e) => {
+                        const fac = { ...(formData.facilities || {}) } as Record<string, any>;
+                        const parsed = (() => {
+                          const v = e.target.value.trim();
+                          if (v === 'true') return true;
+                          if (v === 'false') return false;
+                          const n = Number(v);
+                          return Number.isNaN(n) ? v : n;
+                        })();
+                        fac[key || `key_${idx}`] = parsed;
+                        setFormData({ ...formData, facilities: fac });
+                      }}
+                    />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        const fac = { ...(formData.facilities || {}) } as Record<string, any>;
+                        delete fac[key];
+                        setFormData({ ...formData, facilities: fac });
+                      }}
+                    >
+                      Xóa
+                    </Button>
+                  </div>
+                ))}
+              </div>
+              <Button
+                onClick={() => {
+                  const fac = { ...(formData.facilities || {}) } as Record<string, any>;
+                  // Start with empty key so user can type meaningful names like "WiFi", "Parking", etc.
+                  fac[''] = '';
+                  setFormData({ ...formData, facilities: fac });
+                }}
+                className="mt-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700"
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Thêm Cơ Sở Vật Chất
+              </Button>
+            </div>
 
+            <div className="grid grid-cols-3 gap-4">
               {/* Operating hours: open/close times */}
               <div className="space-y-2">
                 <Label>Giờ Hoạt Động</Label>

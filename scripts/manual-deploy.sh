@@ -15,7 +15,7 @@ NC='\033[0m' # No Color
 
 # Default values
 ENVIRONMENT="${ENVIRONMENT:-staging}"
-DEPLOY_INFRA="${DEPLOY_INFRA:-false}"
+DEPLOY_INFRA="${DEPLOY_INFRA:-true}"
 SERVICES="${SERVICES:-all}"
 REBUILD="${REBUILD:-true}"
 
@@ -326,16 +326,16 @@ main() {
         esac
     done
     
-    #check_prerequisites
+    check_prerequisites
     load_env
-    #azure_login
+    azure_login
     
     if [ "$DEPLOY_INFRA" == "true" ]; then
         deploy_infrastructure
     fi
     
-    #build_push_images
-    #deploy_container_apps
+    build_push_images
+    deploy_container_apps
     run_migrations
     health_check
     print_summary

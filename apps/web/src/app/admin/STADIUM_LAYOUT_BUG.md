@@ -457,6 +457,619 @@ async deleteHall(@Payload() payload: { hallId: string }) {  // ✅ Expect object
 - [ ] **Deploy**: Update to production
 - [ ] **QA/User**: Verify hall deletion works
 
+---
+
+# Issue #4: Update Showtime - Cinema Not Updated When Hall Changes
+
+**Date**: January 3, 2026  
+**Status**: 🔴 CRITICAL BUG - Causes Data Inconsistency  
+**Priority**: CRITICAL  
+**Component**: Admin > Showtimes > Edit Showtime
+
+---
+
+## Problem Description
+
+When user **updates a showtime's hall** in the "Chỉnh sửa suất chiếu" (Edit Showtime) dialog, the **cinema_id is NOT updated** in the database. This causes **data inconsistency** and makes the hall field appear **blank** when reopening the edit dialog.
+
+### Steps to Reproduce
+1. Go to Admin > Suất Chiếu (Showtimes)
+2. Click "Chỉnh sửa" (Edit) on any showtime
+3. Change "Rạp Chiếu Phim" (Cinema) to a different cinema
+4. Select a new "Phòng Chiếu" (Hall) from the new cinema
+5. Click "Cập Nhật Suất Chiếu" (Update Showtime) ✅ Success message
+6. **Reopen the same showtime for editing**
+7. **Result**: ❌ **"Phòng Chiếu" field is BLANK** (see attached screenshot)
+
+### What Actually Happens (Database Level)
+```sql
+-- Before Update:
+cinema_id: "cinema-A-uuid"
+hall_id: "hall-1-uuid" (belongs to cinema A)
+
+-- User changes to hall-2 (belongs to cinema B) in FE
+-- FE sends: { cinemaId: "cinema-B-uuid", hallId: "hall-2-uuid" }
+
+-- After Update in DB:
+cinema_id: "cinema-A-uuid"  -- ❌ NOT UPDATED! Still old cinema
+hall_id: "hall-2-uuid"       -- ✅ Updated correctly
+
+-- Result: Data inconsistency!
+-- hall-2 belongs to cinema-B, but DB says cinema-A
+```
+
+### Why This Causes Blank Hall Field
+1. When FE fetches showtime, it gets:
+   - `cinemaId: "cinema-A-uuid"` (old, wrong)
+   - `hallId: "hall-2-uuid"` (new, correct)
+2. FE populates form with these values
+3. Hall dropdown filters halls by `cinemaId === "cinema-A-uuid"`
+4. But "hall-2" belongs to "cinema-B", so it's NOT in the filtered list
+5. Select component has value "hall-2-uuid" but can't find it in options
+6. **Result: Blank/empty dropdown display**
+
+---
+
+## Root Cause
+
+**File**: `BE/movie-hub/apps/cinema-service/src/app/showtime/showtime-command.service.ts` (lines 279-288)
+
+```typescript
+const updatedShowtime = await this.prisma.showtimes.update({
+  where: { id },
+  data: {
+    movie_id: dto.movieId ?? showtime.movie_id,
+    hall_id: dto.hallId ?? showtime.hall_id,  // ✅ Updates hall
+    start_time: start,
+    end_time: end,
+    format: dto.format ? (dto.format as Format) : showtime.format,
+    language: dto.language ?? showtime.language,
+    subtitles: dto.subtitles ?? showtime.subtitles,
+    updated_at: new Date(),
+    // ❌ MISSING: cinema_id is NEVER updated!
+  },
+});
+```
+
+**The Bug**:
+- BE updates `hall_id` when user changes hall ✅
+- BE **NEVER updates `cinema_id`** even though halls belong to cinemas ❌
+- This creates **referential inconsistency**: hall points to cinema B, but cinema_id still says cinema A
+
+**Why This Is Critical**:
+- Violates data integrity (hall and cinema don't match)
+- Makes edit dialog unusable after first hall change
+- User cannot see which hall is selected
+- Could cause booking/reservation issues (cinema mismatch)
+
+---
+
+## Required Fix (BE Team)
+
+**File**: `BE/movie-hub/apps/cinema-service/src/app/showtime/showtime-command.service.ts`
+
+### Option A: Update cinema_id When hallId Changes (Recommended)
+
+```typescript
+const updatedShowtime = await this.prisma.showtimes.update({
+  where: { id },
+  data: {
+    movie_id: dto.movieId ?? showtime.movie_id,
+    hall_id: dto.hallId ?? showtime.hall_id,
+    cinema_id: dto.cinemaId ?? showtime.cinema_id,  // ✅ ADD THIS LINE
+    start_time: start,
+    end_time: end,
+    format: dto.format ? (dto.format as Format) : showtime.format,
+    language: dto.language ?? showtime.language,
+    subtitles: dto.subtitles ?? showtime.subtitles,
+    updated_at: new Date(),
+  },
+});
+```
+
+**Advantages**:
+- ✅ Simple one-line fix
+- ✅ Maintains data integrity
+- ✅ FE already sends cinemaId in update payload
+- ✅ No migration needed
+
+---
+
+### Option B: Derive cinema_id From hallId Automatically
+
+```typescript
+// When hallId changes, fetch the hall to get its cinemaId
+let cinemaIdToUse = showtime.cinema_id;
+if (dto.hallId && dto.hallId !== showtime.hall_id) {
+  const hall = await this.prisma.halls.findUnique({
+    where: { id: dto.hallId },
+    select: { cinema_id: true },
+  });
+  if (!hall) {
+    throw new NotFoundException('Hall not found');
+  }
+  cinemaIdToUse = hall.cinema_id;
+}
+
+const updatedShowtime = await this.prisma.showtimes.update({
+  where: { id },
+  data: {
+    movie_id: dto.movieId ?? showtime.movie_id,
+    hall_id: dto.hallId ?? showtime.hall_id,
+    cinema_id: cinemaIdToUse,  // ✅ Auto-derived from hall
+    start_time: start,
+    end_time: end,
+    format: dto.format ? (dto.format as Format) : showtime.format,
+    language: dto.language ?? showtime.language,
+    subtitles: dto.subtitles ?? showtime.subtitles,
+    updated_at: new Date(),
+  },
+});
+```
+
+**Advantages**:
+- ✅ Prevents user from sending mismatched cinema/hall
+- ✅ Enforces referential integrity at BE level
+- ❌ More complex (extra DB query)
+- ❌ Requires testing
+
+---
+
+## Why This Cannot Be Fixed in FE
+
+- ❌ FE **already sends correct cinemaId** to BE (verified in payload)
+- ❌ BE receives cinemaId but **ignores it** in update query
+- ❌ BE only updates `hall_id`, not `cinema_id`
+- ❌ FE has NO control over what BE writes to database
+- ✅ **Must be fixed in BE update logic**
+
+---
+
+## FE Status
+
+✅ **FE is correct** - sending all required data
+
+- ✅ Edit dialog sends both `cinemaId` and `hallId` in update payload
+- ✅ User can select cinema and hall correctly
+- ✅ Form validation works
+- ✅ API call succeeds (200 OK)
+- ❌ But BE doesn't persist `cinema_id` change
+
+**FE sends this payload**:
+```json
+{
+  "movieId": "...",
+  "movieReleaseId": "...",
+  "cinemaId": "new-cinema-uuid",  // ✅ FE sends this
+  "hallId": "new-hall-uuid",       // ✅ FE sends this
+  "startTime": "...",
+  "format": "...",
+  "language": "...",
+  "subtitles": []
+}
+```
+
+**BE only updates**:
+```sql
+UPDATE showtimes SET
+  hall_id = 'new-hall-uuid',  -- ✅ Used
+  cinema_id = ???              -- ❌ Not updated (keeps old value)
+```
+
+---
+
+## Data Inconsistency Impact
+
+### Current DB State After Bug
+| Column | Value | Correct? |
+|--------|-------|----------|
+| `cinema_id` | `cinema-A-uuid` | ❌ Wrong (not updated) |
+| `hall_id` | `hall-2-uuid` | ✅ Correct |
+| Hall's Actual Cinema | `cinema-B-uuid` | ✅ (from halls table) |
+
+**Result**: `cinema_id` != actual cinema of the hall
+
+### Potential Issues
+1. ❌ Edit dialog shows blank hall field
+2. ❌ Reports/analytics show wrong cinema for showtime
+3. ❌ Cinema-based queries return incorrect data
+4. ❌ Booking flow might show wrong cinema name
+5. ❌ Violates foreign key semantics (hall belongs to different cinema)
+
+---
+
+## Testing After BE Fix
+
+### Test Case 1: Change Hall Within Same Cinema
+1. Edit showtime with hall-1 (cinema A)
+2. Change to hall-2 (also cinema A)
+3. Save and reopen edit dialog
+4. **Expected**: ✅ Hall-2 displayed correctly
+
+### Test Case 2: Change Hall to Different Cinema
+1. Edit showtime with hall-1 (cinema A)
+2. Change cinema to B, then select hall-3 (cinema B)
+3. Save and reopen edit dialog
+4. **Expected**: 
+   - ✅ Cinema B selected
+   - ✅ Hall-3 displayed correctly
+   - ✅ DB has matching cinema_id and hall_id
+
+### Test Case 3: Verify DB Consistency
+```sql
+-- After update, run this query:
+SELECT 
+  s.id,
+  s.cinema_id,
+  s.hall_id,
+  h.cinema_id as hall_cinema_id,
+  s.cinema_id = h.cinema_id as is_consistent
+FROM showtimes s
+JOIN halls h ON s.hall_id = h.id
+WHERE s.id = '<updated-showtime-id>';
+
+-- Expected: is_consistent = true
+```
+
+---
+
+## Recommended Fix Priority
+
+**Priority**: 🔴 **CRITICAL**
+
+**Reasoning**:
+- Data integrity violation
+- Makes admin panel unusable after first edit
+- Could affect production bookings/reservations
+- Simple one-line fix (Option A)
+
+**Recommended Solution**: **Option A** (add `cinema_id: dto.cinemaId ?? showtime.cinema_id`)
+- Fastest to implement
+- Leverages existing FE payload
+- No migration needed
+- Maintains backward compatibility
+
+---
+
+## Action Items
+
+- [ ] **BE Team**: Apply Option A fix (add cinema_id update line)
+- [ ] **BE Team**: Run Test Cases 1-3 to verify fix
+- [ ] **BE Team**: Check if other microservices have similar issues
+- [ ] **DB Team**: Consider data cleanup script for existing inconsistent records
+- [ ] **Deploy**: Update to staging → production
+- [ ] **QA/User**: Verify hall changes persist correctly
+- [ ] **Monitor**: Check for any cinema/hall mismatch errors in logs
+
+---
+
+# Issue #5: Update Showtime - Movie Release Not Updated When Movie Changes
+
+**Date**: January 3, 2026  
+**Status**: 🔴 CRITICAL BUG - Causes Data Loss  
+**Priority**: CRITICAL  
+**Component**: Admin > Showtimes > Edit Showtime
+
+---
+
+## Problem Description
+
+When user **updates a showtime's movie** in the "Chỉnh sửa suất chiếu" (Edit Showtime) dialog, the **movie_release_id is NOT updated** in the database. This causes the movie release field to appear **blank** when reopening the edit dialog.
+
+### Steps to Reproduce
+1. Go to Admin > Suất Chiếu (Showtimes)
+2. Click "Chỉnh sửa" (Edit) on any showtime
+3. Change "Phim" (Movie) to a different movie
+4. Select "ID Phát hành phim" (Movie Release) for the new movie
+5. Click "Cập Nhật Suất Chiếu" (Update Showtime) ✅ Success message
+6. **Reopen the same showtime for editing**
+7. **Result**: ❌ **"ID Phát hành phim" field is BLANK**
+
+### What Actually Happens (Database Level)
+```sql
+-- Before Update:
+movie_id: "movie-A-uuid"
+movie_release_id: "release-1-uuid" (belongs to movie A)
+
+-- User changes to movie-B and selects release-2 in FE
+-- FE sends: { movieId: "movie-B-uuid", movieReleaseId: "release-2-uuid" }
+
+-- After Update in DB:
+movie_id: "movie-B-uuid"           -- ✅ Updated correctly
+movie_release_id: "release-1-uuid" -- ❌ NOT UPDATED! Still old release
+
+-- Result: Data inconsistency!
+-- release-1 belongs to movie-A, but current movie_id is movie-B
+```
+
+### Why This Causes Blank Release Field
+1. When FE fetches showtime, it gets:
+   - `movieId: "movie-B-uuid"` (new, correct)
+   - `movieReleaseId: "release-1-uuid"` (old, wrong - doesn't belong to movie-B)
+2. FE fetches releases for `movieId = "movie-B-uuid"`
+3. Release list does NOT contain "release-1-uuid" (it belongs to movie-A)
+4. Select component has value "release-1-uuid" but can't find it in options
+5. **Result: Blank/empty dropdown display**
+
+---
+
+## Root Cause
+
+**File**: `BE/movie-hub/apps/cinema-service/src/app/showtime/showtime-command.service.ts` (lines 280-288)
+
+```typescript
+const updatedShowtime = await this.prisma.showtimes.update({
+  where: { id },
+  data: {
+    movie_id: dto.movieId ?? showtime.movie_id,  // ✅ Updates movie
+    hall_id: dto.hallId ?? showtime.hall_id,
+    start_time: start,
+    end_time: end,
+    format: dto.format ? (dto.format as Format) : showtime.format,
+    language: dto.language ?? showtime.language,
+    subtitles: dto.subtitles ?? showtime.subtitles,
+    updated_at: new Date(),
+    // ❌ MISSING: movie_release_id is NEVER updated!
+  },
+});
+```
+
+**The Bug**:
+- BE updates `movie_id` when user changes movie ✅
+- BE **NEVER updates `movie_release_id`** even though releases belong to movies ❌
+- This creates **referential inconsistency**: release points to movie A, but movie_id now says movie B
+
+**Why This Is Critical**:
+- Violates data integrity (release and movie don't match)
+- Makes edit dialog unusable after first movie change
+- User cannot see which release is selected
+- Could affect seat calculations (movie runtime affects showtime duration)
+
+---
+
+## Required Fix (BE Team)
+
+**File**: `BE/movie-hub/apps/cinema-service/src/app/showtime/showtime-command.service.ts` (lines 280-288)
+
+### Option A: Update movie_release_id When movieId Changes (Recommended)
+
+```typescript
+const updatedShowtime = await this.prisma.showtimes.update({
+  where: { id },
+  data: {
+    movie_id: dto.movieId ?? showtime.movie_id,
+    movie_release_id: dto.movieReleaseId ?? showtime.movie_release_id,  // ✅ ADD THIS LINE
+    hall_id: dto.hallId ?? showtime.hall_id,
+    cinema_id: dto.cinemaId ?? showtime.cinema_id,
+    start_time: start,
+    end_time: end,
+    format: dto.format ? (dto.format as Format) : showtime.format,
+    language: dto.language ?? showtime.language,
+    subtitles: dto.subtitles ?? showtime.subtitles,
+    updated_at: new Date(),
+  },
+});
+```
+
+**Advantages**:
+- ✅ Simple one-line fix
+- ✅ Maintains data integrity
+- ✅ FE already sends movieReleaseId in update payload
+- ✅ No migration needed
+
+---
+
+### Option B: Validate movie_release_id Belongs to movieId
+
+```typescript
+// When movieId changes, validate that movieReleaseId (if provided) belongs to new movie
+if (dto.movieId && dto.movieReleaseId) {
+  const release = await this.prisma.movieReleases.findUnique({
+    where: { id: dto.movieReleaseId },
+  });
+  if (!release || release.movie_id !== dto.movieId) {
+    throw new RpcException({
+      summary: 'Movie Release does not belong to selected Movie',
+      statusCode: 400,
+      code: 'INVALID_MOVIE_RELEASE',
+      message: 'Selected movie release does not match the selected movie',
+    });
+  }
+}
+
+const updatedShowtime = await this.prisma.showtimes.update({
+  where: { id },
+  data: {
+    movie_id: dto.movieId ?? showtime.movie_id,
+    movie_release_id: dto.movieReleaseId ?? showtime.movie_release_id,
+    hall_id: dto.hallId ?? showtime.hall_id,
+    cinema_id: dto.cinemaId ?? showtime.cinema_id,
+    start_time: start,
+    end_time: end,
+    format: dto.format ? (dto.format as Format) : showtime.format,
+    language: dto.language ?? showtime.language,
+    subtitles: dto.subtitles ?? showtime.subtitles,
+    updated_at: new Date(),
+  },
+});
+```
+
+**Advantages**:
+- ✅ Prevents invalid movie/release combinations
+- ✅ Enforces referential integrity at BE level
+- ❌ More complex (extra DB query)
+- ❌ Requires testing
+
+---
+
+## Why This Cannot Be Fixed in FE
+
+- ❌ FE **already sends correct movieReleaseId** to BE (verified in payload)
+- ❌ BE receives movieReleaseId but **ignores it** in update query
+- ❌ BE only updates `movie_id`, not `movie_release_id`
+- ❌ FE has NO control over what BE writes to database
+- ✅ **Must be fixed in BE update logic**
+
+---
+
+## FE Status
+
+✅ **FE is correct** - sending all required data
+
+- ✅ Edit dialog sends both `movieId` and `movieReleaseId` in update payload
+- ✅ User can select movie and release correctly
+- ✅ Form validation works
+- ✅ API call succeeds (200 OK)
+- ❌ But BE doesn't persist `movie_release_id` change
+
+**FE sends this payload**:
+```json
+{
+  "movieId": "new-movie-uuid",        // ✅ FE sends this
+  "movieReleaseId": "new-release-uuid", // ✅ FE sends this
+  "cinemaId": "...",
+  "hallId": "...",
+  "startTime": "...",
+  "format": "...",
+  "language": "...",
+  "subtitles": []
+}
+```
+
+**BE only updates**:
+```sql
+UPDATE showtimes SET
+  movie_id = 'new-movie-uuid',  -- ✅ Used
+  movie_release_id = ???         -- ❌ Not updated (keeps old value)
+```
+
+---
+
+## Data Inconsistency Impact
+
+### Current DB State After Bug
+| Column | Value | Correct? |
+|--------|-------|----------|
+| `movie_id` | `movie-B-uuid` | ✅ Correct |
+| `movie_release_id` | `release-1-uuid` | ❌ Wrong (not updated) |
+| Release's Actual Movie | `movie-A-uuid` | ✅ (from movieReleases table) |
+
+**Result**: `movie_release_id` belongs to different movie than `movie_id`
+
+### Potential Issues
+1. ❌ Edit dialog shows blank release field
+2. ❌ Seat calculations use old movie's runtime (affects showtime duration)
+3. ❌ Reports/analytics show wrong release for showtime
+4. ❌ Release-based queries return incorrect data
+5. ❌ Violates foreign key semantics (release belongs to different movie)
+
+---
+
+## Testing After BE Fix
+
+### Test Case 1: Change Movie Within Same Release Group
+1. Edit showtime with movie-A, release-1
+2. Change to movie-B, release-2
+3. Save and reopen edit dialog
+4. **Expected**: ✅ Both movieId and movieReleaseId displayed correctly
+
+### Test Case 2: Verify Runtime Updates End Time
+1. Edit showtime with 120-min movie, start 19:00
+2. Change to 100-min movie
+3. Save and reopen
+4. **Expected**: ✅ End time adjusted (19:00 + 100min, not 120min)
+
+### Test Case 3: Verify DB Consistency
+```sql
+-- After update, run this query:
+SELECT 
+  s.id,
+  s.movie_id,
+  s.movie_release_id,
+  mr.movie_id as release_movie_id,
+  s.movie_id = mr.movie_id as is_consistent
+FROM showtimes s
+JOIN movieReleases mr ON s.movie_release_id = mr.id
+WHERE s.id = '<updated-showtime-id>';
+
+-- Expected: is_consistent = true
+```
+
+---
+
+## Relationship With Issue #4 (Cinema Not Updated)
+
+**Issue #4**: `cinema_id` not updated when `hallId` changes  
+**Issue #5**: `movie_release_id` not updated when `movieId` changes
+
+**Pattern**: BE is missing updates for multiple foreign key fields when parent entities change:
+```typescript
+// Current BE update (WRONG - missing 2 fields):
+data: {
+  movie_id: dto.movieId ?? showtime.movie_id,
+  hall_id: dto.hallId ?? showtime.hall_id,
+  // ❌ cinema_id not included
+  // ❌ movie_release_id not included
+}
+
+// Correct update should include:
+data: {
+  movie_id: dto.movieId ?? showtime.movie_id,
+  movie_release_id: dto.movieReleaseId ?? showtime.movie_release_id,  // ✅ ADD
+  cinema_id: dto.cinemaId ?? showtime.cinema_id,                      // ✅ ADD (Issue #4)
+  hall_id: dto.hallId ?? showtime.hall_id,
+  // ... rest of fields
+}
+```
+
+**Recommended Fix Priority**: Fix both issues simultaneously to avoid future regressions.
+
+---
+
+## Recommended Fix Priority
+
+**Priority**: 🔴 **CRITICAL**
+
+**Reasoning**:
+- Data integrity violation
+- Makes admin panel unusable after first edit
+- Could affect seat calculation and booking flow
+- Simple one-line fix (Option A)
+- Part of pattern: both cinema_id and movie_release_id missing
+
+**Recommended Solution**: **Option A** (add `movie_release_id: dto.movieReleaseId ?? showtime.movie_release_id`)
+- Fastest to implement
+- Leverages existing FE payload
+- No migration needed
+- Maintains backward compatibility
+- Should be applied together with Issue #4 fix
+
+---
+
+## FE Workaround (Applied)
+
+Since BE has this bug, FE now includes automatic correction:
+
+When FE detects that a movieReleaseId doesn't exist in the fetched releases for the current movieId:
+1. Console logs a warning with BE bug reference
+2. Shows a toast message to user: "Đã phát hiện lỗi dữ liệu từ backend"
+3. Attempts to auto-correct if possible
+
+This keeps the form usable while BE is being fixed.
+
+---
+
+## Action Items
+
+- [ ] **BE Team**: Apply Option A fix to showtime-command.service.ts (add movie_release_id line)
+- [ ] **BE Team**: Also apply Issue #4 fix simultaneously (add cinema_id line)
+- [ ] **BE Team**: Run Test Cases 1-3 to verify both fixes
+- [ ] **BE Team**: Check UpdateShowtimeRequest DTO includes movieReleaseId field
+- [ ] **DB Team**: Consider data cleanup script for existing inconsistent records
+- [ ] **Deploy**: Update to staging → production
+- [ ] **QA/User**: Verify movie/release changes persist correctly
+- [ ] **Monitor**: Check for any movie/release mismatch errors in logs
+
 
 
 

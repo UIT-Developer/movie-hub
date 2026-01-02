@@ -85,10 +85,13 @@ export default function ShowtimeDialog({
   }, [formData?.movieId, movieReleases]);
 
   // Auto-select movieReleaseId if editingShowtime has it but form doesn't yet
+  // OR if movieReleases just finished loading
+  // ALSO: Detect if release doesn't belong to current movie (BE bug Issue #5)
   useEffect(() => {
-    if (editingShowtime?.movieReleaseId && !formData.movieReleaseId && movieReleases.length > 0) {
+    if (editingShowtime?.movieReleaseId && movieReleases.length > 0) {
       console.log('[ShowtimeDialog] Auto-selecting movieReleaseId from editingShowtime:', {
         movieReleaseId: editingShowtime.movieReleaseId,
+        releasesCount: movieReleases.length,
       });
       // Check if the movieReleaseId exists in the releases list
       const releaseExists = movieReleases.some(r => r.id === editingShowtime.movieReleaseId);
@@ -98,16 +101,36 @@ export default function ShowtimeDialog({
           movieReleaseId: editingShowtime.movieReleaseId || '',
         }));
       } else {
-        console.warn('[ShowtimeDialog] movieReleaseId not found in releases list:', editingShowtime.movieReleaseId);
+        console.warn('[ShowtimeDialog] movieReleaseId not found in releases list:', {
+          movieReleaseId: editingShowtime.movieReleaseId,
+          currentMovieId: formData.movieId,
+          availableReleases: movieReleases.map(r => ({ id: r.id, status: r.status })),
+          ISSUE: 'BE did not update movie_release_id when movie changed. See STADIUM_LAYOUT_BUG.md Issue #5',
+        });
+        
+        // WORKAROUND for BE bug: Clear the movieReleaseId so user must reselect it for the new movie
+        // This is better than keeping invalid reference
+        setFormData(prev => ({
+          ...prev,
+          movieReleaseId: '', // Clear it so user sees empty and can select correct one
+        }));
+
+        // Show warning toast
+        toast({
+          title: 'Đã phát hiện lỗi dữ liệu từ backend',
+          description: 'ID Phát hành phim không khớp với Phim được chọn. Vui lòng chọn lại ID Phát hành phim. (Lỗi từ backend - vui lòng báo team backend)',
+          variant: 'default',
+        });
       }
     }
-  }, [editingShowtime?.movieReleaseId, movieReleases, formData.movieReleaseId]);
+  }, [editingShowtime?.movieReleaseId, movieReleases, formData.movieId, toast]);
 
   useEffect(() => {
+    // Reset form when dialog opens/closes or when editing showtime changes
     // Use fullShowtimeDetail if available (has complete data from API)
     const showtimeToUse = fullShowtimeDetail || editingShowtime;
     
-    if (showtimeToUse) {
+    if (showtimeToUse && open) {  // Only populate when dialog is OPEN
       // CRITICAL TIMEZONE WORKAROUND:
       // BE has a complex timezone bug:
       // 1. When creating, BE uses new Date(string) which parses wrong
@@ -144,6 +167,8 @@ export default function ShowtimeDialog({
       console.log('[ShowtimeDialog] Setting formData from editingShowtime:', {
         movieId: showtimeToUse.movieId,
         movieReleaseId: showtimeToUse.movieReleaseId,
+        cinemaId: showtimeToUse.cinemaId,
+        hallId: showtimeToUse.hallId,
       });
 
       setFormData({
@@ -163,7 +188,7 @@ export default function ShowtimeDialog({
         startTime: formattedStartTime,
         raw: showtimeToUse.startTime,
       });
-    } else if (preSelectedMovieId && preSelectedReleaseId) {
+    } else if (open && preSelectedMovieId && preSelectedReleaseId) {
       // Pre-fill when opening from Movie Releases page
       setFormData({
         movieId: preSelectedMovieId,
@@ -175,7 +200,8 @@ export default function ShowtimeDialog({
         language: 'vi',
         subtitles: [],
       });
-    } else {
+    } else if (!open) {
+      // Clear form when dialog closes
       setFormData({
         movieId: '',
         movieReleaseId: '',
@@ -259,6 +285,70 @@ export default function ShowtimeDialog({
       });
     }
   }, [editingShowtime, selectedMovie, formData.movieId, movies]);
+
+  // Debug: Log hall filtering issue
+  useEffect(() => {
+    if (open && editingShowtime && formData.hallId && formData.cinemaId) {
+      const filteredHalls = halls.filter(h => h.cinemaId === formData.cinemaId);
+      const selectedHall = halls.find(h => h.id === formData.hallId);
+      const hallExistsInFiltered = filteredHalls.some(h => h.id === formData.hallId);
+      
+      console.log('[ShowtimeDialog] Hall filtering debug:', {
+        formData_cinemaId: formData.cinemaId,
+        formData_hallId: formData.hallId,
+        selectedHall_name: selectedHall?.name,
+        selectedHall_cinemaId: selectedHall?.cinemaId,
+        filteredHalls_count: filteredHalls.length,
+        filteredHalls: filteredHalls.map(h => ({ id: h.id, name: h.name, cinemaId: h.cinemaId })),
+        hallExistsInFiltered,
+        ISSUE: !hallExistsInFiltered ? 'Hall belongs to different cinema! This causes blank dropdown.' : 'OK',
+      });
+
+      // WORKAROUND for BE bug: If hall doesn't belong to selected cinema, auto-correct cinema
+      // BE has bug where it updates hall_id but not cinema_id, causing data inconsistency
+      // See STADIUM_LAYOUT_BUG.md Issue #4
+      if (!hallExistsInFiltered && selectedHall) {
+        console.warn('[ShowtimeDialog] WORKAROUND APPLIED: Auto-correcting cinemaId from hall data', {
+          oldCinemaId: formData.cinemaId,
+          correctCinemaId: selectedHall.cinemaId,
+          hallId: formData.hallId,
+          hallName: selectedHall.name,
+          note: 'BE bug - cinema_id not updated when hall changes. See STADIUM_LAYOUT_BUG.md Issue #4',
+        });
+        
+        // Auto-correct the cinema to match the hall
+        setFormData(prev => ({
+          ...prev,
+          cinemaId: selectedHall.cinemaId,
+        }));
+
+        // Show warning toast to user
+        toast({
+          title: 'Đã tự động sửa lỗi dữ liệu',
+          description: `Rạp chiếu đã được cập nhật để khớp với phòng "${selectedHall.name}". (Lỗi từ backend - vui lòng báo team backend)`,
+          variant: 'default',
+        });
+      }
+    }
+  }, [open, editingShowtime, formData.hallId, formData.cinemaId, halls, toast]);
+
+  // Debug: Log movie release mismatch issue (similar to hall/cinema issue)
+  useEffect(() => {
+    if (open && editingShowtime && formData.movieReleaseId && movieReleases.length > 0) {
+      const releaseExistsForMovie = movieReleases.some(r => r.id === formData.movieReleaseId);
+      
+      if (!releaseExistsForMovie) {
+        console.warn('[ShowtimeDialog] Movie/Release mismatch detected:', {
+          formData_movieId: formData.movieId,
+          formData_movieReleaseId: formData.movieReleaseId,
+          availableReleases_count: movieReleases.length,
+          availableReleases: movieReleases.map(r => ({ id: r.id, startDate: r.startDate, status: r.status })),
+          ISSUE: 'Movie Release does not belong to selected Movie! This causes blank dropdown.',
+          BUG_REFERENCE: 'See STADIUM_LAYOUT_BUG.md Issue #5 - BE did not update movie_release_id when movie changed',
+        });
+      }
+    }
+  }, [open, editingShowtime, formData.movieId, formData.movieReleaseId, movieReleases]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -346,7 +436,7 @@ export default function ShowtimeDialog({
                     }
                     return releases.map((release) => (
                       <SelectItem key={release.id} value={release.id}>
-                        {new Date(release.startDate).toLocaleDateString()} → {new Date(release.endDate).toLocaleDateString()} ({release.status})
+                        {new Date(release.startDate).toLocaleDateString()} → {new Date(release.endDate).toLocaleDateString()}
                       </SelectItem>
                     ));
                   })()}

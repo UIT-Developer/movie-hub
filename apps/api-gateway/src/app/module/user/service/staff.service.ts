@@ -53,4 +53,14 @@ export class StaffService {
       throw new RpcException(error);
     }
   }
+
+  async remove(id: string) {
+    try {
+      return await firstValueFrom(
+        this.client.send(UserMessage.STAFF.DELETED, id)
+      );
+    } catch (error) {
+      throw new RpcException(error);
+    }
+  }
 }

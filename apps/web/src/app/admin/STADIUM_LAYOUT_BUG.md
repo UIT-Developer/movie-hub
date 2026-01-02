@@ -1070,6 +1070,650 @@ This keeps the form usable while BE is being fixed.
 - [ ] **QA/User**: Verify movie/release changes persist correctly
 - [ ] **Monitor**: Check for any movie/release mismatch errors in logs
 
+---
+
+# Issue #6: Concession Filter - "All Cinemas" Items Not Showing When Filtering by Cinema
+
+**Date**: January 3, 2026  
+**Status**: 🔴 CRITICAL BUG - Data Not Displayed  
+**Priority**: HIGH  
+**Component**: Admin > Concessions (Đồ Ăn)
+
+---
+
+## Problem Description
+
+When user **adds a concession with "Tất cả rạp" (All Cinemas)** and then **filters by a specific cinema**, the concession **does NOT appear** in the filtered list.
+
+### Steps to Reproduce
+1. Go to Admin > Đồ Ăn (Concessions)
+2. Click "Thêm" (Add) to create new concession
+3. Fill details and set **Rạp = "Tất cả rạp" (All Cinemas)**
+4. Click "Tạo" (Create) → Success ✅
+5. **Filter by a specific cinema**
+6. **Result**: ❌ Concession not visible in that cinema's list
+
+### Expected Behavior
+- If a concession is available in "Tất cả rạp", it should appear when filtering **any specific cinema**
+- Concession with `cinema_id = NULL` should be combined with cinema-specific concessions when filtering
+
+### What Actually Happens
+- BE query filters: `where: { cinema_id: 'specific-cinema-uuid' }`
+- This **excludes all concessions with `cinema_id = NULL`**
+- "All Cinemas" concessions disappear ❌
+
+---
+
+## Root Cause
+
+**File**: `BE/movie-hub/apps/booking-service/src/app/concession/concession.service.ts` (lines 20-22)
+
+```typescript
+async findAll(
+  cinemaId?: string,
+  category?: ConcessionCategory,
+  available = true
+): Promise<ServiceResult<ConcessionDto[]>> {
+  const where: any = {};
+  const normalizedCinemaId = this.optionalUuid(cinemaId, 'cinemaId');
+  
+  if (normalizedCinemaId) {
+    where.cinema_id = normalizedCinemaId;  // ❌ BUG: Excludes cinema_id = NULL
+  }
+  
+  // ... rest of query
+}
+```
+
+**The Bug**:
+- When `cinemaId` filter is applied, query sets `where.cinema_id = 'specific-uuid'`
+- This **only** returns concessions with that exact cinema_id
+- **Excludes** concessions with `cinema_id = NULL` (representing "all cinemas")
+- User cannot see "all cinema" items when filtering by specific cinema
+
+**Why This Is Critical**:
+- Makes "All Cinemas" option useless for cinema-specific views
+- Incomplete data display
+- User confusion (item was created but can't find it)
+
+---
+
+## Required Fix (BE Team)
+
+**File**: `BE/movie-hub/apps/booking-service/src/app/concession/concession.service.ts`
+
+### Option A: Use OR Logic for Cinema Filter (Recommended)
+
+```typescript
+async findAll(
+  cinemaId?: string,
+  category?: ConcessionCategory,
+  available = true
+): Promise<ServiceResult<ConcessionDto[]>> {
+  const where: any = {};
+  const normalizedCinemaId = this.optionalUuid(cinemaId, 'cinemaId');
+  
+  // When filtering by cinema, include both specific cinema AND all-cinemas items
+  if (normalizedCinemaId) {
+    where.OR = [
+      { cinema_id: normalizedCinemaId },  // ✅ Specific cinema
+      { cinema_id: null }                  // ✅ All cinemas
+    ];
+  }
+  
+  if (category) {
+    where.category = category;
+  }
+  
+  if (available !== undefined) {
+    where.available = available;
+  }
+
+  const concessions = await this.prisma.concessions.findMany({
+    where,
+    orderBy: { name: 'asc' },
+  });
+
+  return {
+    data: concessions.map((c) => this.mapToDto(c)),
+  };
+}
+```
+
+**Advantages**:
+- ✅ Simple one-line logic change (OR instead of direct assignment)
+- ✅ Maintains correct filtering behavior
+- ✅ "All Cinemas" items now visible in every cinema filter
+- ✅ No migration needed
+
+---
+
+### Option B: Separate Query Merge
+
+```typescript
+async findAll(
+  cinemaId?: string,
+  category?: ConcessionCategory,
+  available = true
+): Promise<ServiceResult<ConcessionDto[]>> {
+  const where: any = {};
+  const normalizedCinemaId = this.optionalUuid(cinemaId, 'cinemaId');
+  
+  let concessions: any[] = [];
+  
+  // Query 1: All-cinema items (always included)
+  const allCinemasWhere: any = { cinema_id: null };
+  if (category) {
+    allCinemasWhere.category = category;
+  }
+  if (available !== undefined) {
+    allCinemasWhere.available = available;
+  }
+  const allCinemasItems = await this.prisma.concessions.findMany({
+    where: allCinemasWhere,
+  });
+  
+  // Query 2: Cinema-specific items (if cinema filter applied)
+  if (normalizedCinemaId) {
+    const cinemaSpecificWhere: any = { cinema_id: normalizedCinemaId };
+    if (category) {
+      cinemaSpecificWhere.category = category;
+    }
+    if (available !== undefined) {
+      cinemaSpecificWhere.available = available;
+    }
+    const cinemaSpecificItems = await this.prisma.concessions.findMany({
+      where: cinemaSpecificWhere,
+    });
+    concessions = [...allCinemasItems, ...cinemaSpecificItems];
+  } else {
+    // No cinema filter: return only cinema-specific items
+    const where: any = {};
+    if (category) {
+      where.category = category;
+    }
+    if (available !== undefined) {
+      where.available = available;
+    }
+    concessions = await this.prisma.concessions.findMany({
+      where,
+      orderBy: { name: 'asc' },
+    });
+  }
+
+  return {
+    data: concessions.map((c) => this.mapToDto(c)).sort((a, b) => a.name.localeCompare(b.name)),
+  };
+}
+```
+
+**Advantages**:
+- ✅ Explicit logic, easy to understand
+- ✅ More control over behavior
+- ❌ More complex (two queries)
+- ❌ Less efficient
+
+---
+
+## Why This Cannot Be Fixed in FE
+
+- ❌ FE sends correct filter request to BE
+- ❌ FE receives what BE returns (incomplete data)
+- ❌ FE cannot override what BE queries from database
+- ❌ FE has no way to know if items with NULL cinema_id exist
+- ✅ **Must be fixed in BE query logic**
+
+---
+
+## FE Status
+
+✅ **FE is correct** - sending proper filter requests
+
+- ✅ Filter dropdown works correctly
+- ✅ API call sends `cinemaId` properly
+- ✅ Data display logic is correct
+- ❌ But BE returns incomplete results
+
+**FE sends**:
+```
+GET /api/v1/concessions?cinemaId=specific-uuid
+```
+
+**BE should return**:
+- Concessions with `cinema_id = 'specific-uuid'` ✅ (currently returns these)
+- **+ Concessions with `cinema_id = NULL`** ❌ (currently missing these)
+
+---
+
+## Data Model Impact
+
+### Database State
+| concession_id | name | cinema_id | Status |
+|---|---|---|---|
+| uuid-1 | Popcorn | null | "All Cinemas" ✅ |
+| uuid-2 | Coke | cinema-A | "Cinema A only" |
+| uuid-3 | Candy | cinema-B | "Cinema B only" |
+
+### Current Query Result (WRONG)
+```sql
+SELECT * FROM concessions WHERE cinema_id = 'cinema-A';
+-- Returns: [uuid-2] 
+-- Missing: [uuid-1] ❌
+```
+
+### Expected Query Result (CORRECT)
+```sql
+SELECT * FROM concessions 
+WHERE cinema_id = 'cinema-A' OR cinema_id IS NULL
+ORDER BY name;
+-- Returns: [uuid-1, uuid-2] ✅
+```
+
+---
+
+## Testing After BE Fix
+
+### Test Case 1: Filter by Cinema Shows All-Cinemas Items
+1. Create concession: "Popcorn" with cinema = "All Cinemas"
+2. Create concession: "Coke" with cinema = "Cinema A"
+3. Filter by "Cinema A"
+4. **Expected**: Both "Popcorn" and "Coke" appear ✅
+
+### Test Case 2: No Cinema Filter Shows Only Cinema-Specific
+1. (Same data as Test Case 1)
+2. Filter by "All Cinemas"
+3. **Expected**: All concessions appear ✅
+
+### Test Case 3: Cinema-Specific Items Still Work
+1. Create "Candy" with cinema = "Cinema B"
+2. Filter by "Cinema B"
+3. **Expected**: See "Candy" + "Popcorn" (if exists) ✅
+
+---
+
+## Recommended Fix Priority
+
+**Priority**: 🔴 **HIGH**
+
+**Reasoning**:
+- Core functionality broken (filtering shows incomplete data)
+- User cannot see items they created
+- Simple fix (Option A: 2-line change)
+- Affects user experience directly
+
+**Recommended Solution**: **Option A** (OR logic)
+- Fastest to implement
+- Most efficient (single query)
+- Clear logic
+- No breaking changes
+
+---
+
+## Action Items
+
+- [ ] **BE Team**: Apply Option A fix to concession.service.ts findAll() method
+- [ ] **BE Team**: Ensure Prisma OR syntax handles NULL correctly
+- [ ] **BE Team**: Test with both cinema-specific and all-cinemas concessions
+- [ ] **Deploy**: Update to staging → production
+- [ ] **QA/User**: Verify:
+  - Create concession with "All Cinemas"
+  - Filter by specific cinema
+  - Verify "All Cinemas" item appears ✅
+  - Verify cinema-specific items still appear ✅
+  - No duplicate items shown
+- [ ] **Monitor**: Check concession filter queries in logs
+
+---
+
+# Issue #8: Update Concession - Cinema Not Updated When Changed from "Tất cả rạp"
+
+**Date**: January 3, 2026  
+**Status**: 🔴 CRITICAL BUG - Update Ignored  
+**Priority**: CRITICAL  
+**Component**: Admin > Concessions (Đồ Ăn) > Edit
+
+---
+
+## Problem Description
+
+When user **updates a concession's cinema from a specific cinema to "Tất cả rạp" (All Cinemas)**, the update appears to succeed but the concession **still belongs to the original cinema** and **does NOT appear** in the "All Cinemas" filter view.
+
+### Steps to Reproduce
+1. Go to Admin > Đồ Ăn (Concessions)
+2. Create a concession with **Rạp = "Cinema A"**
+3. Click "Chỉnh Sửa" (Edit) on the concession
+4. Change **Rạp = "Cinema A"** to **"Tất cả rạp" (All Cinemas)**
+5. Click "Cập Nhật" (Update) → Success message ✅
+6. **Filter by "Tất cả rạp"**
+7. **Result**: ❌ Concession NOT visible
+8. **Filter by "Cinema A"**
+9. **Result**: ✅ Concession still visible (should NOT be here after update)
+
+### Expected Behavior
+- When updating to "Tất cả rạp", the concession's `cinema_id` should be set to **NULL**
+- Concession should appear in "All Cinemas" filter view
+- Concession should no longer appear in "Cinema A" filter view
+- DB should reflect: `cinema_id = NULL`
+
+### What Actually Happens
+- FE sends: `cinemaId: undefined` (after converting empty string)
+- BE receives: `cinemaId: undefined`
+- BE query checks: `if (normalizedCinemaId !== undefined && { cinema_id: normalizedCinemaId })`
+- Since `normalizedCinemaId === undefined`, **no update is applied**
+- `cinema_id` remains as the **original cinema UUID**
+- **Update silently fails - no error message to user**
+
+---
+
+## Root Cause
+
+**File**: `BE/movie-hub/apps/booking-service/src/app/concession/concession.service.ts` (lines 102-150)
+
+```typescript
+async update(id: string, dto: UpdateConcessionDto): Promise<ServiceResult<ConcessionDto>> {
+  const concessionId = this.requireUuid(id, 'id');
+  const normalizedCinemaId = this.optionalUuid(dto.cinemaId, 'cinemaId');
+  // Line 104: ^^^^^^^^^^^^^^^^^^^^^^^^^
+  // When dto.cinemaId = undefined, normalizedCinemaId = undefined
+
+  // ... validation code ...
+
+  const concession = await this.prisma.concessions.update({
+    where: { id: concessionId },
+    data: {
+      ...(dto.name !== undefined && { name: dto.name }),
+      ...(dto.nameEn !== undefined && { name_en: dto.nameEn }),
+      // ... other fields ...
+      ...(normalizedCinemaId !== undefined && { cinema_id: normalizedCinemaId }),
+      // Line 142: ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+      // ❌ BUG: When normalizedCinemaId is undefined, this spreads NOTHING
+      // So cinema_id is never updated to NULL
+      // ... other fields ...
+    },
+  });
+  // Result: cinema_id keeps its old value ❌
+}
+```
+
+**The Bug**:
+1. User selects "Tất cả rạp" in FE form
+2. FE converts 'all' string to empty string `''` in formData
+3. In handleSubmit, cinemaId becomes `undefined`
+4. FE sends to BE: `cinemaId: undefined`
+5. BE's `optionalUuid(undefined, ...)` returns `undefined`
+6. Update condition: `...(normalizedCinemaId !== undefined && { cinema_id: normalizedCinemaId })`
+7. Since `normalizedCinemaId === undefined`, nothing is added to update data
+8. **Prisma skips the `cinema_id` field entirely**
+9. `cinema_id` keeps its **old value** ❌
+
+**Why This Is Critical**:
+- BE cannot distinguish between "don't update" and "update to NULL"
+- FE has no way to send "set to NULL" (can only send undefined)
+- Data integrity is violated (concession assignment not updated)
+- Update appears successful but is actually ignored
+- User cannot change concession assignment
+
+---
+
+## Why This Is A BE Design Issue
+
+The BE's conditional update pattern:
+```typescript
+...(normalizedCinemaId !== undefined && { cinema_id: normalizedCinemaId })
+```
+
+This pattern assumes:
+- `undefined` = "don't update this field"
+- A UUID string = "update to this UUID"
+- ❌ **No way to update to NULL**
+
+But for optional fields like `cinema_id`, we need to support:
+- `undefined` = "don't update"
+- A UUID string = "update to this UUID"
+- ✅ `null` explicitly = "update to NULL"
+
+The BE needs a different approach to handle NULL updates.
+
+---
+
+## Required Fix (BE Team)
+
+**File**: `BE/movie-hub/apps/booking-service/src/app/concession/concession.service.ts`
+
+### Option A: Use Explicit Field Flag (Recommended)
+
+Modify the DTO to use an explicit flag or use a different approach:
+
+```typescript
+async update(id: string, dto: UpdateConcessionDto): Promise<ServiceResult<ConcessionDto>> {
+  const concessionId = this.requireUuid(id, 'id');
+  
+  // For optional UUID fields, need to handle three cases:
+  // 1. undefined = don't update
+  // 2. null = update to NULL
+  // 3. valid UUID = update to this UUID
+  
+  let cinemaIdValue = undefined;
+  let shouldUpdateCinemaId = false;
+  
+  if ('cinemaId' in dto) {  // Field was explicitly provided
+    shouldUpdateCinemaId = true;
+    if (dto.cinemaId !== null && dto.cinemaId !== undefined) {
+      cinemaIdValue = this.optionalUuid(dto.cinemaId, 'cinemaId');
+    } else {
+      cinemaIdValue = null;  // Explicitly NULL
+    }
+  }
+
+  // ... validation code ...
+
+  const concession = await this.prisma.concessions.update({
+    where: { id: concessionId },
+    data: {
+      ...(dto.name !== undefined && { name: dto.name }),
+      ...(dto.nameEn !== undefined && { name_en: dto.nameEn }),
+      // ... other fields ...
+      ...(shouldUpdateCinemaId && { cinema_id: cinemaIdValue }),  // ✅ Now handles NULL
+      // ... other fields ...
+    },
+  });
+
+  return {
+    data: this.mapToDto(concession),
+    message: 'Concession updated successfully',
+  };
+}
+```
+
+**Advantages**:
+- ✅ Explicitly checks if field was provided
+- ✅ Distinguishes between "don't update" and "update to NULL"
+- ✅ Works with current FE approach
+- ✅ Handles all three cases properly
+
+---
+
+### Option B: Use Zod Validation with Optional Nulls
+
+Change the UpdateConcessionDto DTO to allow explicit null:
+
+```typescript
+export interface UpdateConcessionDto {
+  name?: string;
+  nameEn?: string;
+  description?: string | null;
+  category?: ConcessionCategory;
+  price?: number;
+  imageUrl?: string | null;
+  available?: boolean;
+  inventory?: number;
+  cinemaId?: string | null;  // ✅ Changed: now accepts null
+  nutritionInfo?: Record<string, any> | null;
+  allergens?: string[];
+}
+```
+
+Then in BE:
+```typescript
+const concession = await this.prisma.concessions.update({
+  where: { id: concessionId },
+  data: {
+    ...(dto.name !== undefined && { name: dto.name }),
+    ...(dto.nameEn !== undefined && { name_en: dto.nameEn }),
+    // ... other fields ...
+    ...(dto.cinemaId !== undefined && { cinema_id: dto.cinemaId ?? null }),  // ✅ Coalesce to NULL
+    // ... other fields ...
+  },
+});
+```
+
+**Advantages**:
+- ✅ Cleaner code
+- ✅ Type-safe NULL handling
+- ✅ More semantic (cinemaId can be null)
+- ❌ Requires DTO update (touches both FE and BE shared types)
+
+---
+
+## Why This Cannot Be Fixed in FE
+
+- ❌ FE can only send `undefined` or a string value
+- ❌ JavaScript doesn't have a way to distinguish "omitted" from "explicitly undefined"
+- ❌ FE cannot control whether BE treats undefined as "don't update" or "update to NULL"
+- ❌ FE cannot modify BE's update logic
+- ✅ **Must be fixed in BE update logic**
+
+---
+
+## FE Status
+
+✅ **FE is correct** - sending the right data
+
+- ✅ Form correctly converts 'all' to empty string
+- ✅ handleSubmit correctly converts empty string to undefined
+- ✅ API call sends correct payload: `cinemaId: undefined`
+- ✅ No validation errors (BE accepts undefined)
+- ❌ But BE ignores the undefined value instead of treating it as "set to NULL"
+
+**FE sends this payload**:
+```json
+{
+  "name": "Popcorn",
+  "category": "FOOD",
+  "price": 25000,
+  "cinemaId": undefined,  // ✅ FE sends this
+  "available": true,
+  // ... other fields ...
+}
+```
+
+**BE receives but ignores**:
+- `cinemaId: undefined` is in the object
+- But update condition skips it: `...(undefined !== undefined && ...)`
+- So `cinema_id` in DB is never updated ❌
+
+---
+
+## Data Inconsistency Impact
+
+### Current State After Update Bug
+| Before | After (with bug) | Expected |
+|--------|------------------|----------|
+| `cinema_id: 'cinema-A-uuid'` | `cinema_id: 'cinema-A-uuid'` | `cinema_id: NULL` |
+| Appears in "Cinema A" filter | Still in "Cinema A" | NOT in "Cinema A" |
+| NOT in "All Cinemas" filter | Still NOT in "All Cinemas" | Should be in "All Cinemas" |
+
+### Potential Issues
+1. ❌ Concession still restricted to original cinema
+2. ❌ User cannot change concession assignment
+3. ❌ "All Cinemas" option doesn't work for updates
+4. ❌ Update appears successful but is silent failure
+5. ❌ Data integrity violation
+
+---
+
+## Testing After BE Fix
+
+### Test Case 1: Update Specific Cinema to All Cinemas
+1. Create concession with cinema = "Cinema A"
+2. Edit and change to cinema = "Tất cả rạp"
+3. Update → Success ✅
+4. Filter by "All Cinemas"
+5. **Expected**: Concession appears ✅
+6. Filter by "Cinema A"
+7. **Expected**: Concession does NOT appear ✅
+8. DB check: `SELECT cinema_id FROM concessions WHERE id='...';`
+9. **Expected**: `cinema_id = NULL` ✅
+
+### Test Case 2: Update All Cinemas to Specific Cinema
+1. Create concession with cinema = "All Cinemas" (cinema_id = NULL)
+2. Edit and change to cinema = "Cinema B"
+3. Update → Success ✅
+4. Filter by "Cinema B"
+5. **Expected**: Concession appears ✅
+6. Filter by "All Cinemas"
+7. **Expected**: Concession does NOT appear ✅
+8. DB check:
+9. **Expected**: `cinema_id = 'cinema-B-uuid'` ✅
+
+### Test Case 3: Update Specific Cinema to Different Specific Cinema
+1. Create concession with cinema = "Cinema A"
+2. Edit and change to cinema = "Cinema C"
+3. Update → Success ✅
+4. Filter by "Cinema C"
+5. **Expected**: Concession appears ✅
+6. Filter by "Cinema A"
+7. **Expected**: Concession does NOT appear ✅
+
+---
+
+## Relationship to Other Issues
+
+| Issue | Component | Root Cause | Fix |
+|-------|-----------|-----------|-----|
+| #4 | Showtime | `cinema_id` not updated when hall changes | Add field to update |
+| #5 | Showtime | `movie_release_id` not updated when movie changes | Add field to update |
+| #8 | Concession | `cinema_id` not updated to NULL when needed | Handle NULL case |
+
+**Pattern**: Multiple issues with optional field updates. Issues #4 & #5 are missing fields in update data. Issue #8 is BE ignoring NULL updates.
+
+---
+
+## Recommended Fix Priority
+
+**Priority**: 🔴 **CRITICAL**
+
+**Reasoning**:
+- Core feature broken (cannot change concession assignment)
+- Silent failure (appears successful but doesn't update)
+- Data integrity violation
+- Affects all concession updates to/from "All Cinemas"
+
+**Recommended Solution**: **Option A** (explicit field flag)
+- Works with current FE approach
+- No FE changes needed
+- Handles NULL properly
+- More defensive (explicitly checks if field provided)
+
+---
+
+## Action Items
+
+- [ ] **BE Team**: Apply Option A fix to concession.service.ts update() method
+- [ ] **BE Team**: Verify fix handles all three cases: undefined, null, UUID string
+- [ ] **BE Team**: Run Test Cases 1-3 to verify fix
+- [ ] **BE Team**: Check if same issue exists in create() method (might also need fix)
+- [ ] **DB Team**: Consider data cleanup script for concessions with wrong cinema_id
+- [ ] **Deploy**: Update to staging → production
+- [ ] **QA/User**: Verify:
+  - Update concession from specific cinema to "All Cinemas"
+  - Verify appears in "All Cinemas" filter ✅
+  - Verify removed from original cinema filter ✅
+  - Update concession from "All Cinemas" to specific cinema
+  - Verify appears in that cinema's filter ✅
+  - Verify removed from "All Cinemas" filter ✅
+- [ ] **Monitor**: Check concession update queries in logs
+
 
 
 

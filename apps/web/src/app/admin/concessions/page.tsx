@@ -82,7 +82,14 @@ export default function ConcessionsPage() {
     category: filterCategory !== 'all' ? (filterCategory as ConcessionCategory) : undefined,
     available: filterAvailable !== 'all' ? filterAvailable === 'true' : undefined,
   });
-  const concessions = concessionsData || [];
+  
+  // FE workaround for Issue #7: When filtering by "Tất cả rạp", filter out cinema-specific items
+  // (only show items with cinemaId = null, created as "Tất cả rạp")
+  // This is because "Tất cả rạp" should mean "available in all cinemas" (cinema_id = NULL)
+  // while specific cinema items are assigned to that cinema only
+  const concessions = filterCinemaId === 'all' 
+    ? (concessionsData || []).filter(c => !c.cinemaId || c.cinemaId === '')
+    : (concessionsData || []);
 
   const createConcession = useCreateConcession();
   const updateConcession = useUpdateConcession();
@@ -127,6 +134,9 @@ export default function ConcessionsPage() {
     }
 
     try {
+      // Convert 'all' to undefined for cinemaId (means available in all cinemas)
+      const cinemaId = formData.cinemaId && formData.cinemaId !== 'all' ? formData.cinemaId : undefined;
+
       if (editingConcession) {
         const updateData: UpdateConcessionRequest = {
           name: formData.name,
@@ -137,7 +147,7 @@ export default function ConcessionsPage() {
           imageUrl: formData.imageUrl || undefined,
           available: formData.available,
           inventory: formData.inventory,
-          cinemaId: formData.cinemaId || undefined,
+          cinemaId: cinemaId,
           allergens: formData.allergens.length > 0 ? formData.allergens : undefined,
         };
         await updateConcession.mutateAsync({ id: editingConcession.id, data: updateData });
@@ -151,7 +161,7 @@ export default function ConcessionsPage() {
           imageUrl: formData.imageUrl || undefined,
           available: formData.available,
           inventory: formData.inventory,
-          cinemaId: formData.cinemaId || undefined,
+          cinemaId: cinemaId,
           allergens: formData.allergens.length > 0 ? formData.allergens : undefined,
         };
         await createConcession.mutateAsync(createData);

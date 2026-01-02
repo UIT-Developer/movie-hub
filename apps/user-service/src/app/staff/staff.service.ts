@@ -16,7 +16,8 @@ import {
   WorkType,
   Prisma,
 } from '../../../generated/prisma';
-
+import { PrismaClientKnownRequestError } from '../../../generated/prisma/runtime/library';
+import { RpcException } from '@nestjs/microservices';
 @Injectable()
 export class StaffService {
   constructor(private prisma: PrismaService) {}
@@ -191,29 +192,45 @@ export class StaffService {
     };
   }
 
-  async remove(id: string): Promise<ServiceResult<StaffResponse>> {
-    const staff = await this.prisma.staff.delete({
-      where: { id },
-      select: {
-        id: true,
-        cinemaId: true,
-        fullName: true,
-        email: true,
-        phone: true,
-        gender: true,
-        dob: true,
-        position: true,
-        status: true,
-        workType: true,
-        shiftType: true,
-        salary: true,
-        hireDate: true,
-      },
-    });
+  async remove(id: string): Promise<ServiceResult<void>> {
+    try {
+      await this.prisma.staff.delete({
+        where: { id },
+      });
+      return {
+        data: undefined,
+        message: 'Delete staff successfully!',
+      };
+    } catch (e) {
+      if (e instanceof PrismaClientKnownRequestError) {
+        // Không tồn tại
+        if (e.code === 'P2025') {
+          throw new RpcException({
+            summary: 'Delete staff failed',
+            statusCode: 404,
+            code: 'STAFF_NOT_FOUND',
+            message: 'Staff does not exist',
+          });
+        }
 
-    return {
-      data: staff as unknown as StaffResponse,
-      message: 'Delete staff successfully!',
-    };
+        // Bị ràng buộc FK (có liên quan đến booking hoặc cinema)
+        if (e.code === 'P2003') {
+          throw new RpcException({
+            summary: 'Delete staff failed',
+            statusCode: 400,
+            code: 'STAFF_IN_USE',
+            message: 'Staff cannot be deleted because it is referenced by bookings or other entities',
+          });
+        }
+      }
+
+      // Fallback
+      throw new RpcException({
+        summary: 'Delete staff failed',
+        statusCode: 500,
+        code: 'DELETE_STAFF_FAILED',
+        message: 'Unexpected error occurred while deleting staff',
+      });
+    }
   }
 }

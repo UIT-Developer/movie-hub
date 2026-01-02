@@ -7,6 +7,7 @@ export const UserMessage = {
     CREATED: 'movie.created',
     UPDATED: 'movie.updated',
     GET_DETAIL: 'movie.detail',
+    DELETED: 'movie.deleted',
   },
   CONFIG: {
     GET_LIST: 'config.list',

@@ -34,4 +34,9 @@ export class StaffController {
   ) {
     return this.staffService.update(id, data);
   }
+
+  @MessagePattern(UserMessage.STAFF.DELETED)
+  async remove(@Payload() id: string) {
+    return this.staffService.remove(id);
+  }
 }

@@ -190,4 +190,30 @@ export class StaffService {
       data: staff as unknown as StaffResponse,
     };
   }
+
+  async remove(id: string): Promise<ServiceResult<StaffResponse>> {
+    const staff = await this.prisma.staff.delete({
+      where: { id },
+      select: {
+        id: true,
+        cinemaId: true,
+        fullName: true,
+        email: true,
+        phone: true,
+        gender: true,
+        dob: true,
+        position: true,
+        status: true,
+        workType: true,
+        shiftType: true,
+        salary: true,
+        hireDate: true,
+      },
+    });
+
+    return {
+      data: staff as unknown as StaffResponse,
+      message: 'Delete staff successfully!',
+    };
+  }
 }

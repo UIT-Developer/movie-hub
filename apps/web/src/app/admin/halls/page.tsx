@@ -486,8 +486,9 @@ export default function HallsPage() {
                 onValueChange={(value) =>
                   setFormData({ ...formData, layoutType: value as LayoutTypeEnum })
                 }
+                disabled={!!selectedHall}
               >
-                <SelectTrigger>
+                <SelectTrigger className={selectedHall ? 'opacity-60 cursor-not-allowed' : ''}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -496,6 +497,9 @@ export default function HallsPage() {
                   <SelectItem value={LayoutTypeEnum.STADIUM}>Sân Vận Động</SelectItem>
                 </SelectContent>
               </Select>
+              {selectedHall && (
+                <p className="text-xs text-gray-500 mt-1">Loại bố trí không thể thay đổi sau khi tạo</p>
+              )}
             </div>
 
             {selectedHall && (

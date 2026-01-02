@@ -359,25 +359,37 @@ export default function MovieReleasesPage() {
                 >
                   {/* Movie Poster Header */}
                   <div className="relative h-64 overflow-hidden bg-gradient-to-br from-slate-100 via-blue-50 to-indigo-100">
+                    {/* Backdrop Background Image */}
+                    {movie?.backdropUrl && (
+                      <Image 
+                        src={movie.backdropUrl} 
+                        alt={`${movie.title} backdrop`}
+                        fill
+                        sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw"
+                        className="object-cover group-hover:scale-110 transition-transform duration-500 pointer-events-none"
+                      />
+                    )}
+
+                    {/* Poster Image Overlay */}
                     {movie?.posterUrl ? (
                       <Image 
                         src={movie.posterUrl} 
                         alt={movie.title}
                         fill
                         sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw"
-                        className="object-contain group-hover:scale-105 transition-transform duration-500"
+                        className="object-contain group-hover:scale-105 transition-transform duration-500 pointer-events-none"
                       />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <Film className="h-24 w-24 text-slate-300" />
+                      <div className="w-full h-full flex items-center justify-center pointer-events-none">
+                        <Film className="h-24 w-24 text-slate-300 drop-shadow-lg" />
                       </div>
                     )}
                     
                     {/* Gradient Overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent pointer-events-none" />
                     
                     {/* Status Badge */}
-                    <div className="absolute top-4 right-4">
+                    <div className="absolute top-4 right-4 z-20 pointer-events-auto">
                       <Badge 
                         className={`${getStatusColor(status)} border-0 shadow-lg backdrop-blur-sm font-semibold px-3 py-1`}
                       >
@@ -386,7 +398,7 @@ export default function MovieReleasesPage() {
                     </div>
 
                     {/* Action Menu */}
-                    <div className="absolute top-4 left-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                    <div className="absolute top-4 left-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20 pointer-events-auto">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button

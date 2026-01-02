@@ -37,10 +37,19 @@ export default function ShowtimesPage() {
   const [selectedMovieId, setSelectedMovieId] = useState('all');
 
   // API hooks: pass date (now defaults to today)
+  // TIMEZONE FIX: Don't use toISOString() as it converts to UTC and shifts the date
+  // Instead, format date in local timezone to YYYY-MM-DD
+  const formatDateForQuery = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   const { data: showtimesData = [], isLoading: loading, refetch: refetchShowtimes } = useShowtimes({
     cinemaId: selectedCinemaId !== 'all' ? selectedCinemaId : undefined,
     movieId: selectedMovieId !== 'all' ? selectedMovieId : undefined,
-    date: selectedDate.toISOString().split('T')[0],
+    date: formatDateForQuery(selectedDate),
   });
   const showtimes = showtimesData || [];
   const { data: moviesData = [] } = useMovies();
@@ -293,6 +302,8 @@ export default function ShowtimesPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {movieShowtimes.map((showtime) => {
                       const cinema = cinemas.find((c) => c.id === showtime.cinemaId);
+                      // TIMEZONE WORKAROUND: BE adds +7h in mapper, we need to subtract it
+                      const correctedStartTime = new Date(new Date(showtime.startTime).getTime() - 7 * 60 * 60 * 1000);
                       return (
                         <Card key={showtime.id} className="relative">
                           <CardContent className="pt-6">
@@ -300,7 +311,7 @@ export default function ShowtimesPage() {
                               <div className="flex items-start justify-between">
                                 <div>
                                   <div className="font-semibold text-lg">
-                                    {format(new Date(showtime.startTime), 'HH:mm')}
+                                    {format(correctedStartTime, 'HH:mm')}
                                   </div>
                                   <div className="text-sm text-gray-500">
                                     {cinema?.name}
@@ -328,10 +339,9 @@ export default function ShowtimesPage() {
 
                               <div className="flex items-center gap-2 text-sm text-gray-600">
                                 <Clock className="h-4 w-4" />
-                                {format(new Date(showtime.startTime), 'HH:mm')} -{' '}
+                                {format(correctedStartTime, 'HH:mm')} -{' '}
                                 {movie?.runtime ? (() => {
-                                  const startDate = new Date(showtime.startTime);
-                                  const endDate = new Date(startDate.getTime() + movie.runtime * 60 * 1000);
+                                  const endDate = new Date(correctedStartTime.getTime() + movie.runtime * 60 * 1000);
                                   return format(endDate, 'HH:mm');
                                 })() : 'N/A'}
                               </div>

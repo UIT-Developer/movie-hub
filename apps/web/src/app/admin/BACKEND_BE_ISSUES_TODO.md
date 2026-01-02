@@ -1,52 +1,205 @@
 # BACKEND ISSUES - IMPLEMENTATION STATUS
 
-**Last Checked**: January 2, 2026
+**Last Checked**: January 2, 2026 (Updated after timezone bug investigation)
 
 ## Summary of BE Implementation Status:
 
 | Issue | Status | Progress |
 |-------|--------|----------|
-| 1. Showtime Date Filter Off-by-One | ⚠️ PARTIALLY FIXED | Date filter improved but timezone handling still needs work |
-| 2. Delete Staff Member - 500 Error | 🔴 NOT FIXED | DELETE endpoint completely missing |
-| 3. Batch Create Showtimes - 500 Error | ✅ MOSTLY FIXED | Validation added, logging still needed |
+| 1. Showtime Timezone Bug - CRITICAL | 🔴 MAJOR BUG | BE stores wrong timezone AND adds +7h on response |
+| 2. Showtime Date Filter Off-by-One | ⚠️ PARTIALLY FIXED | Date filter improved but timezone handling still needs work |
+| 3. Delete Staff Member - 500 Error | 🔴 NOT FIXED | DELETE endpoint completely missing |
+| 4. Batch Create Showtimes - 500 Error | ✅ MOSTLY FIXED | Validation added, logging still needed |
 
 ---
 
-# Issue: Showtime Date Filter Off-by-One — Showtimes Not Appearing (urgent)
+# Issue #1: CRITICAL - Showtime Timezone Bug Causing Data Corruption
 
-**Status**: ⚠️ PARTIALLY FIXED - Still has timezone ambiguity issues
+**Status**: 🔴 CRITICAL BUG - Data stored incorrectly in database
+
+**Severity**: HIGH - Affects all showtime create/update/display operations
+
+**FE Workaround Implemented**: ✅ YES - FE now compensates for BE's timezone bug
+
+**BE Implementation Status (checked Jan 2, 2026):**
+- ❌ **MAJOR BUG**: `showtime-command.service.ts` line 59 uses `new Date(startTime)` without timezone handling
+- ❌ **BAD WORKAROUND**: `showtime.mapper.ts` lines 13, 37 add +7 hours when returning data
+- ❌ No proper UTC normalization in create/update methods
+- ❌ Causes cascading timezone errors throughout the system
+
+## Real-World Impact:
+
+**User Action**: Admin creates showtime for "2/1/2026 7:30 PM" (19:30)
+**What Happens**:
+1. FE sends: `"2026-01-02 19:30:00"`
+2. BE parses with `new Date("2026-01-02 19:30:00")` → interpreted as local browser time
+3. With UTC+7 browser, JS converts to UTC → stores as `2026-01-03T02:30:00.000Z` in DB (WRONG!)
+4. When retrieving, BE adds +7h in mapper → returns `2026-01-03T09:30:00.000Z` 
+5. FE displays: "3/1/2026 9:30 AM" (WRONG!)
+6. When editing, it becomes "3/1/2026 4:30 PM" (WRONG AGAIN!)
+7. To see the showtime for 2/1, admin must filter by 4/1 date (COMPLETELY BROKEN!)
+
+## Root Cause Analysis:
+
+### Problem 1: Incorrect Parsing on Create/Update
+
+**File**: `apps/cinema-service/src/app/showtime/showtime-command.service.ts`
+
+**Line 59** (Create):
+```typescript
+const start = new Date(startTime);  // ❌ WRONG! No timezone handling
+```
+
+**Problem**: 
+- Input: `"2026-01-02 19:30:00"` (string without timezone)
+- `new Date("2026-01-02 19:30:00")` is **timezone-ambiguous** 
+- JavaScript interprets as **local timezone of Node.js server**
+- If server is UTC+7, it becomes `2026-01-02T12:30:00Z` (7 hours earlier in UTC)
+- If server is UTC+0, it stays `2026-01-02T19:30:00Z`
+- **Result**: Same input produces different DB values depending on server timezone!
+
+### Problem 2: Bad Workaround with +7 Hours Offset
+
+**File**: `apps/cinema-service/src/app/showtime/showtime.mapper.ts`
+
+**Line 13, 37**:
+```typescript
+startTime: new Date(entity.start_time.getTime() + 7 * 60 * 60 * 1000),  // ❌ WRONG!
+endTime: new Date(entity.end_time.getTime() + 7 * 60 * 60 * 1000),      // ❌ WRONG!
+```
+
+**Problem**:
+- Hardcoded +7 hours offset when returning data
+- This is an attempt to "fix" the timezone issue but makes it worse
+- Causes double conversion when FE parses the date
+- Not portable: Breaks if deployed in different timezone
+- Assumes all clients are in UTC+7 (Vietnam timezone)
+
+## Correct Solution for BE Team:
+
+### Option 1 (RECOMMENDED): Store as UTC, Handle Timezone in Application Layer
+
+**Step 1**: Fix create/update to parse as UTC
+```typescript
+// In showtime-command.service.ts line ~59
+// Instead of:
+// const start = new Date(startTime);
+
+// Do this:
+const start = this.parseAsUTC(startTime);
+
+// Add helper method:
+private parseAsUTC(datetimeString: string): Date {
+  // Input format: "2026-01-02 19:30:00" (no timezone)
+  // Parse as UTC explicitly
+  const [datePart, timePart] = datetimeString.split(' ');
+  const [year, month, day] = datePart.split('-');
+  const [hours, minutes, seconds] = timePart.split(':');
+  
+  return new Date(Date.UTC(
+    parseInt(year),
+    parseInt(month) - 1,  // JS months are 0-indexed
+    parseInt(day),
+    parseInt(hours),
+    parseInt(minutes),
+    parseInt(seconds || '0')
+  ));
+}
+```
+
+**Step 2**: Remove the +7 hour workaround
+```typescript
+// In showtime.mapper.ts lines 13, 37
+// Remove the offset:
+startTime: entity.start_time,  // Just use the Date object directly
+endTime: entity.end_time,
+```
+
+**Step 3**: Update API documentation
+- Document that FE should send datetime in UTC format OR
+- Document that datetime strings are treated as UTC+7 Vietnam time
+
+### Option 2: Accept ISO 8601 with Timezone
+
+Change API contract to accept ISO format:
+```typescript
+// FE sends:
+"startTime": "2026-01-02T19:30:00+07:00"  // ISO with timezone
+
+// BE parses:
+const start = new Date(startTime);  // Works correctly with ISO format
+```
+
+### Option 3: Add Timezone Parameter
+
+```typescript
+interface CreateShowtimeRequest {
+  // ... other fields
+  startTime: string;
+  timezone: string;  // e.g., "Asia/Ho_Chi_Minh" or "UTC+07:00"
+}
+```
+
+## Test Cases After Fix:
+
+1. **Create showtime**: 
+   - Input: `startTime = "2026-01-02 19:30:00"`
+   - Expected DB: `2026-01-02T19:30:00.000Z` (UTC)
+   - API returns: `"2026-01-02T19:30:00.000Z"`
+   - FE displays: "2/1/2026 7:30 PM" (correct in local timezone)
+
+2. **Edit showtime**:
+   - Load showtime with `startTime = "2026-01-02T19:30:00.000Z"`
+   - FE displays: "2/1/2026 7:30 PM"
+   - Update to "2/1/2026 8:00 PM"
+   - Saves as: `"2026-01-02T20:00:00.000Z"`
+   - Still displays as: "2/1/2026 8:00 PM" ✓
+
+3. **Date filter**:
+   - Filter by date: `2026-01-02`
+   - Returns showtimes with `start_time` between `2026-01-02T00:00:00Z` and `2026-01-02T23:59:59Z`
+   - Shows correct showtimes for that date ✓
+
+## FE Workaround (TEMPORARY):
+
+✅ **Implemented in `ShowtimeDialog.tsx`**:
+- When loading for edit: Subtract 7 hours from BE response to compensate for mapper's +7h
+- When creating: Send local time in `yyyy-MM-dd HH:mm:ss` format (BE will parse as local)
+- This keeps data consistent but doesn't fix the root cause
+
+⚠️ **Important**: FE workaround is fragile and should be removed once BE is fixed properly!
+
+---
+
+# Issue #2: Showtime Date Filter Off-by-One — Showtimes Not Appearing
+
+**Status**: ⚠️ RELATED TO ISSUE #1 - Same root cause
+
+---
+
+# Issue #2: Showtime Date Filter Off-by-One — Showtimes Not Appearing
+
+**Status**: ⚠️ RELATED TO ISSUE #1 - Same root cause
 
 **BE Implementation Status (checked Jan 2, 2026):**
 - ✅ Date filter now uses `T00:00:00.000` and `T23:59:59.999` without 'Z' suffix (treating as local time)
-- ❌ Create showtime still uses `new Date(startTime)` which relies on browser timezone interpretation
+- ❌ Create showtime still uses `new Date(startTime)` which relies on browser timezone interpretation (see Issue #1)
 - ❌ No explicit UTC normalization implemented in create method
-- ⚠️ Issue may persist depending on browser/server timezone differences
+- ⚠️ Issue persists because of root timezone bug in Issue #1
 
 **Problem (tóm tắt):**
 - Admin creates showtime with `startTime = "2025-12-31 14:00:00"` (Dec 31, 2025)
 - But when filtering by `date: "2025-12-31"` in the showtimes list, the showtime doesn't appear
 - Showtime only appears when filtering by `date: "2026-01-01"` (next day)
-- **Root cause**: Timezone mismatch between how `startTime` is stored and how the date filter is applied
+- **Root cause**: Timezone mismatch - same as Issue #1 above
 
-## Affected Endpoints:
-- `GET /api/v1/showtimes` with `date` query parameter (admin filter)
+## Solution:
 
-## Affected Files (BE):
+Fix Issue #1 first, then this will be resolved automatically.
 
-### File 1: `apps/cinema-service/src/app/showtime/showtime.service.ts` (line ~48-54)
+---
 
-**Current Code (PARTIALLY FIXED)**:
-```typescript
-if (date) {
-  where.start_time = {
-    gte: new Date(`${date}T00:00:00.000`),  // ⚠️ Changed: Removed 'Z' suffix
-    lt: new Date(`${date}T23:59:59.999`),   // ⚠️ Changed: Removed 'Z' suffix
-  };
-}
-```
-**Note**: BE removed the 'Z' suffix, treating dates as local time instead of UTC. This is a workaround but doesn't fully solve timezone issues.
-
-**Problem Explanation:**
+# Issue #3: Delete Staff Member — 500 Error (CRITICAL)
 
 1. **Creating showtime** (cinema-service/showtime-command.service.ts line 61):
    - FE sends: `startTime = "2025-12-31 14:00:00"` (no timezone, just datetime string)

@@ -141,23 +141,27 @@ export default function ShowtimeSeatsPage() {
               <SelectValue placeholder="Chọn suất chiếu" />
             </SelectTrigger>
             <SelectContent>
-              {showtimes.map((showtime: any) => (
-                <SelectItem key={showtime.id} value={showtime.id}>
-                  <div className="flex items-center gap-2 text-sm">
-                    <span className="font-semibold">{movieMap[showtime.movieId] || showtime.movieTitle || 'Không Xác Định'}</span>
-                    <span className="text-gray-400">•</span>
-                    <span className="text-gray-600">{hallMap[showtime.hallId] || showtime.hallName || 'Phòng Không Xác Định'}</span>
-                    <span className="text-gray-400">•</span>
-                    <span className="text-gray-600">{format(new Date(showtime.startTime || showtime.start_time || showtime.start), 'MMM dd, HH:mm')}</span>
-                    {showtime.format && (
-                      <>
-                        <span className="text-gray-400">•</span>
-                        <Badge variant="outline" className="text-xs">{showtime.format}</Badge>
-                      </>
-                    )}
-                  </div>
-                </SelectItem>
-              ))}
+              {showtimes.map((showtime: any) => {
+                // TIMEZONE WORKAROUND: BE adds +7h in mapper, we need to subtract it
+                const correctedStartTime = new Date(new Date(showtime.startTime || showtime.start_time || showtime.start).getTime() - 7 * 60 * 60 * 1000);
+                return (
+                  <SelectItem key={showtime.id} value={showtime.id}>
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className="font-semibold">{movieMap[showtime.movieId] || showtime.movieTitle || 'Không Xác Định'}</span>
+                      <span className="text-gray-400">•</span>
+                      <span className="text-gray-600">{hallMap[showtime.hallId] || showtime.hallName || 'Phòng Không Xác Định'}</span>
+                      <span className="text-gray-400">•</span>
+                      <span className="text-gray-600">{format(correctedStartTime, 'MMM dd, HH:mm')}</span>
+                      {showtime.format && (
+                        <>
+                          <span className="text-gray-400">•</span>
+                          <Badge variant="outline" className="text-xs">{showtime.format}</Badge>
+                        </>
+                      )}
+                    </div>
+                  </SelectItem>
+                );
+              })}
             </SelectContent>
           </Select>
         </CardContent>

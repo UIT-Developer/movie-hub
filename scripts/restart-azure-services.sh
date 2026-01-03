@@ -28,9 +28,30 @@ SERVICES=(
 )
 
 echo "Restarting Azure Container Apps in resource group: $RESOURCE_GROUP"
+echo "Restarting Azure Container Apps in: $RESOURCE_GROUP"
+
 for svc in "${SERVICES[@]}"; do
-  echo "- Restarting $svc"
-  az containerapp restart --name "$svc" --resource-group "$RESOURCE_GROUP"
+  echo -n "- Processing $svc... "
+
+  # 1. Get the name of the latest ACTIVE revision
+  # We sort by createdTime to ensure we get the newest one
+  REVISION_NAME=$(az containerapp revision list \
+    --name "$svc" \
+    --resource-group "$RESOURCE_GROUP" \
+    --query "sort_by([?properties.active], &properties.createdTime) | [-1].name" \
+    --output tsv)
+
+  if [ -n "$REVISION_NAME" ]; then
+    # 2. Restart that specific revision
+    # Note: 'revision restart' bounces the replicas without creating a new revision
+    if az containerapp revision restart --revision "$REVISION_NAME" --resource-group "$RESOURCE_GROUP" --output none; then
+      echo "✅ Restarted revision: $REVISION_NAME"
+    else
+      echo "❌ Failed to restart revision: $REVISION_NAME" >&2
+    fi
+  else
+    echo "⚠️ No active revision found (is the app scaled to 0?)"
+  fi
 done
 
 echo "Done. Current status:"

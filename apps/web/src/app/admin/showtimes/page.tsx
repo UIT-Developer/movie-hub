@@ -24,6 +24,16 @@ import {
 import { Badge } from '@movie-hub/shacdn-ui/badge';
 import { Calendar } from '@movie-hub/shacdn-ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@movie-hub/shacdn-ui/popover';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@movie-hub/shacdn-ui/alert-dialog';
 import { useShowtimes, useDeleteShowtime, useMovies, useCinemas, useHallsGroupedByCinema } from '@/libs/api';
 import type { Showtime, Hall } from '@/libs/api/types';
 import { format } from 'date-fns';
@@ -35,6 +45,8 @@ export default function ShowtimesPage() {
   const [selectedDate, setSelectedDate] = useState<Date>(() => new Date()); // Set to today by default
   const [selectedCinemaId, setSelectedCinemaId] = useState('all');
   const [selectedMovieId, setSelectedMovieId] = useState('all');
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   // API hooks: pass date (now defaults to today)
   // TIMEZONE FIX: Don't use toISOString() as it converts to UTC and shifts the date
@@ -83,9 +95,18 @@ export default function ShowtimesPage() {
   const handleDelete = async (id: string) => {
     try {
       await deleteShowtime.mutateAsync(id);
+      setDeleteConfirmOpen(false);
+      setDeleteConfirmId(null);
     } catch {
       // Error toast already shown by mutation hook
+      setDeleteConfirmOpen(false);
+      setDeleteConfirmId(null);
     }
+  };
+
+  const handleDeleteClick = (id: string) => {
+    setDeleteConfirmId(id);
+    setDeleteConfirmOpen(true);
   };
 
   const getStatusColor = (status: string | undefined) => {
@@ -329,7 +350,7 @@ export default function ShowtimesPage() {
                                   <Button
                                     variant="ghost"
                                     size="icon"
-                                    onClick={() => handleDelete(showtime.id)}
+                                    onClick={() => handleDeleteClick(showtime.id)}
                                     className="text-red-600 hover:text-red-700 hover:bg-red-50"
                                   >
                                     <Trash2 className="h-4 w-4" />
@@ -413,6 +434,31 @@ export default function ShowtimesPage() {
           refetchShowtimes();
         }}
       />
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>⚠️ Xác nhận xóa suất chiếu?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Hành động này không thể hoàn tác. Suất chiếu sẽ bị xóa vĩnh viễn khỏi hệ thống.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Hủy</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (deleteConfirmId) {
+                  handleDelete(deleteConfirmId);
+                }
+              }}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Xóa Suất Chiếu
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

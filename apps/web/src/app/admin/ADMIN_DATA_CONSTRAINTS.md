@@ -24,6 +24,108 @@
 
 ---
 
+## ⚡ FAST SOLUTION - Không Cần Thêm API Mới (Backend Biếu Làm)
+
+### Giải Pháp Nhanh Gọn Lẹ
+
+**Vấn Đề**: Backend không muốn code thêm `/dependencies` endpoints → Giải pháp: **Dùng error response từ DELETE endpoint**
+
+#### **Mô Hình**
+
+```
+User click Delete → FE call DELETE /cinemas/{id}
+                        ↓
+                    BE kiểm tra dependency
+                        ↓
+                    Nếu có dependency:
+                      Return 400 + error details
+                    Nếu không:
+                      Delete + Return 200
+                        ↓
+                    FE catch error → Show constraint info
+```
+
+#### **Backend: Modify DELETE Endpoint (Không cần API mới)**
+
+```typescript
+// File: backend/src/cinemas/cinemas.controller.ts
+
+@Delete(':id')
+async delete(@Param('id') id: string) {
+  // ✅ Chỉ thêm kiểm tra này (5 dòng code)
+  const hallCount = await this.cinemasService.countHalls(id);
+  const showtimeCount = await this.cinemasService.countShowtimes(id);
+  const bookingCount = await this.cinemasService.countBookings(id);
+  
+  if (hallCount > 0 || showtimeCount > 0 || bookingCount > 0) {
+    throw new BadRequestException({
+      code: 'CONSTRAINT_VIOLATION',
+      message: 'Cannot delete cinema with dependent data',
+      halls: hallCount,
+      showtimes: showtimeCount,
+      bookings: bookingCount,
+    });
+  }
+  
+  // Proceed with delete
+  return await this.cinemasService.delete(id);
+}
+```
+
+#### **Frontend: Catch Error + Show Dialog**
+
+```typescript
+// File: FE/cinemas/page.tsx
+
+const handleDelete = async (id: string) => {
+  try {
+    await deleteCinema.mutateAsync(id);
+    toast.success('Cinema deleted');
+  } catch (error: any) {
+    // ✅ Catch error from BE validation
+    if (error.response?.data?.code === 'CONSTRAINT_VIOLATION') {
+      const { halls, showtimes, bookings } = error.response.data;
+      
+      toast.error({
+        title: '❌ Không thể xóa rạp',
+        description: (
+          <div>
+            <p>Rạp có:</p>
+            <ul>
+              {halls > 0 && <li>• {halls} phòng chiếu</li>}
+              {showtimes > 0 && <li>• {showtimes} suất chiếu</li>}
+              {bookings > 0 && <li>• {bookings} vé đặt</li>}
+            </ul>
+          </div>
+        ),
+      });
+      return;
+    }
+    
+    // Other errors
+    toast.error(error.message);
+  }
+};
+```
+
+#### **Ưu Điểm Giải Pháp Này**
+
+| Khía Cạnh | Chi Phí |
+|----------|--------|
+| **Backend Changes** | 5-10 dòng per endpoint (easy) |
+| **API Mới** | ❌ Không cần |
+| **Frontend Changes** | 10-15 dòng per page (easy) |
+| **Testing** | Simple (just test delete endpoint) |
+| **Maintenance** | Low (centralized logic in BE) |
+
+#### **Timeline**
+
+- Backend: **30 phút** (modify DELETE endpoints)
+- Frontend: **1-2 giờ** (add error handling + UI)
+- Total: **2-3 giờ** (vs 1-2 ngày với `/dependencies` endpoints)
+
+---
+
 ## 🏢 Module: CINEMA (Rạp Chiếu Phim)
 
 ### Ràng Buộc Xóa (Delete Constraints)
@@ -366,36 +468,42 @@ const handleStatusUpdate = async (
 
 ---
 
-## 📋 Action Items - Ưu Tiên Triển Khai
+## 📋 Action Items - Ưu Tiên Triển Khai (Fast Solution)
 
-### 🚨 Ưu Tiên CRITICAL (Cần làm ngay)
+### 🚀 Sprint 1: CRITICAL (Cần làm ngay) - 2-3 giờ
 
-| # | Task | Module | Lý Do |
-|---|------|--------|-------|
-| 1 | Thêm confirmation dialog cho Showtime delete | Showtime | Xóa ngay không hỏi! |
-| 2 | Kiểm tra Booking trước khi xóa Showtime | Showtime | Mất data booking |
-| 3 | Thêm onError cho useDeleteShowtime | Showtime | Silent failure |
-| 4 | Thêm onError cho useDeleteHall | Hall | Silent failure |
-| 5 | Thêm onError cho useDeleteMovie | Movie | Silent failure |
+#### Backend Tasks (30 phút)
+| # | Task | Module | Code |
+|---|------|--------|------|
+| B1 | Modify DELETE endpoint - add constraint check | Cinema | 10 lines |
+| B2 | Modify DELETE endpoint - add constraint check | Hall | 10 lines |
+| B3 | Modify DELETE endpoint - add constraint check | Movie | 10 lines |
+| B4 | Modify DELETE endpoint - add constraint check | Movie Release | 10 lines |
+| B5 | Modify DELETE endpoint - add constraint check | Showtime | 10 lines |
+| B6 | Modify DELETE endpoint - add constraint check | Genre | 10 lines |
+| B7 | Modify DELETE endpoint - add constraint check | Concession | 10 lines |
 
-### ⚠️ Ưu Tiên HIGH
+**Tip**: Copy-paste pattern một lần, modify values, xong!
 
-| # | Task | Module | Lý Do |
-|---|------|--------|-------|
-| 6 | Kiểm tra Hall trước khi xóa Cinema | Cinema | Data integrity |
-| 7 | Kiểm tra Showtime trước khi xóa Hall | Hall | Data integrity |
-| 8 | Kiểm tra Release trước khi xóa Movie | Movie | Data integrity |
-| 9 | Kiểm tra Showtime trước khi xóa Release | Movie Release | Data integrity |
-| 10 | Thêm onError cho useDeleteMovieRelease | Movie Release | Silent failure |
+#### Frontend Tasks (1.5-2 giờ)
+| # | Task | Module | Code |
+|---|------|--------|------|
+| F1 | Add error handler + constraint dialog | Cinema | 15 lines |
+| F2 | Add error handler + constraint dialog | Hall | 15 lines |
+| F3 | Add error handler + constraint dialog | Movie | 15 lines |
+| F4 | Add error handler + constraint dialog | Movie Release | 15 lines |
+| F5 | Add confirmation + error handler | Showtime | 20 lines |
+| F6 | Add error handler + constraint dialog | Genre | 15 lines |
+| F7 | Add error handler + constraint dialog | Concession | 15 lines |
 
-### 📝 Ưu Tiên MEDIUM
+### ⚠️ Sprint 2: HIGH (1-2 ngày) - UX Polish
 
-| # | Task | Module | Lý Do |
-|---|------|--------|-------|
-| 11 | Kiểm tra Movie trước khi xóa Genre | Genre | FK constraint |
-| 12 | Cảnh báo khi cancel booking đã gần giờ chiếu | Booking | UX |
-| 13 | Cảnh báo khi đổi giá Concession | Concession | Pending orders |
-| 14 | Kiểm tra Order trước khi xóa Concession | Concession | Data integrity |
+| # | Task | Priority |
+|---|------|----------|
+| 7 | Disable delete button nếu có constraint (FE) | HIGH |
+| 8 | Add loading state khi delete | HIGH |
+| 9 | Show toast notification style consistent | HIGH |
+| 10 | Test cascade delete prevent | HIGH |
 
 ---
 
@@ -499,35 +607,58 @@ export const useDeleteHall = () => {
 
 ---
 
-## 📊 Backend API Requirements
+## 📊 Backend Error Response Format
 
-Để FE có thể kiểm tra constraint, cần BE cung cấp các API sau:
+**Không cần thêm API mới** - Chỉ modify DELETE endpoint error response
 
-### Cần Thêm API
-
-| API | Method | Response | Mục Đích |
-|-----|--------|----------|----------|
-| `/api/v1/cinemas/{id}/dependencies` | GET | `{ halls: number, showtimes: number, bookings: number }` | Kiểm tra trước khi xóa Cinema |
-| `/api/v1/halls/{id}/dependencies` | GET | `{ showtimes: number, bookings: number }` | Kiểm tra trước khi xóa Hall |
-| `/api/v1/movies/{id}/dependencies` | GET | `{ releases: number, showtimes: number, reviews: number }` | Kiểm tra trước khi xóa Movie |
-| `/api/v1/movie-releases/{id}/dependencies` | GET | `{ showtimes: number }` | Kiểm tra trước khi xóa Release |
-| `/api/v1/showtimes/{id}/dependencies` | GET | `{ bookings: number, confirmedBookings: number }` | Kiểm tra trước khi xóa Showtime |
-| `/api/v1/genres/{id}/dependencies` | GET | `{ movies: number }` | Kiểm tra trước khi xóa Genre |
-| `/api/v1/concessions/{id}/dependencies` | GET | `{ pendingOrders: number }` | Kiểm tra trước khi xóa Concession |
-
-### Hoặc BE Trả Về Error Chi Tiết
+### ✅ DELETE Endpoint Error Response (Recommended)
 
 ```json
 {
-  "success": false,
   "statusCode": 400,
-  "error": "CONSTRAINT_VIOLATION",
-  "message": "Cannot delete hall with active showtimes",
-  "details": {
-    "constraint": "hall_showtime_fk",
-    "dependentCount": 5,
-    "dependentType": "showtimes"
+  "code": "CONSTRAINT_VIOLATION",
+  "message": "Cannot delete cinema with dependent data",
+  "halls": 3,
+  "showtimes": 15,
+  "bookings": 42
+}
+```
+
+### Áp Dụng Cho Tất Cả Module
+
+| Module | Fields | Ví Dụ |
+|--------|--------|-------|
+| Cinema | `halls`, `showtimes`, `bookings` | `{ halls: 3, showtimes: 15, bookings: 42 }` |
+| Hall | `showtimes`, `bookings` | `{ showtimes: 5, bookings: 20 }` |
+| Movie | `releases`, `showtimes`, `reviews` | `{ releases: 2, showtimes: 10, reviews: 5 }` |
+| Movie Release | `showtimes` | `{ showtimes: 3 }` |
+| Showtime | `bookings`, `confirmedBookings` | `{ bookings: 15, confirmedBookings: 12 }` |
+| Genre | `movies` | `{ movies: 5 }` |
+| Concession | `pendingOrders` | `{ pendingOrders: 2 }` |
+
+### Quick Copy-Paste cho Backend (NestJS)
+
+```typescript
+// Tạo exception này một lần, dùng lại everywhere
+export class ConstraintViolationException extends BadRequestException {
+  constructor(
+    private dependencyInfo: Record<string, number>
+  ) {
+    super({
+      code: 'CONSTRAINT_VIOLATION',
+      message: 'Cannot delete: has dependent data',
+      ...dependencyInfo,
+    });
   }
+}
+
+// Dùng:
+if (deps.count > 0) {
+  throw new ConstraintViolationException({
+    halls: deps.halls,
+    showtimes: deps.showtimes,
+    bookings: deps.bookings,
+  });
 }
 ```
 
@@ -535,20 +666,36 @@ export const useDeleteHall = () => {
 
 ## 📅 Timeline Đề Xuất
 
-### Phase 1: Critical Fixes (1-2 ngày)
-- [ ] Thêm confirmation dialog cho Showtime delete
-- [ ] Thêm onError handler cho tất cả delete hooks
-- [ ] Test các silent failure cases
+### Phase 1: Nhanh (2-3 giờ) - Fast Solution
 
-### Phase 2: Constraint Checks (3-5 ngày)
-- [ ] Implement pre-delete validation cho Cinema, Hall, Movie
-- [ ] Coordinate với BE team về dependency APIs
-- [ ] Test constraint scenarios
+**Backend Changes** (30 phút):
+```
+Modify DELETE endpoints (6 endpoints) → Add constraint check → Return error
+```
 
-### Phase 3: UX Improvements (2-3 ngày)
-- [ ] Cải thiện error messages với thông tin cụ thể
-- [ ] Thêm warning dialogs cho update operations
-- [ ] Document tất cả constraints cho QA
+**Frontend Changes** (1.5-2 giờ):
+```
+Add error handling + show constraint dialog → Test
+```
+
+**Result**: ✅ Prevent delete + show why can't delete
+
+---
+
+### Phase 2: Polish (1 ngày) - UX Improvements
+
+- Disable delete button when has constraints (FE)
+- Add loading states
+- Test all scenarios
+- QA sign-off
+
+---
+
+### Phase 3: Optional (Future) - Advanced Features
+
+- Soft delete with archive
+- Auto-cascade some items with confirmation
+- Bulk delete with constraint preview
 
 ---
 

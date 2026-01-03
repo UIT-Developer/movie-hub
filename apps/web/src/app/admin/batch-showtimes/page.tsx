@@ -83,8 +83,8 @@ const FORMAT_LABELS: Record<string, string> = {
 
 export default function BatchShowtimesPage() {
   const searchParams = useSearchParams();
-  const preSelectedMovieId = searchParams.get('movieId');
-  const preSelectedReleaseId = searchParams.get('releaseId');
+  const preSelectedMovieId = searchParams?.get('movieId');
+  const preSelectedReleaseId = searchParams?.get('releaseId');
   
   // API hooks
   const { data: moviesData = [] } = useMovies();
@@ -378,7 +378,7 @@ export default function BatchShowtimesPage() {
                   <Input
                     value={
                       movieReleases.find((r: typeof movieReleases[0]) => r.id === formData.movieReleaseId)
-                        ? `${new Date(movieReleases.find((r: typeof movieReleases[0]) => r.id === formData.movieReleaseId)?.startDate).toLocaleDateString()} → ${new Date(movieReleases.find((r: typeof movieReleases[0]) => r.id === formData.movieReleaseId)?.endDate).toLocaleDateString()}`
+                        ? `${new Date(movieReleases.find((r: typeof movieReleases[0]) => r.id === formData.movieReleaseId)?.startDate ?? '').toLocaleDateString()} → ${new Date(movieReleases.find((r: typeof movieReleases[0]) => r.id === formData.movieReleaseId)?.endDate ?? '').toLocaleDateString()}`
                         : 'Đang tải...'
                     }
                     disabled

@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import { Button } from '@movie-hub/shacdn-ui/button';
 
+export const dynamic = 'force-dynamic';
+
 export default async function CheckoutPage({
   searchParams,
 }: {

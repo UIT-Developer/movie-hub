@@ -1,5 +1,7 @@
 import { SignIn } from '@clerk/nextjs';
 
+export const dynamic = 'force-dynamic';
+
 export default function ClerkCatchAllSignIn() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-600 via-pink-600 to-rose-600 flex items-center justify-center p-4">

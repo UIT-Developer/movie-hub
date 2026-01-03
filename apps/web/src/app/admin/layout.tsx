@@ -97,10 +97,10 @@ export default function AdminLayout({
   const pathname = usePathname();
   
   // Auth pages (login, signup, reset-password) should not have admin layout
-  const isAuthPage = pathname.startsWith('/admin/login') || 
-                     pathname.startsWith('/admin/sign-up') || 
-                     pathname.startsWith('/admin/reset-password') ||
-                     pathname.startsWith('/admin/verify');
+  const isAuthPage = pathname?.startsWith('/admin/login') || 
+                     pathname?.startsWith('/admin/sign-up') || 
+                     pathname?.startsWith('/admin/reset-password') ||
+                     pathname?.startsWith('/admin/verify');
   
   if (isAuthPage) {
     // Render auth pages without sidebar/navbar
@@ -178,7 +178,7 @@ function AdminLayoutContent({
                   {section.items.map((item) => {
                     const Icon = item.icon;
                     const isActive = pathname === item.href || 
-                                    (item.href !== '/admin' && pathname.startsWith(item.href + '/'));
+                                    (item.href !== '/admin' && pathname?.startsWith(item.href + '/'));
                     
                     return (
                       <Link 
@@ -245,7 +245,7 @@ function AdminLayoutContent({
               <h2 className="text-lg font-semibold text-gray-900">
                 {menuItems.find((item) => 
                   pathname === item.href || 
-                  (item.href !== '/admin' && pathname.startsWith(item.href))
+                  (item.href !== '/admin' && pathname?.startsWith(item.href))
                 )?.label || 'Bảng điều khiển'}
               </h2>
             </div>

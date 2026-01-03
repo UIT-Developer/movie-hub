@@ -49,8 +49,8 @@ export default function ShowtimesPage() {
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   // API hooks: pass date (now defaults to today)
-  // TIMEZONE FIX: Don't use toISOString() as it converts to UTC and shifts the date
-  // Instead, format date in local timezone to YYYY-MM-DD
+  // NOTE: Backend has timezone bug in date filtering - see HUY LE - Fix Bug.md Issue #3
+  // Format date in local timezone to YYYY-MM-DD for backend query
   const formatDateForQuery = (date: Date): string => {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');

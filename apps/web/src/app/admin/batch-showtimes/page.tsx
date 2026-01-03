@@ -223,6 +223,27 @@ export default function BatchShowtimesPage() {
     try {
       setLoading(true);
       
+      // TIMEZONE FIX: Backend treats timeSlots as UTC when combining with dates
+      // Convert local times to UTC before sending
+      // Example: 08:00 Vietnam (UTC+7) = 01:00 UTC
+      const convertedTimeSlots = formData.timeSlots.map(timeStr => {
+        const [hh, mm] = timeStr.split(':').map(Number);
+        
+        // Create a date object with the local time
+        const localDate = new Date();
+        localDate.setHours(hh, mm, 0, 0);
+        
+        // Convert to UTC
+        const utcHours = String(localDate.getUTCHours()).padStart(2, '0');
+        const utcMinutes = String(localDate.getUTCMinutes()).padStart(2, '0');
+        
+        const utcTime = `${utcHours}:${utcMinutes}`;
+        
+        console.log(`[BatchShowtimes] Time conversion: ${timeStr} (local) → ${utcTime} (UTC)`);
+        
+        return utcTime;
+      });
+      
       // Convert admin form shape to API request shape
       // BE expects startDate/endDate at root level, not in dateRange wrapper
       const apiRequest = {
@@ -232,7 +253,7 @@ export default function BatchShowtimesPage() {
         hallId: formData.hallId,
         startDate: formData.startDate,      // String in YYYY-MM-DD format
         endDate: formData.endDate,          // String in YYYY-MM-DD format
-        timeSlots: formData.timeSlots,      // Array of HH:mm strings
+        timeSlots: convertedTimeSlots,      // Array of HH:mm strings (UTC converted)
         repeatType: formData.repeatType,    // Add required field for BE
         weekdays: formData.weekdays || [],  // Add required field for BE
         format: formData.format as unknown as ApiShowtimeFormat,
@@ -240,7 +261,7 @@ export default function BatchShowtimesPage() {
         subtitles: formData.subtitles || [],
       };
 
-      console.log('[BatchShowtimes] Submitting request with data:', apiRequest);
+      console.log('[BatchShowtimes] Submitting request with UTC-converted timeSlots:', apiRequest);
 
       const response = await batchCreateMutation.mutateAsync(apiRequest as ApiBatchCreateRequest);
       // The backend returns an array of created showtimes (Showtime[]). Normalize to BatchCreateResponse

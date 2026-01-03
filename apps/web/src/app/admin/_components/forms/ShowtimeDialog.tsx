@@ -217,26 +217,28 @@ export default function ShowtimeDialog({
     }
 
     try {
-      // BE now correctly parses datetime with 'Z' suffix as UTC
-      // Input from datetime-local: "2026-01-02T19:30" (user's local time)
-      // We format as "yyyy-MM-dd HH:mm:ss" and BE will append 'Z' to treat as UTC
+      // TIMEZONE FIX: Backend treats time as UTC when it adds 'Z' suffix
+      // Input from datetime-local: "2026-01-04T01:00" (user's LOCAL time in Vietnam = UTC+7)
+      // Backend adds 'Z' to treat as UTC, so we must send UTC time
       
-      const localDateTime = new Date(formData.startTime); // Parse as local
+      const localDateTime = new Date(formData.startTime); // Parse as local time (e.g., 1:00 AM Vietnam)
       
-      // Format as "yyyy-MM-dd HH:mm:ss" - BE will append 'Z' for UTC parsing
-      const year = localDateTime.getFullYear();
-      const month = String(localDateTime.getMonth() + 1).padStart(2, '0');
-      const day = String(localDateTime.getDate()).padStart(2, '0');
-      const hours = String(localDateTime.getHours()).padStart(2, '0');
-      const minutes = String(localDateTime.getMinutes()).padStart(2, '0');
+      // Convert to UTC - toISOString() gives us UTC time
+      // Example: 2026-01-04T01:00 Vietnam (UTC+7) = 2026-01-03T18:00:00Z
+      const year = localDateTime.getUTCFullYear();
+      const month = String(localDateTime.getUTCMonth() + 1).padStart(2, '0');
+      const day = String(localDateTime.getUTCDate()).padStart(2, '0');
+      const hours = String(localDateTime.getUTCHours()).padStart(2, '0');
+      const minutes = String(localDateTime.getUTCMinutes()).padStart(2, '0');
       
       const startTimeFormatted = `${year}-${month}-${day} ${hours}:${minutes}:00`;
       
-      console.log('[ShowtimeDialog] Submitting showtime:', {
+      console.log('[ShowtimeDialog] Submitting showtime (TIMEZONE FIX APPLIED):', {
         userInput: formData.startTime,
         localDateTime: localDateTime.toISOString(),
         formatted: startTimeFormatted,
-        note: 'BE will parse this as UTC (adds Z suffix)',
+        timezoneOffset: localDateTime.getTimezoneOffset(),
+        note: 'Converted local time to UTC before sending to BE',
       });
 
       const payload = {

@@ -166,7 +166,7 @@ export class ShowtimeCommandService {
       // BUILD VALID DAYS (UTC)
       // ===========================
       const days: Date[] = [];
-      let cursor = new Date(rangeStart);
+      const cursor = new Date(rangeStart);
 
       while (cursor <= rangeEnd) {
         const dow = cursor.getUTCDay();

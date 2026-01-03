@@ -21,7 +21,6 @@ import {
   batchCreateShowtimesSchema,
   CreateShowtimeRequest,
   createShowtimeSchema,
-  UpdateSeatStatusRequest,
   UpdateShowtimeRequest,
 } from '@movie-hub/shared-types';
 import { ZodValidationPipe } from 'nestjs-zod';
@@ -66,6 +65,7 @@ export class ShowtimeController {
 
   @Post('showtime')
   @UseGuards(ClerkAuthGuard)
+  @UsePipes(new ZodValidationPipe(createShowtimeSchema))
   createShowtime(@Body() body: CreateShowtimeRequest) {
     return this.showtimeService.createShowtime(body);
   }

@@ -71,6 +71,26 @@ export class CinemaService {
 
   async deleteCinema(id: string): Promise<ServiceResult<void>> {
     try {
+      const [hallCount, showtimeCount, bookingCount] = await Promise.all([
+        this.prisma.halls.count({
+          where: { cinema_id: id },
+        }),
+        this.prisma.showtimes.count({
+          where: { cinema_id: id },
+        }),
+        this.prisma.seatReservations.count({
+          where: {
+            showtime: {
+              cinema_id: id,
+            },
+          },
+        }),
+      ]);
+
+      if (hallCount > 0 || showtimeCount > 0 || bookingCount > 0) {
+        throw new RpcException('Cannot delete cinema with dependent data');
+      }
+
       await this.prisma.cinemas.delete({
         where: { id },
       });
@@ -81,7 +101,6 @@ export class CinemaService {
       };
     } catch (e) {
       if (e instanceof PrismaClientKnownRequestError) {
-        // Không tồn tại
         if (e.code === 'P2025') {
           throw new RpcException({
             summary: 'Delete cinema failed',
@@ -90,20 +109,17 @@ export class CinemaService {
             message: 'Cinema does not exist',
           });
         }
-
-        // Bị ràng buộc FK (có hall / showtime)
-        if (e.code === 'P2003') {
-          throw new RpcException({
-            summary: 'Delete cinema failed',
-            statusCode: 400,
-            code: 'CINEMA_IN_USE',
-            message:
-              'Cinema cannot be deleted because it is referenced by halls or showtimes',
-          });
-        }
       }
 
-      // Fallback
+      if (e instanceof RpcException) {
+        throw new RpcException({
+          summary: 'Delete cinema failed',
+          statusCode: 400,
+          code: 'CINEMA_IN_USE',
+          message: e.message,
+        });
+      }
+
       throw new RpcException({
         summary: 'Delete cinema failed',
         statusCode: 500,
@@ -243,8 +259,8 @@ export class CinemaService {
       where: {
         status: ShowtimeStatus.SELLING,
         start_time: {
-          gte: new Date(selectedDate + 'T00:00:00'),
-          lt: new Date(selectedDate + 'T23:59:59'),
+          gte: new Date(selectedDate + 'T00:00:00Z'),
+          lt: new Date(selectedDate + 'T23:59:59.999Z'),
         },
       },
       include: {

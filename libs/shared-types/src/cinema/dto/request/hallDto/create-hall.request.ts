@@ -6,7 +6,7 @@ import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
 
 export const CreateHallSchema = z.object({
-  cinemaId: z.uuid({ message: 'cinema_id phải là UUID hợp lệ' }),
+  cinemaId: z.string().min(1, 'ID rạp không được để trống'),
   name: z.string().min(1, 'Tên phòng chiếu không được để trống').max(100),
   type: z.enum(Object.values(HallTypeEnum) as [string, ...string[]], {
     message: 'Loại phòng chiếu không hợp lệ',

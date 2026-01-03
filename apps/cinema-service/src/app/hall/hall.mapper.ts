@@ -85,8 +85,8 @@ export class HallMapper {
       status: hall.status as HallStatusEnum,
       layoutType: hall.layout_type as LayoutTypeEnum,
       seatMap: this.mapSeatRow(hall.seats?.map(this.toSeatResponse) || []),
-      createdAt: new Date(hall.created_at.getTime() + 7 * 60 * 60 * 1000),
-      updatedAt: new Date(hall.updated_at.getTime() + 7 * 60 * 60 * 1000),
+      createdAt: hall.created_at,
+      updatedAt: hall.updated_at,
     };
   }
 

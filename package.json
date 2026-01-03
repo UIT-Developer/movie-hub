@@ -15,10 +15,16 @@
     "test:clean": "rimraf test-results coverage dist",
     "seed:movie": "ts-node apps/movie-service/prisma/seed.ts",
     "seed:cinema": "node apps/cinema-service/prisma/seed.js",
-    "seed:all": "npm run seed:movie && npm run seed:cinema"
+    "seed:all": "npm run seed:movie && npm run seed:cinema",
+    "docker:up": "docker compose up -d",
+    "docker:up:build": "docker compose up -d --build",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f",
+    "docker:clean": "docker compose down -v",
+    "dev:web": "nx serve web"
   },
   "prisma": {
-    "seed": "node prisma/seed.js"
+    "seed": "node prisma/seed.js",
     "prisma:generate": "nx run-many -t prisma:generate --all",
     "db:init": "nx run-many -t prisma:generate && nx run-many -t prisma:push && nx run-many -t prisma:seed",
     "start:auto": "docker compose up -d redis postgres-user postgres-movie postgres-cinema postgres-booking && echo Waiting for databases to start... && timeout /t 20 /nobreak > NUL && npm run db:init && npm run dev:all",

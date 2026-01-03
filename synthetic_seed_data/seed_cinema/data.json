@@ -1,0 +1,172 @@
+{
+  "cinemas": [
+    {
+      "id": "cinema_1",
+      "name": "CGV Vincom Center Landmark",
+      "address": "81 Đ. Lê Thánh Tôn, Bến Nghé, Quận 1, Thành phố Hồ Chí Minh",
+      "city": "Hồ Chí Minh",
+      "district": "Quận 1",
+      "phone": "1900-6017",
+      "email": "landmark@cgv.vn",
+      "latitude": 10.7827,
+      "longitude": 106.7013,
+      "description": "Rạp phim hiện đại với công nghệ âm thanh và hình ảnh tiên tiến",
+      "amenities": ["Parking", "Food Court", "3D", "IMAX", "VIP"],
+      "facilities": {
+        "totalScreens": 8,
+        "totalSeats": 1200,
+        "parking": true,
+        "wheelchairAccess": true,
+        "airConditioning": true
+      },
+      "images": [
+        "https://example.com/cgv-landmark-exterior.jpg",
+        "https://example.com/cgv-landmark-lobby.jpg"
+      ],
+      "rating": 4.5,
+      "total_reviews": 156,
+      "operating_hours": {
+        "monday": "09:00-23:00",
+        "tuesday": "09:00-23:00",
+        "wednesday": "09:00-23:00",
+        "thursday": "09:00-23:00",
+        "friday": "09:00-24:00",
+        "saturday": "09:00-24:00",
+        "sunday": "09:00-23:00"
+      },
+      "social_media": {
+        "facebook": "cgvcinemas.vietnam",
+        "instagram": "cgvcinemas_vn"
+      },
+      "status": "ACTIVE"
+    },
+    {
+      "id": "cinema_2",
+      "name": "Lotte Cinema Diamond Plaza",
+      "address": "34 Lê Duẩn, Bến Nghé, Quận 1, Thành phố Hồ Chí Minh",
+      "city": "Hồ Chí Minh",
+      "district": "Quận 1",
+      "phone": "1900-5555",
+      "email": "diamond@lottecinema.com.vn",
+      "latitude": 10.7886,
+      "longitude": 106.7024,
+      "description": "Rạp chiếu phim cao cấp với dịch vụ VIP đẳng cấp",
+      "amenities": ["Parking", "Food Court", "3D", "4DX", "Premium"],
+      "facilities": {
+        "totalScreens": 6,
+        "totalSeats": 900,
+        "parking": true,
+        "wheelchairAccess": true,
+        "airConditioning": true
+      },
+      "images": [
+        "https://example.com/lotte-diamond-exterior.jpg",
+        "https://example.com/lotte-diamond-lobby.jpg"
+      ],
+      "rating": 4.3,
+      "total_reviews": 89,
+      "operating_hours": {
+        "monday": "10:00-22:30",
+        "tuesday": "10:00-22:30",
+        "wednesday": "10:00-22:30",
+        "thursday": "10:00-22:30",
+        "friday": "10:00-23:30",
+        "saturday": "10:00-23:30",
+        "sunday": "10:00-22:30"
+      },
+      "social_media": {
+        "facebook": "lottecinemasVN",
+        "instagram": "lotte_cinemas_vn"
+      },
+      "status": "ACTIVE"
+    }
+  ],
+  "halls": [
+    {
+      "cinema_ref": "cinema_1",
+      "name": "Hall 1",
+      "type": "STANDARD",
+      "capacity": 150,
+      "rows": 10,
+      "screen_type": "2K Digital",
+      "sound_system": "Dolby Digital 7.1",
+      "features": ["Air Conditioning", "Cup Holders"],
+      "status": "ACTIVE"
+    },
+    {
+      "cinema_ref": "cinema_1",
+      "name": "Hall 2",
+      "type": "VIP",
+      "capacity": 80,
+      "rows": 8,
+      "screen_type": "4K Digital",
+      "sound_system": "Dolby Atmos",
+      "features": ["Reclining Seats", "Food Service", "Blankets"],
+      "status": "ACTIVE"
+    },
+    {
+      "cinema_ref": "cinema_1",
+      "name": "Hall 3",
+      "type": "IMAX",
+      "capacity": 200,
+      "rows": 12,
+      "screen_type": "IMAX Laser",
+      "sound_system": "IMAX Enhanced Sound",
+      "features": ["Large Screen", "Enhanced Audio"],
+      "status": "ACTIVE"
+    },
+    {
+      "cinema_ref": "cinema_2",
+      "name": "Screen 1",
+      "type": "STANDARD",
+      "capacity": 120,
+      "rows": 10,
+      "screen_type": "2K Digital",
+      "sound_system": "DTS Digital Surround",
+      "features": ["Air Conditioning", "Cup Holders"],
+      "status": "ACTIVE"
+    },
+    {
+      "cinema_ref": "cinema_2",
+      "name": "Screen 2",
+      "type": "PREMIUM",
+      "capacity": 100,
+      "rows": 8,
+      "screen_type": "4K Digital",
+      "sound_system": "Dolby Atmos",
+      "features": ["Premium Seats", "Food Service"],
+      "status": "ACTIVE"
+    },
+    {
+      "cinema_ref": "cinema_2",
+      "name": "Screen 3",
+      "type": "FOUR_DX",
+      "capacity": 60,
+      "rows": 6,
+      "screen_type": "4K Digital",
+      "sound_system": "Dolby Atmos",
+      "features": ["Motion Seats", "Environmental Effects", "Wind", "Water"],
+      "status": "ACTIVE"
+    }
+  ],
+  "reviews": [
+    {
+      "cinema_ref": "cinema_1",
+      "user_id": "auth0|663a1b2c3d4e5f6a7b8c9d0e",
+      "rating": 5,
+      "comment": "Rạp phim tuyệt vời! Âm thanh và hình ảnh rất chất lượng."
+    },
+    {
+      "cinema_ref": "cinema_1",
+      "user_id": "auth0|663a2b3c4d5e6f7a8b9c0d1e",
+      "rating": 4,
+      "comment": "Rạp đẹp, ghế ngồi thoải mái. Giá hơi cao một chút."
+    },
+    {
+      "cinema_ref": "cinema_2",
+      "user_id": "auth0|663a3b4c5d6e7f8a9b0c1d2e",
+      "rating": 5,
+      "comment": "Phòng VIP rất sang trọng. Dịch vụ tuyệt vời!"
+    }
+  ]
+}

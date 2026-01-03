@@ -1,8 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
-import { AppModule } from '../app/app.module';
-import { PrismaService } from '../app/prisma.service';
+import { AppModule } from '../../apps/user-service/src/app/app.module';
+import { PrismaService } from '../../apps/user-service/src/app/prisma.service';
 
 describe('User Service Integration Tests', () => {
   let app: INestApplication;

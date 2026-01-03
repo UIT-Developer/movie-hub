@@ -21,20 +21,23 @@ const nextConfig = {
     ],
   },
 
-  webpack: (config, { isServer }) => {
-    if (!isServer) {
-      // Provide empty modules for server-side only dependencies in client bundle
-      config.resolve.fallback = {
-        ...config.resolve.fallback,
-        'class-transformer/storage': false,
-        'class-transformer': false,
-        'class-validator': false,
-      };
-    }
-    return config;
-  },
+  webpack: (config, { isServer, webpack }) => {
+    console.log(`> Webpack building for ${isServer ? 'server' : 'client'}`);
 
-  webpack: (config, { isServer }) => {
+    const path = require('path');
+    const dummyPath = path.resolve(__dirname, 'dummy-module.js');
+
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      'class-transformer/storage': dummyPath,
+      'class-transformer': dummyPath,
+      'class-validator': dummyPath,
+      '@nestjs/microservices': dummyPath,
+      '@nestjs/swagger': dummyPath,
+      'nestjs-zod': dummyPath,
+      '@grpc/proto-loader': dummyPath,
+    };
+
     if (!isServer) {
       // Provide empty modules for server-side only dependencies in client bundle
       config.resolve.fallback = {
@@ -42,8 +45,23 @@ const nextConfig = {
         'class-transformer/storage': false,
         'class-transformer': false,
         'class-validator': false,
+        '@nestjs/microservices': false,
+        '@nestjs/websockets/socket-module': false,
+        '@nestjs/common/utils/load-package.util': false,
+        '@grpc/proto-loader': false,
+        '@opencensus/propagation-stackdriver': false,
+        '@nestjs/swagger': false,
+        'nestjs-zod': false,
       };
     }
+
+    config.plugins.push(
+      new webpack.IgnorePlugin({
+        resourceRegExp:
+          /@nestjs\/microservices|@nestjs\/swagger|nestjs-zod|class-transformer\/storage|class-validator|@grpc\/proto-loader/,
+      })
+    );
+
     return config;
   },
 };

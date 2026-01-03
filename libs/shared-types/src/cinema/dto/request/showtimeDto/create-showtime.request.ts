@@ -13,11 +13,7 @@ export const createShowtimeSchema = z.object({
 
   startTime: z
     .string()
-    .regex(DATE_TIME_REGEX, 'startTime phải theo format yyyy-MM-dd HH:mm:ss')
-    .transform((v) => {
-      // Convert "2025-12-15 18:30:00" -> "2025-12-15T18:30:00"
-      return new Date(v.replace(' ', 'T'));
-    }),
+    .regex(DATE_TIME_REGEX, 'startTime phải theo format yyyy-MM-dd HH:mm:ss'),
 
   format: z
     .enum(Object.values(FormatEnum) as [string, ...string[]])

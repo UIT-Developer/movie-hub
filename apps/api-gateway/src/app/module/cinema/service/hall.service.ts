@@ -38,7 +38,7 @@ export class HallService {
   }
 
   async deleteHall(hallId: string) {
-    return this.cinemaClient.send(CinemaMessage.HALL.DELETE, { hallId });
+    return this.cinemaClient.send(CinemaMessage.HALL.DELETE, hallId);
   }
 
   async updateSeatStatus(

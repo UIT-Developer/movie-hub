@@ -247,6 +247,11 @@ export class RealtimeService implements OnModuleInit, OnModuleDestroy {
     return this.redis.ttl(`hold:user:${userId}:showtime:${showtimeId}`);
   }
 
+  async hasHeldSeats(showtimeId: string): Promise<boolean> {
+    const keys = await this.redis.keys(`hold:showtime:${showtimeId}:*`);
+    return keys.length > 0;
+  }
+
   async getOrSetCache<T>(
     key: string,
     ttlSeconds: number,

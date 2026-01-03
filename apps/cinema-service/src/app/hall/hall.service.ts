@@ -59,11 +59,12 @@ export class HallService {
         });
 
         if (!cinema) {
-          throw new ResourceNotFoundException(
-            'Cinema',
-            'id',
-            createHallDto.cinemaId
-          );
+          throw new RpcException({
+            summary: 'Cinema not found',
+            statusCode: 409,
+            code: 'CINEMA_NOT_FOUND',
+            message: 'Cinema not found',
+          });
         }
 
         if (cinema.status !== CinemaStatus.ACTIVE) {
@@ -135,6 +136,23 @@ export class HallService {
 
   async deleteHall(id: string): Promise<ServiceResult<void>> {
     try {
+      const [showtimeCount, bookingCount] = await Promise.all([
+        this.prisma.showtimes.count({
+          where: { hall_id: id },
+        }),
+        this.prisma.seatReservations.count({
+          where: {
+            showtime: {
+              hall_id: id,
+            },
+          },
+        }),
+      ]);
+
+      if (showtimeCount > 0 || bookingCount > 0) {
+        throw new RpcException('Cannot delete hall with dependent data');
+      }
+
       await this.prisma.halls.delete({
         where: { id },
       });
@@ -145,7 +163,6 @@ export class HallService {
       };
     } catch (e) {
       if (e instanceof PrismaClientKnownRequestError) {
-        // Hall không tồn tại
         if (e.code === 'P2025') {
           throw new RpcException({
             summary: 'Delete hall failed',
@@ -154,20 +171,17 @@ export class HallService {
             message: 'Hall does not exist',
           });
         }
-
-        // Hall đang được dùng (showtime / seat / pricing ...)
-        if (e.code === 'P2003') {
-          throw new RpcException({
-            summary: 'Delete hall failed',
-            statusCode: 400,
-            code: 'HALL_IN_USE',
-            message:
-              'Hall cannot be deleted because it is referenced by other entities',
-          });
-        }
       }
 
-      // Fallback
+      if (e instanceof RpcException) {
+        throw new RpcException({
+          summary: 'Delete hall failed',
+          statusCode: 400,
+          code: 'HALL_IN_USE',
+          message: 'Cannot delete hall with dependent data',
+        });
+      }
+
       throw new RpcException({
         summary: 'Delete hall failed',
         statusCode: 500,

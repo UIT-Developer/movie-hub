@@ -48,8 +48,8 @@ export class ShowtimeService {
 
     if (date) {
       where.start_time = {
-        gte: new Date(`${date}T00:00:00.000`),
-        lt: new Date(`${date}T23:59:59.999`),
+        gte: new Date(`${date}T00:00:00.000Z`),
+        lt: new Date(`${date}T23:59:59.999Z`),
       };
     }
 
@@ -94,8 +94,8 @@ export class ShowtimeService {
         hallId: showtime.hall_id,
         hallName: showtime.hall.name,
         format: showtime.format as FormatEnum,
-        startTime: new Date(showtime.start_time.getTime() + 7 * 60 * 60 * 1000),
-        endTime: new Date(showtime.end_time.getTime() + 7 * 60 * 60 * 1000),
+        startTime: showtime.start_time,
+        endTime: showtime.end_time,
         language: showtime.language,
         subtitles: showtime.subtitles ?? [],
         availableSeats: showtime.available_seats,
@@ -144,8 +144,8 @@ export class ShowtimeService {
             cinema_id: cinemaId,
             movie_id: movieId,
             start_time: {
-              gte: new Date(`${query.date}T00:00:00.000`),
-              lt: new Date(`${query.date}T23:59:59.999`),
+              gte: new Date(`${query.date}T00:00:00.000Z`),
+              lt: new Date(`${query.date}T23:59:59.999Z`),
             },
             status: ShowtimeStatus.SELLING,
           },
@@ -174,8 +174,8 @@ export class ShowtimeService {
       cinema_id: cinemaId,
       movie_id: movieId,
       start_time: {
-        gte: new Date(`${date}T00:00:00.000`),
-        lt: new Date(`${date}T23:59:59.999`),
+        gte: new Date(`${date}T00:00:00.000Z`),
+        lt: new Date(`${date}T23:59:59.999Z`),
       },
     };
 

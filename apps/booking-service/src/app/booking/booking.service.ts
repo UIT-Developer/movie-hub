@@ -123,9 +123,9 @@ export class BookingService {
       status?: BookingStatus;
       page?: number;
       limit?: number;
-    }
+    } = {}
   ): Promise<ServiceResult<BookingSummaryDto[]>> {
-    const { status, page = 1, limit = 10 } = query;
+    const { status, page = 1, limit = 10 } = query || {};
     const skip = (page - 1) * limit;
 
     const where: Prisma.BookingsWhereInput = { user_id: userId };
@@ -762,28 +762,28 @@ export class BookingService {
    * Admin: Find all bookings with comprehensive filters
    */
   async adminFindAllBookings(
-    filters: AdminFindAllBookingsDto
+    filters: AdminFindAllBookingsDto = {}
   ): Promise<ServiceResult<BookingSummaryDto[]>> {
-    const page = filters.page || 1;
-    const limit = filters.limit || 10;
+    const page = filters?.page || 1;
+    const limit = filters?.limit || 10;
     const skip = (page - 1) * limit;
 
     const where: Prisma.BookingsWhereInput = {};
 
-    if (filters.userId) where.user_id = filters.userId;
-    if (filters.showtimeId) where.showtime_id = filters.showtimeId;
-    if (filters.status) where.status = filters.status;
-    if (filters.paymentStatus) where.payment_status = filters.paymentStatus;
+    if (filters?.userId) where.user_id = filters.userId;
+    if (filters?.showtimeId) where.showtime_id = filters.showtimeId;
+    if (filters?.status) where.status = filters.status;
+    if (filters?.paymentStatus) where.payment_status = filters.paymentStatus;
 
-    if (filters.startDate || filters.endDate) {
+    if (filters?.startDate || filters?.endDate) {
       where.created_at = {};
       if (filters.startDate) where.created_at.gte = filters.startDate;
       if (filters.endDate) where.created_at.lte = filters.endDate;
     }
 
     const orderBy: Prisma.BookingsOrderByWithRelationInput = {};
-    const sortBy = filters.sortBy || 'created_at';
-    const sortOrder = filters.sortOrder || 'desc';
+    const sortBy = filters?.sortBy || 'created_at';
+    const sortOrder = filters?.sortOrder || 'desc';
     orderBy[sortBy] = sortOrder;
 
     const [bookings, total] = await Promise.all([
@@ -868,24 +868,25 @@ export class BookingService {
    * Find bookings by date range
    */
   async findBookingsByDateRange(filters: {
-    startDate: Date;
-    endDate: Date;
+    startDate?: Date;
+    endDate?: Date;
     status?: BookingStatus;
     page?: number;
     limit?: number;
-  }): Promise<ServiceResult<BookingSummaryDto[]>> {
-    const page = filters.page || 1;
-    const limit = filters.limit || 10;
+  } = {}): Promise<ServiceResult<BookingSummaryDto[]>> {
+    const page = filters?.page || 1;
+    const limit = filters?.limit || 10;
     const skip = (page - 1) * limit;
 
-    const where: Prisma.BookingsWhereInput = {
-      created_at: {
-        gte: filters.startDate,
-        lte: filters.endDate,
-      },
-    };
+    const where: Prisma.BookingsWhereInput = {};
 
-    if (filters.status) where.status = filters.status;
+    if (filters?.startDate || filters?.endDate) {
+      where.created_at = {};
+      if (filters.startDate) where.created_at.gte = filters.startDate;
+      if (filters.endDate) where.created_at.lte = filters.endDate;
+    }
+
+    if (filters?.status) where.status = filters.status;
 
     const [bookings, total] = await Promise.all([
       this.prisma.bookings.findMany({
@@ -1009,16 +1010,16 @@ export class BookingService {
     endDate?: Date;
     cinemaId?: string;
     showtimeId?: string;
-  }): Promise<any> {
+  } = {}): Promise<any> {
     const where: Prisma.BookingsWhereInput = {};
 
-    if (filters.startDate || filters.endDate) {
+    if (filters?.startDate || filters?.endDate) {
       where.created_at = {};
       if (filters.startDate) where.created_at.gte = filters.startDate;
       if (filters.endDate) where.created_at.lte = filters.endDate;
     }
 
-    if (filters.showtimeId) where.showtime_id = filters.showtimeId;
+    if (filters?.showtimeId) where.showtime_id = filters.showtimeId;
 
     const bookings = await this.prisma.bookings.findMany({
       where,
@@ -1119,20 +1120,22 @@ export class BookingService {
    * Get revenue report
    */
   async getRevenueReport(filters: {
-    startDate: Date;
-    endDate: Date;
+    startDate?: Date;
+    endDate?: Date;
     cinemaId?: string;
     groupBy?: 'day' | 'week' | 'month' | 'cinema';
-  }): Promise<any> {
+  } = {}): Promise<any> {
     const where: Prisma.BookingsWhereInput = {
-      created_at: {
-        gte: filters.startDate,
-        lte: filters.endDate,
-      },
       status: BookingStatus.CONFIRMED, // Only confirmed bookings count towards revenue
     };
 
-    if (filters.cinemaId) {
+    if (filters?.startDate || filters?.endDate) {
+      where.created_at = {};
+      if (filters.startDate) where.created_at.gte = filters.startDate;
+      if (filters.endDate) where.created_at.lte = filters.endDate;
+    }
+
+    if (filters?.cinemaId) {
       // Would need cinema_id in bookings table or join through showtime
       // For now, we'll skip this filter
     }

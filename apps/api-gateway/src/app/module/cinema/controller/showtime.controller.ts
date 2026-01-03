@@ -6,19 +6,24 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   UseGuards,
   UseInterceptors,
+  UsePipes,
 } from '@nestjs/common';
 import { ShowtimeService } from '../service/showtime.service';
 import { TransformInterceptor } from '../../../common/interceptor/transform.interceptor';
 import { ClerkAuthGuard } from '../../../common/guard/clerk-auth.guard';
 import { CurrentUserId } from '../../../common/decorator/current-user-id.decorator';
 import {
+  AdminShowtimeFilterDTO,
   BatchCreateShowtimesInput,
+  batchCreateShowtimesSchema,
   CreateShowtimeRequest,
-  UpdateSeatStatusRequest,
+  createShowtimeSchema,
   UpdateShowtimeRequest,
 } from '@movie-hub/shared-types';
+import { ZodValidationPipe } from 'nestjs-zod';
 
 @Controller({
   version: '1',
@@ -30,8 +35,8 @@ export class ShowtimeController {
 
   @Get()
   @UseGuards(ClerkAuthGuard)
-  test() {
-    return 'Oke';
+  getShowtimes(@Query() filter: AdminShowtimeFilterDTO) {
+    return this.showtimeService.getShowtimes(filter);
   }
 
   @Get(':id/seats')
@@ -41,6 +46,12 @@ export class ShowtimeController {
     @CurrentUserId() userId: string
   ) {
     return this.showtimeService.getShowtimeSeats(showtimeId, userId);
+  }
+
+  @Get(':id')
+  @UseGuards(ClerkAuthGuard)
+  getShowtime(@Param('id') showtimeId: string) {
+    return this.showtimeService.getShowtime(showtimeId);
   }
 
   @Get('showtime/:showtimeId/ttl')
@@ -54,12 +65,14 @@ export class ShowtimeController {
 
   @Post('showtime')
   @UseGuards(ClerkAuthGuard)
+  @UsePipes(new ZodValidationPipe(createShowtimeSchema))
   createShowtime(@Body() body: CreateShowtimeRequest) {
     return this.showtimeService.createShowtime(body);
   }
 
   @Post('/batch')
   @UseGuards(ClerkAuthGuard)
+  @UsePipes(new ZodValidationPipe(batchCreateShowtimesSchema))
   createBatchShowtimes(@Body() body: BatchCreateShowtimesInput) {
     return this.showtimeService.createBatchShowtimes(body);
   }

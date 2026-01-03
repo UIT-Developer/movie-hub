@@ -11,6 +11,9 @@ import {
   SeatTypeEnum,
   MovieServiceMessage,
   ServiceResult,
+  AdminShowtimeFilterDTO,
+  FormatEnum,
+  ShowtimeStatusEnum,
 } from '@movie-hub/shared-types';
 import { PrismaService } from '../prisma.service';
 import { RealtimeService } from '../realtime/realtime.service';
@@ -34,6 +37,94 @@ export class ShowtimeService {
     @Inject('MOVIE_SERVICE') private readonly movieClient: ClientProxy
   ) {}
 
+  async getShowtimes(filter: AdminShowtimeFilterDTO) {
+    const { cinemaId, date, movieId, hallId } = filter;
+
+    const where: Prisma.ShowtimesWhereInput = {};
+
+    if (cinemaId) where.cinema_id = cinemaId;
+    if (movieId) where.movie_id = movieId;
+    if (hallId) where.hall_id = hallId;
+
+    if (date) {
+      where.start_time = {
+        gte: new Date(`${date}T00:00:00.000Z`),
+        lt: new Date(`${date}T23:59:59.999Z`),
+      };
+    }
+
+    console.log('ShowtimeService.getShowtimes - where:', where);
+
+    const showtimes = await this.prisma.showtimes.findMany({
+      where,
+      orderBy: { start_time: 'asc' },
+      include: {
+        hall: true,
+        cinema: true,
+      },
+    });
+
+    console.log('ShowtimeService.getShowtimes - found showtimes:', showtimes);
+
+    // ===== 1. Gom unique movieIds =====
+    const movieIds = [...new Set(showtimes.map((s) => s.movie_id))];
+
+    // ===== 2. Gọi movie service =====
+    const movies = movieIds.length
+      ? await lastValueFrom(
+          this.movieClient.send(
+            MovieServiceMessage.MOVIE.GET_LIST_BY_ID,
+            movieIds
+          )
+        )
+      : [];
+
+    // ===== 3. Map movieId -> movie =====
+    const movieMap = new Map(movies.map((movie) => [movie.id, movie]));
+
+    // ===== 4. Build response =====
+    const data: ShowtimeSummaryResponse[] = showtimes.map((showtime) => {
+      const movie: any = movieMap.get(showtime.movie_id);
+      return {
+        id: showtime.id,
+        cinemaId: showtime.cinema_id,
+        cinemaName: showtime.cinema.name,
+        movieId: showtime.movie_id,
+        movieTitle: movie?.title,
+        hallId: showtime.hall_id,
+        hallName: showtime.hall.name,
+        format: showtime.format as FormatEnum,
+        startTime: showtime.start_time,
+        endTime: showtime.end_time,
+        language: showtime.language,
+        subtitles: showtime.subtitles ?? [],
+        availableSeats: showtime.available_seats,
+        totalSeats: showtime.total_seats,
+        status: showtime.status as ShowtimeStatusEnum,
+      };
+    });
+
+    return {
+      data,
+      message: 'Fetch showtimes successfully',
+    };
+  }
+
+  async getShowtimeById(showtimeId: string) {
+    const showtime = await this.prisma.showtimes.findUnique({
+      where: { id: showtimeId },
+    });
+
+    if (!showtime) {
+      throw new NotFoundException('Showtime not found');
+    }
+
+    return {
+      data: ShowtimeMapper.toShowtimDetailResponse(showtime),
+      message: 'Fetch showtime successfully',
+    };
+  }
+
   /**
    * 📅 Lấy danh sách suất chiếu của 1 phim tại 1 rạp (có cache)
    */
@@ -46,7 +137,7 @@ export class ShowtimeService {
 
     const data = await this.realtimeService.getOrSetCache(
       cacheKey,
-      3600,
+      60,
       async () => {
         const showtimes = await this.prisma.showtimes.findMany({
           where: {
@@ -128,7 +219,7 @@ export class ShowtimeService {
     const showtimeCacheKey = `showtime:detail:${showtimeId}`;
     const showtime = await this.realtimeService.getOrSetCache(
       showtimeCacheKey,
-      3600 * 6,
+      60,
       async () => {
         const data = await this.prisma.showtimes.findUnique({
           where: { id: showtimeId },
@@ -143,7 +234,7 @@ export class ShowtimeService {
     const seatsCacheKey = `hall:${showtime.hall_id}:seats`;
     const seats = await this.realtimeService.getOrSetCache(
       seatsCacheKey,
-      3600 * 12,
+      60,
       async () => {
         return this.prisma.seats.findMany({
           where: { hall_id: showtime.hall_id },
@@ -156,7 +247,7 @@ export class ShowtimeService {
     const ticketPricingCacheKey = `ticketPricing:${showtime.hall_id}:${showtime.day_type}`;
     const ticketPricings = await this.realtimeService.getOrSetCache(
       ticketPricingCacheKey,
-      3600 * 6,
+      60,
       async () => {
         return this.prisma.ticketPricing.findMany({
           where: {

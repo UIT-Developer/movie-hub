@@ -1,20 +1,20 @@
 # ===========================================
 # DEPENDENCIES STAGE - Install all deps
 # ===========================================
-FROM node:18-alpine AS deps
+FROM node:20-alpine AS deps
 
 WORKDIR /app
-
+RUN npm install -g npm@latest && npm -v
 # Copy only package files for better caching
 COPY package*.json ./
 
 # Install ALL dependencies (needed for build)
-RUN npm ci
+RUN npm i --legacy-peer-deps
 
 # ===========================================
 # BUILD STAGE - Build Next.js application
 # ===========================================
-FROM node:18-alpine AS builder
+FROM node:20-alpine AS builder
 
 WORKDIR /app
 
@@ -36,7 +36,7 @@ RUN npx nx run web:build --prod
 # ===========================================
 # PRODUCTION STAGE - Minimal Next.js runtime using standalone output
 # ===========================================
-FROM node:18-alpine AS production
+FROM node:20-alpine AS production
 
 # Install wget for healthcheck
 RUN apk add --no-cache wget

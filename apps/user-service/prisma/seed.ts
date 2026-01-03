@@ -1,21 +1,20 @@
-import { PrismaClient } from '../generated/prisma';
+import { PrismaClient, Gender, StaffStatus, WorkType, StaffPosition, ShiftType } from '../generated/prisma';
 
 const prisma = new PrismaClient();
 
 async function main() {
   console.log('🌱 Seeding User Service database...');
 
-  // Clear existing data
   await prisma.rolePermission.deleteMany();
   await prisma.userRole.deleteMany();
   await prisma.role.deleteMany();
   await prisma.permission.deleteMany();
+  await prisma.staff.deleteMany();
+  await prisma.setting.deleteMany();
 
-  // Create Permissions
   const permissions = await Promise.all([
     prisma.permission.create({ data: { name: 'user:read' } }),
     prisma.permission.create({ data: { name: 'user:write' } }),
-    prisma.permission.create({ data: { name: 'user:delete' } }),
     prisma.permission.create({ data: { name: 'booking:read' } }),
     prisma.permission.create({ data: { name: 'booking:write' } }),
     prisma.permission.create({ data: { name: 'booking:cancel' } }),
@@ -26,86 +25,87 @@ async function main() {
     prisma.permission.create({ data: { name: 'admin:access' } }),
   ]);
 
-  console.log(`✅ Created ${permissions.length} permissions`);
+  const adminRole = await prisma.role.create({ data: { name: 'admin' } });
+  const managerRole = await prisma.role.create({ data: { name: 'manager' } });
+  const customerRole = await prisma.role.create({ data: { name: 'customer' } });
 
-  // Create Roles
-  const adminRole = await prisma.role.create({
-    data: { name: 'admin' },
-  });
-
-  const managerRole = await prisma.role.create({
-    data: { name: 'manager' },
-  });
-
-  const customerRole = await prisma.role.create({
-    data: { name: 'customer' },
-  });
-
-  console.log('✅ Created 3 roles: admin, manager, customer');
-
-  // Assign Permissions to Admin Role (all permissions)
   await Promise.all(
-    permissions.map((permission) =>
-      prisma.rolePermission.create({
-        data: {
-          roleId: adminRole.id,
-          permissionId: permission.id,
-        },
-      })
-    )
+    permissions.map((p) => prisma.rolePermission.create({ data: { roleId: adminRole.id, permissionId: p.id } }))
   );
 
-  // Assign Permissions to Manager Role
-  const managerPermissions = permissions.filter((p) =>
-    ['user:read', 'booking:read', 'booking:write', 'movie:read', 'cinema:read', 'cinema:write'].includes(p.name)
-  );
+  const managerNames = ['user:read', 'booking:read', 'booking:write', 'movie:read', 'cinema:read', 'cinema:write'];
+  const customerNames = ['user:read', 'booking:read', 'booking:write', 'booking:cancel', 'movie:read', 'cinema:read'];
+
   await Promise.all(
-    managerPermissions.map((permission) =>
-      prisma.rolePermission.create({
-        data: {
-          roleId: managerRole.id,
-          permissionId: permission.id,
-        },
-      })
-    )
+    permissions
+      .filter((p) => managerNames.includes(p.name))
+      .map((p) => prisma.rolePermission.create({ data: { roleId: managerRole.id, permissionId: p.id } }))
   );
 
-  // Assign Permissions to Customer Role
-  const customerPermissions = permissions.filter((p) =>
-    ['user:read', 'booking:read', 'booking:write', 'booking:cancel', 'movie:read', 'cinema:read'].includes(p.name)
-  );
   await Promise.all(
-    customerPermissions.map((permission) =>
-      prisma.rolePermission.create({
-        data: {
-          roleId: customerRole.id,
-          permissionId: permission.id,
-        },
-      })
-    )
+    permissions
+      .filter((p) => customerNames.includes(p.name))
+      .map((p) => prisma.rolePermission.create({ data: { roleId: customerRole.id, permissionId: p.id } }))
   );
 
-  console.log('✅ Assigned permissions to roles');
+  const users = {
+    admin: 'user-admin-001',
+    manager: 'user-manager-001',
+    customer1: 'user-customer-001',
+    customer2: 'user-customer-002',
+  };
 
-  // Create sample UserRoles (assuming some users exist in the system)
-  // Note: These user IDs should match actual user records in the User table
-  // If you have a User table, make sure to create those records first
-  const sampleUserRoles = [
-    { userId: 'admin-user-1', roleId: adminRole.id },
-    { userId: 'manager-user-1', roleId: managerRole.id },
-    { userId: 'customer-user-1', roleId: customerRole.id },
-    { userId: 'customer-user-2', roleId: customerRole.id },
-    { userId: 'customer-user-3', roleId: customerRole.id },
+  const userRoles = [
+    { userId: users.admin, roleId: adminRole.id },
+    { userId: users.manager, roleId: managerRole.id },
+    { userId: users.customer1, roleId: customerRole.id },
+    { userId: users.customer2, roleId: customerRole.id },
   ];
 
-  await Promise.all(
-    sampleUserRoles.map((userRole) =>
-      prisma.userRole.create({ data: userRole })
-    )
-  );
+  await prisma.userRole.createMany({ data: userRoles });
 
-  console.log('✅ Created sample user role assignments');
-  console.log('🎉 User Service database seeding completed!');
+  const staff = [
+    {
+      cinemaId: 'aaaa1111-0000-0000-0000-000000000001',
+      fullName: 'Lê Minh Quân',
+      email: 'quan.le@cgv.vn',
+      phone: '0903000111',
+      gender: Gender.MALE,
+      dob: new Date('1990-05-12'),
+      position: StaffPosition.CINEMA_MANAGER,
+      status: StaffStatus.ACTIVE,
+      workType: WorkType.FULL_TIME,
+      shiftType: ShiftType.MORNING,
+      salary: 25000000,
+      hireDate: new Date('2020-01-05'),
+    },
+    {
+      cinemaId: 'aaaa1111-0000-0000-0000-000000000002',
+      fullName: 'Trần Thu Hà',
+      email: 'ha.tran@bhdstar.vn',
+      phone: '0912000222',
+      gender: Gender.FEMALE,
+      dob: new Date('1994-08-21'),
+      position: StaffPosition.TICKET_CLERK,
+      status: StaffStatus.ACTIVE,
+      workType: WorkType.PART_TIME,
+      shiftType: ShiftType.AFTERNOON,
+      salary: 12000000,
+      hireDate: new Date('2022-09-10'),
+    },
+  ];
+
+  await prisma.staff.createMany({ data: staff });
+
+  await prisma.setting.create({
+    data: {
+      key: 'auth.passwordPolicy',
+      value: { minLength: 8, requireSpecial: true, requireNumber: true },
+      description: 'Chính sách mật khẩu tối thiểu',
+    },
+  });
+
+  console.log('✅ Seeded permissions, roles, user-role mapping, staff, and settings');
 }
 
 main()

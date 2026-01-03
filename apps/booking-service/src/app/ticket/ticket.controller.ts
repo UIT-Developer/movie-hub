@@ -53,9 +53,9 @@ export class TicketController {
 
   @MessagePattern('ticket.admin.findAll')
   async adminFindAll(
-    @Payload() payload: { filters: AdminFindAllTicketsDto }
+    @Payload() payload: { filters?: AdminFindAllTicketsDto }
   ) {
-    return this.ticketService.adminFindAllTickets(payload.filters);
+    return this.ticketService.adminFindAllTickets(payload?.filters || {});
   }
 
   @MessagePattern('ticket.findByShowtime')

@@ -3,6 +3,7 @@ import { CinemaService } from './cinema.service';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import {
   CinemaMessage,
+  CinemaStatusEnum,
   CreateCinemaRequest,
   ShowtimesFilterDTO,
   UpdateCinemaRequest,
@@ -43,8 +44,8 @@ export class CinemaController {
   }
 
   @MessagePattern(CinemaMessage.GET_CINEMAS)
-  async getAllCinemas() {
-    return this.cinemaService.getAllCinemas();
+  async getAllCinemas(@Payload() status: CinemaStatusEnum) {
+    return this.cinemaService.getAllCinemas(status);
   }
 
   @MessagePattern(CinemaMessage.MOVIE.GET_MOVIES_BY_CINEMA)

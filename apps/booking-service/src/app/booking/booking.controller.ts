@@ -31,7 +31,7 @@ export class BookingController {
     @Payload()
     payload: {
       userId: string;
-      query: {
+      query?: {
         status?: BookingStatus;
         page?: number;
         limit?: number;
@@ -40,7 +40,7 @@ export class BookingController {
   ) {
     return this.bookingService.findAllByUser(
       payload.userId,
-      payload.query
+      payload.query || {}
     );
   }
 
@@ -90,9 +90,9 @@ export class BookingController {
 
   @MessagePattern('booking.findByDateRange')
   async findByDateRange(
-    @Payload() payload: { filters: FindBookingsByDateRangeDto }
+    @Payload() payload: { filters?: FindBookingsByDateRangeDto }
   ) {
-    return this.bookingService.findBookingsByDateRange(payload.filters);
+    return this.bookingService.findBookingsByDateRange(payload.filters || {});
   }
 
   @MessagePattern('booking.updateStatus')
@@ -130,13 +130,13 @@ export class BookingController {
   // ==================== STATISTICS & REPORTS ====================
 
   @MessagePattern('booking.getStatistics')
-  async getStatistics(@Payload() filters: GetBookingStatisticsDto) {
-    return this.bookingService.getBookingStatistics(filters);
+  async getStatistics(@Payload() payload: { filters?: GetBookingStatisticsDto }) {
+    return this.bookingService.getBookingStatistics(payload?.filters || {});
   }
 
   @MessagePattern('booking.getRevenueReport')
-  async getRevenueReport(@Payload() filters: GetRevenueReportDto) {
-    return this.bookingService.getRevenueReport(filters);
+  async getRevenueReport(@Payload() payload: { filters?: GetRevenueReportDto }) {
+    return this.bookingService.getRevenueReport(payload?.filters || {});
   }
 
   // ==================== NEW FEATURES ====================

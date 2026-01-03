@@ -1,20 +1,20 @@
 # ===========================================
 # DEPENDENCIES STAGE - Install all deps
 # ===========================================
-FROM node:18-alpine AS deps
+FROM node:20-alpine AS deps
 
 WORKDIR /app
-
+RUN npm install -g npm@latest && npm -v
 # Copy only package files for better caching
 COPY package*.json ./
 
 # Install ALL dependencies (needed for build)
-RUN npm ci 
+RUN npm i --legacy-peer-deps
 
 # ===========================================
 # BUILD STAGE - Build the application
 # ===========================================
-FROM node:18-alpine AS builder
+FROM node:20-alpine AS builder
 
 WORKDIR /app
 
@@ -31,7 +31,7 @@ COPY apps/movie-service ./apps/movie-service
 
 # Generate Prisma Client for movie-service
 WORKDIR /app/apps/movie-service
-RUN npx prisma generate
+RUN npx --yes prisma@6.16.2 generate
 
 # Build the movie-service using Nx
 WORKDIR /app
@@ -40,7 +40,7 @@ RUN npx nx build movie-service --prod
 # ===========================================
 # PRODUCTION STAGE - Minimal runtime image
 # ===========================================
-FROM node:18-alpine AS production
+FROM node:20-alpine AS production
 
 # Install openssl for Prisma
 RUN apk add --no-cache openssl

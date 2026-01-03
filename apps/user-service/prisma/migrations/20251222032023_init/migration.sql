@@ -1,12 +1,3 @@
-/*
-  Warnings:
-
-  - You are about to drop the `Permission` table. If the table is not empty, all the data it contains will be lost.
-  - You are about to drop the `Role` table. If the table is not empty, all the data it contains will be lost.
-  - You are about to drop the `RolePermission` table. If the table is not empty, all the data it contains will be lost.
-  - You are about to drop the `UserRole` table. If the table is not empty, all the data it contains will be lost.
-
-*/
 -- CreateEnum
 CREATE TYPE "public"."Gender" AS ENUM ('MALE', 'FEMALE', 'OTHER');
 
@@ -21,27 +12,6 @@ CREATE TYPE "public"."StaffPosition" AS ENUM ('CINEMA_MANAGER', 'ASSISTANT_MANAG
 
 -- CreateEnum
 CREATE TYPE "public"."ShiftType" AS ENUM ('MORNING', 'AFTERNOON', 'NIGHT');
-
--- DropForeignKey
-ALTER TABLE "public"."RolePermission" DROP CONSTRAINT "RolePermission_permissionId_fkey";
-
--- DropForeignKey
-ALTER TABLE "public"."RolePermission" DROP CONSTRAINT "RolePermission_roleId_fkey";
-
--- DropForeignKey
-ALTER TABLE "public"."UserRole" DROP CONSTRAINT "UserRole_roleId_fkey";
-
--- DropTable
-DROP TABLE "public"."Permission";
-
--- DropTable
-DROP TABLE "public"."Role";
-
--- DropTable
-DROP TABLE "public"."RolePermission";
-
--- DropTable
-DROP TABLE "public"."UserRole";
 
 -- CreateTable
 CREATE TABLE "public"."roles" (

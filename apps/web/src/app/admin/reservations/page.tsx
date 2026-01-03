@@ -203,10 +203,8 @@ export default function ReservationsPage() {
   };
 
   const formatDate = (date: string | Date) => {
-    // TIMEZONE WORKAROUND: BE adds +7h in mapper, we need to subtract it
     const dateObj = new Date(date);
-    const correctedDate = new Date(dateObj.getTime() - 7 * 60 * 60 * 1000);
-    return correctedDate.toLocaleString('vi-VN', {
+    return dateObj.toLocaleString('vi-VN', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',

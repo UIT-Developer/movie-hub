@@ -1,0 +1,598 @@
+'use client';
+
+import { useState, useEffect, useMemo } from 'react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@movie-hub/shacdn-ui/dialog';
+import { Label } from '@movie-hub/shacdn-ui/label';
+import { Input } from '@movie-hub/shacdn-ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@movie-hub/shacdn-ui/select';
+import { Button } from '@movie-hub/shacdn-ui/button';
+import { useToast } from '../../_libs/use-toast';
+import { useCreateShowtime, useUpdateShowtime, useShowtime, useMovieReleases } from '@/libs/api';
+import type { Showtime, Movie, Cinema, Hall, CreateShowtimeRequest } from '@/libs/api/types';
+import { FormatEnum } from '@movie-hub/shared-types/cinema/enum';
+
+interface ShowtimeDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  movies: Movie[];
+  cinemas: Cinema[];
+  halls: Hall[];
+  editingShowtime?: Showtime | null;
+  preSelectedMovieId?: string;
+  preSelectedReleaseId?: string;
+  onSuccess?: () => void;
+}
+
+export default function ShowtimeDialog({
+  open,
+  onOpenChange,
+  movies,
+  cinemas,
+  halls,
+  editingShowtime,
+  preSelectedMovieId,
+  preSelectedReleaseId,
+  onSuccess,
+}: ShowtimeDialogProps) {
+  const createShowtime = useCreateShowtime();
+  const updateShowtime = useUpdateShowtime();
+  // Fetch full showtime detail from API when editing (if showtime ID provided)
+  const { data: fetchedShowtimeDetail } = useShowtime(editingShowtime?.id || null);
+  // Use fetched detail if available, otherwise fall back to editingShowtime from props
+  const fullShowtimeDetail = fetchedShowtimeDetail || editingShowtime;
+  const [formData, setFormData] = useState<CreateShowtimeRequest>({
+    movieId: '',
+    movieReleaseId: '',
+    cinemaId: '',
+    hallId: '',
+    startTime: '',
+    format: FormatEnum.TWO_D,
+    language: 'vi',
+    subtitles: [],
+  });
+  // Fetch releases for the selected movie (or pre-selected movie)
+  // Triggers whenever movieId in form changes OR when editingShowtime's movieId is loaded
+  const { data: movieReleasesData = [] } = useMovieReleases(
+    (formData?.movieId || preSelectedMovieId) ? { movieId: formData?.movieId || preSelectedMovieId } : undefined
+  );
+  const movieReleases = useMemo(() => movieReleasesData || [], [movieReleasesData]);
+  const { toast } = useToast();
+
+  // Debug: log when releases are fetched
+  useEffect(() => {
+    if (formData?.movieId && movieReleases.length > 0) {
+      console.log('[ShowtimeDialog] Loaded releases for movie:', {
+        movieId: formData.movieId,
+        releaseCount: movieReleases.length,
+        releases: movieReleases.map(r => ({ id: r.id, startDate: r.startDate, status: r.status })),
+      });
+    } else if (formData?.movieId && movieReleases.length === 0) {
+      console.warn('[ShowtimeDialog] No releases found for movie:', formData.movieId);
+    }
+  }, [formData?.movieId, movieReleases]);
+
+  // Auto-select movieReleaseId if editingShowtime has it but form doesn't yet
+  // OR if movieReleases just finished loading
+  // ALSO: Detect if release doesn't belong to current movie (BE bug Issue #5)
+  useEffect(() => {
+    if (editingShowtime?.movieReleaseId && movieReleases.length > 0) {
+      console.log('[ShowtimeDialog] Auto-selecting movieReleaseId from editingShowtime:', {
+        movieReleaseId: editingShowtime.movieReleaseId,
+        releasesCount: movieReleases.length,
+      });
+      // Check if the movieReleaseId exists in the releases list
+      const releaseExists = movieReleases.some(r => r.id === editingShowtime.movieReleaseId);
+      if (releaseExists) {
+        setFormData(prev => ({
+          ...prev,
+          movieReleaseId: editingShowtime.movieReleaseId || '',
+        }));
+      } else {
+        console.warn('[ShowtimeDialog] movieReleaseId not found in releases list:', {
+          movieReleaseId: editingShowtime.movieReleaseId,
+          currentMovieId: formData.movieId,
+          availableReleases: movieReleases.map(r => ({ id: r.id, status: r.status })),
+          ISSUE: 'BE did not update movie_release_id when movie changed. See STADIUM_LAYOUT_BUG.md Issue #5',
+        });
+        
+        // WORKAROUND for BE bug: Clear the movieReleaseId so user must reselect it for the new movie
+        // This is better than keeping invalid reference
+        setFormData(prev => ({
+          ...prev,
+          movieReleaseId: '', // Clear it so user sees empty and can select correct one
+        }));
+
+        // Show warning toast
+        toast({
+          title: 'Đã phát hiện lỗi dữ liệu từ backend',
+          description: 'ID Phát hành phim không khớp với Phim được chọn. Vui lòng chọn lại ID Phát hành phim. (Lỗi từ backend - vui lòng báo team backend)',
+          variant: 'default',
+        });
+      }
+    }
+  }, [editingShowtime?.movieReleaseId, movieReleases, formData.movieId, toast]);
+
+  useEffect(() => {
+    // Reset form when dialog opens/closes or when editing showtime changes
+    // Use fullShowtimeDetail if available (has complete data from API)
+    const showtimeToUse = fullShowtimeDetail || editingShowtime;
+    
+    if (showtimeToUse && open) {  // Only populate when dialog is OPEN
+      // BE now returns correct UTC time, parse it directly
+      let formattedStartTime = '';
+      try {
+        const dateFromAPI = new Date(showtimeToUse.startTime);
+        
+        // Backend returns UTC time string (e.g., "2026-01-03T23:00:00.000Z")
+        // Display UTC time directly (not converted to local)
+        // Backend stores UTC, we show UTC to admin user
+        // Use getUTC* methods to extract UTC components
+        const year = dateFromAPI.getUTCFullYear();
+        const month = String(dateFromAPI.getUTCMonth() + 1).padStart(2, '0');
+        const day = String(dateFromAPI.getUTCDate()).padStart(2, '0');
+        const hours = String(dateFromAPI.getUTCHours()).padStart(2, '0');
+        const minutes = String(dateFromAPI.getUTCMinutes()).padStart(2, '0');
+        formattedStartTime = `${year}-${month}-${day}T${hours}:${minutes}`;
+        
+        console.log('[ShowtimeDialog] Loaded showtime time (displaying UTC):', {
+          rawFromAPI: showtimeToUse.startTime,
+          dateFromAPI: dateFromAPI.toISOString(),
+          utcValues: { year, month, day, hours, minutes },
+          formatted: formattedStartTime,
+          note: 'Displaying UTC time directly, not converting to local',
+        });
+      } catch (e) {
+        console.warn('[ShowtimeDialog] Failed to parse startTime:', showtimeToUse.startTime, e);
+        formattedStartTime = '';
+      }
+
+      console.log('[ShowtimeDialog] Setting formData from editingShowtime:', {
+        movieId: showtimeToUse.movieId,
+        movieReleaseId: showtimeToUse.movieReleaseId,
+        cinemaId: showtimeToUse.cinemaId,
+        hallId: showtimeToUse.hallId,
+      });
+
+      setFormData({
+        movieId: showtimeToUse.movieId,
+        movieReleaseId: showtimeToUse.movieReleaseId || '',
+        cinemaId: showtimeToUse.cinemaId,
+        hallId: showtimeToUse.hallId,
+        startTime: formattedStartTime,
+        format: showtimeToUse.format,
+        language: showtimeToUse.language,
+        subtitles: showtimeToUse.subtitles || [],
+      });
+      console.log('[ShowtimeDialog] Loaded showtime for edit:', {
+        id: showtimeToUse.id,
+        movieId: showtimeToUse.movieId,
+        movieReleaseId: showtimeToUse.movieReleaseId,
+        startTime: formattedStartTime,
+        raw: showtimeToUse.startTime,
+      });
+    } else if (open && preSelectedMovieId && preSelectedReleaseId) {
+      // Pre-fill when opening from Movie Releases page
+      setFormData({
+        movieId: preSelectedMovieId,
+        movieReleaseId: preSelectedReleaseId,
+        cinemaId: '',
+        hallId: '',
+        startTime: '',
+        format: FormatEnum.TWO_D,
+        language: 'vi',
+        subtitles: [],
+      });
+    } else if (!open) {
+      // Clear form when dialog closes
+      setFormData({
+        movieId: '',
+        movieReleaseId: '',
+        cinemaId: '',
+        hallId: '',
+        startTime: '',
+        format: FormatEnum.TWO_D,
+        language: 'vi',
+        subtitles: [],
+      });
+    }
+  }, [fullShowtimeDetail, editingShowtime, preSelectedMovieId, preSelectedReleaseId, open]);
+
+  const handleSubmit = async () => {
+    if (!formData.movieId || !formData.movieReleaseId || !formData.cinemaId || 
+        !formData.hallId || !formData.startTime) {
+      toast({
+        title: 'Validation Error',
+        description: 'Please fill in all required fields',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      // User inputs UTC time directly in datetime-local field
+      // No timezone conversion needed - just format for backend
+      
+      const [datePart, timePart] = formData.startTime.split('T');
+      const [year, month, day] = datePart.split('-').map(Number);
+      const [hours, minutes] = timePart.split(':').map(Number);
+      
+      // Format as backend expects: "YYYY-MM-DD HH:mm:ss" (treated as UTC)
+      const monthStr = String(month).padStart(2, '0');
+      const dayStr = String(day).padStart(2, '0');
+      const hoursStr = String(hours).padStart(2, '0');
+      const minutesStr = String(minutes).padStart(2, '0');
+      const startTimeFormatted = `${year}-${monthStr}-${dayStr} ${hoursStr}:${minutesStr}:00`;
+      
+      console.log('[ShowtimeDialog] Submitting UTC time (no conversion):', {
+        userInput: formData.startTime,
+        parsed: { year, month, day, hours, minutes },
+        formatted: startTimeFormatted,
+        note: 'User input is treated as UTC directly, no timezone conversion',
+      });
+
+      // Send as custom format "YYYY-MM-DD HH:mm:ss" which backend parses as UTC
+      const payload = {
+        ...formData,
+        startTime: startTimeFormatted,
+      };
+
+      if (editingShowtime) {
+        await updateShowtime.mutateAsync({ id: editingShowtime.id, data: payload });
+      } else {
+        await createShowtime.mutateAsync(payload);
+      }
+
+      onOpenChange(false);
+      onSuccess?.();
+    } catch {
+      // Error toast already shown by mutation hooks
+    }
+  };
+
+  const selectedMovie = movies.find(m => m.id === formData.movieId);
+  const selectedRelease = movieReleases.find(r => r.id === formData.movieReleaseId);
+  const isMovieDisabled = !!preSelectedMovieId;
+  const isReleaseDisabled = !!preSelectedReleaseId;
+
+  // Debug logging
+  useEffect(() => {
+    if (editingShowtime && !selectedMovie) {
+      console.warn('[ShowtimeDialog] Movie not found in passed movies array', {
+        formDataMovieId: formData.movieId,
+        editingShowtimeMovieId: editingShowtime.movieId,
+        availableMovies: movies.map(m => ({ id: m.id, title: m.title })),
+      });
+    }
+  }, [editingShowtime, selectedMovie, formData.movieId, movies]);
+
+  // Debug: Log hall filtering issue
+  useEffect(() => {
+    if (open && editingShowtime && formData.hallId && formData.cinemaId) {
+      const filteredHalls = halls.filter(h => h.cinemaId === formData.cinemaId);
+      const selectedHall = halls.find(h => h.id === formData.hallId);
+      const hallExistsInFiltered = filteredHalls.some(h => h.id === formData.hallId);
+      
+      console.log('[ShowtimeDialog] Hall filtering debug:', {
+        formData_cinemaId: formData.cinemaId,
+        formData_hallId: formData.hallId,
+        selectedHall_name: selectedHall?.name,
+        selectedHall_cinemaId: selectedHall?.cinemaId,
+        filteredHalls_count: filteredHalls.length,
+        filteredHalls: filteredHalls.map(h => ({ id: h.id, name: h.name, cinemaId: h.cinemaId })),
+        hallExistsInFiltered,
+        ISSUE: !hallExistsInFiltered ? 'Hall belongs to different cinema! This causes blank dropdown.' : 'OK',
+      });
+
+      // WORKAROUND for BE bug: If hall doesn't belong to selected cinema, auto-correct cinema
+      // BE has bug where it updates hall_id but not cinema_id, causing data inconsistency
+      // See STADIUM_LAYOUT_BUG.md Issue #4
+      if (!hallExistsInFiltered && selectedHall) {
+        console.warn('[ShowtimeDialog] WORKAROUND APPLIED: Auto-correcting cinemaId from hall data', {
+          oldCinemaId: formData.cinemaId,
+          correctCinemaId: selectedHall.cinemaId,
+          hallId: formData.hallId,
+          hallName: selectedHall.name,
+          note: 'BE bug - cinema_id not updated when hall changes. See STADIUM_LAYOUT_BUG.md Issue #4',
+        });
+        
+        // Auto-correct the cinema to match the hall
+        setFormData(prev => ({
+          ...prev,
+          cinemaId: selectedHall.cinemaId,
+        }));
+
+        // Show warning toast to user
+        toast({
+          title: 'Đã tự động sửa lỗi dữ liệu',
+          description: `Rạp chiếu đã được cập nhật để khớp với phòng "${selectedHall.name}". (Lỗi từ backend - vui lòng báo team backend)`,
+          variant: 'default',
+        });
+      }
+    }
+  }, [open, editingShowtime, formData.hallId, formData.cinemaId, halls, toast]);
+
+  // Debug: Log movie release mismatch issue (similar to hall/cinema issue)
+  useEffect(() => {
+    if (open && editingShowtime && formData.movieReleaseId && movieReleases.length > 0) {
+      const releaseExistsForMovie = movieReleases.some(r => r.id === formData.movieReleaseId);
+      
+      if (!releaseExistsForMovie) {
+        console.warn('[ShowtimeDialog] Movie/Release mismatch detected:', {
+          formData_movieId: formData.movieId,
+          formData_movieReleaseId: formData.movieReleaseId,
+          availableReleases_count: movieReleases.length,
+          availableReleases: movieReleases.map(r => ({ id: r.id, startDate: r.startDate, status: r.status })),
+          ISSUE: 'Movie Release does not belong to selected Movie! This causes blank dropdown.',
+          BUG_REFERENCE: 'See STADIUM_LAYOUT_BUG.md Issue #5 - BE did not update movie_release_id when movie changed',
+        });
+      }
+    }
+  }, [open, editingShowtime, formData.movieId, formData.movieReleaseId, movieReleases]);
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{editingShowtime ? 'Chỉnh sửa suất chiếu' : 'Thêm suất chiếu mới'}</DialogTitle>
+          <DialogDescription>
+            {editingShowtime ? 'Cập nhật chi tiết suất chiếu' : 'Lịch chiếu phim mới'}
+          </DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-4 py-4">
+          {/* Movie */}
+          <div className="space-y-2">
+            <Label htmlFor="movie">Phim *</Label>
+            {isMovieDisabled ? (
+              <Input
+                id="movie"
+                value={selectedMovie ? `${selectedMovie.title} (${selectedMovie.runtime} phút)` : (formData.movieId || 'Chưa chọn phim')}
+                disabled
+                className="bg-gray-50"
+              />
+            ) : (
+              <Select
+                value={formData.movieId}
+                onValueChange={(value) => {
+                  setFormData({ 
+                    ...formData, 
+                    movieId: value,
+                    movieReleaseId: '', // Reset release when movie changes
+                  });
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Chọn phim">
+                    {selectedMovie ? `${selectedMovie.title} (${selectedMovie.runtime} phút)` : undefined}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {movies.map((movie) => (
+                    <SelectItem key={movie.id} value={movie.id}>
+                      {movie.title} ({movie.runtime} phút)
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+
+          {/* Movie Release ID */}
+          <div className="space-y-2">
+            <Label htmlFor="movieReleaseId">ID Phát hành phim *</Label>
+            {isReleaseDisabled ? (
+              <Input
+                id="movieReleaseId"
+                value={selectedRelease ? `${new Date(selectedRelease.startDate).toLocaleDateString()} → ${new Date(selectedRelease.endDate).toLocaleDateString()}` : ''}
+                disabled
+                className="bg-gray-50"
+              />
+            ) : (
+              <Select
+                value={formData.movieReleaseId}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, movieReleaseId: value })
+                }
+                disabled={!formData.movieId}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Chọn phát hành phim">
+                    {selectedRelease ? `${new Date(selectedRelease.startDate).toLocaleDateString()} → ${new Date(selectedRelease.endDate).toLocaleDateString()}` : undefined}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {formData.movieId && (() => {
+                    // movieReleases already contains only releases for formData.movieId
+                    // (fetched via useMovieReleases with { movieId: formData.movieId })
+                    // No need to filter - just use the data directly
+                    const releases = movieReleases;
+                    console.log('[ShowtimeDialog] Releases for movieId:', {
+                      movieId: formData.movieId,
+                      availableReleases: releases.length,
+                      releases: releases.map(r => ({ id: r.id, status: r.status })),
+                    });
+                    if (releases.length === 0) {
+                      return <div className="px-2 py-1.5 text-sm text-gray-500">Không có phát hành nào</div>;
+                    }
+                    return releases.map((release) => (
+                      <SelectItem key={release.id} value={release.id}>
+                        {new Date(release.startDate).toLocaleDateString()} → {new Date(release.endDate).toLocaleDateString()}
+                      </SelectItem>
+                    ));
+                  })()}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+
+          {/* Cinema */}
+          <div className="space-y-2">
+            <Label htmlFor="cinema">Rạp Chiếu Phim *</Label>
+            <Select
+              value={formData.cinemaId}
+              onValueChange={(value) => {
+                setFormData({ ...formData, cinemaId: value, hallId: '' });
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Chọn rạp" />
+              </SelectTrigger>
+              <SelectContent>
+                {cinemas.map((cinema) => (
+                  <SelectItem key={cinema.id} value={cinema.id}>
+                    {cinema.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Hall */}
+          <div className="space-y-2">
+            <Label htmlFor="hall">Phòng Chiếu *</Label>
+            {!formData.cinemaId ? (
+              <div className="px-3 py-2 border rounded-md bg-gray-50 text-gray-500 text-sm">
+                Chọn rạp trước
+              </div>
+            ) : (
+              <Select
+                value={formData.hallId}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, hallId: value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Chọn phòng" />
+                </SelectTrigger>
+                <SelectContent>
+                  {halls && halls.length > 0 ? (
+                    halls
+                      .filter(hall => hall.cinemaId === formData.cinemaId)
+                      .map((hall) => (
+                        <SelectItem key={hall.id} value={hall.id}>
+                          {hall.name} ({hall.type}) - {hall.capacity} ghế
+                        </SelectItem>
+                      ))
+                  ) : (
+                    <div className="p-2 text-sm text-gray-500">
+                      Không có phòng nào
+                    </div>
+                  )}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+
+          {/* Start Time */}
+          <div className="space-y-2">
+            <Label htmlFor="startTime">
+              Thời Gian Bắt Đầu (UTC) *
+              <span className="text-xs text-gray-500 ml-2">Nhập giờ UTC, không phải giờ địa phương</span>
+            </Label>
+            <Input
+              id="startTime"
+              type="datetime-local"
+              value={formData.startTime}
+              onChange={(e) => {
+                setFormData({ 
+                  ...formData, 
+                  startTime: e.target.value,
+                });
+              }}
+            />
+          </div>
+
+          {/* Format & Language */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="format">Định dạng</Label>
+              <Select
+                value={formData.format}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, format: value as FormatEnum })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Chọn định dạng" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={FormatEnum.TWO_D}>2D</SelectItem>
+                  <SelectItem value={FormatEnum.THREE_D}>3D</SelectItem>
+                  <SelectItem value={FormatEnum.IMAX}>IMAX</SelectItem>
+                  <SelectItem value={FormatEnum.FOUR_DX}>4DX</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="language">Ngôn ngữ</Label>
+              <Select
+                value={formData.language}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, language: value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Chọn ngôn ngữ" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="vi">Tiếng Việt</SelectItem>
+                  <SelectItem value="en">Tiếng Anh</SelectItem>
+                  <SelectItem value="ko">Tiếng Hàn</SelectItem>
+                  <SelectItem value="zh">Tiếng Trung</SelectItem>
+                  <SelectItem value="ja">Tiếng Nhật</SelectItem>
+                  <SelectItem value="th">Tiếng Thái</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Subtitles */}
+          <div className="space-y-2">
+            <Label htmlFor="subtitles">Subtitles (Phụ đề)</Label>
+            <Input
+              id="subtitles"
+              value={(formData.subtitles || []).join(', ')}
+              onChange={(e) => {
+                const subtitlesArray = e.target.value
+                  .split(',')
+                  .map(s => s.trim())
+                  .filter(s => s.length > 0);
+                setFormData({ ...formData, subtitles: subtitlesArray });
+              }}
+              placeholder="en"
+            />
+            <p className="text-xs text-gray-500">
+              Nhập các ngôn ngữ phụ đề, phân cách bằng dấu phẩy. Ví dụ: Vietnamese, English, Chinese
+            </p>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+          >
+            Hủy Bỏ
+          </Button>
+          <Button
+            onClick={handleSubmit}
+            className="bg-gradient-to-r from-purple-600 to-pink-600"
+          >
+            {editingShowtime ? 'Cập Nhật Suất Chiếu' : 'Tạo Suất Chiếu'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}

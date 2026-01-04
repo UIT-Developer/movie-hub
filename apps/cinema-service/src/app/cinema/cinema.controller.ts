@@ -42,6 +42,11 @@ export class CinemaController {
     return this.cinemaService.deleteCinema(cinemaId);
   }
 
+  @MessagePattern(CinemaMessage.GET_CINEMAS)
+  async getAllCinemas() {
+    return this.cinemaService.getAllCinemas();
+  }
+
   @MessagePattern(CinemaMessage.MOVIE.GET_MOVIES_BY_CINEMA)
   async getMoviesByCinema(
     @Payload() payload: { cinemaId: string; query: PaginationQuery }

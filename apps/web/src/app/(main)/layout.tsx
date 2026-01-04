@@ -7,11 +7,20 @@ export default async function MainLayout({
 }: {
   children: React.ReactNode;
 }) {
-   const cinemas = await getAllCinemas();
-  const cinemaOptions = cinemas.data.map((c) => ({
-    id: c.id,
-    name: c.name,
-  }));
+  let cinemaOptions = [];
+  
+  try {
+    const cinemas = await getAllCinemas();
+    cinemaOptions = cinemas.data.map((c) => ({
+      id: c.id,
+      name: c.name,
+    }));
+  } catch (error) {
+    console.error('Failed to fetch cinemas:', error);
+    // Use empty array as fallback
+    cinemaOptions = [];
+  }
+
   return (
     <div className="min-h-screen bg-[#09090B] flex flex-col  overflow-x-hidden">
       <Navbar cinemas={cinemaOptions} />

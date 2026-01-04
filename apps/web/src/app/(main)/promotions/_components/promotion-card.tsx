@@ -1,25 +1,28 @@
-import { Badge } from "@movie-hub/shacdn-ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@movie-hub/shacdn-ui/card";
-import { Skeleton } from "@movie-hub/shacdn-ui/skeleton";
-import { PromotionDto } from "@/libs/types/promotion.type";
+import { Badge } from '@movie-hub/shacdn-ui/badge';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from '@movie-hub/shacdn-ui/card';
+import { Skeleton } from '@movie-hub/shacdn-ui/skeleton';
+import { PromotionDto } from '@/libs/types/promotion.type';
 
-import { CalendarDays, TicketPercent } from "lucide-react";
+import { CalendarDays, TicketPercent } from 'lucide-react';
 
-export const PromotionCard = ({data}: {
-  data: PromotionDto
-}) => {
+export const PromotionCard = ({ data }: { data: PromotionDto }) => {
   return (
     <Card className="w-full max-w-md rounded-2xl shadow-lg p-4 bg-rose-500/20 border border-rose-500">
       <CardHeader>
         <CardTitle className="text-xl font-bold flex items-center gap-2 text-rose-400">
           <TicketPercent className="w-5 h-5" /> {data.name}
         </CardTitle>
-        <p className="text-sm text-neutral-300">Mã: {data.code}</p>
+        <div className="text-sm text-neutral-300">Mã: {data.code}</div>
       </CardHeader>
 
       <CardContent className="space-y-3">
         {data.description && (
-          <p className="text-gray-400 text-sm">{data.description}</p>
+          <div className="text-gray-400 text-sm">{data.description}</div>
         )}
 
         <div className="flex flex-wrap gap-2">
@@ -44,30 +47,29 @@ export const PromotionCard = ({data}: {
           Đã dùng: {data.currentUsage}
           {data.usageLimit && ` / ${data.usageLimit}`}
         </div>
-
       </CardContent>
     </Card>
   );
-}
+};
 
 PromotionCard.Skeleton = function PromotionCardSkeleton() {
   return (
-    <Card className="w-full max-w-md rounded-2xl bg-bg-neutral-700 shadow-lg p-4">
+    <Card className="w-full max-w-md rounded-2xl bg-neutral-700 shadow-lg p-4">
       <CardHeader>
-        <CardTitle className="text-xl font-bold flex items-center gap-">
+        <CardTitle className="text-xl font-bold flex items-center gap-2">
           <Skeleton className="w-5 h-5" />
           <Skeleton className="w-32 h-6" />
         </CardTitle>
-        <p className="text-sm text-neutral-300">
+        <div className="text-sm text-neutral-300">
           <Skeleton className="w-24 h-4" />
-        </p>
+        </div>
       </CardHeader>
 
       <CardContent className="space-y-3">
-        <p>
+        <div>
           <Skeleton className="w-full h-4" />
           <Skeleton className="w-5/6 h-4 mt-1" />
-        </p>
+        </div>
 
         <div className="flex flex-wrap gap-2">
           <Skeleton className="w-16 h-6" />
@@ -90,4 +92,4 @@ PromotionCard.Skeleton = function PromotionCardSkeleton() {
       </CardContent>
     </Card>
   );
-}
+};

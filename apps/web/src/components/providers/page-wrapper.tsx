@@ -17,7 +17,7 @@ export default function PageWrapper({
     // Set up the token getter for both API clients
     setAuthTokenGetter(getToken);
     setAuthTokenGetterApi(getToken);
-    
+
     // Khi client mount xong thì bật mounted
     setMounted(true);
   }, [getToken]);

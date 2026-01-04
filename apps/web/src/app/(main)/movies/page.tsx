@@ -1,4 +1,5 @@
 import { MovieListSummary } from './_components/movie-list';
+export const dynamic = 'force-dynamic';
 
 export const dynamic = 'force-dynamic';
 
@@ -8,11 +9,11 @@ const MoviesPage = () => {
       <h1 className="text-3xl font-bold text-gray-300 mb-6 text-center mt-10">
         🎬 PHIM ĐANG CHIẾU
       </h1>
-      <MovieListSummary isShowing={true} href='showing' />
+      <MovieListSummary isShowing={true} href="showing" />
       <h1 className="text-3xl font-bold text-gray-300 mb-6 text-center mt-10">
         🎬 PHIM SẮP CHIẾU
       </h1>
-      <MovieListSummary isShowing={false} href='upcoming' />
+      <MovieListSummary isShowing={false} href="upcoming" />
     </div>
   );
 };

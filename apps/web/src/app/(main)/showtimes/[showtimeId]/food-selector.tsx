@@ -12,15 +12,15 @@ import {
   SelectValue,
 } from '@movie-hub/shacdn-ui/select';
 import { useGetConcessions } from '@/hooks/concession-hooks';
-import { ConcessionCategory } from '@movie-hub/shared-types/booking/enum';
-import { ConcessionDto } from '@movie-hub/shared-types/booking';
+import { ConcessionDto } from '@/libs/types/concession.type';
+import { ConcessionCategory } from '@movie-hub/shared-types';
 import { Loader } from '@/components/loader';
 import { toast } from 'sonner';
 
 export const FoodSelector = ({ cinemaId }: { cinemaId?: string }) => {
   const { concessionSelections, setConcessionSelection } = useBookingStore();
 
-  const [category, setCategory] = useState<ConcessionCategory | undefined>(
+  const [category, setCategory] = useState<ConcessionCategory>(
     ConcessionCategory.FOOD
   );
 
@@ -32,37 +32,33 @@ export const FoodSelector = ({ cinemaId }: { cinemaId?: string }) => {
   const foodList = data || [];
 
   const handleIncrement = useCallback(
-    (foodId: string) => {
-      const food = foodList.find(f => f.id === foodId);
-      if (!food) return;
-      
-      const current = concessionSelections[foodId] || 0;
-      if (current >= (food.inventory ?? 0)) {
+    (food: ConcessionDto) => {
+      const current = concessionSelections[food.id] || 0;
+      if (current >= food.inventory) {
         toast.error('Đã đat đến số lượng tối đa có thể mua cho món này.');
         return;
       }
 
-      setConcessionSelection(foodId, current + 1, {
+      setConcessionSelection(food.id, current + 1, {
         name: food.name,
         price: food.price,
       });
     },
-    [concessionSelections, setConcessionSelection, foodList]
+    [concessionSelections, setConcessionSelection]
   );
 
   const handleDecrement = useCallback(
-    (foodId: string) => {
-      const current = concessionSelections[foodId] || 0;
+    (food: ConcessionDto) => {
+      const current = concessionSelections[food.id] || 0;
 
       if (current > 0) {
-        const food = foodList.find(f => f.id === foodId);
-        setConcessionSelection(foodId, current - 1, {
-          name: food?.name || '',
-          price: food?.price || 0,
+        setConcessionSelection(food.id, current - 1, {
+          name: food.name,
+          price: food.price,
         });
       }
     },
-    [concessionSelections, setConcessionSelection, foodList]
+    [concessionSelections, setConcessionSelection]
   );
 
   return (
@@ -81,12 +77,12 @@ export const FoodSelector = ({ cinemaId }: { cinemaId?: string }) => {
         </SelectTrigger>
 
         <SelectContent className="bg-zinc-900 text-white border-zinc-700">
-          <SelectItem value={ConcessionCategory.FOOD.toString()}>🍔 Đồ ăn</SelectItem>
-          <SelectItem value={ConcessionCategory.BEVERAGE.toString()}>🥤 Nước uống</SelectItem>
-          <SelectItem value={ConcessionCategory.SNACK.toString()}>🍿 Snack</SelectItem>
-          <SelectItem value={ConcessionCategory.COMBO.toString()}>
-            🛍️ Combo
+          <SelectItem value={ConcessionCategory.FOOD}>🍔 Đồ ăn</SelectItem>
+          <SelectItem value={ConcessionCategory.BEVERAGE}>
+            🥤 Nước uống
           </SelectItem>
+          <SelectItem value={ConcessionCategory.COMBO}>🍿 Combo</SelectItem>
+          <SelectItem value={ConcessionCategory.SNACK}>🛍️ Ăn nhẹ</SelectItem>
         </SelectContent>
       </Select>
 
@@ -118,8 +114,8 @@ export const FoodSelector = ({ cinemaId }: { cinemaId?: string }) => {
               image={food.imageUrl || '/images/placeholder-bg.png'}
               inventory={food.inventory}
               quantity={concessionSelections[food.id] || 0}
-              onIncrement={() => handleIncrement(food.id)}
-              onDecrement={() => handleDecrement(food.id)}
+              onIncrement={() => handleIncrement(food)}
+              onDecrement={() => handleDecrement(food)}
             />
           ))}
       </div>

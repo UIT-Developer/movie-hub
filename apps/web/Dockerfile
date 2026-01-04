@@ -18,6 +18,19 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
+# Build arguments for NEXT_PUBLIC environment variables
+# These are baked into the Next.js build at compile time
+ARG NEXT_PUBLIC_API_URL=http://localhost:4000/api/v1
+ARG NEXT_PUBLIC_BACKEND_API_URL=http://localhost:4000/api/v1
+ARG NEXT_PUBLIC_WEBSOCKET_URL=ws://localhost:4000
+ARG NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
+
+# Set them as environment variables for the build
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_BACKEND_API_URL=$NEXT_PUBLIC_BACKEND_API_URL
+ENV NEXT_PUBLIC_WEBSOCKET_URL=$NEXT_PUBLIC_WEBSOCKET_URL
+ENV NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=$NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
+
 # Copy dependencies from deps stage
 COPY --from=deps /app/node_modules ./node_modules
 

@@ -69,3 +69,12 @@ apps/**/.env.*.local
 docker-compose.override.yml
 !docker-compose.override.yml.example
 
+# Test results
+test-results/
+coverage/
+junit.xml
+*.log
+
+# Keep folder structure
+!test-results/.gitkeep
+

@@ -18,11 +18,11 @@
         "development": {
           "buildTarget": "web:build:development",
           "dev": true
+        },
+        "production": {
+          "buildTarget": "web:build:production",
+          "dev": false
         }
-      },
-      "production": {
-        "buildTarget": "web:build:production",
-        "dev": false
       }
     }
   }

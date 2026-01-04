@@ -12,7 +12,6 @@ import { getQueryClient } from '../../libs/get-query-client';
 import { getMovies } from '../../libs/actions/movies/movie-action';
 import { dehydrate, HydrationBoundary } from '@tanstack/react-query';
 
-export const dynamic = 'force-dynamic';
 
 export default async function MainPage() {
   const queryClient = getQueryClient();

@@ -218,27 +218,38 @@ export default function ShowtimeDialog({
 
     try {
       // TIMEZONE FIX: Backend treats time as UTC when it adds 'Z' suffix
-      // Input from datetime-local: "2026-01-04T01:00" (user's LOCAL time in Vietnam = UTC+7)
-      // Backend adds 'Z' to treat as UTC, so we must send UTC time
+      // Input from datetime-local: "2026-01-04T05:00" (user's LOCAL time in Vietnam = UTC+7)
+      // Need to convert local → UTC before sending to backend
       
-      const localDateTime = new Date(formData.startTime); // Parse as local time (e.g., 1:00 AM Vietnam)
+      // Parse the datetime-local string "2026-01-04T05:00" → get local date parts
+      const [datePart, timePart] = formData.startTime.split('T');
+      const [year, month, day] = datePart.split('-').map(Number);
+      const [hours, minutes] = timePart.split(':').map(Number);
       
-      // Convert to UTC - toISOString() gives us UTC time
-      // Example: 2026-01-04T01:00 Vietnam (UTC+7) = 2026-01-03T18:00:00Z
-      const year = localDateTime.getUTCFullYear();
-      const month = String(localDateTime.getUTCMonth() + 1).padStart(2, '0');
-      const day = String(localDateTime.getUTCDate()).padStart(2, '0');
-      const hours = String(localDateTime.getUTCHours()).padStart(2, '0');
-      const minutes = String(localDateTime.getUTCMinutes()).padStart(2, '0');
+      // Create a Date object with local time values
+      // When we do new Date(year, month-1, day, hours, minutes),
+      // the constructor interprets these as LOCAL time values
+      const localDate = new Date(year, month - 1, day, hours, minutes, 0);
       
-      const startTimeFormatted = `${year}-${month}-${day} ${hours}:${minutes}:00`;
+      // Extract UTC values using getUTC* methods
+      // Example: Local 2026-01-04 05:00 (Vietnam UTC+7)
+      //        → UTC 2026-01-03 22:00
+      const utcYear = localDate.getUTCFullYear();
+      const utcMonth = String(localDate.getUTCMonth() + 1).padStart(2, '0');
+      const utcDay = String(localDate.getUTCDate()).padStart(2, '0');
+      const utcHours = String(localDate.getUTCHours()).padStart(2, '0');
+      const utcMinutes = String(localDate.getUTCMinutes()).padStart(2, '0');
+      
+      const startTimeFormatted = `${utcYear}-${utcMonth}-${utcDay} ${utcHours}:${utcMinutes}:00`;
       
       console.log('[ShowtimeDialog] Submitting showtime (TIMEZONE FIX APPLIED):', {
         userInput: formData.startTime,
-        localDateTime: localDateTime.toISOString(),
+        localParsed: { year, month, day, hours, minutes },
+        localDate: localDate.toString(),
+        localDateISO: localDate.toISOString(),
+        utcValues: { utcYear, utcMonth, utcDay, utcHours, utcMinutes },
         formatted: startTimeFormatted,
-        timezoneOffset: localDateTime.getTimezoneOffset(),
-        note: 'Converted local time to UTC before sending to BE',
+        note: 'Converted local datetime-local to UTC using getUTC* methods',
       });
 
       const payload = {

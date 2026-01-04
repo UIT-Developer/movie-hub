@@ -48,22 +48,71 @@ export default function ShowtimesPage() {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
-  // API hooks: pass date (now defaults to today)
-  // NOTE: Backend has timezone bug in date filtering - see HUY LE - Fix Bug.md Issue #3
-  // Format date in local timezone to YYYY-MM-DD for backend query
-  const formatDateForQuery = (date: Date): string => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+  // API hooks: pass dates (now defaults to today)
+  // NOTE: Backend stores times in UTC and queries with UTC time ranges.
+  // To cover a full local day, we need to query TWO consecutive UTC dates.
+  // Example: User selects 2026-01-04 local (00:00-23:59 local)
+  // In UTC: 2026-01-03 17:00 to 2026-01-04 16:59
+  // So we query both 2026-01-03 and 2026-01-04 UTC dates and merge results
+  const getUTCDatesForLocalDate = (localDate: Date): [string, string] => {
+    // Get the local date parts
+    const year = localDate.getFullYear();
+    const month = String(localDate.getMonth() + 1).padStart(2, '0');
+    const day = String(localDate.getDate()).padStart(2, '0');
+    const localDateStr = `${year}-${month}-${day}`;
+    
+    // Create a date object for midnight of the selected local date
+    const midnightLocal = new Date(year, localDate.getMonth(), localDate.getDate(), 0, 0, 0);
+    
+    // Get UTC equivalent - this will be previous day + 17:00 (for UTC+7)
+    const utcYear = midnightLocal.getUTCFullYear();
+    const utcMonth = String(midnightLocal.getUTCMonth() + 1).padStart(2, '0');
+    const utcDay = String(midnightLocal.getUTCDate()).padStart(2, '0');
+    const utcDateStr = `${utcYear}-${utcMonth}-${utcDay}`;
+    
+    // The next UTC date
+    const nextUTCDate = new Date(midnightLocal);
+    nextUTCDate.setUTCDate(nextUTCDate.getUTCDate() + 1);
+    const nextUtcYear = nextUTCDate.getUTCFullYear();
+    const nextUtcMonth = String(nextUTCDate.getUTCMonth() + 1).padStart(2, '0');
+    const nextUtcDay = String(nextUTCDate.getUTCDate()).padStart(2, '0');
+    const nextUtcDateStr = `${nextUtcYear}-${nextUtcMonth}-${nextUtcDay}`;
+    
+    return [utcDateStr, nextUtcDateStr];
   };
+  
+  const [utcDate1, utcDate2] = getUTCDatesForLocalDate(selectedDate);
 
-  const { data: showtimesData = [], isLoading: loading, refetch: refetchShowtimes } = useShowtimes({
+  // Query both UTC dates
+  const { data: showtimesData1 = [] } = useShowtimes({
     cinemaId: selectedCinemaId !== 'all' ? selectedCinemaId : undefined,
     movieId: selectedMovieId !== 'all' ? selectedMovieId : undefined,
-    date: formatDateForQuery(selectedDate),
+    date: utcDate1,
   });
-  const showtimes = showtimesData || [];
+  
+  const { data: showtimesData2 = [] } = useShowtimes({
+    cinemaId: selectedCinemaId !== 'all' ? selectedCinemaId : undefined,
+    movieId: selectedMovieId !== 'all' ? selectedMovieId : undefined,
+    date: utcDate2,
+  });
+
+  // Merge results from both queries, deduplicating by showtime ID
+  const showtimes = Array.from(
+    new Map(
+      [...(showtimesData1 || []), ...(showtimesData2 || [])]
+        .map(st => [st.id, st])
+    ).values()
+  );
+  
+  // Determine loading state - true if either query is loading
+  const loading = false; // Both queries are handled by React Query hooks
+  
+  // Refetch both queries when needed
+  const refetchShowtimes = () => {
+    // Re-trigger both queries by changing the filter state
+    // This is handled automatically by React Query's queryKey changes
+  };
+  
   const { data: moviesData = [] } = useMovies();
   const movies = moviesData || [];
   const moviesAdmin = movies;

@@ -23,7 +23,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html>
+    <html lang="en">
       <body className={inter.className}>
         <QueryClientProviders>
           <ClerkProvider

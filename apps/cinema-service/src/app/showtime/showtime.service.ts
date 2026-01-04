@@ -38,13 +38,15 @@ export class ShowtimeService {
   ) {}
 
   async getShowtimes(filter: AdminShowtimeFilterDTO) {
-    const { cinemaId, date, movieId, hallId } = filter;
+    const { cinemaId, date, movieId, hallId, status } = filter;
 
     const where: Prisma.ShowtimesWhereInput = {};
 
     if (cinemaId) where.cinema_id = cinemaId;
     if (movieId) where.movie_id = movieId;
     if (hallId) where.hall_id = hallId;
+
+    if (status) where.status = status as ShowtimeStatus;
 
     if (date) {
       where.start_time = {

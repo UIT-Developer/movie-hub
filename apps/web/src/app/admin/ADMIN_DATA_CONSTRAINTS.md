@@ -1,6 +1,7 @@
-# 📋 Admin FE - Data Constraints Audit
+# 📋 Admin FE - Data Constraints Audit (Full Version)
 
-**Date**: January 3, 2026  
+**Date**: January 4, 2026  
+**Updated**: January 4, 2026 - Thêm CREATE constraints + cập nhật toàn bộ  
 **Purpose**: Rà soát và quản lý các ràng buộc dữ liệu (business/data constraints) trên Admin FE  
 **Status**: 🔴 Cần bổ sung nhiều ràng buộc quan trọng
 
@@ -8,712 +9,452 @@
 
 ## 📊 Tổng Quan
 
-| Module | Số Ràng Buộc Cần Có | Đã Triển Khai | Chưa Triển Khai |
-|--------|---------------------|---------------|-----------------|
-| Cinema | 3 | 0 | 3 |
-| Hall | 3 | 0 | 3 |
-| Movie | 3 | 0 | 3 |
-| Movie Release | 2 | 0 | 2 |
-| Showtime | 4 | 0 | 4 |
-| Concession | 2 | 0 | 2 |
-| Genre | 1 | 0 | 1 |
-| Staff | 2 | 0 | 2 |
-| Booking | 3 | 1 | 2 |
-| User | 2 | 0 | 2 |
-| **TOTAL** | **25** | **1** | **24** |
+| Module | CREATE | UPDATE | DELETE | Tổng | Đã Triển Khai | Chưa Triển Khai |
+|--------|--------|--------|--------|------|---------------|-----------------|
+| Cinema | 3 | 4 | 3 | **10** | 0 | 10 |
+| Hall | 5 | 4 | 3 | **12** | 0 | 12 |
+| Movie | 4 | 3 | 3 | **10** | 0 | 10 |
+| Movie Release | 5 | 4 | 2 | **11** | 0 | 11 |
+| Showtime | 8 | 6 | 4 | **18** | 0 | 18 |
+| Booking/Reservation | 5 | 5 | 2 | **12** | 2 | 10 |
+| Concession | 3 | 3 | 2 | **8** | 1 | 7 |
+| Genre | 2 | 1 | 2 | **5** | 0 | 5 |
+| Ticket Pricing | 3 | 2 | 1 | **6** | 0 | 6 |
+| Staff | 5 | 3 | 2 | **10** | 1 | 9 |
+| **TOTAL** | **43** | **35** | **24** | **102** | **4** | **98** |
 
 ---
 
-## ⚡ FAST SOLUTION - Không Cần Thêm API Mới (Backend Biếu Làm)
+## 🚨 LỖI NGHIÊM TRỌNG ĐÃ PHÁT HIỆN (Critical Bugs)
 
-### Giải Pháp Nhanh Gọn Lẹ
+### Bug #1: Showtime có thể tạo ngoài Release Period
+**Mức độ**: 🔴 CRITICAL  
+**Mô tả**: Hiện tại cho phép tạo Showtime có ngày lớn hơn `endDate` của Release tương ứng  
+**Ảnh hưởng**: Suất chiếu có thể được tạo sau khi phim đã hết thời gian phát hành  
+**File liên quan**: `ShowtimeDialog.tsx`, `batch-showtimes/page.tsx`
 
-**Vấn Đề**: Backend không muốn code thêm `/dependencies` endpoints → Giải pháp: **Dùng error response từ DELETE endpoint**
+### Bug #2: Release startDate có thể nhỏ hơn Movie releaseDate
+**Mức độ**: 🔴 CRITICAL  
+**Mô tả**: Movie có ngày ra mắt là X nhưng cho tạo Release có `startDate` nhỏ hơn X  
+**Ảnh hưởng**: Phim có thể được phát hành trước cả ngày ra mắt chính thức  
+**File liên quan**: `movie-releases/page.tsx`, `MovieReleaseDialog.tsx`
 
-#### **Mô Hình**
-
-```
-User click Delete → FE call DELETE /cinemas/{id}
-                        ↓
-                    BE kiểm tra dependency
-                        ↓
-                    Nếu có dependency:
-                      Return 400 + error details
-                    Nếu không:
-                      Delete + Return 200
-                        ↓
-                    FE catch error → Show constraint info
-```
-
-#### **Backend: Modify DELETE Endpoint (Không cần API mới)**
-
-```typescript
-// File: backend/src/cinemas/cinemas.controller.ts
-
-@Delete(':id')
-async delete(@Param('id') id: string) {
-  // ✅ Chỉ thêm kiểm tra này (5 dòng code)
-  const hallCount = await this.cinemasService.countHalls(id);
-  const showtimeCount = await this.cinemasService.countShowtimes(id);
-  const bookingCount = await this.cinemasService.countBookings(id);
-  
-  if (hallCount > 0 || showtimeCount > 0 || bookingCount > 0) {
-    throw new BadRequestException({
-      code: 'CONSTRAINT_VIOLATION',
-      message: 'Cannot delete cinema with dependent data',
-      halls: hallCount,
-      showtimes: showtimeCount,
-      bookings: bookingCount,
-    });
-  }
-  
-  // Proceed with delete
-  return await this.cinemasService.delete(id);
-}
-```
-
-#### **Frontend: Catch Error + Show Dialog**
-
-```typescript
-// File: FE/cinemas/page.tsx
-
-const handleDelete = async (id: string) => {
-  try {
-    await deleteCinema.mutateAsync(id);
-    toast.success('Cinema deleted');
-  } catch (error: any) {
-    // ✅ Catch error from BE validation
-    if (error.response?.data?.code === 'CONSTRAINT_VIOLATION') {
-      const { halls, showtimes, bookings } = error.response.data;
-      
-      toast.error({
-        title: '❌ Không thể xóa rạp',
-        description: (
-          <div>
-            <p>Rạp có:</p>
-            <ul>
-              {halls > 0 && <li>• {halls} phòng chiếu</li>}
-              {showtimes > 0 && <li>• {showtimes} suất chiếu</li>}
-              {bookings > 0 && <li>• {bookings} vé đặt</li>}
-            </ul>
-          </div>
-        ),
-      });
-      return;
-    }
-    
-    // Other errors
-    toast.error(error.message);
-  }
-};
-```
-
-#### **Ưu Điểm Giải Pháp Này**
-
-| Khía Cạnh | Chi Phí |
-|----------|--------|
-| **Backend Changes** | 5-10 dòng per endpoint (easy) |
-| **API Mới** | ❌ Không cần |
-| **Frontend Changes** | 10-15 dòng per page (easy) |
-| **Testing** | Simple (just test delete endpoint) |
-| **Maintenance** | Low (centralized logic in BE) |
-
-#### **Timeline**
-
-- Backend: **30 phút** (modify DELETE endpoints)
-- Frontend: **1-2 giờ** (add error handling + UI)
-- Total: **2-3 giờ** (vs 1-2 ngày với `/dependencies` endpoints)
+### Bug #3: Showtime delete không có confirmation dialog
+**Mức độ**: 🔴 CRITICAL  
+**Mô tả**: Nút xóa suất chiếu gọi delete trực tiếp, không có dialog xác nhận  
+**Ảnh hưởng**: User có thể vô tình xóa suất chiếu có booking  
+**File liên quan**: `showtimes/page.tsx`
 
 ---
 
 ## 🏢 Module: CINEMA (Rạp Chiếu Phim)
 
-### Ràng Buộc Xóa (Delete Constraints)
+### ➕ Ràng Buộc Tạo (CREATE Constraints)
 
-| # | Ràng Buộc | Mô Tả | Trạng Thái | File | Ghi Chú |
-|---|-----------|-------|------------|------|---------|
-| C-D1 | Cinema có Hall | Không cho xóa Cinema nếu đã có Hall thuộc Cinema đó | ❌ Chưa triển khai | `cinemas/page.tsx` | Cần kiểm tra trước khi xóa |
-| C-D2 | Cinema có Showtime | Không cho xóa Cinema nếu có Showtime đang hoạt động | ❌ Chưa triển khai | `cinemas/page.tsx` | Cần kiểm tra qua Hall → Showtime |
-| C-D3 | Cinema có Booking | Không cho xóa Cinema nếu có Booking chưa hoàn tất | ❌ Chưa triển khai | `cinemas/page.tsx` | Cần kiểm tra qua Showtime → Booking |
+| # | Ràng Buộc | Mô Tả | Ưu Tiên | Trạng Thái | File |
+|---|-----------|-------|---------|------------|------|
+| C-C1 | Tên rạp unique | Không cho tạo rạp trùng tên | 🟡 HIGH | ❌ Chưa | `cinemas/page.tsx` |
+| C-C2 | Địa chỉ bắt buộc | Rạp phải có địa chỉ đầy đủ | 🟡 HIGH | ❌ Chưa | `CinemaDialog.tsx` |
+| C-C3 | Status mặc định | Status mặc định là ACTIVE khi tạo | 🟢 LOW | ✅ BE handles | - |
 
-### Ràng Buộc Cập Nhật (Update Constraints)
+### ✏️ Ràng Buộc Cập Nhật (UPDATE Constraints)
 
-| # | Ràng Buộc | Mô Tả | Trạng Thái | File | Ghi Chú |
-|---|-----------|-------|------------|------|---------|
-| C-U1 | Cập nhật status | Không cho đổi status sang INACTIVE nếu có Showtime tương lai | ❌ Chưa triển khai | `cinemas/page.tsx` | Cần thông báo ảnh hưởng |
+| # | Ràng Buộc | Mô Tả | Ưu Tiên | Trạng Thái | File |
+|---|-----------|-------|---------|------------|------|
+| C-U1 | Đổi status → INACTIVE | Cảnh báo nếu có Showtime tương lai | 🟡 HIGH | ❌ Chưa | `cinemas/page.tsx` |
+| C-U2 | Đổi status → INACTIVE | Không cho đổi nếu có Booking chưa hoàn tất | 🔴 CRITICAL | ❌ Chưa | `cinemas/page.tsx` |
+| C-U3 | Đổi tên rạp | Kiểm tra unique name | 🟡 HIGH | ❌ Chưa | `CinemaDialog.tsx` |
+| C-U4 | Đổi địa chỉ | Cảnh báo ảnh hưởng hiển thị cho user đã đặt vé | 🟢 MEDIUM | ❌ Chưa | `CinemaDialog.tsx` |
 
-### Hiện Trạng Code
+### 🗑️ Ràng Buộc Xóa (DELETE Constraints)
 
-```typescript
-// File: cinemas/page.tsx - Lines 180-187
-const handleDelete = async (id: string) => {
-  setDeleteConfirmId(id);
-  setDeleteDialogOpen(true);
-  // ❌ Không có kiểm tra constraint trước khi hiện dialog
-};
-
-// Confirmation dialog chỉ có warning chung chung
-// ❌ Không hiển thị thông tin về số Hall, Showtime đang có
-```
-
-### Cần Bổ Sung
-
-```typescript
-// Trước khi xóa, cần:
-// 1. Gọi API kiểm tra số lượng Hall
-// 2. Gọi API kiểm tra số lượng Showtime đang hoạt động
-// 3. Hiển thị thông báo: "Rạp này có X phòng chiếu và Y suất chiếu. Không thể xóa."
-```
+| # | Ràng Buộc | Mô Tả | Ưu Tiên | Trạng Thái | File |
+|---|-----------|-------|---------|------------|------|
+| C-D1 | Cinema có Hall | Không cho xóa nếu có Hall thuộc Cinema | 🔴 CRITICAL | ❌ Chưa | `cinemas/page.tsx` |
+| C-D2 | Cinema có Showtime | Không cho xóa nếu có Showtime (qua Hall) | 🔴 CRITICAL | ❌ Chưa | `cinemas/page.tsx` |
+| C-D3 | Cinema có Booking | Không cho xóa nếu có Booking chưa hoàn tất | 🔴 CRITICAL | ❌ Chưa | `cinemas/page.tsx` |
 
 ---
 
 ## 🎬 Module: HALL (Phòng Chiếu)
 
-### Ràng Buộc Xóa (Delete Constraints)
+### ➕ Ràng Buộc Tạo (CREATE Constraints)
 
-| # | Ràng Buộc | Mô Tả | Trạng Thái | File | Ghi Chú |
-|---|-----------|-------|------------|------|---------|
-| H-D1 | Hall có Showtime | Không cho xóa Hall nếu có Showtime đang hoạt động hoặc tương lai | ❌ Chưa triển khai | `halls/page.tsx` | Critical |
-| H-D2 | Hall có Booking | Không cho xóa Hall nếu có Booking chưa hoàn tất | ❌ Chưa triển khai | `halls/page.tsx` | Qua Showtime → Booking |
-| H-D3 | Hall có Seat đặc biệt | Cảnh báo nếu xóa Hall có cấu hình ghế đặc biệt | ❌ Chưa triển khai | `halls/page.tsx` | Warning only |
+| # | Ràng Buộc | Mô Tả | Ưu Tiên | Trạng Thái | File |
+|---|-----------|-------|---------|------------|------|
+| H-C1 | Cinema phải ACTIVE | Không tạo Hall cho Cinema đã INACTIVE | 🔴 CRITICAL | ❌ Chưa | `halls/page.tsx` |
+| H-C2 | Tên Hall unique per Cinema | Không trùng tên trong cùng rạp | 🟡 HIGH | ❌ Chưa | `HallDialog.tsx` |
+| H-C3 | Layout hợp lệ | Layout phải có ít nhất 1 row và 1 seat | 🟡 HIGH | ❌ Chưa | `HallDialog.tsx` |
+| H-C4 | Số ghế hợp lệ | totalSeats phải > 0 | 🟡 HIGH | ❌ Chưa | `HallDialog.tsx` |
+| H-C5 | Format hợp lệ | Format phải là enum value hợp lệ | 🟢 LOW | ✅ BE validates | - |
 
-### Ràng Buộc Cập Nhật (Update Constraints)
+### ✏️ Ràng Buộc Cập Nhật (UPDATE Constraints)
 
-| # | Ràng Buộc | Mô Tả | Trạng Thái | File | Ghi Chú |
-|---|-----------|-------|------------|------|---------|
-| H-U1 | Thay đổi Layout | Không cho đổi layout nếu đã có Showtime | ❌ Chưa triển khai | `halls/page.tsx` | Layout bị khóa |
-| H-U2 | Thay đổi Cinema | Không cho đổi Cinema nếu có Showtime | ❌ Chưa triển khai | `halls/page.tsx` | Ảnh hưởng data |
+| # | Ràng Buộc | Mô Tả | Ưu Tiên | Trạng Thái | File |
+|---|-----------|-------|---------|------------|------|
+| H-U1 | Đổi Layout | 🔴 KHÔNG CHO đổi nếu đã có Showtime | 🔴 CRITICAL | ❌ Chưa | `HallDialog.tsx` |
+| H-U2 | Đổi Cinema | 🔴 KHÔNG CHO đổi Cinema | 🔴 CRITICAL | ❌ Chưa | `HallDialog.tsx` |
+| H-U3 | Đổi status → INACTIVE | Cảnh báo nếu có Showtime tương lai | 🟡 HIGH | ❌ Chưa | `halls/page.tsx` |
+| H-U4 | Đổi totalSeats | Không cho đổi nếu có Booking (seat references) | 🔴 CRITICAL | ❌ Chưa | `HallDialog.tsx` |
 
-### Hiện Trạng Code
+### 🗑️ Ràng Buộc Xóa (DELETE Constraints)
 
-```typescript
-// File: halls/page.tsx - Lines 98-106
-const handleDeleteHall = async (hallId: string) => {
-  setHallToDelete(hallId);
-  setDeleteDialogOpen(true);
-  // ❌ Không kiểm tra showtime/booking trước khi xóa
-};
-
-// ❌ useDeleteHall hook không có onError handler
-// => Nếu BE trả lỗi constraint, user không thấy thông báo
-```
-
-### Cần Bổ Sung
-
-```typescript
-// 1. Thêm API: GET /api/v1/halls/{id}/dependencies
-//    Trả về: { showtimes: number, bookings: number }
-// 2. Kiểm tra trước khi hiện dialog xác nhận
-// 3. Thêm onError handler cho useDeleteHall hook
-```
+| # | Ràng Buộc | Mô Tả | Ưu Tiên | Trạng Thái | File |
+|---|-----------|-------|---------|------------|------|
+| H-D1 | Hall có Showtime | Không cho xóa nếu có Showtime (kể cả quá khứ) | 🔴 CRITICAL | ❌ Chưa | `halls/page.tsx` |
+| H-D2 | Hall có Booking | Không cho xóa nếu có Booking | 🔴 CRITICAL | ❌ Chưa | `halls/page.tsx` |
+| H-D3 | Confirmation dialog | Hiện dialog xác nhận + warning | 🟡 HIGH | ❌ Chưa | `halls/page.tsx` |
 
 ---
 
 ## 🎥 Module: MOVIE (Phim)
 
-### Ràng Buộc Xóa (Delete Constraints)
+### ➕ Ràng Buộc Tạo (CREATE Constraints)
 
-| # | Ràng Buộc | Mô Tả | Trạng Thái | File | Ghi Chú |
-|---|-----------|-------|------------|------|---------|
-| M-D1 | Movie có Release | Không cho xóa Movie nếu có Movie Release | ❌ Chưa triển khai | `movies/page.tsx` | Critical |
-| M-D2 | Movie có Showtime | Không cho xóa Movie nếu có Showtime đang chiếu/tương lai | ❌ Chưa triển khai | `movies/page.tsx` | Qua Release → Showtime |
-| M-D3 | Movie có Review | Cảnh báo nếu xóa Movie có reviews | ❌ Chưa triển khai | `movies/page.tsx` | Warning only |
+| # | Ràng Buộc | Mô Tả | Ưu Tiên | Trạng Thái | File |
+|---|-----------|-------|---------|------------|------|
+| M-C1 | Title bắt buộc | Phim phải có tên | 🟡 HIGH | ✅ FE validates | `MovieDialog.tsx` |
+| M-C2 | Runtime > 0 | Thời lượng phim > 0 phút | 🟡 HIGH | ❌ Chưa | `MovieDialog.tsx` |
+| M-C3 | releaseDate hợp lệ | Ngày phát hành phải là date hợp lệ | 🟡 HIGH | ❌ Chưa | `MovieDialog.tsx` |
+| M-C4 | Genre tồn tại | Genre IDs phải tồn tại trong DB | 🟢 MEDIUM | ✅ BE validates | - |
 
-### Ràng Buộc Cập Nhật (Update Constraints)
+### ✏️ Ràng Buộc Cập Nhật (UPDATE Constraints)
 
-| # | Ràng Buộc | Mô Tả | Trạng Thái | File | Ghi Chú |
-|---|-----------|-------|------------|------|---------|
-| M-U1 | Đổi status | Cảnh báo khi đổi sang INACTIVE nếu có Showtime tương lai | ❌ Chưa triển khai | `movies/page.tsx` | Warning |
-| M-U2 | Đổi runtime | Cảnh báo nếu có Showtime có thể bị ảnh hưởng end_time | ❌ Chưa triển khai | `movies/page.tsx` | Info only |
+| # | Ràng Buộc | Mô Tả | Ưu Tiên | Trạng Thái | File |
+|---|-----------|-------|---------|------------|------|
+| M-U1 | Đổi releaseDate | ⚠️ Cảnh báo nếu có Release có startDate < newReleaseDate | 🔴 CRITICAL | ❌ Chưa | `MovieDialog.tsx` |
+| M-U2 | Đổi runtime | Cảnh báo ảnh hưởng endTime của Showtime đã tạo | 🟡 HIGH | ❌ Chưa | `MovieDialog.tsx` |
+| M-U3 | Đổi status → INACTIVE | Không cho đổi nếu có Showtime tương lai | 🔴 CRITICAL | ❌ Chưa | `movies/page.tsx` |
 
-### Hiện Trạng Code
+### 🗑️ Ràng Buộc Xóa (DELETE Constraints)
 
-```typescript
-// File: movies/page.tsx - Lines 282-290
-const handleDelete = async () => {
-  if (deleteId) {
-    await deleteMovie.mutateAsync(deleteId);
-    // ❌ Không kiểm tra release/showtime
-    // ❌ Không có error handling cụ thể
-  }
-};
-```
+| # | Ràng Buộc | Mô Tả | Ưu Tiên | Trạng Thái | File |
+|---|-----------|-------|---------|------------|------|
+| M-D1 | Movie có Release | 🔴 KHÔNG CHO xóa nếu có MovieRelease | 🔴 CRITICAL | ❌ Chưa | `movies/page.tsx` |
+| M-D2 | Movie có Showtime | Không cho xóa nếu có Showtime (qua Release) | 🔴 CRITICAL | ❌ Chưa | `movies/page.tsx` |
+| M-D3 | Movie có Review | Cảnh báo sẽ mất reviews nếu xóa | 🟢 MEDIUM | ❌ Chưa | `movies/page.tsx` |
 
 ---
 
 ## 📅 Module: MOVIE RELEASE (Phát Hành Phim)
 
-### Ràng Buộc Xóa (Delete Constraints)
+### ➕ Ràng Buộc Tạo (CREATE Constraints)
 
-| # | Ràng Buộc | Mô Tả | Trạng Thái | File | Ghi Chú |
-|---|-----------|-------|------------|------|---------|
-| MR-D1 | Release có Showtime | Không cho xóa Release nếu có Showtime liên quan | ❌ Chưa triển khai | `movie-releases/page.tsx` | Critical |
-| MR-D2 | Release đã qua | Cảnh báo nếu xóa Release có ngày trong quá khứ | ❌ Chưa triển khai | `movie-releases/page.tsx` | Archive data |
+| # | Ràng Buộc | Mô Tả | Ưu Tiên | Trạng Thái | File |
+|---|-----------|-------|---------|------------|------|
+| MR-C1 | 🚨 startDate >= Movie.releaseDate | Release KHÔNG THỂ bắt đầu trước ngày ra mắt phim | 🔴 CRITICAL | ❌ **BUG** | `movie-releases/page.tsx` |
+| MR-C2 | endDate > startDate | Ngày kết thúc phải sau ngày bắt đầu | 🔴 CRITICAL | ❌ Chưa | `MovieReleaseDialog.tsx` |
+| MR-C3 | Movie phải ACTIVE | Không tạo Release cho phim đã INACTIVE | 🟡 HIGH | ❌ Chưa | `movie-releases/page.tsx` |
+| MR-C4 | Không chồng lấn Release | Cùng Movie không có 2 Release overlap period | 🟡 HIGH | ❌ Chưa | `MovieReleaseDialog.tsx` |
+| MR-C5 | Cinema phải ACTIVE | Release chỉ có thể ở Cinema đang ACTIVE | 🟡 HIGH | ❌ Chưa | `MovieReleaseDialog.tsx` |
 
-### Ràng Buộc Cập Nhật (Update Constraints)
+### ✏️ Ràng Buộc Cập Nhật (UPDATE Constraints)
 
-| # | Ràng Buộc | Mô Tả | Trạng Thái | File | Ghi Chú |
-|---|-----------|-------|------------|------|---------|
-| MR-U1 | Đổi ngày release | Cảnh báo nếu có Showtime trước ngày release mới | ❌ Chưa triển khai | `movie-releases/page.tsx` | Logic check |
+| # | Ràng Buộc | Mô Tả | Ưu Tiên | Trạng Thái | File |
+|---|-----------|-------|---------|------------|------|
+| MR-U1 | Đổi startDate | 🔴 KHÔNG CHO nhỏ hơn Movie.releaseDate | 🔴 CRITICAL | ❌ Chưa | `MovieReleaseDialog.tsx` |
+| MR-U2 | Đổi endDate | 🔴 KHÔNG CHO nhỏ hơn max(Showtime.startTime) | 🔴 CRITICAL | ❌ Chưa | `MovieReleaseDialog.tsx` |
+| MR-U3 | Thu hẹp period | Cảnh báo nếu có Showtime nằm ngoài period mới | 🔴 CRITICAL | ❌ Chưa | `MovieReleaseDialog.tsx` |
+| MR-U4 | Đổi status | Không cho INACTIVE nếu có Showtime tương lai | 🟡 HIGH | ❌ Chưa | `movie-releases/page.tsx` |
 
-### Hiện Trạng Code
+### 🗑️ Ràng Buộc Xóa (DELETE Constraints)
 
-```typescript
-// File: movie-releases/page.tsx - Lines 88-102
-const handleDelete = async () => {
-  if (deleteReleaseId) {
-    await deleteRelease.mutateAsync(deleteReleaseId);
-    setDeleteReleaseId(null);
-    setDeleteDialogOpen(false);
-    // ❌ Không kiểm tra showtime dependency
-  }
-};
-```
-
----
-
-## 🕐 Module: SHOWTIME (Suất Chiếu)
-
-### 🚨 VẤN ĐỀ NGHIÊM TRỌNG
-
-**Showtime delete KHÔNG CÓ CONFIRMATION DIALOG** - User có thể vô tình xóa suất chiếu!
-
-### Ràng Buộc Xóa (Delete Constraints)
-
-| # | Ràng Buộc | Mô Tả | Trạng Thái | File | Ghi Chú |
-|---|-----------|-------|------------|------|---------|
-| S-D1 | Showtime có Booking | Không cho xóa Showtime nếu có Booking (PENDING/CONFIRMED) | ❌ Chưa triển khai | `showtimes/page.tsx` | 🚨 CRITICAL |
-| S-D2 | Showtime đã bắt đầu | Không cho xóa Showtime đã bắt đầu chiếu | ❌ Chưa triển khai | `showtimes/page.tsx` | Time check |
-| S-D3 | Confirmation dialog | Hiện dialog xác nhận trước khi xóa | ❌ Chưa triển khai | `showtimes/page.tsx` | 🚨 MISSING! |
-
-### Ràng Buộc Cập Nhật (Update Constraints)
-
-| # | Ràng Buộc | Mô Tả | Trạng Thái | File | Ghi Chú |
-|---|-----------|-------|------------|------|---------|
-| S-U1 | Đổi Hall khi có Booking | Không cho đổi Hall nếu đã có Booking (ghế đã chọn) | ❌ Chưa triển khai | `ShowtimeDialog.tsx` | Seat conflict |
-| S-U2 | Đổi thời gian khi có Booking | Cảnh báo nếu đổi thời gian ảnh hưởng người đã đặt | ❌ Chưa triển khai | `ShowtimeDialog.tsx` | Notify users |
-| S-U3 | Trùng thời gian | Kiểm tra trùng Hall + thời gian với Showtime khác | ❌ Chưa triển khai | `ShowtimeDialog.tsx` | BE handles |
-
-### Hiện Trạng Code
-
-```typescript
-// File: showtimes/page.tsx - Lines 83-88
-// 🚨 CRITICAL: Xóa trực tiếp KHÔNG CÓ confirmation dialog!
-<Button
-  variant="ghost"
-  size="icon"
-  onClick={() => deleteShowtime.mutate(showtime.id)}  // ❌ Xóa ngay lập tức!
->
-  <Trash2 className="h-4 w-4 text-red-500" />
-</Button>
-```
-
-### Cần Bổ Sung Ngay
-
-```typescript
-// 1. THÊM CONFIRMATION DIALOG - Bắt buộc!
-// 2. Kiểm tra booking trước khi cho xóa
-// 3. Hiển thị: "Suất chiếu này có X vé đã đặt. Bạn có chắc muốn xóa?"
-// 4. Nếu có booking → Không cho xóa hoặc yêu cầu hủy booking trước
-```
+| # | Ràng Buộc | Mô Tả | Ưu Tiên | Trạng Thái | File |
+|---|-----------|-------|---------|------------|------|
+| MR-D1 | Release có Showtime | 🔴 KHÔNG CHO xóa nếu có Showtime | 🔴 CRITICAL | ❌ Chưa | `movie-releases/page.tsx` |
+| MR-D2 | Confirmation dialog | Hiện dialog + số lượng Showtime sẽ bị ảnh hưởng | 🟡 HIGH | ❌ Chưa | `movie-releases/page.tsx` |
 
 ---
 
-## 🍿 Module: CONCESSION (Đồ Ăn/Uống)
+## 🕐 Module: SHOWTIME (Suất Chiếu) - 🔴 NHIỀU LỖI NHẤT
 
-### Ràng Buộc Xóa (Delete Constraints)
+### ➕ Ràng Buộc Tạo (CREATE Constraints)
 
-| # | Ràng Buộc | Mô Tả | Trạng Thái | File | Ghi Chú |
-|---|-----------|-------|------------|------|---------|
-| CO-D1 | Concession có Order | Không cho xóa nếu có trong Booking đang pending | ❌ Chưa triển khai | `concessions/page.tsx` | Check booking |
-| CO-D2 | Concession có lịch sử | Cảnh báo nếu xóa item đã có trong đơn hàng cũ | ❌ Chưa triển khai | `concessions/page.tsx` | Soft delete |
+| # | Ràng Buộc | Mô Tả | Ưu Tiên | Trạng Thái | File |
+|---|-----------|-------|---------|------------|------|
+| S-C1 | 🚨 startTime trong Release period | startTime PHẢI >= Release.startDate VÀ <= Release.endDate | 🔴 CRITICAL | ❌ **BUG** | `ShowtimeDialog.tsx` |
+| S-C2 | 🚨 endTime trong Release period | endTime (startTime + runtime) <= Release.endDate | 🔴 CRITICAL | ❌ **BUG** | `ShowtimeDialog.tsx` |
+| S-C3 | Hall phải ACTIVE | Không tạo Showtime cho Hall đã INACTIVE | 🔴 CRITICAL | ❌ Chưa | `ShowtimeDialog.tsx` |
+| S-C4 | Cinema phải ACTIVE | Không tạo Showtime cho Cinema đã INACTIVE | 🔴 CRITICAL | ❌ Chưa | `ShowtimeDialog.tsx` |
+| S-C5 | Không trùng Hall + Time | Không có 2 Showtime cùng Hall overlap thời gian | 🔴 CRITICAL | ✅ BE validates | - |
+| S-C6 | startTime > now | Không tạo Showtime trong quá khứ | 🟡 HIGH | ❌ Chưa | `ShowtimeDialog.tsx` |
+| S-C7 | Release phải ACTIVE | Không tạo Showtime cho Release đã cancel | 🟡 HIGH | ❌ Chưa | `ShowtimeDialog.tsx` |
+| S-C8 | Format phù hợp Hall | Showtime.format phải Hall support (2D Hall không chiếu IMAX) | 🟢 MEDIUM | ❌ Chưa | `ShowtimeDialog.tsx` |
 
-### Ràng Buộc Cập Nhật (Update Constraints)
+### ✏️ Ràng Buộc Cập Nhật (UPDATE Constraints)
 
-| # | Ràng Buộc | Mô Tả | Trạng Thái | File | Ghi Chú |
-|---|-----------|-------|------------|------|---------|
-| CO-U1 | Đổi giá | Cảnh báo ảnh hưởng đến pending orders | ❌ Chưa triển khai | `concessions/page.tsx` | Price change |
-| CO-U2 | Đổi availability | Tự động hủy khỏi pending orders nếu unavailable | ❌ Chưa triển khai | `concessions/page.tsx` | Auto update |
+| # | Ràng Buộc | Mô Tả | Ưu Tiên | Trạng Thái | File |
+|---|-----------|-------|---------|------------|------|
+| S-U1 | Đổi Hall khi có Booking | 🔴 KHÔNG CHO đổi Hall nếu có Booking (seats khác) | 🔴 CRITICAL | ❌ Chưa | `ShowtimeDialog.tsx` |
+| S-U2 | Đổi startTime khi có Booking | ⚠️ Cảnh báo + cần confirm nếu có Booking | 🔴 CRITICAL | ❌ Chưa | `ShowtimeDialog.tsx` |
+| S-U3 | Đổi startTime vẫn trong period | startTime mới PHẢI trong Release period | 🔴 CRITICAL | ❌ Chưa | `ShowtimeDialog.tsx` |
+| S-U4 | Không đổi Showtime đã chiếu | Không cho edit Showtime có startTime < now | 🟡 HIGH | ❌ Chưa | `ShowtimeDialog.tsx` |
+| S-U5 | Đổi Release | Cảnh báo nếu startTime không còn hợp lệ với Release mới | 🟡 HIGH | ❌ Chưa | `ShowtimeDialog.tsx` |
+| S-U6 | Đổi format | Kiểm tra Hall có support format mới không | 🟢 MEDIUM | ❌ Chưa | `ShowtimeDialog.tsx` |
 
-### Hiện Trạng Code
+### 🗑️ Ràng Buộc Xóa (DELETE Constraints)
 
-```typescript
-// File: concessions/page.tsx - Lines 193-209
-const handleConfirmDelete = async () => {
-  if (!deleteConfirmId) return;
-  try {
-    await deleteConcession.mutateAsync(deleteConfirmId);
-    // ✅ Có onError handler trong hook
-    // ❌ Nhưng không kiểm tra constraint trước
-  } catch {
-    // Error handled by mutation hook
-  }
-};
-```
-
----
-
-## 🎭 Module: GENRE (Thể Loại)
-
-### Ràng Buộc Xóa (Delete Constraints)
-
-| # | Ràng Buộc | Mô Tả | Trạng Thái | File | Ghi Chú |
-|---|-----------|-------|------------|------|---------|
-| G-D1 | Genre có Movie | Không cho xóa Genre nếu đang được gán cho Movie | ❌ Chưa triển khai | `genres/page.tsx` | Detach first |
-
-### Hiện Trạng Code
-
-```typescript
-// File: genres/page.tsx - Lines 89-103
-const handleDeleteGenre = async () => {
-  if (deleteGenreId) {
-    await deleteGenre.mutateAsync(deleteGenreId);
-    // ❌ useDeleteGenre không có onError handler
-    // => User không biết nếu BE từ chối xóa
-  }
-};
-```
-
----
-
-## 👥 Module: STAFF (Nhân Viên)
-
-### Ràng Buộc Xóa (Delete Constraints)
-
-| # | Ràng Buộc | Mô Tả | Trạng Thái | File | Ghi Chú |
-|---|-----------|-------|------------|------|---------|
-| ST-D1 | Staff có Shift | Không cho xóa nếu có ca làm việc tương lai | ❌ Chưa triển khai | `staff/page.tsx` | Reassign |
-| ST-D2 | Staff đang online | Cảnh báo nếu nhân viên đang trong ca | ❌ Chưa triển khai | `staff/page.tsx` | Active session |
-
-### Hiện Trạng Code
-
-```typescript
-// File: staff/page.tsx - Lines 329-343
-const handleDelete = async () => {
-  if (!deleteUserId) return;
-  try {
-    await deleteUser.mutateAsync(deleteUserId);
-    // ✅ Có onError handler
-  } catch {
-    // Error handled
-  }
-};
-```
+| # | Ràng Buộc | Mô Tả | Ưu Tiên | Trạng Thái | File |
+|---|-----------|-------|---------|------------|------|
+| S-D1 | 🚨 Confirmation dialog | **THIẾU** - Hiện đang xóa trực tiếp không confirm! | 🔴 CRITICAL | ❌ **BUG** | `showtimes/page.tsx` |
+| S-D2 | Showtime có Booking | 🔴 KHÔNG CHO xóa nếu có Booking (PENDING/CONFIRMED) | 🔴 CRITICAL | ❌ Chưa | `showtimes/page.tsx` |
+| S-D3 | Showtime đã bắt đầu | Không cho xóa Showtime đã/đang chiếu | 🟡 HIGH | ❌ Chưa | `showtimes/page.tsx` |
+| S-D4 | Show booking count | Dialog hiện số vé đã đặt nếu có | 🟡 HIGH | ❌ Chưa | `showtimes/page.tsx` |
 
 ---
 
 ## 🎫 Module: BOOKING/RESERVATION (Đặt Vé)
 
-### Ràng Buộc Cập Nhật Status (Update Constraints)
+### ➕ Ràng Buộc Tạo (CREATE Constraints)
 
-| # | Ràng Buộc | Mô Tả | Trạng Thái | File | Ghi Chú |
-|---|-----------|-------|------------|------|---------|
-| B-U1 | Cancel completed | Không cho cancel booking đã COMPLETED | ✅ BE handles | `reservations/page.tsx` | BE validates |
-| B-U2 | Cancel started | Cảnh báo nếu hủy booking của showtime đã bắt đầu | ❌ Chưa triển khai | `reservations/page.tsx` | Time check |
-| B-U3 | Refund policy | Hiển thị policy hoàn tiền khi cancel | ❌ Chưa triển khai | `reservations/page.tsx` | Info display |
+| # | Ràng Buộc | Mô Tả | Ưu Tiên | Trạng Thái | File |
+|---|-----------|-------|---------|------------|------|
+| B-C1 | Showtime chưa chiếu | Không đặt vé Showtime đã bắt đầu | 🔴 CRITICAL | ✅ BE validates | - |
+| B-C2 | Ghế còn trống | Ghế chọn phải AVAILABLE | 🔴 CRITICAL | ✅ BE validates | - |
+| B-C3 | Showtime còn slot | availableSeats > 0 | 🟡 HIGH | ✅ BE validates | - |
+| B-C4 | User hợp lệ | User phải tồn tại và ACTIVE | 🟡 HIGH | ✅ BE validates | - |
+| B-C5 | Giá hợp lệ | totalPrice = sum(seats) + sum(concessions) | 🟡 HIGH | ✅ BE calculates | - |
 
-### Hiện Trạng Code
+### ✏️ Ràng Buộc Cập Nhật (UPDATE Constraints)
 
-```typescript
-// File: reservations/page.tsx - Lines 117-132
-const handleStatusUpdate = async (
-  bookingId: string,
-  newStatus: BookingStatus
-) => {
-  await updateStatus.mutateAsync({
-    id: bookingId,
-    status: newStatus,
-  });
-  // ✅ Có onError handler
-  // ❌ Không kiểm tra time constraint trước
-};
+| # | Ràng Buộc | Mô Tả | Ưu Tiên | Trạng Thái | File |
+|---|-----------|-------|---------|------------|------|
+| B-U1 | Cancel COMPLETED | 🔴 KHÔNG CHO cancel booking đã COMPLETED | 🔴 CRITICAL | ✅ BE validates | - |
+| B-U2 | Cancel time limit | Chỉ cancel trước showtime 2 tiếng (configurable) | 🟡 HIGH | ❌ Chưa | `reservations/page.tsx` |
+| B-U3 | Status transitions | PENDING → CONFIRMED → COMPLETED (không ngược) | 🔴 CRITICAL | ✅ BE validates | - |
+| B-U4 | Đổi seats | 🔴 KHÔNG CHO đổi seats sau khi CONFIRMED | 🔴 CRITICAL | ✅ BE validates | - |
+| B-U5 | Cảnh báo refund | Hiện policy hoàn tiền khi admin cancel | 🟢 MEDIUM | ❌ Chưa | `reservations/page.tsx` |
+
+### 🗑️ Ràng Buộc Xóa (DELETE Constraints)
+
+| # | Ràng Buộc | Mô Tả | Ưu Tiên | Trạng Thái | File |
+|---|-----------|-------|---------|------------|------|
+| B-D1 | Không cho xóa | Booking chỉ cancel, không xóa (audit trail) | 🔴 CRITICAL | ✅ No delete API | - |
+| B-D2 | Soft delete only | Nếu cần xóa thì soft delete + log lý do | 🟡 HIGH | ✅ Design choice | - |
+
+---
+
+## 🍿 Module: CONCESSION (Đồ Ăn/Uống)
+
+### ➕ Ràng Buộc Tạo (CREATE Constraints)
+
+| # | Ràng Buộc | Mô Tả | Ưu Tiên | Trạng Thái | File |
+|---|-----------|-------|---------|------------|------|
+| CO-C1 | Tên unique | Không trùng tên concession | 🟡 HIGH | ❌ Chưa | `ConcessionDialog.tsx` |
+| CO-C2 | Giá > 0 | Price phải lớn hơn 0 | 🟡 HIGH | ❌ Chưa | `ConcessionDialog.tsx` |
+| CO-C3 | Category hợp lệ | Category phải là value hợp lệ | 🟢 LOW | ✅ FE validates | - |
+
+### ✏️ Ràng Buộc Cập Nhật (UPDATE Constraints)
+
+| # | Ràng Buộc | Mô Tả | Ưu Tiên | Trạng Thái | File |
+|---|-----------|-------|---------|------------|------|
+| CO-U1 | Đổi giá | Cảnh báo ảnh hưởng pending bookings | 🟡 HIGH | ❌ Chưa | `ConcessionDialog.tsx` |
+| CO-U2 | Đổi availability → false | Tự động remove khỏi pending bookings | 🟡 HIGH | ❌ Chưa | `concessions/page.tsx` |
+| CO-U3 | Đổi tên | Kiểm tra unique | 🟢 MEDIUM | ❌ Chưa | `ConcessionDialog.tsx` |
+
+### 🗑️ Ràng Buộc Xóa (DELETE Constraints)
+
+| # | Ràng Buộc | Mô Tả | Ưu Tiên | Trạng Thái | File |
+|---|-----------|-------|---------|------------|------|
+| CO-D1 | Concession trong pending order | Không xóa nếu có trong booking đang pending | 🔴 CRITICAL | ❌ Chưa | `concessions/page.tsx` |
+| CO-D2 | Soft delete | Concession có lịch sử nên soft delete thay vì hard delete | 🟢 MEDIUM | ❌ Chưa | `concessions/page.tsx` |
+
+---
+
+## 🎭 Module: GENRE (Thể Loại)
+
+### ➕ Ràng Buộc Tạo (CREATE Constraints)
+
+| # | Ràng Buộc | Mô Tả | Ưu Tiên | Trạng Thái | File |
+|---|-----------|-------|---------|------------|------|
+| G-C1 | Tên unique | Không trùng tên genre | 🟡 HIGH | ❌ Chưa | `genres/page.tsx` |
+| G-C2 | Tên không rỗng | Genre phải có tên | 🟡 HIGH | ❌ Chưa | `genres/page.tsx` |
+
+### ✏️ Ràng Buộc Cập Nhật (UPDATE Constraints)
+
+| # | Ràng Buộc | Mô Tả | Ưu Tiên | Trạng Thái | File |
+|---|-----------|-------|---------|------------|------|
+| G-U1 | Đổi tên | Kiểm tra unique | 🟡 HIGH | ❌ Chưa | `genres/page.tsx` |
+
+### 🗑️ Ràng Buộc Xóa (DELETE Constraints)
+
+| # | Ràng Buộc | Mô Tả | Ưu Tiên | Trạng Thái | File |
+|---|-----------|-------|---------|------------|------|
+| G-D1 | Genre có Movie | Không xóa Genre đang được gán cho Movie | 🔴 CRITICAL | ❌ Chưa | `genres/page.tsx` |
+| G-D2 | Confirmation + count | Hiện số Movie đang dùng Genre này | 🟡 HIGH | ❌ Chưa | `genres/page.tsx` |
+
+---
+
+## 💰 Module: TICKET PRICING (Định Giá Vé)
+
+### ➕ Ràng Buộc Tạo (CREATE Constraints)
+
+| # | Ràng Buộc | Mô Tả | Ưu Tiên | Trạng Thái | File |
+|---|-----------|-------|---------|------------|------|
+| TP-C1 | Price > 0 | Giá vé phải > 0 | 🟡 HIGH | ❌ Chưa | `ticket-pricing/page.tsx` |
+| TP-C2 | Không trùng rule | Không có 2 rule cùng (dayType, timeSlot, seatType, format) | 🟡 HIGH | ❌ Chưa | `ticket-pricing/page.tsx` |
+| TP-C3 | Enum values hợp lệ | dayType, seatType, format phải là enum hợp lệ | 🟢 MEDIUM | ✅ FE validates | - |
+
+### ✏️ Ràng Buộc Cập Nhật (UPDATE Constraints)
+
+| # | Ràng Buộc | Mô Tả | Ưu Tiên | Trạng Thái | File |
+|---|-----------|-------|---------|------------|------|
+| TP-U1 | Đổi price | Cảnh báo: giá mới áp dụng cho booking mới | 🟢 MEDIUM | ❌ Chưa | `ticket-pricing/page.tsx` |
+| TP-U2 | Đổi conditions | Kiểm tra unique rule | 🟡 HIGH | ❌ Chưa | `ticket-pricing/page.tsx` |
+
+### 🗑️ Ràng Buộc Xóa (DELETE Constraints)
+
+| # | Ràng Buộc | Mô Tả | Ưu Tiên | Trạng Thái | File |
+|---|-----------|-------|---------|------------|------|
+| TP-D1 | Phải có rule mặc định | Cảnh báo nếu xóa rule cuối cùng của loại ghế | 🟡 HIGH | ❌ Chưa | `ticket-pricing/page.tsx` |
+
+---
+
+## 👥 Module: STAFF (Nhân Viên)
+
+### ➕ Ràng Buộc Tạo (CREATE Constraints)
+
+| # | Ràng Buộc | Mô Tả | Ưu Tiên | Trạng Thái | File |
+|---|-----------|-------|---------|------------|------|
+| ST-C1 | Email unique | Không trùng email | 🔴 CRITICAL | ❌ Chưa | `staff/page.tsx` |
+| ST-C2 | Email format | Email phải valid format | 🟡 HIGH | ❌ Chưa | `staff/page.tsx` |
+| ST-C3 | Rạp hợp lệ | Nếu assign cinema, cinema phải tồn tại và ACTIVE | 🟡 HIGH | ❌ Chưa | `staff/page.tsx` |
+| ST-C4 | Password policy | Password đủ mạnh (nếu tạo account) | 🟡 HIGH | ❌ Chưa | `staff/page.tsx` |
+| ST-C5 | Role hợp lệ | Role phải là enum value hợp lệ | 🟢 LOW | ✅ FE validates | - |
+
+### ✏️ Ràng Buộc Cập Nhật (UPDATE Constraints)
+
+| # | Ràng Buộc | Mô Tả | Ưu Tiên | Trạng Thái | File |
+|---|-----------|-------|---------|------------|------|
+| ST-U1 | Đổi email | Kiểm tra unique | 🟡 HIGH | ❌ Chưa | `staff/page.tsx` |
+| ST-U2 | Đổi role | Cảnh báo ảnh hưởng permissions | 🟢 MEDIUM | ❌ Chưa | `staff/page.tsx` |
+| ST-U3 | Đổi cinema | Cảnh báo nếu có shift tương lai ở rạp cũ | 🟢 MEDIUM | ❌ Chưa | `staff/page.tsx` |
+
+### 🗑️ Ràng Buộc Xóa (DELETE Constraints)
+
+| # | Ràng Buộc | Mô Tả | Ưu Tiên | Trạng Thái | File |
+|---|-----------|-------|---------|------------|------|
+| ST-D1 | Staff có shift tương lai | Không xóa nếu có shift chưa qua | 🟡 HIGH | ❌ Chưa | `staff/page.tsx` |
+| ST-D2 | Soft delete | Staff có history nên soft delete | 🟢 MEDIUM | ❌ Chưa | `staff/page.tsx` |
+
+---
+
+## 🚀 Implementation Priority
+
+### 🔴 CRITICAL - Sprint 1 (Làm ngay - 1-2 ngày)
+
+| # | Constraint | Module | Lý do |
+|---|------------|--------|-------|
+| 1 | S-C1, S-C2 | Showtime | **BUG**: Cho tạo showtime ngoài release period |
+| 2 | MR-C1 | Movie Release | **BUG**: Cho release trước ngày ra mắt phim |
+| 3 | S-D1 | Showtime | **BUG**: Xóa showtime không có confirmation |
+| 4 | S-D2 | Showtime | Xóa showtime có booking = mất tiền khách |
+| 5 | MR-D1 | Movie Release | Xóa release = orphan showtimes |
+| 6 | M-D1 | Movie | Xóa movie = orphan releases |
+
+### 🟡 HIGH - Sprint 2 (1 tuần)
+
+| # | Constraint | Module | Lý do |
+|---|------------|--------|-------|
+| 7 | H-U1 | Hall | Đổi layout khi có showtime = seat mapping broken |
+| 8 | S-U1 | Showtime | Đổi hall khi có booking = invalid seats |
+| 9 | MR-U2 | Movie Release | Thu hẹp period có thể orphan showtimes |
+| 10 | C-D1, C-D2, C-D3 | Cinema | Delete cinema cascade nhiều data |
+| 11 | H-D1, H-D2 | Hall | Delete hall cascade showtimes |
+| 12 | G-D1 | Genre | Delete genre đang dùng = broken data |
+
+### 🟢 MEDIUM - Sprint 3 (2 tuần)
+
+| # | Constraint | Module | Lý do |
+|---|------------|--------|-------|
+| 13 | All unique checks | All | Data integrity |
+| 14 | Status change warnings | Cinema, Hall, Movie | User awareness |
+| 15 | B-U2 | Booking | Cancel time limit |
+| 16 | CO-D1 | Concession | Pending order integrity |
+
+### ⚪ LOW - Backlog
+
+| # | Constraint | Module | Lý do |
+|---|------------|--------|-------|
+| 17 | Soft deletes | All | Audit trail (nice to have) |
+| 18 | Info warnings | All | UX improvements |
+
+---
+
+## ⚡ FAST SOLUTION - Backend Error Response
+
+### Mô Hình Xử Lý
+
+```
+User click action → FE call API
+                       ↓
+                   BE kiểm tra constraint
+                       ↓
+                   Nếu vi phạm:
+                     Return 400 + error details
+                   Nếu OK:
+                     Execute + Return 200
+                       ↓
+                   FE catch error → Show constraint info
 ```
 
----
-
-## 👤 Module: USER (Người Dùng)
-
-### Ràng Buộc Xóa (Delete Constraints)
-
-| # | Ràng Buộc | Mô Tả | Trạng Thái | File | Ghi Chú |
-|---|-----------|-------|------------|------|---------|
-| U-D1 | User có Booking | Không cho xóa User có booking history | ❌ Chưa triển khai | N/A | Soft delete |
-| U-D2 | User có Review | Cảnh báo/xử lý reviews khi xóa user | ❌ Chưa triển khai | N/A | Orphan data |
-
----
-
-## 🔧 API Hooks - Error Handling Status
-
-### Hooks CÓ onError Handler ✅
-
-| Hook | File | Error Handling |
-|------|------|----------------|
-| `useDeleteCinema` | hooks.ts | ✅ Toast error message |
-| `useDeleteConcession` | hooks.ts | ✅ Toast error message |
-| `useDeleteStaff` | hooks.ts | ✅ Toast error message |
-| `useUpdateBookingStatus` | hooks.ts | ✅ Toast error message |
-| `useCreateMovie` | hooks.ts | ✅ Toast with validation details |
-| `useUpdateMovie` | hooks.ts | ✅ Toast with validation details |
-
-### Hooks KHÔNG CÓ onError Handler ❌
-
-| Hook | File | Vấn Đề |
-|------|------|--------|
-| `useDeleteHall` | hooks.ts | ❌ Silent failure - User không biết lỗi |
-| `useDeleteMovie` | hooks.ts | ❌ Silent failure |
-| `useDeleteMovieRelease` | hooks.ts | ❌ Silent failure |
-| `useDeleteShowtime` | hooks.ts | ❌ Silent failure |
-| `useDeleteGenre` | hooks.ts | ❌ Silent failure |
-| `useDeleteReview` | hooks.ts | ❌ Silent failure |
-
----
-
-## 📋 Action Items - Ưu Tiên Triển Khai (Fast Solution)
-
-### 🚀 Sprint 1: CRITICAL (Cần làm ngay) - 2-3 giờ
-
-#### Backend Tasks (30 phút)
-| # | Task | Module | Code |
-|---|------|--------|------|
-| B1 | Modify DELETE endpoint - add constraint check | Cinema | 10 lines |
-| B2 | Modify DELETE endpoint - add constraint check | Hall | 10 lines |
-| B3 | Modify DELETE endpoint - add constraint check | Movie | 10 lines |
-| B4 | Modify DELETE endpoint - add constraint check | Movie Release | 10 lines |
-| B5 | Modify DELETE endpoint - add constraint check | Showtime | 10 lines |
-| B6 | Modify DELETE endpoint - add constraint check | Genre | 10 lines |
-| B7 | Modify DELETE endpoint - add constraint check | Concession | 10 lines |
-
-**Tip**: Copy-paste pattern một lần, modify values, xong!
-
-#### Frontend Tasks (1.5-2 giờ)
-| # | Task | Module | Code |
-|---|------|--------|------|
-| F1 | Add error handler + constraint dialog | Cinema | 15 lines |
-| F2 | Add error handler + constraint dialog | Hall | 15 lines |
-| F3 | Add error handler + constraint dialog | Movie | 15 lines |
-| F4 | Add error handler + constraint dialog | Movie Release | 15 lines |
-| F5 | Add confirmation + error handler | Showtime | 20 lines |
-| F6 | Add error handler + constraint dialog | Genre | 15 lines |
-| F7 | Add error handler + constraint dialog | Concession | 15 lines |
-
-### ⚠️ Sprint 2: HIGH (1-2 ngày) - UX Polish
-
-| # | Task | Priority |
-|---|------|----------|
-| 7 | Disable delete button nếu có constraint (FE) | HIGH |
-| 8 | Add loading state khi delete | HIGH |
-| 9 | Show toast notification style consistent | HIGH |
-| 10 | Test cascade delete prevent | HIGH |
-
----
-
-## 🛠️ Implementation Guide
-
-### Pattern cho Pre-Delete Validation
-
-```typescript
-// Ví dụ: Kiểm tra constraint trước khi xóa Hall
-
-const handleDeleteHall = async (hallId: string) => {
-  // 1. Kiểm tra dependencies
-  const dependencies = await checkHallDependencies(hallId);
-  
-  if (dependencies.showtimes > 0) {
-    toast({
-      title: "Không thể xóa",
-      description: `Phòng chiếu này có ${dependencies.showtimes} suất chiếu. Vui lòng xóa suất chiếu trước.`,
-      variant: "destructive",
-    });
-    return;
-  }
-  
-  if (dependencies.bookings > 0) {
-    toast({
-      title: "Không thể xóa",
-      description: `Phòng chiếu này có ${dependencies.bookings} đặt vé chưa hoàn tất.`,
-      variant: "destructive",
-    });
-    return;
-  }
-  
-  // 2. Hiện confirmation dialog
-  setHallToDelete(hallId);
-  setDeleteDialogOpen(true);
-};
-```
-
-### Pattern cho onError Handler
-
-```typescript
-// Thêm vào hooks.ts
-
-export const useDeleteHall = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (id: string) => hallsApi.delete(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.halls.lists() });
-      toast.success('Hall deleted successfully');
-    },
-    onError: (error: Error & { responseData?: { message?: string } }) => {
-      // ✅ Thêm error handler
-      const message = error.responseData?.message || error.message || 'Failed to delete hall';
-      toast.error(message);
-    },
-  });
-};
-```
-
-### Pattern cho Confirmation Dialog với Constraint Info
-
-```typescript
-// Confirmation dialog hiển thị thông tin constraint
-
-<AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-  <AlertDialogContent>
-    <AlertDialogHeader>
-      <AlertDialogTitle>Xác nhận xóa?</AlertDialogTitle>
-      <AlertDialogDescription>
-        {dependencies && dependencies.count > 0 ? (
-          <div className="text-red-500">
-            ⚠️ Không thể xóa! Có {dependencies.count} mục phụ thuộc:
-            <ul className="list-disc ml-4 mt-2">
-              {dependencies.showtimes > 0 && (
-                <li>{dependencies.showtimes} suất chiếu</li>
-              )}
-              {dependencies.bookings > 0 && (
-                <li>{dependencies.bookings} đặt vé</li>
-              )}
-            </ul>
-          </div>
-        ) : (
-          "Hành động này không thể hoàn tác."
-        )}
-      </AlertDialogDescription>
-    </AlertDialogHeader>
-    <AlertDialogFooter>
-      <AlertDialogCancel>Hủy</AlertDialogCancel>
-      <AlertDialogAction
-        onClick={handleConfirmDelete}
-        disabled={dependencies && dependencies.count > 0}
-      >
-        Xóa
-      </AlertDialogAction>
-    </AlertDialogFooter>
-  </AlertDialogContent>
-</AlertDialog>
-```
-
----
-
-## 📊 Backend Error Response Format
-
-**Không cần thêm API mới** - Chỉ modify DELETE endpoint error response
-
-### ✅ DELETE Endpoint Error Response (Recommended)
+### Backend Error Response Format
 
 ```json
 {
   "statusCode": 400,
   "code": "CONSTRAINT_VIOLATION",
   "message": "Cannot delete cinema with dependent data",
-  "halls": 3,
-  "showtimes": 15,
-  "bookings": 42
-}
-```
-
-### Áp Dụng Cho Tất Cả Module
-
-| Module | Fields | Ví Dụ |
-|--------|--------|-------|
-| Cinema | `halls`, `showtimes`, `bookings` | `{ halls: 3, showtimes: 15, bookings: 42 }` |
-| Hall | `showtimes`, `bookings` | `{ showtimes: 5, bookings: 20 }` |
-| Movie | `releases`, `showtimes`, `reviews` | `{ releases: 2, showtimes: 10, reviews: 5 }` |
-| Movie Release | `showtimes` | `{ showtimes: 3 }` |
-| Showtime | `bookings`, `confirmedBookings` | `{ bookings: 15, confirmedBookings: 12 }` |
-| Genre | `movies` | `{ movies: 5 }` |
-| Concession | `pendingOrders` | `{ pendingOrders: 2 }` |
-
-### Quick Copy-Paste cho Backend (NestJS)
-
-```typescript
-// Tạo exception này một lần, dùng lại everywhere
-export class ConstraintViolationException extends BadRequestException {
-  constructor(
-    private dependencyInfo: Record<string, number>
-  ) {
-    super({
-      code: 'CONSTRAINT_VIOLATION',
-      message: 'Cannot delete: has dependent data',
-      ...dependencyInfo,
-    });
+  "details": {
+    "halls": 3,
+    "showtimes": 15,
+    "bookings": 42
   }
 }
+```
 
-// Dùng:
-if (deps.count > 0) {
-  throw new ConstraintViolationException({
-    halls: deps.halls,
-    showtimes: deps.showtimes,
-    bookings: deps.bookings,
-  });
+### CREATE Validation Error Format
+
+```json
+{
+  "statusCode": 400,
+  "code": "VALIDATION_ERROR",
+  "message": "Release startDate cannot be before movie releaseDate",
+  "details": {
+    "field": "startDate",
+    "value": "2026-01-01",
+    "constraint": "Movie releaseDate is 2026-01-15"
+  }
 }
 ```
 
 ---
 
-## 📅 Timeline Đề Xuất
+## 📝 Checklist Hoàn Thành
 
-### Phase 1: Nhanh (2-3 giờ) - Fast Solution
+### CREATE Constraints
+- [ ] MR-C1: Release startDate >= Movie releaseDate
+- [ ] S-C1: Showtime startTime trong release period
+- [ ] S-C2: Showtime endTime trong release period
+- [ ] H-C1: Hall chỉ tạo cho Cinema ACTIVE
+- [ ] S-C3, S-C4: Showtime chỉ cho Hall/Cinema ACTIVE
+- [ ] All unique name checks
 
-**Backend Changes** (30 phút):
-```
-Modify DELETE endpoints (6 endpoints) → Add constraint check → Return error
-```
+### UPDATE Constraints
+- [ ] H-U1: Không đổi layout khi có showtime
+- [ ] S-U1: Không đổi hall khi có booking
+- [ ] MR-U2: Không thu hẹp period có showtime ngoài
+- [ ] All status change validations
 
-**Frontend Changes** (1.5-2 giờ):
-```
-Add error handling + show constraint dialog → Test
-```
-
-**Result**: ✅ Prevent delete + show why can't delete
-
----
-
-### Phase 2: Polish (1 ngày) - UX Improvements
-
-- Disable delete button when has constraints (FE)
-- Add loading states
-- Test all scenarios
-- QA sign-off
+### DELETE Constraints
+- [ ] S-D1: Showtime confirmation dialog
+- [ ] S-D2: Không xóa showtime có booking
+- [ ] MR-D1: Không xóa release có showtime
+- [ ] M-D1: Không xóa movie có release
+- [ ] C-D1, H-D1, G-D1: All dependency checks
 
 ---
 
-### Phase 3: Optional (Future) - Advanced Features
-
-- Soft delete with archive
-- Auto-cascade some items with confirmation
-- Bulk delete with constraint preview
-
----
-
-## ✅ Checklist Hoàn Thành
-
-- [ ] Tất cả delete operations có confirmation dialog
-- [ ] Tất cả delete hooks có onError handler
-- [ ] Pre-delete validation cho Cinema dependencies
-- [ ] Pre-delete validation cho Hall dependencies
-- [ ] Pre-delete validation cho Movie dependencies
-- [ ] Pre-delete validation cho Showtime dependencies
-- [ ] Update constraints cho Booking status
-- [ ] Error messages hiển thị thông tin constraint cụ thể
-- [ ] QA test tất cả constraint scenarios
-- [ ] Documentation updated
-
----
-
-**Last Updated**: January 3, 2026  
+**Last Updated**: January 4, 2026  
 **Author**: GitHub Copilot  
-**Status**: 🔴 Cần triển khai nhiều ràng buộc quan trọng
+**Status**: 🔴 102 ràng buộc cần triển khai, chỉ có 4 đã hoàn thành

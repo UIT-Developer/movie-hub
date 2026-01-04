@@ -229,17 +229,11 @@ export default function BatchShowtimesPage() {
       const convertedTimeSlots = formData.timeSlots.map(timeStr => {
         const [hh, mm] = timeStr.split(':').map(Number);
         
-        // Create a date object with the local time
-        const localDate = new Date();
-        localDate.setHours(hh, mm, 0, 0);
+        // User inputs UTC time directly - no conversion needed
+        // Just format it properly
+        const utcTime = `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
         
-        // Convert to UTC
-        const utcHours = String(localDate.getUTCHours()).padStart(2, '0');
-        const utcMinutes = String(localDate.getUTCMinutes()).padStart(2, '0');
-        
-        const utcTime = `${utcHours}:${utcMinutes}`;
-        
-        console.log(`[BatchShowtimes] Time conversion: ${timeStr} (local) → ${utcTime} (UTC)`);
+        console.log(`[BatchShowtimes] Time (UTC input, no conversion): ${timeStr} → ${utcTime}`);
         
         return utcTime;
       });
@@ -561,9 +555,11 @@ export default function BatchShowtimesPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Clock className="h-5 w-5 text-orange-600" />
-                Khung giờ suất chiếu
+                Khung giờ suất chiếu (UTC)
               </CardTitle>
-              <CardDescription>Chọn khung giờ suất chiếu (cho phép chọn nhiều)</CardDescription>
+              <CardDescription>
+                Chọn khung giờ suất chiếu UTC - không phải giờ địa phương (cho phép chọn nhiều)
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2">
@@ -583,7 +579,7 @@ export default function BatchShowtimesPage() {
               {formData.timeSlots.length > 0 && (
                 <div className="mt-4 p-3 bg-purple-50 rounded-lg">
                   <p className="text-sm font-medium text-purple-900">
-                    Selected: {formData.timeSlots.join(', ')}
+                    Selected UTC times: {formData.timeSlots.join(', ')}
                   </p>
                 </div>
               )}

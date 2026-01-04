@@ -136,18 +136,23 @@ export default function ShowtimeDialog({
       try {
         const dateFromAPI = new Date(showtimeToUse.startTime);
         
-        // Format as datetime-local: YYYY-MM-DDTHH:mm
-        const year = dateFromAPI.getFullYear();
-        const month = String(dateFromAPI.getMonth() + 1).padStart(2, '0');
-        const day = String(dateFromAPI.getDate()).padStart(2, '0');
-        const hours = String(dateFromAPI.getHours()).padStart(2, '0');
-        const minutes = String(dateFromAPI.getMinutes()).padStart(2, '0');
+        // Backend returns UTC time string (e.g., "2026-01-03T23:00:00.000Z")
+        // Display UTC time directly (not converted to local)
+        // Backend stores UTC, we show UTC to admin user
+        // Use getUTC* methods to extract UTC components
+        const year = dateFromAPI.getUTCFullYear();
+        const month = String(dateFromAPI.getUTCMonth() + 1).padStart(2, '0');
+        const day = String(dateFromAPI.getUTCDate()).padStart(2, '0');
+        const hours = String(dateFromAPI.getUTCHours()).padStart(2, '0');
+        const minutes = String(dateFromAPI.getUTCMinutes()).padStart(2, '0');
         formattedStartTime = `${year}-${month}-${day}T${hours}:${minutes}`;
         
-        console.log('[ShowtimeDialog] Loaded showtime time:', {
+        console.log('[ShowtimeDialog] Loaded showtime time (displaying UTC):', {
           rawFromAPI: showtimeToUse.startTime,
           dateFromAPI: dateFromAPI.toISOString(),
+          utcValues: { year, month, day, hours, minutes },
           formatted: formattedStartTime,
+          note: 'Displaying UTC time directly, not converting to local',
         });
       } catch (e) {
         console.warn('[ShowtimeDialog] Failed to parse startTime:', showtimeToUse.startTime, e);
@@ -217,41 +222,28 @@ export default function ShowtimeDialog({
     }
 
     try {
-      // TIMEZONE FIX: Backend treats time as UTC when it adds 'Z' suffix
-      // Input from datetime-local: "2026-01-04T05:00" (user's LOCAL time in Vietnam = UTC+7)
-      // Need to convert local → UTC before sending to backend
+      // User inputs UTC time directly in datetime-local field
+      // No timezone conversion needed - just format for backend
       
-      // Parse the datetime-local string "2026-01-04T05:00" → get local date parts
       const [datePart, timePart] = formData.startTime.split('T');
       const [year, month, day] = datePart.split('-').map(Number);
       const [hours, minutes] = timePart.split(':').map(Number);
       
-      // Create a Date object with local time values
-      // When we do new Date(year, month-1, day, hours, minutes),
-      // the constructor interprets these as LOCAL time values
-      const localDate = new Date(year, month - 1, day, hours, minutes, 0);
+      // Format as backend expects: "YYYY-MM-DD HH:mm:ss" (treated as UTC)
+      const monthStr = String(month).padStart(2, '0');
+      const dayStr = String(day).padStart(2, '0');
+      const hoursStr = String(hours).padStart(2, '0');
+      const minutesStr = String(minutes).padStart(2, '0');
+      const startTimeFormatted = `${year}-${monthStr}-${dayStr} ${hoursStr}:${minutesStr}:00`;
       
-      // Extract UTC values using getUTC* methods
-      // Example: Local 2026-01-04 05:00 (Vietnam UTC+7)
-      //        → UTC 2026-01-03 22:00
-      const utcYear = localDate.getUTCFullYear();
-      const utcMonth = String(localDate.getUTCMonth() + 1).padStart(2, '0');
-      const utcDay = String(localDate.getUTCDate()).padStart(2, '0');
-      const utcHours = String(localDate.getUTCHours()).padStart(2, '0');
-      const utcMinutes = String(localDate.getUTCMinutes()).padStart(2, '0');
-      
-      const startTimeFormatted = `${utcYear}-${utcMonth}-${utcDay} ${utcHours}:${utcMinutes}:00`;
-      
-      console.log('[ShowtimeDialog] Submitting showtime (TIMEZONE FIX APPLIED):', {
+      console.log('[ShowtimeDialog] Submitting UTC time (no conversion):', {
         userInput: formData.startTime,
-        localParsed: { year, month, day, hours, minutes },
-        localDate: localDate.toString(),
-        localDateISO: localDate.toISOString(),
-        utcValues: { utcYear, utcMonth, utcDay, utcHours, utcMinutes },
+        parsed: { year, month, day, hours, minutes },
         formatted: startTimeFormatted,
-        note: 'Converted local datetime-local to UTC using getUTC* methods',
+        note: 'User input is treated as UTC directly, no timezone conversion',
       });
 
+      // Send as custom format "YYYY-MM-DD HH:mm:ss" which backend parses as UTC
       const payload = {
         ...formData,
         startTime: startTimeFormatted,
@@ -505,7 +497,10 @@ export default function ShowtimeDialog({
 
           {/* Start Time */}
           <div className="space-y-2">
-            <Label htmlFor="startTime">Thời Gian Bắt Đầu *</Label>
+            <Label htmlFor="startTime">
+              Thời Gian Bắt Đầu (UTC) *
+              <span className="text-xs text-gray-500 ml-2">Nhập giờ UTC, không phải giờ địa phương</span>
+            </Label>
             <Input
               id="startTime"
               type="datetime-local"

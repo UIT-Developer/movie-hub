@@ -48,69 +48,45 @@ export default function ShowtimesPage() {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
-  // API hooks: pass dates (now defaults to today)
-  // NOTE: Backend stores times in UTC and queries with UTC time ranges.
-  // To cover a full local day, we need to query TWO consecutive UTC dates.
-  // Example: User selects 2026-01-04 local (00:00-23:59 local)
-  // In UTC: 2026-01-03 17:00 to 2026-01-04 16:59
-  // So we query both 2026-01-03 and 2026-01-04 UTC dates and merge results
-  const getUTCDatesForLocalDate = (localDate: Date): [string, string] => {
-    // Get the local date parts
-    const year = localDate.getFullYear();
-    const month = String(localDate.getMonth() + 1).padStart(2, '0');
-    const day = String(localDate.getDate()).padStart(2, '0');
-    const localDateStr = `${year}-${month}-${day}`;
-    
-    // Create a date object for midnight of the selected local date
-    const midnightLocal = new Date(year, localDate.getMonth(), localDate.getDate(), 0, 0, 0);
-    
-    // Get UTC equivalent - this will be previous day + 17:00 (for UTC+7)
-    const utcYear = midnightLocal.getUTCFullYear();
-    const utcMonth = String(midnightLocal.getUTCMonth() + 1).padStart(2, '0');
-    const utcDay = String(midnightLocal.getUTCDate()).padStart(2, '0');
-    const utcDateStr = `${utcYear}-${utcMonth}-${utcDay}`;
-    
-    // The next UTC date
-    const nextUTCDate = new Date(midnightLocal);
-    nextUTCDate.setUTCDate(nextUTCDate.getUTCDate() + 1);
-    const nextUtcYear = nextUTCDate.getUTCFullYear();
-    const nextUtcMonth = String(nextUTCDate.getUTCMonth() + 1).padStart(2, '0');
-    const nextUtcDay = String(nextUTCDate.getUTCDate()).padStart(2, '0');
-    const nextUtcDateStr = `${nextUtcYear}-${nextUtcMonth}-${nextUtcDay}`;
-    
-    return [utcDateStr, nextUtcDateStr];
-  };
+  // API hooks: pass date to backend
+  // NOTE: Since we now display and input UTC times directly (no conversion),
+  // the selected date is already in UTC context.
+  // User selects: 2026-01-04 → Query date=2026-01-04 UTC only
+  // No need to query 2 dates anymore since we're working in UTC throughout
   
-  const [utcDate1, utcDate2] = getUTCDatesForLocalDate(selectedDate);
-
-  // Query both UTC dates
-  const { data: showtimesData1 = [] } = useShowtimes({
-    cinemaId: selectedCinemaId !== 'all' ? selectedCinemaId : undefined,
-    movieId: selectedMovieId !== 'all' ? selectedMovieId : undefined,
-    date: utcDate1,
-  });
+  const selectedDateStr = selectedDate ? format(selectedDate, 'yyyy-MM-dd') : '';
   
-  const { data: showtimesData2 = [] } = useShowtimes({
-    cinemaId: selectedCinemaId !== 'all' ? selectedCinemaId : undefined,
-    movieId: selectedMovieId !== 'all' ? selectedMovieId : undefined,
-    date: utcDate2,
+  console.log('[ShowtimesPage] Query date (UTC):', {
+    selectedDate: selectedDateStr,
+    note: 'Querying single UTC date - no timezone conversion',
   });
 
-  // Merge results from both queries, deduplicating by showtime ID
-  const showtimes = Array.from(
-    new Map(
-      [...(showtimesData1 || []), ...(showtimesData2 || [])]
-        .map(st => [st.id, st])
-    ).values()
-  );
+  // Query single UTC date
+  const { data: showtimesData = [] } = useShowtimes({
+    cinemaId: selectedCinemaId !== 'all' ? selectedCinemaId : undefined,
+    movieId: selectedMovieId !== 'all' ? selectedMovieId : undefined,
+    date: selectedDateStr,
+  });
+
+  const showtimes = showtimesData || [];
   
-  // Determine loading state - true if either query is loading
-  const loading = false; // Both queries are handled by React Query hooks
+  // DEBUG: Log what we're getting from backend
+  console.log('[ShowtimesPage] Showtimes from backend:', {
+    queryDate: selectedDateStr,
+    showtimesLength: showtimes.length,
+    showtimes: showtimes.map(st => ({
+      id: st.id,
+      startTime: st.startTime,
+      utcTimeDisplay: st.startTime,
+    })),
+  });
   
-  // Refetch both queries when needed
+  // Determine loading state
+  const loading = false;
+  
+  // Refetch function
   const refetchShowtimes = () => {
-    // Re-trigger both queries by changing the filter state
-    // This is handled automatically by React Query's queryKey changes
+    // Handled automatically by React Query
   };
   
   const { data: moviesData = [] } = useMovies();
@@ -373,6 +349,10 @@ export default function ShowtimesPage() {
                     {movieShowtimes.map((showtime) => {
                       const cinema = cinemas.find((c) => c.id === showtime.cinemaId);
                       const startTime = new Date(showtime.startTime);
+                      // Display UTC time (not local time)
+                      const utcHours = String(startTime.getUTCHours()).padStart(2, '0');
+                      const utcMinutes = String(startTime.getUTCMinutes()).padStart(2, '0');
+                      const timeDisplay = `${utcHours}:${utcMinutes}`;
                       return (
                         <Card key={showtime.id} className="relative">
                           <CardContent className="pt-6">
@@ -380,7 +360,7 @@ export default function ShowtimesPage() {
                               <div className="flex items-start justify-between">
                                 <div>
                                   <div className="font-semibold text-lg">
-                                    {format(startTime, 'HH:mm')}
+                                    {timeDisplay}
                                   </div>
                                   <div className="text-sm text-gray-500">
                                     {cinema?.name}
@@ -408,10 +388,12 @@ export default function ShowtimesPage() {
 
                               <div className="flex items-center gap-2 text-sm text-gray-600">
                                 <Clock className="h-4 w-4" />
-                                {format(startTime, 'HH:mm')} -{' '}
+                                {timeDisplay} -{' '}
                                 {movie?.runtime ? (() => {
                                   const endDate = new Date(startTime.getTime() + movie.runtime * 60 * 1000);
-                                  return format(endDate, 'HH:mm');
+                                  const endUtcHours = String(endDate.getUTCHours()).padStart(2, '0');
+                                  const endUtcMinutes = String(endDate.getUTCMinutes()).padStart(2, '0');
+                                  return `${endUtcHours}:${endUtcMinutes}`;
                                 })() : 'N/A'}
                               </div>
 

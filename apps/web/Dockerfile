@@ -9,7 +9,7 @@ RUN npm install -g npm@latest && npm -v
 COPY package*.json ./
 
 # Install ALL dependencies (needed for build)
-RUN npm i --legacy-peer-deps
+RUN npm install --legacy-peer-deps
 
 # ===========================================
 # BUILD STAGE - Build Next.js application
@@ -30,8 +30,9 @@ COPY libs ./libs
 COPY apps/web ./apps/web
 
 # Build the web app using Nx (creates standalone output)
+ENV NODE_ENV production
 ENV NEXT_TELEMETRY_DISABLED 1
-RUN npx nx run web:build --prod
+RUN NODE_ENV=production npx nx run web:build
 
 # ===========================================
 # PRODUCTION STAGE - Minimal Next.js runtime using standalone output

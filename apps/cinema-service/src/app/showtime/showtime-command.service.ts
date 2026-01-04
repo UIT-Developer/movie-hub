@@ -40,6 +40,7 @@ export class ShowtimeCommandService {
         format,
         language,
         subtitles,
+        status,
       } = dto;
 
       await this.checkCinemaAndHallStatus(cinemaId, hallId);
@@ -102,6 +103,7 @@ export class ShowtimeCommandService {
           total_seats: totalSeats,
           available_seats: totalSeats,
           day_type: dayType,
+          status: status ? (status as ShowtimeStatus) : ShowtimeStatus.SELLING,
         },
       });
       return {
@@ -133,6 +135,7 @@ export class ShowtimeCommandService {
         format,
         language,
         subtitles,
+        status,
       } = input;
 
       await this.checkCinemaAndHallStatus(cinemaId, hallId);
@@ -279,6 +282,7 @@ export class ShowtimeCommandService {
             total_seats: totalSeats,
             available_seats: totalSeats,
             day_type: dayType,
+            status: status ? (status as ShowtimeStatus) : ShowtimeStatus.SELLING,
           },
         });
 
@@ -370,6 +374,7 @@ export class ShowtimeCommandService {
         format: dto.format ? (dto.format as Format) : showtime.format,
         language: dto.language ?? showtime.language,
         subtitles: dto.subtitles ?? showtime.subtitles,
+        status: dto.status ? (dto.status as ShowtimeStatus) : showtime.status,
         updated_at: new Date(),
       },
     });

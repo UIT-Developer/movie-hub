@@ -32,6 +32,9 @@ jobs:
           cache: 'npm'
 
       - run: npm ci --legacy-peer-deps
+      
+      # Clean nx cache to avoid pnpm lockfile parsing issues
+      - run: npx nx reset
 
       - run: npm run prisma:generate
       # Prepend any command with "nx-cloud record --" to record its logs to Nx Cloud

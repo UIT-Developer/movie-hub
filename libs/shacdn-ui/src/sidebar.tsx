@@ -3,11 +3,11 @@ import { Slot } from '@radix-ui/react-slot';
 import { VariantProps, cva } from 'class-variance-authority';
 import { PanelLeft } from 'lucide-react';
 
-import { useIsMobile } from './hooks/use-mobile';
-import { cn } from '@movie-hub/shacdn-utils';
-import { Button } from './button';
-import { Input } from './input';
-import { Separator } from './separator';
+import { useIsMobile } from "@movie-hub/shacdn-ui/hooks/use-mobile"
+import { cn } from "@movie-hub/shacdn-ui/components/lib/utils"
+import { Button } from "@movie-hub/shacdn-ui/button"
+import { Input } from "@movie-hub/shacdn-ui/input"
+import { Separator } from "@movie-hub/shacdn-ui/separator"
 import {
   Sheet,
   SheetContent,
@@ -21,7 +21,7 @@ import {
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from './tooltip';
+} from "@movie-hub/shacdn-ui/tooltip"
 
 const SIDEBAR_COOKIE_NAME = 'sidebar_state';
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;

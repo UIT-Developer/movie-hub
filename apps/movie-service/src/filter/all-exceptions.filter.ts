@@ -3,7 +3,7 @@ import { ResourceNotFoundException } from '@movie-hub/shared-types';
 import { Catch } from '@nestjs/common';
 import { BaseRpcExceptionFilter } from '@nestjs/microservices';
 import { throwError } from 'rxjs';
-import { PrismaClientKnownRequestError } from '../../generated/prisma/runtime/library';
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 
 @Catch() // Catch all exceptions
 export class AllExceptionsFilter extends BaseRpcExceptionFilter {

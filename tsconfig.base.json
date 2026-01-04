@@ -15,9 +15,9 @@
     "skipDefaultLibCheck": true,
     "baseUrl": ".",
     "paths": {
-      "@movie-hub/shacdn-ui": ["libs/shacdn-ui/src"],
+      "@movie-hub/shacdn-ui": ["libs/shacdn-ui/src/index.ts"],
       "@movie-hub/shacdn-ui/*": ["libs/shacdn-ui/src/*"],
-      "@movie-hub/shacdn-utils": ["libs/shacdn-utils/src"],
+      "@movie-hub/shacdn-utils": ["libs/shacdn-utils/src/index.ts"],
       "@movie-hub/shacdn-utils/*": ["libs/shacdn-utils/src/*"],
       "@movie-hub/shared-redis": ["libs/shared-redis/src/index.ts"],
       "@movie-hub/shared-redis/*": ["libs/shared-redis/src/*"],

@@ -10,8 +10,8 @@ import {
   type FieldValues,
 } from 'react-hook-form';
 
-import { cn } from '@movie-hub/shacdn-utils';
-import { Label } from './label';
+import { cn } from "@movie-hub/shacdn-utils"
+import { Label } from "@movie-hub/shacdn-ui/label"
 
 const Form = FormProvider;
 

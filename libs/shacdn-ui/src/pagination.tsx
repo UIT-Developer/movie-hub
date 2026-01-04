@@ -1,8 +1,8 @@
 import * as React from 'react';
 import { ChevronLeft, ChevronRight, MoreHorizontal } from 'lucide-react';
 
-import { cn } from '@movie-hub/shacdn-utils';
-import { ButtonProps, buttonVariants } from './button';
+import { cn } from "@movie-hub/shacdn-utils"
+import { ButtonProps, buttonVariants } from "@movie-hub/shacdn-ui/button"
 
 const Pagination = ({ className, ...props }: React.ComponentProps<'nav'>) => (
   <nav
@@ -42,8 +42,7 @@ type PaginationLinkProps = {
 const PaginationLink = ({
   className,
   isActive,
-  size = 'icon',
-  children,
+  size = "icon",
   ...props
 }: PaginationLinkProps) => (
   <a
@@ -56,11 +55,9 @@ const PaginationLink = ({
       className
     )}
     {...props}
-  >
-    {children}
-  </a>
-);
-PaginationLink.displayName = 'PaginationLink';
+  />
+)
+PaginationLink.displayName = "PaginationLink"
 
 const PaginationPrevious = ({
   className,

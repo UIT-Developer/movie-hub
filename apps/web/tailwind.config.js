@@ -22,9 +22,6 @@
 //   plugins: [],
 // };
 
-const path = require('path');
-const { buildConfig } = require(path.resolve(
-  __dirname,
-  '../../libs/shacdn-utils/src/tailwind.config'
-));
+import { buildConfig } from '../../libs/shacdn-utils/src/tailwind.config';
+
 export default buildConfig(__dirname);

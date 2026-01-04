@@ -5,7 +5,7 @@ import {
   GetCinemasNearbyDto,
   GetCinemasWithFiltersDto,
   GetCinemaDetailDto,
-} from './dto/cinema-location.dto';
+} from '@movie-hub/shared-types';
 
 @Controller()
 export class CinemaLocationController {

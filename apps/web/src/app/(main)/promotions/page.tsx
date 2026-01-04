@@ -4,6 +4,8 @@ import { getQueryClient } from "@/libs/get-query-client";
 import { PromotionType } from "@/libs/types/promotion.type";
 import { PromotionList } from "./promotion-list";
 
+export const dynamic = 'force-dynamic';
+
 export default async function PromotionsPage() {
   const queryClient = getQueryClient();
   await queryClient.prefetchQuery({

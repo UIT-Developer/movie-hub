@@ -2,6 +2,8 @@ import { BookingStatus } from "@/libs/types/booking.type";
 import { MyBookingList } from "./my-booking-list";
 import { RequireSignIn } from "@/components/require-sign-in";
 
+export const dynamic = 'force-dynamic';
+
 export default function MyBookingPage() {
   return (
     <RequireSignIn>

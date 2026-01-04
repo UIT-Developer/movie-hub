@@ -1,5 +1,7 @@
 import { ShowtimesList } from "./showtimes-list";
 
+export const dynamic = 'force-dynamic';
+
 const ShowtimesPage = () => {
   return (
     <div className="flex flex-col p-4 items-center">

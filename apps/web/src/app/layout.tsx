@@ -23,24 +23,34 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const hasClerkPublishableKey = !!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+
+  const app = (
+    <PageWrapper>
+      <Toaster theme="light" richColors closeButton />
+
+      {children}
+    </PageWrapper>
+  );
+
   return (
     <html lang="en" className="dark">
       <body className={inter.className}>
         <QueryClientProviders>
-          <ClerkProvider
-            appearance={{
-              variables: {
-                colorPrimary: '#E11D48',
-              },
-            }}
-            afterSignOutUrl="/admin/login"
-          >
-            <PageWrapper>
-              <Toaster theme="light" richColors closeButton />
-
-              {children}
-            </PageWrapper>
-          </ClerkProvider>
+          {hasClerkPublishableKey ? (
+            <ClerkProvider
+              appearance={{
+                variables: {
+                  colorPrimary: '#E11D48',
+                },
+              }}
+              afterSignOutUrl="/admin/login"
+            >
+              {app}
+            </ClerkProvider>
+          ) : (
+            app
+          )}
         </QueryClientProviders>
       </body>
     </html>

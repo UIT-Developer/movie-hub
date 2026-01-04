@@ -27,8 +27,19 @@ const nextConfig = {
     const path = require('path');
     const dummyPath = path.resolve(__dirname, 'dummy-module.js');
 
+    // Frontend-safe shared-types entrypoint: avoids exporting Nest-only DTOs/exceptions
+    // that pull in `nestjs-zod`, `@nestjs/*`, etc.
+    const sharedTypesPublic = path.resolve(
+      __dirname,
+      '../../libs/shared-types/src/public.ts'
+    );
+
     config.resolve.alias = {
       ...config.resolve.alias,
+      // Ensure any root imports from `@movie-hub/shared-types` stay browser-safe
+      '@movie-hub/shared-types$': sharedTypesPublic,
+
+      // Stub server-only deps so shared libs can be imported in the web app
       'class-transformer/storage': dummyPath,
       'class-transformer': dummyPath,
       'class-validator': dummyPath,

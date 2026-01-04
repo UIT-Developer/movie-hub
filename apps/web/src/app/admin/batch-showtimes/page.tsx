@@ -260,6 +260,14 @@ function BatchShowtimesContent() {
     try {
       setLoading(true);
 
+      // Map format from UI values to API values
+      const formatMap: Record<string, ApiShowtimeFormat> = {
+        '2D': 'TWO_D',
+        '3D': 'THREE_D',
+        'IMAX': 'IMAX',
+        '4DX': 'FOUR_DX',
+      };
+
       // Convert admin form shape to API request shape
       // BE expects startDate/endDate at root level, not in dateRange wrapper
       const apiRequest = {
@@ -272,7 +280,7 @@ function BatchShowtimesContent() {
         timeSlots: formData.timeSlots, // Array of HH:mm strings
         repeatType: formData.repeatType, // Add required field for BE
         weekdays: formData.weekdays || [], // Add required field for BE
-        format: formData.format as unknown as ApiShowtimeFormat,
+        format: formatMap[formData.format] as ApiShowtimeFormat, // Map to backend format
         language: formData.language,
         subtitles: formData.subtitles || [],
       };

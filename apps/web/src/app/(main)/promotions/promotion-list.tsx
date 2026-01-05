@@ -1,7 +1,5 @@
 'use client';
 
-
-
 import {
   Select,
   SelectContent,
@@ -9,6 +7,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@movie-hub/shacdn-ui/select';
+import { useUser } from '@clerk/nextjs';
 import { useGetConcessions } from '@/hooks/concession-hooks';
 import {
   ConcessionCategory,
@@ -22,16 +21,20 @@ import { useState } from 'react';
 import { PromotionCard } from './_components/promotion-card';
 
 export const PromotionList = () => {
+  const [type, setType] = useState<PromotionType>(PromotionType.FIXED_AMOUNT);
 
+  const { user } = useUser();
 
-   const [type, setType] = useState<PromotionType>(PromotionType.FIXED_AMOUNT);
+  const { data, isLoading } = useFindPromotionByTypes(type);
 
-  const { data, isLoading } = useFindPromotionByTypes(
-    type
-  )
-
-  const promotions = data || [];
-
+  const promotions = (data || []).filter((p) => {
+    // If it's a refund voucher (checked via conditions), only show to owner
+    if (p.conditions?.isRefundVoucher) {
+      if (!user) return false;
+      return p.conditions.userId === user.id;
+    }
+    return true;
+  });
 
   return (
     <div className="flex flex-col gap-4">

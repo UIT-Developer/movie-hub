@@ -1,10 +1,10 @@
 'use client';
-import { ErrorFallback } from "@/components/error-fallback";
-import { Loader } from "@/components/loader";
-import { useGetBookings } from "@/hooks/booking-hooks";
-import { BookingStatus } from "@/libs/types/booking.type";
-import { useState } from "react";
-import BookingCard from "./_components/booking-summary-card";
+import { ErrorFallback } from '@/components/error-fallback';
+import { Loader } from '@/components/loader';
+import { useGetBookings } from '@/hooks/booking-hooks';
+import { BookingStatus } from '@/libs/types/booking.type';
+import { useState } from 'react';
+import BookingCard from './_components/booking-summary-card';
 import {
   Pagination,
   PaginationContent,
@@ -13,25 +13,25 @@ import {
   PaginationLink,
   PaginationNext,
   PaginationPrevious,
-} from "@movie-hub/shacdn-ui/pagination";
+} from '@movie-hub/shacdn-ui/pagination';
 
-export const MyBookingList = ({status = BookingStatus.CONFIRMED}: {
-  status: BookingStatus;
-}) => {
+export const MyBookingList = ({ status }: { status?: BookingStatus }) => {
   const [page, setPage] = useState(1);
 
+  const {
+    data: result,
+    isLoading,
+    isError,
+    error,
+  } = useGetBookings({ status, page });
 
-  const { data: result, isLoading, isError, error } = useGetBookings({ status, page });
-
-  if (isLoading) return (
-    <div className="flex justify-center items-center h-full ">
-      <Loader size={32} />
-    </div>
-  )
-  if (isError)
+  if (isLoading)
     return (
-      <ErrorFallback message={error.message} /> 
+      <div className="flex justify-center items-center h-full ">
+        <Loader size={32} />
+      </div>
     );
+  if (isError) return <ErrorFallback message={error.message} />;
 
   const totalPages = result?.meta?.totalPages || 0;
 
@@ -78,4 +78,4 @@ export const MyBookingList = ({status = BookingStatus.CONFIRMED}: {
       </Pagination>
     </div>
   );
-}
+};

@@ -5,7 +5,11 @@ import { moviesApi } from '@/libs/api/services';
 import { ReviewForm } from './review-form';
 import { StarRating } from '@/components/ui/star-rating';
 import { formatDate } from 'date-fns';
-import { Avatar, AvatarFallback } from '@movie-hub/shacdn-ui/avatar';
+import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+} from '@movie-hub/shacdn-ui/avatar';
 
 interface MovieReviewsProps {
   movieId: string;
@@ -40,7 +44,7 @@ export function MovieReviews({ movieId }: MovieReviewsProps) {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
         <div>
           <h2 className="text-3xl font-bold text-white tracking-tight flex items-center gap-3">
-            <span className="bg-gradient-to-r from-rose-500 to-purple-600 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-slate-200 to-purple-400 bg-clip-text text-transparent">
               Đánh Giá & Nhận Xét
             </span>
             <span className="text-lg font-medium text-slate-400 bg-slate-800/50 px-3 py-1 rounded-full">
@@ -94,14 +98,22 @@ export function MovieReviews({ movieId }: MovieReviewsProps) {
               >
                 <div className="flex items-start gap-4">
                   <Avatar className="h-12 w-12 border-2 border-slate-800 shadow-md">
+                    {review.user?.imageUrl && (
+                      <AvatarImage
+                        src={review.user.imageUrl}
+                        alt={review.user.fullName}
+                      />
+                    )}
                     <AvatarFallback className="bg-gradient-to-br from-indigo-500 to-purple-600 text-white font-bold text-lg">
-                      {review.userId?.substring(0, 2).toUpperCase() ?? 'U'}
+                      {review.user?.fullName
+                        ? review.user.fullName.substring(0, 1).toUpperCase()
+                        : 'U'}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-                      <h4 className="font-bold text-slate-200 text-lg group-hover:text-rose-400 transition-colors">
-                        Người dùng
+                      <h4 className="font-bold text-slate-200 text-lg group-hover:text-primary transition-colors">
+                        {review.user?.fullName || 'Người dùng'}
                       </h4>
                       <span className="text-sm text-slate-500 font-medium bg-slate-950/50 px-2 py-1 rounded">
                         {review.createdAt
@@ -142,8 +154,12 @@ export function MovieReviews({ movieId }: MovieReviewsProps) {
         <div className="lg:col-span-5 lg:sticky lg:top-24">
           <div className="relative">
             {/* Decorative gradient blur behind the form */}
-            <div className="absolute -inset-1 bg-gradient-to-r from-rose-500 to-purple-600 rounded-2xl blur opacity-20"></div>
-            <ReviewForm movieId={movieId} />
+            <div className="absolute -inset-1 bg-gradient-to-r from-slate-200 to-purple-600 rounded-2xl blur opacity-10"></div>
+            <ReviewForm
+              movieId={movieId}
+              reviews={reviewList}
+              isCheckLoading={isLoading}
+            />
           </div>
         </div>
       </div>

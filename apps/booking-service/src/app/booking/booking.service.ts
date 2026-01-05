@@ -215,7 +215,31 @@ export class BookingService {
       showtimeData = null;
     }
 
-    return { data: this.mapToDetailDto(booking, showtimeData) };
+    // Fetch refund voucher code if booking is REFUNDED
+    let refundVoucherCode: string | undefined;
+    if (booking.status === BookingStatus.REFUNDED) {
+      try {
+        const refundPromotion = await this.prisma.promotions.findFirst({
+          where: {
+            conditions: {
+              path: ['originalBookingId'],
+              equals: id,
+            },
+          },
+        });
+        if (refundPromotion) {
+          refundVoucherCode = refundPromotion.code;
+        }
+      } catch (error) {
+        this.logger.warn(
+          `Failed to fetch refund voucher for booking ${id}`,
+          error
+        );
+      }
+    }
+
+    const detailDto = this.mapToDetailDto(booking, showtimeData);
+    return { data: { ...detailDto, refundVoucherCode } };
   }
 
   async cancelBooking(

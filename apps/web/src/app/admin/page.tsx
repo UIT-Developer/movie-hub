@@ -283,7 +283,7 @@ export default function DashboardPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <TrendingUp className="h-5 w-5 text-purple-600" />
-              Revenue Overview (Last 7 Days)
+              Revenue Overview
             </CardTitle>
             <CardDescription>Daily revenue and booking trends</CardDescription>
           </CardHeader>

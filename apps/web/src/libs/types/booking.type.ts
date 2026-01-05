@@ -57,4 +57,6 @@ export interface BookingDetailDto extends BookingSummaryDto {
   cancelledAt?: Date;
   cancellationReason?: string;
   updatedAt: Date;
+  // Refund voucher code (available when status is REFUNDED)
+  refundVoucherCode?: string;
 }

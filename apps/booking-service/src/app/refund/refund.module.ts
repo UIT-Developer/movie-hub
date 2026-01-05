@@ -5,9 +5,11 @@ import { RefundService } from './refund.service';
 import { PrismaService } from '../prisma.service';
 import { PromotionModule } from '../promotion/promotion.module';
 import { SERVICE_NAME } from '@movie-hub/shared-types';
+import { NotificationModule } from '../notification/notification.module';
 
 @Module({
   imports: [
+    NotificationModule,
     forwardRef(() => PromotionModule),
     ClientsModule.register([
       {

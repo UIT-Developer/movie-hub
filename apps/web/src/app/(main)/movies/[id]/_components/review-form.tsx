@@ -9,14 +9,21 @@ import { Button } from '@movie-hub/shacdn-ui/button';
 import { Textarea } from '@movie-hub/shacdn-ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
-import { CreateReviewRequest } from '@/libs/api/types';
+import { CreateReviewRequest, Review } from '@/libs/api/types';
 
 interface ReviewFormProps {
   movieId: string;
+  reviews?: Review[];
+  isCheckLoading?: boolean;
   onSuccess?: () => void;
 }
 
-export function ReviewForm({ movieId, onSuccess }: ReviewFormProps) {
+export function ReviewForm({
+  movieId,
+  reviews = [],
+  isCheckLoading = false,
+  onSuccess,
+}: ReviewFormProps) {
   const { user, isSignedIn } = useUser();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -70,6 +77,31 @@ export function ReviewForm({ movieId, onSuccess }: ReviewFormProps) {
     });
   };
 
+  const hasReviewed =
+    isSignedIn && user && reviews?.some((review) => review.userId === user.id);
+
+  if (isCheckLoading) {
+    return (
+      <div className="bg-slate-900/95 backdrop-blur-md p-6 sm:p-8 rounded-2xl border border-slate-800 shadow-2xl relative z-10 h-[400px] flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (hasReviewed) {
+    return (
+      <div className="bg-slate-900/95 backdrop-blur-md p-6 sm:p-8 rounded-2xl border border-slate-800 shadow-2xl relative z-10 text-center">
+        <div className="bg-green-500/20 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6">
+          <span className="text-3xl">✅</span>
+        </div>
+        <h3 className="text-xl font-bold text-white mb-2">Đã gửi đánh giá</h3>
+        <p className="text-slate-400 max-w-xs mx-auto">
+          Bạn đã đánh giá bộ phim này rồi. Cảm ơn bạn đã chia sẻ ý kiến!
+        </p>
+      </div>
+    );
+  }
+
   if (!isSignedIn) {
     return (
       <div className="bg-slate-900/90 backdrop-blur-md p-8 rounded-2xl text-center border border-slate-800 shadow-2xl relative z-10">
@@ -90,7 +122,7 @@ export function ReviewForm({ movieId, onSuccess }: ReviewFormProps) {
   return (
     <div className="bg-slate-900/95 backdrop-blur-md p-6 sm:p-8 rounded-2xl border border-slate-800 shadow-2xl relative z-10">
       <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-        <span className="text-rose-500">✍️</span> Viết đánh giá
+        <span className="text-slate-100">✍️</span> Viết đánh giá
       </h3>
 
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -112,7 +144,7 @@ export function ReviewForm({ movieId, onSuccess }: ReviewFormProps) {
               value={content}
               onChange={(e) => setContent(e.target.value)}
               placeholder="Bộ phim này thế nào? Diễn xuất ra sao? Hãy chia sẻ suy nghĩ chân thật nhất của bạn..."
-              className="bg-slate-950/50 border-slate-800 text-slate-200 min-h-[150px] p-4 text-base placeholder:text-slate-500 focus:ring-2 focus:ring-rose-500/50 focus:border-rose-500 transition-all rounded-xl resize-none"
+              className="bg-slate-950/50 border-slate-800 text-slate-200 min-h-[150px] p-4 text-base placeholder:text-slate-500 focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all rounded-xl resize-none"
             />
             {content.length > 0 && (
               <div className="absolute bottom-3 right-3 text-xs text-slate-500 font-medium">
@@ -125,7 +157,7 @@ export function ReviewForm({ movieId, onSuccess }: ReviewFormProps) {
         <Button
           type="submit"
           disabled={mutation.isPending || rating === 0 || !content.trim()}
-          className="w-full bg-gradient-to-r from-rose-600 to-purple-600 hover:from-rose-500 hover:to-purple-500 text-white font-bold py-6 rounded-xl shadow-lg shadow-rose-900/20 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full bg-gradient-to-r from-slate-200 to-slate-100 hover:from-white hover:to-slate-50 text-slate-900 font-bold py-6 rounded-xl shadow-lg shadow-slate-900/20 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {mutation.isPending ? (
             <>

@@ -7,6 +7,7 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from '@movie-hub/shacdn-ui/carousel';
+import { useUser } from '@clerk/nextjs';
 import { useFindPromotionByTypes } from '@/hooks/promotion-hook';
 import { PromotionType } from '@/libs/types/promotion.type';
 import { ArrowRight, TicketPercent } from 'lucide-react';
@@ -14,9 +15,19 @@ import Link from 'next/link';
 import { PromotionCard } from '../promotions/_components/promotion-card';
 
 export default function PromotionsSection() {
-  const { data: promotions, isLoading } = useFindPromotionByTypes(
+  const { data: promotionsData, isLoading } = useFindPromotionByTypes(
     PromotionType.FIXED_AMOUNT
   );
+
+  const { user } = useUser();
+
+  const promotions = (promotionsData || []).filter((p) => {
+    if (p.conditions?.isRefundVoucher) {
+      if (!user) return false;
+      return p.conditions.userId === user.id;
+    }
+    return true;
+  });
 
   return (
     <section className="px-6 w-full py-10 relative">

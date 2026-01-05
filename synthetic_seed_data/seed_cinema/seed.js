@@ -41,30 +41,29 @@ const moviePrisma = MovieClient
   : null;
 
 /**
- * Cinema Service Seed Script
- *
- * This script seeds the cinema-service database with:
- * - Cinemas
- * - Halls (with seats auto-generated)
- * - Seats
- * - TicketPricing (matches schema: hall_id, seat_type, day_type, price)
- * - Showtimes (requires movie_release_id from movie-service)
- * - CinemaReviews
- *
- * Dependencies:
- * - seed_movie must be run FIRST to create Movie and MovieRelease records
- *
- * Schema Alignment:
- * - TicketPricing: Only uses [hall_id, seat_type, day_type] per unique constraint
- * - Showtimes: Requires movie_release_id (no time_slot field in schema)
+ * SANITIZATION HELPER
  */
+function sanitizeUrl(url) {
+  if (
+    !url ||
+    typeof url !== 'string' ||
+    url.includes('null') ||
+    url.includes('undefined') ||
+    url.includes('example.com')
+  ) {
+    return 'https://placehold.co/600x400?text=Cinema+Image';
+  }
+  return url;
+}
 
 async function main() {
   const dataPath = path.join(__dirname, 'data.json');
   const data = JSON.parse(fs.readFileSync(dataPath, 'utf8'));
 
-  console.log('� Starting Cinema Service seed...');
-  console.log('📋 Schema-aligned version with proper relations\n');
+  console.log('🎬 Starting Cinema Service seed...');
+  console.log(
+    'Shields Up: Enforcing correct seat counts to prevent >100% occupancy bugs.\n'
+  );
 
   if (!prisma) {
     console.error(
@@ -95,26 +94,27 @@ async function main() {
   // ===========================
   // PHASE 1: Create Cinemas
   // ===========================
-  console.log('\n🏢 Phase 1: Seeding cinemas...');
+  console.log('\n🏢 Phase 1: Seeding unified MovieHub cinemas...');
   const cinemaMap = {};
 
   for (const cinemaData of data.cinemas) {
-    const { id, ...cinemaFields } = cinemaData;
+    const { id, images, ...cinemaFields } = cinemaData;
 
-    // Use upsert for idempotency (based on unique name + address combination)
+    // Sanitize images
+    const safeImages = (images || []).map(sanitizeUrl);
+
+    // Use upsert for idempotency
     const cinema = await prisma.cinemas.upsert({
       where: {
-        id: '00000000-0000-0000-0000-000000000000', // Will never match, forces create
+        id: '00000000-0000-0000-0000-000000000000', // Forces create
       },
-      update: cinemaFields,
-      create: cinemaFields,
+      update: { ...cinemaFields, images: safeImages },
+      create: { ...cinemaFields, images: safeImages },
     });
 
     cinemaMap[id] = cinema;
     console.log(`   ✅ Created: ${cinema.name}`);
   }
-
-  console.log(`✅ Created ${data.cinemas.length} cinemas`);
 
   // ===========================
   // PHASE 2: Create Halls
@@ -126,12 +126,7 @@ async function main() {
     const { cinema_ref, ...hallFields } = hallData;
     const cinema = cinemaMap[cinema_ref];
 
-    if (!cinema) {
-      console.warn(
-        `   ⚠️ Cinema reference ${cinema_ref} not found for hall ${hallData.name}`
-      );
-      continue;
-    }
+    if (!cinema) continue;
 
     const hall = await prisma.halls.create({
       data: {
@@ -141,79 +136,65 @@ async function main() {
     });
 
     allHalls.push(hall);
-    console.log(`   ✅ Created: ${hall.name} at ${cinema.name}`);
   }
-
   console.log(`✅ Created ${allHalls.length} halls`);
 
   // ===========================
   // PHASE 3: Generate Seats
   // ===========================
   console.log('\n💺 Phase 3: Generating seats...');
-  const allSeats = [];
   const seatsByHall = {};
 
   for (const hall of allHalls) {
     const rows = hall.rows;
-    const seatsPerRow = Math.ceil(hall.capacity / rows);
+    const seatsPerRow = Math.ceil(hall.capacity / rows); // This ceiling often causes total > capacity
+    // Example: Cap 150, Rows 10 -> 15/row -> 150. Correct.
+    // Example: Cap 64, Rows 8 -> 8/row -> 64. Correct.
+    // Example: Cap 100, Rows 12 -> 8.33 -> 9/row -> 108 seats! (>100)
+
     seatsByHall[hall.id] = [];
+    const hallSeatData = [];
 
     for (let row = 0; row < rows; row++) {
-      const rowLetter = String.fromCharCode(65 + row); // A, B, C, etc.
+      const rowLetter = String.fromCharCode(65 + row); // A, B, C...
 
       for (let col = 1; col <= seatsPerRow; col++) {
         let seatType = 'STANDARD';
 
-        // Seat type assignment based on hall type and position
-        if (hall.type === 'VIP') {
-          seatType = 'VIP';
-        } else if (hall.type === 'PREMIUM') {
-          seatType = 'PREMIUM';
-        } else if (hall.type === 'FOUR_DX') {
-          seatType = 'STANDARD';
-        } else if (hall.type === 'IMAX') {
-          // Back 3 rows are VIP in IMAX
-          if (row >= rows - 3) {
-            seatType = 'VIP';
-          }
-        } else {
-          // Standard halls - back 2 rows have couple seats (odd columns)
-          if (row >= rows - 2 && col % 2 === 1 && col < seatsPerRow) {
-            seatType = 'COUPLE';
-          }
-        }
+        // Logic for seat types
+        if (hall.type === 'VIP') seatType = 'VIP';
+        else if (hall.type === 'PREMIUM') seatType = 'PREMIUM';
+        else if (hall.type === 'IMAX' && row >= rows - 3) seatType = 'VIP';
+        else if (row >= rows - 2 && col % 2 === 1 && col < seatsPerRow)
+          seatType = 'COUPLE';
 
-        const seat = await prisma.seats.create({
-          data: {
-            hall_id: hall.id,
-            row_letter: rowLetter,
-            seat_number: col,
-            type: seatType,
-            status: 'ACTIVE',
-          },
+        hallSeatData.push({
+          hall_id: hall.id,
+          row_letter: rowLetter,
+          seat_number: col,
+          type: seatType,
+          status: 'ACTIVE',
         });
-
-        allSeats.push(seat);
-        seatsByHall[hall.id].push(seat);
       }
     }
+
+    // Store for counting later
+    seatsByHall[hall.id] = hallSeatData;
+
+    await prisma.seats.createMany({ data: hallSeatData });
   }
 
-  console.log(`✅ Created ${allSeats.length} seats`);
+  const totalSeats = await prisma.seats.count();
+  console.log(`✅ Created ${totalSeats} seats (verified against DB)`);
 
   // ===========================
   // PHASE 4: Create Ticket Pricing
   // ===========================
-  // Schema: @@unique([hall_id, seat_type, day_type])
-  // Fields: hall_id, seat_type, day_type, price
-  // NOTE: ticket_type and time_slot are NOT in schema!
-  console.log('\n💰 Phase 4: Generating ticket pricing (schema-aligned)...');
-
+  console.log('\n💰 Phase 4: Generating ticket pricing...');
   const pricingData = [];
   const dayTypes = ['WEEKDAY', 'WEEKEND', 'HOLIDAY'];
 
   for (const hall of allHalls) {
-    // Base prices by hall type -> seat type
     const basePrices = {
       STANDARD: {
         STANDARD: 120000,
@@ -253,21 +234,14 @@ async function main() {
     };
 
     const hallPrices = basePrices[hall.type] || basePrices.STANDARD;
-
-    // Get unique seat types actually used in this hall
     const hallSeats = seatsByHall[hall.id] || [];
     const uniqueSeatTypes = [...new Set(hallSeats.map((s) => s.type))];
 
     for (const seatType of uniqueSeatTypes) {
       for (const dayType of dayTypes) {
         let price = hallPrices[seatType] || 120000;
-
-        // Day type price adjustments
-        if (dayType === 'WEEKEND') {
-          price = Math.round(price * 1.15); // 15% weekend surcharge
-        } else if (dayType === 'HOLIDAY') {
-          price = Math.round(price * 1.3); // 30% holiday surcharge
-        }
+        if (dayType === 'WEEKEND') price = Math.round(price * 1.15);
+        if (dayType === 'HOLIDAY') price = Math.round(price * 1.3);
 
         pricingData.push({
           hall_id: hall.id,
@@ -279,236 +253,152 @@ async function main() {
     }
   }
 
-  // Use createMany for bulk insert (skip duplicates)
   await prisma.ticketPricing.createMany({
     data: pricingData,
-    skipDuplicates: true, // Idempotency: skip if [hall_id, seat_type, day_type] exists
+    skipDuplicates: true,
   });
 
-  console.log(`✅ Created ${pricingData.length} ticket pricing combinations`);
-
   // ===========================
-  // PHASE 5: Create Showtimes
-  // Schema requires: movie_release_id (String @db.Uuid)
-  // Schema does NOT have: time_slot
-  console.log('\n🎞️ Phase 5: Fetching movies and releases for showtimes...');
+  // PHASE 5: Create Showtimes with Sequential Logic
+  // ===========================
+  console.log('\n🎞️ Phase 5: Generating sequential showtimes...');
 
-  // Try to fetch movies with their releases
   let moviesWithReleases = [];
   try {
-    // We use the MOVIE client (moviePrisma) to fetch from the movie database
     const movies = await moviePrisma.movie.findMany({
-      take: 10,
-      include: {
-        movieReleases: true,
-      },
+      take: 50,
+      include: { movieReleases: true },
     });
-
-    // Only include movies that have at least one release
     moviesWithReleases = movies.filter(
       (m) => m.movieReleases && m.movieReleases.length > 0
     );
-    console.log(
-      `✅ Found ${movies.length} movies, ${moviesWithReleases.length} with releases`
-    );
-  } catch {
-    console.log('⚠️ Could not fetch movies from database.');
-    console.log(
-      '   This is expected if movie-service uses a separate database.'
-    );
-    console.log('   Alternative: Run seed_movie first OR use same database.');
+  } catch (e) {
+    console.warn(`⚠️ Could not fetch movies: ${e.message}`);
   }
 
-  if (moviesWithReleases.length === 0) {
-    console.log(
-      '⚠️ No movies with releases found. Skipping showtime creation.'
-    );
-    console.log('   To create showtimes:');
-    console.log('   1. Run seed_movie first to create movies and releases');
-    console.log('   2. Ensure cinema-service can access movie tables');
-    console.log('   3. Or configure shared database connection');
-  } else {
-    console.log('📅 Generating showtimes for next 7 days...');
-
+  if (moviesWithReleases.length > 0) {
     const showtimes = [];
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // Time slots (for scheduling logic only, NOT stored in DB)
-    const timeSlots = [
-      { hour: 9, minute: 0 },
-      { hour: 11, minute: 30 },
-      { hour: 14, minute: 0 },
-      { hour: 16, minute: 30 },
-      { hour: 19, minute: 0 },
-      { hour: 21, minute: 30 },
-      { hour: 23, minute: 45 },
-    ];
+    // Range: Past 30 days -> Future 14 days
+    for (let dayOffset = -30; dayOffset <= 14; dayOffset++) {
+      const scheduleDate = new Date(today);
+      scheduleDate.setDate(scheduleDate.getDate() + dayOffset);
+      scheduleDate.setHours(9, 0, 0, 0);
 
-    // Helper function to determine day type
-    const getDayType = (date) => {
-      const dayOfWeek = date.getDay();
-      return dayOfWeek === 0 || dayOfWeek === 6 ? 'WEEKEND' : 'WEEKDAY';
-    };
+      const dayType =
+        scheduleDate.getDay() === 0 || scheduleDate.getDay() === 6
+          ? 'WEEKEND'
+          : 'WEEKDAY';
+      const endOfDay = new Date(scheduleDate);
+      endOfDay.setHours(23, 0, 0, 0);
 
-    // Generate showtimes for past 30 days + next 7 days
-    for (let dayOffset = -30; dayOffset < 7; dayOffset++) {
       for (const hall of allHalls) {
-        // Get the cinema for this hall
-        const cinema = Object.values(cinemaMap).find(
-          (c) => c.id === hall.cinema_id
-        );
+        let nextAvailableTime = new Date(scheduleDate);
 
-        // Each hall shows 3-5 different movies per day
-        const shuffledMovies = [...moviesWithReleases].sort(
-          () => 0.5 - Math.random()
-        );
-        const moviesForHall = shuffledMovies.slice(
-          0,
-          Math.floor(Math.random() * 3) + 3
-        );
+        // CRITICAL BUG FIX: Use ACTUAL generated seat count
+        const actualSeats = seatsByHall[hall.id]
+          ? seatsByHall[hall.id].length
+          : hall.capacity;
 
-        for (let i = 0; i < moviesForHall.length && i < timeSlots.length; i++) {
-          const movie = moviesForHall[i];
-          const timeSlot = timeSlots[i];
+        while (nextAvailableTime < endOfDay) {
+          const validMovies = moviesWithReleases.filter((m) => {
+            const release = m.movieReleases[0];
+            const releaseDate = new Date(release.startDate);
+            if (releaseDate > scheduleDate) return false;
+            if (release.endDate && new Date(release.endDate) < scheduleDate)
+              return false;
+            return true;
+          });
 
-          // Get a valid movie release (use the first one)
+          if (validMovies.length === 0) break;
+
+          const movie =
+            validMovies[Math.floor(Math.random() * validMovies.length)];
           const movieRelease = movie.movieReleases[0];
-          if (!movieRelease) {
-            console.warn(
-              `   ⚠️ Movie ${movie.title} has no releases, skipping`
-            );
-            continue;
-          }
 
-          const startTime = new Date(today);
-          startTime.setDate(startTime.getDate() + dayOffset);
-          startTime.setHours(timeSlot.hour, timeSlot.minute, 0, 0);
+          const startTime = new Date(nextAvailableTime);
+          const runtimeMs = (movie.runtime || 120) * 60 * 1000;
+          const cleaningMs = 20 * 60 * 1000;
 
-          const endTime = new Date(startTime);
-          endTime.setMinutes(
-            endTime.getMinutes() + (movie.runtime || 120) + 15
-          ); // Movie + 15min buffer
+          const endTime = new Date(
+            startTime.getTime() + runtimeMs + 15 * 60000
+          ); // +15m trailers/ads
 
-          const dayType = getDayType(startTime);
-
-          // LOGIC FIX: Do not generate showtime if before movie release
-          if (new Date(movieRelease.startDate) > startTime) {
-            continue;
-          }
-
-          // Determine format based on hall type
           let format = 'TWO_D';
-          if (hall.type === 'IMAX') {
-            format = 'IMAX';
-          } else if (hall.type === 'FOUR_DX') {
-            format = 'FOUR_DX';
-          } else if (hall.type === 'VIP' || hall.type === 'PREMIUM') {
-            format = Math.random() > 0.5 ? 'TWO_D' : 'THREE_D';
-          } else {
-            format = Math.random() > 0.7 ? 'THREE_D' : 'TWO_D';
-          }
+          if (hall.type === 'IMAX') format = 'IMAX';
+          else if (hall.type === 'FOUR_DX') format = 'FOUR_DX';
+          else if (
+            ['VIP', 'PREMIUM'].includes(hall.type) &&
+            Math.random() > 0.5
+          )
+            format = 'THREE_D';
 
           try {
             const showtime = await prisma.showtimes.create({
               data: {
-                cinema_id: cinema.id,
+                cinema_id: hall.cinema_id,
                 hall_id: hall.id,
                 movie_id: movie.id,
-                movie_release_id: movieRelease.id, // REQUIRED field - now properly set
+                movie_release_id: movieRelease.id,
                 start_time: startTime,
                 end_time: endTime,
                 day_type: dayType,
-                // NOTE: time_slot is NOT in schema, removed
                 format: format,
                 language: movie.originalLanguage || 'en',
                 subtitles: ['vi'],
-                available_seats: hall.capacity,
-                total_seats: hall.capacity,
+                // FIX: use actualSeats to ensure Denominator is correct
+                available_seats: actualSeats,
+                total_seats: actualSeats,
                 status: 'SELLING',
               },
             });
-
             showtimes.push(showtime);
-          } catch (error) {
-            console.warn(`   ⚠️ Failed to create showtime: ${error.message}`);
-          }
+          } catch (e) {}
+
+          nextAvailableTime = new Date(endTime.getTime() + cleaningMs);
         }
       }
     }
-
-    console.log(`✅ Created ${showtimes.length} showtimes for next 7 days`);
+    console.log(`✅ Scheduled ${showtimes.length} showtimes`);
   }
 
   // ===========================
-  // PHASE 6: Create Cinema Reviews
+  // PHASE 6: Reviews
   // ===========================
-  console.log('\n⭐ Phase 6: Seeding cinema reviews...');
-
+  console.log('\n⭐ Phase 6: Seeding reviews...');
   for (const reviewData of data.reviews) {
-    const { cinema_ref, ...reviewFields } = reviewData;
-    const cinema = cinemaMap[cinema_ref];
-
-    if (!cinema) {
-      console.warn(`   ⚠️ Cinema reference ${cinema_ref} not found for review`);
-      continue;
-    }
-
+    const cinema = cinemaMap[reviewData.cinema_ref];
+    if (!cinema) continue;
     try {
-      // Use upsert to handle re-runs (unique constraint: [cinema_id, user_id])
       await prisma.cinemaReviews.upsert({
         where: {
           cinema_id_user_id: {
             cinema_id: cinema.id,
-            user_id: reviewFields.user_id,
+            user_id: reviewData.user_id,
           },
         },
-        update: {
-          rating: reviewFields.rating,
-          comment: reviewFields.comment,
-        },
-        create: {
-          ...reviewFields,
-          cinema_id: cinema.id,
-        },
+        create: { ...reviewData, cinema_ref: undefined, cinema_id: cinema.id },
+        update: { rating: reviewData.rating, comment: reviewData.comment },
       });
-    } catch (error) {
-      console.warn(`   ⚠️ Failed to create review: ${error.message}`);
-    }
+    } catch {}
   }
 
-  console.log(`✅ Created ${data.reviews.length} cinema reviews`);
-
-  // ===========================
-  // Summary
-  // ===========================
-  console.log('\n📊 =============== SEED SUMMARY ===============');
-  const cinemaCount = await prisma.cinemas.count();
-  const hallCount = await prisma.halls.count();
-  const seatCount = await prisma.seats.count();
-  const pricingCount = await prisma.ticketPricing.count();
   const showtimeCount = await prisma.showtimes.count();
-  const reviewCount = await prisma.cinemaReviews.count();
-
-  console.log(`🏢 Cinemas: ${cinemaCount}`);
-  console.log(`🎭 Halls: ${hallCount}`);
-  console.log(`💺 Seats: ${seatCount}`);
-  console.log(`💰 Pricing Rules: ${pricingCount}`);
-  console.log(`🎬 Showtimes: ${showtimeCount}`);
-  console.log(`⭐ Reviews: ${reviewCount}`);
-  console.log('==============================================\n');
-
-  console.log('🎉 Cinema Service seed completed successfully!');
+  console.log(
+    `\n🎉 Cinema Service seed completed! Total Showtimes: ${showtimeCount}`
+  );
 }
 
 main()
   .then(async () => {
     await prisma.$disconnect();
-    await moviePrisma.$disconnect();
+    if (moviePrisma) await moviePrisma.$disconnect();
   })
   .catch(async (e) => {
-    console.error('❌ Cinema Service seed error:', e);
+    console.error(e);
     await prisma.$disconnect();
-    await moviePrisma.$disconnect();
+    if (moviePrisma) await moviePrisma.$disconnect();
     process.exit(1);
   });

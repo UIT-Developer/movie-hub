@@ -8,6 +8,7 @@ import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
 import { PrismaService } from '../prisma.service';
 import { PromotionService } from '../promotion/promotion.service';
+import { NotificationService } from '../notification/notification.service';
 import {
   CreateRefundDto,
   RefundDetailDto,
@@ -42,7 +43,8 @@ export class RefundService {
   constructor(
     private prisma: PrismaService,
     private promotionService: PromotionService,
-    @Inject(SERVICE_NAME.CINEMA) private cinemaClient: ClientProxy
+    @Inject(SERVICE_NAME.CINEMA) private cinemaClient: ClientProxy,
+    private notificationService: NotificationService
   ) {}
 
   /**
@@ -521,6 +523,9 @@ export class RefundService {
       `Refund as voucher completed for booking ${bookingId}. Voucher: ${result.voucher.code}`
     );
 
+    // Send email notification async
+    this.sendVoucherRefundNotification(bookingId, ticketAmount, showtimeData);
+
     return {
       data: {
         bookingId,
@@ -531,6 +536,48 @@ export class RefundService {
       },
       message: `Voucher code: ${result.voucher.code}`,
     };
+  }
+
+  // Helper method to send email notification async
+  private async sendVoucherRefundNotification(
+    bookingId: string,
+    ticketAmount: number,
+    showtimeData: ShowtimeSeatResponse
+  ) {
+    try {
+      const updatedBooking = await this.prisma.bookings.findUnique({
+        where: { id: bookingId },
+        include: {
+          tickets: true,
+          booking_concessions: { include: { concession: true } },
+        },
+      });
+
+      if (updatedBooking) {
+        const emailBookingDto: any = {
+          bookingCode: updatedBooking.booking_code,
+          movieTitle: showtimeData.showtime.movieTitle,
+          cinemaName: showtimeData.cinemaName,
+          hallName: showtimeData.hallName,
+          startTime: new Date(showtimeData.showtime.start_time),
+          endTime: new Date(showtimeData.showtime.end_time),
+          customerEmail: updatedBooking.customer_email,
+          customerName: updatedBooking.customer_name,
+          cancelledAt: updatedBooking.cancelled_at,
+          cancellationReason: updatedBooking.cancellation_reason,
+        };
+
+        await this.notificationService.sendBookingCancellation(
+          emailBookingDto,
+          ticketAmount
+        );
+      }
+    } catch (emailError) {
+      this.logger.error(
+        `Failed to send refund voucher email for booking ${bookingId}`,
+        emailError
+      );
+    }
   }
 
   private mapToDetailDto(

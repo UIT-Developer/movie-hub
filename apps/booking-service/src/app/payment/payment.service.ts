@@ -64,6 +64,15 @@ export class PaymentService {
   ): Promise<ServiceResult<PaymentDetailDto>> {
     const booking = await this.prisma.bookings.findUnique({
       where: { id: bookingId },
+      select: {
+        id: true,
+        user_id: true,
+        showtime_id: true,
+        final_amount: true,
+        payment_status: true,
+        expires_at: true,
+        promotion_code: true,
+      },
     });
 
     if (!booking) {
@@ -74,8 +83,13 @@ export class PaymentService {
       throw new Error('Booking is not pending payment');
     }
 
-    // Use booking's final_amount if no amount provided in DTO
+    // Use booking's final_amount
     const paymentAmount = Number(booking.final_amount);
+
+    // Handle zero-amount payment (e.g., 100% voucher coverage)
+    if (paymentAmount <= 0) {
+      return this.handleZeroAmountPayment(booking, dto);
+    }
 
     const payment = await this.prisma.payments.create({
       data: {
@@ -105,8 +119,115 @@ export class PaymentService {
     });
 
     return { data: this.mapToDto({ ...payment, payment_url: paymentUrl }) };
+  }
 
-    return { data: this.mapToDto(payment) };
+  /**
+   * Handle zero-amount payment (e.g., 100% voucher coverage)
+   * Skip VNPay and directly confirm the booking
+   */
+  private async handleZeroAmountPayment(
+    booking: {
+      id: string;
+      user_id: string;
+      showtime_id: string;
+      final_amount: any;
+      payment_status: string;
+      expires_at: Date | null;
+      promotion_code: string | null;
+    },
+    dto: CreatePaymentDto
+  ): Promise<ServiceResult<PaymentDetailDto>> {
+    console.log(
+      `[Payment] Zero-amount payment for booking ${booking.id}, confirming directly`
+    );
+
+    // Use transaction to create payment and confirm booking atomically
+    const payment = await this.prisma.$transaction(async (tx) => {
+      // Create payment record marked as COMPLETED
+      const newPayment = await tx.payments.create({
+        data: {
+          booking_id: booking.id,
+          amount: 0,
+          payment_method: dto.paymentMethod,
+          status: PaymentStatus.COMPLETED,
+          paid_at: new Date(),
+          metadata: {
+            returnUrl: dto.returnUrl,
+            cancelUrl: dto.cancelUrl,
+            zeroAmountPayment: true,
+          },
+        },
+      });
+
+      // Update booking status to CONFIRMED
+      await tx.bookings.update({
+        where: { id: booking.id },
+        data: {
+          payment_status: PaymentStatus.COMPLETED,
+          status: BookingStatus.CONFIRMED,
+          expires_at: null,
+        },
+      });
+
+      // Update ticket statuses to VALID
+      await tx.tickets.updateMany({
+        where: { booking_id: booking.id },
+        data: { status: TicketStatus.VALID },
+      });
+
+      // If a promotion was used, increment its usage count
+      if (booking.promotion_code) {
+        await tx.promotions.update({
+          where: { code: booking.promotion_code },
+          data: { current_usage: { increment: 1 } },
+        });
+        console.log(
+          `[Payment] Incrementing usage for promotion: ${booking.promotion_code}`
+        );
+      }
+
+      return newPayment;
+    });
+
+    // Publish booking completed event to Redis (fire-and-forget)
+    try {
+      const tickets = await this.prisma.tickets.findMany({
+        where: { booking_id: booking.id },
+        select: { seat_id: true },
+      });
+
+      await this.bookingEventService.publishBookingConfirmed({
+        userId: booking.user_id,
+        showtimeId: booking.showtime_id,
+        bookingId: booking.id,
+        seatIds: tickets.map((t) => t.seat_id),
+      });
+      console.log('[Payment] Zero-amount booking event published');
+    } catch (eventError) {
+      console.error('[Payment] Event publish warning:', eventError);
+    }
+
+    // Send booking confirmation email ASYNCHRONOUSLY
+    this.sendBookingConfirmationEmailAsync(booking.id).catch((emailError) => {
+      console.error(
+        '[Payment] Failed to send booking confirmation email (async):',
+        emailError
+      );
+    });
+
+    console.log(
+      `[Payment] Zero-amount payment completed for booking ${booking.id}`
+    );
+
+    // Return payment with a special marker indicating no redirect is needed
+    const paymentDto = this.mapToDto(payment);
+    // Set paymentUrl to the success returnUrl since payment is already complete
+    paymentDto.paymentUrl = dto.returnUrl;
+
+    return {
+      data: paymentDto,
+      message: 'Payment completed - order fully covered by voucher',
+    };
   }
 
   async createVNPayUrl(
@@ -186,108 +307,165 @@ export class PaymentService {
   async handleVNPayIPN(
     vnpParams: Record<string, string>
   ): Promise<ServiceResult<{ RspCode: string; Message: string }>> {
-    const secureHash = vnpParams.vnp_SecureHash;
-    const orderId = vnpParams.vnp_TxnRef;
-    const transactionId = vnpParams.vnp_TransactionNo;
-    const transactionStatus = vnpParams.vnp_TransactionStatus;
+    console.log('[VNPay IPN] Received params:', JSON.stringify(vnpParams));
+    try {
+      const secureHash = vnpParams.vnp_SecureHash;
+      const orderId = vnpParams.vnp_TxnRef;
+      const transactionId = vnpParams.vnp_TransactionNo;
+      const transactionStatus = vnpParams.vnp_TransactionStatus;
 
-    delete vnpParams.vnp_SecureHash;
-    delete vnpParams.vnp_SecureHashType;
+      // Clone params to avoid mutating input passed by ref (though usually safe)
+      const paramsToVerify = { ...vnpParams };
+      delete paramsToVerify.vnp_SecureHash;
+      delete paramsToVerify.vnp_SecureHashType;
 
-    const sortedParams = this.sortObject(vnpParams);
-    const signData = querystring.stringify(sortedParams, { encode: false });
-    const hmac = crypto.createHmac('sha512', this.vnp_HashSecret);
-    const signed = hmac.update(Buffer.from(signData, 'utf-8')).digest('hex');
-    console.log('[VNPay IPN] signData:', signData);
-    console.log('[VNPay IPN] computed:', signed);
-    console.log('[VNPay IPN] provided:', secureHash);
-    if (secureHash !== signed) {
-      return { data: { RspCode: '97', Message: 'Checksum failed' } };
-    }
+      const sortedParams = this.sortObject(paramsToVerify);
+      const signData = querystring.stringify(sortedParams, { encode: false });
+      const hmac = crypto.createHmac('sha512', this.vnp_HashSecret);
+      const signed = hmac.update(Buffer.from(signData, 'utf-8')).digest('hex');
 
-    const payment = await this.prisma.payments.findUnique({
-      where: { id: orderId },
-      include: {
-        booking: {
-          select: {
-            id: true,
-            user_id: true,
-            showtime_id: true,
-            status: true,
-            payment_status: true,
-            expires_at: true,
+      console.log('[VNPay IPN] signData:', signData);
+      console.log('[VNPay IPN] computed:', signed);
+      console.log('[VNPay IPN] provided:', secureHash);
+
+      if (secureHash !== signed) {
+        console.error('[VNPay IPN] Checksum failed');
+        return { data: { RspCode: '97', Message: 'Checksum failed' } };
+      }
+
+      console.log(`[VNPay IPN] Finding payment for orderId: ${orderId}`);
+      const payment = await this.prisma.payments.findUnique({
+        where: { id: orderId },
+        include: {
+          booking: {
+            select: {
+              id: true,
+              user_id: true,
+              showtime_id: true,
+              status: true,
+              payment_status: true,
+              expires_at: true,
+            },
           },
         },
-      },
-    });
+      });
 
-    if (!payment) {
-      return { data: { RspCode: '01', Message: 'Order not found' } };
-    }
+      if (!payment) {
+        console.error('[VNPay IPN] Order not found');
+        return { data: { RspCode: '01', Message: 'Order not found' } };
+      }
 
-    if (payment.booking.expires_at && new Date() > payment.booking.expires_at) {
-      return { data: { RspCode: '04', Message: 'Order expired' } };
-    }
+      console.log('[VNPay IPN] Payment found:', payment.id);
 
-    const amount = parseInt(vnpParams.vnp_Amount) / 100;
-    if (Number(payment.amount) !== amount) {
-      return { data: { RspCode: '04', Message: 'Amount invalid' } };
-    }
+      // Check expiry (optional, depends on business logic, usually IPN should still process if user paid on time)
+      // VNPAY timestamp is vnp_PayDate, but we can check if payment was created too long ago?
+      // For now, keep existing logic but be careful.
+      if (
+        payment.booking.expires_at &&
+        new Date() > payment.booking.expires_at
+      ) {
+        // If checks fail, we might still want to record the payment as FAILED or handle manual refund?
+        // But preventing updates on expired booking is standard.
+        console.error('[VNPay IPN] Order expired');
+        return { data: { RspCode: '04', Message: 'Order expired' } };
+      }
 
-    if (
-      payment.status !== PaymentStatus.PENDING ||
-      payment.booking.status !== BookingStatus.PENDING
-    ) {
-      return {
-        data: {
-          RspCode: '02',
-          Message: 'This order has been updated to the payment status',
-        },
-      };
-    }
+      const amount = parseInt(vnpParams.vnp_Amount) / 100;
+      if (Number(payment.amount) !== amount) {
+        console.error(
+          `[VNPay IPN] Invalid amount. Expected ${payment.amount}, got ${amount}`
+        );
+        return { data: { RspCode: '04', Message: 'Amount invalid' } };
+      }
 
-    try {
+      if (
+        payment.status !== PaymentStatus.PENDING ||
+        payment.booking.status !== BookingStatus.PENDING
+      ) {
+        console.log('[VNPay IPN] Order already processed');
+        return {
+          data: {
+            RspCode: '02',
+            Message: 'This order has been updated to the payment status',
+          },
+        };
+      }
+
+      console.log(
+        `[VNPay IPN] Processing transaction status: ${transactionStatus}`
+      );
+
       if (transactionStatus === '00') {
-        await this.prisma.$transaction([
-          this.prisma.payments.update({
+        // First, get the booking to check for promotion_code
+        const bookingWithPromotion = await this.prisma.bookings.findUnique({
+          where: { id: payment.booking_id },
+          select: { promotion_code: true },
+        });
+
+        // Use interactive transaction to handle all updates atomically
+        await this.prisma.$transaction(async (tx) => {
+          // Update payment status
+          await tx.payments.update({
             where: { id: payment.id },
             data: {
               status: PaymentStatus.COMPLETED,
               provider_transaction_id: transactionId,
               paid_at: new Date(),
             },
-          }),
-          this.prisma.bookings.update({
+          });
+
+          // Update booking status
+          await tx.bookings.update({
             where: { id: payment.booking_id },
             data: {
               payment_status: PaymentStatus.COMPLETED,
               status: BookingStatus.CONFIRMED,
               expires_at: null,
             },
-          }),
-          this.prisma.tickets.updateMany({
+          });
+
+          // Update ticket statuses
+          await tx.tickets.updateMany({
             where: { booking_id: payment.booking_id },
             data: { status: TicketStatus.VALID },
-          }),
-        ]);
+          });
+
+          // If a promotion was used, increment its usage count
+          if (bookingWithPromotion?.promotion_code) {
+            await tx.promotions.update({
+              where: { code: bookingWithPromotion.promotion_code },
+              data: { current_usage: { increment: 1 } },
+            });
+            console.log(
+              `[VNPay IPN] Incrementing usage for promotion: ${bookingWithPromotion.promotion_code}`
+            );
+          }
+        });
+
+        console.log('[VNPay IPN] DB updated successfully');
 
         // Publish booking completed event to Redis
-        const tickets = await this.prisma.tickets.findMany({
-          where: { booking_id: payment.booking_id },
-          select: { seat_id: true },
-        });
+        try {
+          const tickets = await this.prisma.tickets.findMany({
+            where: { booking_id: payment.booking_id },
+            select: { seat_id: true },
+          });
 
-        await this.bookingEventService.publishBookingConfirmed({
-          userId: payment.booking.user_id,
-          showtimeId: payment.booking.showtime_id,
-          bookingId: payment.booking_id,
-          seatIds: tickets.map((t) => t.seat_id),
-        });
+          await this.bookingEventService.publishBookingConfirmed({
+            userId: payment.booking.user_id,
+            showtimeId: payment.booking.showtime_id,
+            bookingId: payment.booking_id,
+            seatIds: tickets.map((t) => t.seat_id),
+          });
+          console.log('[VNPay IPN] Event published');
+        } catch (eventError) {
+          console.error('[VNPay IPN] Event publish warning:', eventError);
+          // Non-critical
+        }
 
-        // Send booking confirmation email ASYNCHRONOUSLY (fire-and-forget, don't block payment)
+        // Send booking confirmation email ASYNCHRONOUSLY
         this.sendBookingConfirmationEmailAsync(payment.booking_id).catch(
           (emailError) => {
-            // Log but don't throw - email failure should not affect payment success
             console.error(
               '[Payment] Failed to send booking confirmation email (async):',
               emailError
@@ -317,9 +495,17 @@ export class PaymentService {
 
         return { data: { RspCode: '00', Message: 'Success' } };
       }
-    } catch {
+    } catch (error) {
+      console.error('[VNPay IPN] Critical Error:', error);
+      // Return 99 (Unspecified error) but include message for debugging
+      // VNPay expects RspCode 99 for errors.
       return {
-        data: { RspCode: '99', Message: 'Update failed, please retry' },
+        data: {
+          RspCode: '99',
+          Message: `Update failed: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        },
       };
     }
   }

@@ -26,24 +26,49 @@ const { PrismaClient } = getPrismaClient();
 const prisma = new PrismaClient();
 
 /**
- * Movie Service Seed Script
- *
- * This script seeds the movie-service database with:
- * - Genres (film categories)
- * - Movies (with all required fields)
- * - MovieReleases (release dates for each movie)
- * - MovieGenres (many-to-many relation between movies and genres)
- *
- * Dependencies:
- * - None - this seed should run FIRST before cinema and booking seeds
- *
- * Schema Alignment:
- * - All Movie fields are populated per schema requirements
- * - Enum values: ageRating (P, K, T13, T16, T18, C), languageType (ORIGINAL, SUBTITLE, DUBBED)
- * - MovieRelease requires startDate, endDate is optional
- *
- * Note: This creates MovieReleases which are REQUIRED by cinema-service Showtimes
+ * SANITIZATION HELPER
+ * Ensures we never return "null", "undefined", or invalid "example.com" URLs.
  */
+function sanitizeUrl(url, type = 'POSTER') {
+  // If url is literally null/undefined or contains "null"/"undefined" string
+  if (
+    !url ||
+    typeof url !== 'string' ||
+    url.includes('null') ||
+    url.includes('undefined')
+  ) {
+    return getFallbackImage(type);
+  }
+
+  // If TMDB url but ends in null (e.g. "https://image.tmdb.org/t/p/w500null")
+  if (
+    url.includes('tmdb.org') &&
+    (url.endsWith('null') || url.endsWith('undefined'))
+  ) {
+    return getFallbackImage(type);
+  }
+
+  // If example.com (invalid for production/images)
+  if (url.includes('example.com')) {
+    return getFallbackImage(type);
+  }
+
+  // Valid URL
+  return url;
+}
+
+function getFallbackImage(type) {
+  switch (type) {
+    case 'POSTER':
+      return 'https://placehold.co/600x900/1e1e1e/FFF?text=Movie+Poster';
+    case 'BACKDROP':
+      return 'https://placehold.co/1920x1080/1e1e1e/FFF?text=No+Backdrop';
+    case 'PROFILE':
+      return 'https://placehold.co/200x300/1e1e1e/FFF?text=Unknown';
+    default:
+      return 'https://placehold.co/500x500?text=No+Image';
+  }
+}
 
 /**
  * Maps TMDB genre IDs to Vietnamese genre names
@@ -70,7 +95,7 @@ function getGenreNameById(id) {
     10752: 'Phim Chiến Tranh',
     37: 'Phim Miền Tây',
   };
-  return map[id] || 'Unknown';
+  return map[id] || 'Phim Khác';
 }
 
 async function main() {
@@ -78,9 +103,9 @@ async function main() {
   const data = JSON.parse(fs.readFileSync(dataPath, 'utf8'));
 
   console.log('🎬 Starting Movie Service seed...');
-  console.log('📋 Schema-aligned version with proper relations\n');
+  console.log('🛡️  Enforcing Asset Integrity & Temporal Logic\n');
 
-  // Clean existing data in correct order (respecting foreign keys)
+  // Clean existing data in correct order
   await prisma.$transaction([
     prisma.review.deleteMany(),
     prisma.movieGenre.deleteMany(),
@@ -99,19 +124,15 @@ async function main() {
   const genreMap = {};
   for (const g of data.genres) {
     try {
-      // Create genre (or skip if exists)
       const genre = await prisma.genre.create({
         data: { name: g.name },
       });
       genreMap[g.name] = genre;
     } catch {
-      // If unique constraint violation, find existing
-      const existingGenre = await prisma.genre.findFirst({
+      const existing = await prisma.genre.findFirst({
         where: { name: g.name },
       });
-      if (existingGenre) {
-        genreMap[g.name] = existingGenre;
-      }
+      if (existing) genreMap[g.name] = existing;
     }
   }
 
@@ -122,9 +143,11 @@ async function main() {
   // ===========================
   console.log('\n🎬 Phase 2: Seeding movies with releases and genres...');
 
+  const NOW = new Date();
+
   for (const m of data.movies) {
     try {
-      // Build genre connections
+      // 1. Build Genre Connections
       const genreConnects = [];
       for (const g of m.genres || []) {
         const genreName = getGenreNameById(g.id);
@@ -134,56 +157,95 @@ async function main() {
         }
       }
 
-      // Build release dates (CRITICAL: these are needed for Showtimes)
-      let releaseDates = (m.release_dates || []).map((r) => ({
-        startDate: new Date(r),
+      // 2. Temporal Logic (Dynamic Dates)
+      // Determine if movie should be "Coming Soon" or "Now Showing"
+      let releaseDate;
+      let endDate = null;
+
+      // Special handling for specific titles PLUS random selection to ensure population
+      // Keywords that suggest "Future"
+      const isHardcodedUpcoming =
+        (m.title &&
+          (m.title.includes('TRON') ||
+            m.title.includes('Mufasa') ||
+            m.title.includes('Captain') ||
+            m.title.includes('Superman') ||
+            m.title.includes('Avatar') ||
+            m.title.includes('Batman') ||
+            m.title.includes('Jurassic') ||
+            m.title.includes('Fantastic'))) ||
+        (m.original_title &&
+          (m.original_title.includes('Last Rites') ||
+            m.original_title.includes('TRON')));
+
+      // Logic: If hardcoded OR 30% random chance -> Coming Soon
+      const isUpComingTitle = isHardcodedUpcoming || Math.random() < 0.3;
+
+      if (isUpComingTitle) {
+        // COMING SOON: Release in 14-45 days (widened window)
+        const daysInFuture = Math.floor(Math.random() * 30) + 14;
+        releaseDate = new Date(
+          NOW.getTime() + daysInFuture * 24 * 60 * 60 * 1000
+        );
+      } else {
+        // NOW SHOWING: Released 1-60 days ago
+        const daysAgo = Math.floor(Math.random() * 60) + 1;
+        releaseDate = new Date(NOW.getTime() - daysAgo * 24 * 60 * 60 * 1000);
+
+        // End date in future (so it's still showing)
+        const runTimeDays = Math.floor(Math.random() * 30) + 30; // Runs for 30-60 days total
+        endDate = new Date(
+          releaseDate.getTime() + runTimeDays * 24 * 60 * 60 * 1000
+        );
+      }
+
+      // 3. Asset Integrity (Sanitize URLs)
+      let backdropUrl = sanitizeUrl(m.backdrop_path, 'BACKDROP');
+      // Fix potential double-prefixing if source data wasn't clean
+      if (
+        m.backdrop_path &&
+        !m.backdrop_path.startsWith('http') &&
+        !backdropUrl.startsWith('http')
+      ) {
+        const fullUrl = `https://image.tmdb.org/t/p/original${m.backdrop_path}`;
+        backdropUrl = sanitizeUrl(fullUrl, 'BACKDROP');
+      }
+
+      const posterUrl = sanitizeUrl(m.poster_path, 'POSTER');
+
+      // Sanitize Cast Profiles
+      const sanitizedCast = (m.cast || []).map((actor) => ({
+        ...actor,
+        profileUrl: sanitizeUrl(actor.profileUrl, 'PROFILE'),
       }));
 
-      // Ensure at least one release if none provided
-      if (releaseDates.length === 0 && m.release_date) {
-        releaseDates.push({ startDate: new Date(m.release_date) });
-      }
-
-      // OVERRIDE: Make 'TRON: Ares' upcoming (2026) for testing
-      if (
-        (m.title && m.title.includes('TRON: Ares')) ||
-        (m.original_title && m.original_title.includes('TRON: Ares'))
-      ) {
-        releaseDates = [{ startDate: new Date('2026-02-15') }];
-      }
-
-      // Handle backdrop URL - data already contains full URLs, don't add prefix again
-      let backdropUrl = '';
-      if (m.backdrop_path) {
-        // Check if it's already a full URL
-        if (m.backdrop_path.startsWith('http')) {
-          backdropUrl = m.backdrop_path;
-        } else {
-          backdropUrl = `https://image.tmdb.org/t/p/original${m.backdrop_path}`;
-        }
-      }
-
+      // 4. Create Movie
       const movie = await prisma.movie.create({
         data: {
           title: m.title,
           originalTitle: m.original_title ?? m.title,
-          overview: m.overview ?? '',
-          posterUrl: m.poster_path ?? '',
+          overview: m.overview ?? 'No description available.',
+          posterUrl: posterUrl, // GUARANTEED valid
           trailerUrl: m.trailerUrl ?? '',
-          backdropUrl: backdropUrl,
+          backdropUrl: backdropUrl, // GUARANTEED valid
           runtime: m.runtime ?? 120,
-          releaseDate: new Date(m.release_date),
-          ageRating: 'P', // Default to P (General Audiences)
+          releaseDate: releaseDate,
+          ageRating: 'P',
           originalLanguage: m.original_language ?? 'en',
           spokenLanguages: Array.isArray(m.spoken_languages)
             ? m.spoken_languages
-            : [m.spoken_languages || m.original_language || 'en'],
+            : [String(m.spoken_languages || 'en')],
           productionCountry: m.production_countries ?? 'Unknown',
-          languageType: 'SUBTITLE', // Default to subtitled
+          languageType: 'SUBTITLE',
           director: m.director ?? 'Unknown',
-          cast: m.cast ?? [],
+          cast: sanitizedCast,
           movieReleases: {
-            create: releaseDates,
+            create: [
+              {
+                startDate: releaseDate,
+                endDate: endDate,
+              },
+            ],
           },
           movieGenres: {
             create: genreConnects,
@@ -192,7 +254,9 @@ async function main() {
       });
 
       console.log(
-        `   ✅ Seeded: ${movie.title} (${releaseDates.length} releases, ${genreConnects.length} genres)`
+        `   ✅ Seeded: ${movie.title.substring(0, 30)}... [${
+          isUpComingTitle ? 'COMING SOON' : 'NOW SHOWING'
+        }]`
       );
     } catch (error) {
       console.error(
@@ -201,25 +265,9 @@ async function main() {
     }
   }
 
-  // ===========================
   // Summary
-  // ===========================
-  console.log('\n📊 =============== SEED SUMMARY ===============');
-  const genreCount = await prisma.genre.count();
-  const totalMovies = await prisma.movie.count();
-  const totalReleases = await prisma.movieRelease.count();
-  const totalGenreLinks = await prisma.movieGenre.count();
-
-  console.log(`🎭 Genres: ${genreCount}`);
-  console.log(`🎬 Movies: ${totalMovies}`);
-  console.log(`📅 Movie Releases: ${totalReleases}`);
-  console.log(`🔗 Genre Links: ${totalGenreLinks}`);
-  console.log('==============================================\n');
-
-  console.log('🎉 Movie Service seed completed successfully!');
-  console.log(
-    'ℹ️  Next: Run seed_cinema to create showtimes using these movies'
-  );
+  const count = await prisma.movie.count();
+  console.log(`\n🎉 Movie Service seed completed! Total Movies: ${count}`);
 }
 
 main()
@@ -227,7 +275,7 @@ main()
     await prisma.$disconnect();
   })
   .catch(async (e) => {
-    console.error('❌ Movie Service seed error:', e);
+    console.error(e);
     await prisma.$disconnect();
     process.exit(1);
   });

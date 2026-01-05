@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 
-// Helper to find PrismaClient in different environments (Local vs Docker)
+// Helper to find PrismaClient in different environments
 function getPrismaClient(serviceName, customPath) {
   const possiblePaths = [
     customPath || `../../apps/${serviceName}/generated/prisma`, // Local
@@ -24,10 +24,7 @@ function getPrismaClient(serviceName, customPath) {
 const BookingClient = getPrismaClient('booking-service');
 const CinemaClient = getPrismaClient('cinema-service');
 
-// Initialize Booking Service client
 const prisma = BookingClient ? new BookingClient() : null;
-
-// Initialize Cinema Service client for cross-service data fetching
 const cinemaPrisma = CinemaClient
   ? new CinemaClient({
       datasources: {
@@ -40,691 +37,301 @@ const cinemaPrisma = CinemaClient
     })
   : null;
 
+// ==========================================
+// 1. SMART PRICING LOGIC
+// ==========================================
+function calculatePrice(basePrice, seatType, showtimeDate) {
+  let finalPrice = basePrice;
+
+  // Seat Type Modifiers
+  if (seatType === 'VIP') finalPrice *= 1.5;
+  if (seatType === 'COUPLE') finalPrice *= 2.0; // Usually price for 2 people
+  if (seatType === 'PREMIUM') finalPrice *= 1.25;
+
+  // Day of Week Modifiers
+  const day = showtimeDate.getDay();
+  const isWeekend = day === 0 || day === 6; // Sun or Sat
+  if (isWeekend) finalPrice *= 1.2;
+
+  // Time of Day Modifiers
+  const hour = showtimeDate.getHours();
+  if (hour < 12) finalPrice *= 0.8; // Morning discount
+  else if (hour >= 18 && hour <= 21) finalPrice *= 1.1; // Prime time
+
+  return Math.round(finalPrice / 1000) * 1000; // Round to nearest 1000 VND
+}
+
+// ==========================================
+// 2. BOOKING DENSITY SIMULATION
+// ==========================================
 /**
- * Booking Service Seed Script
- *
- * This script seeds the booking-service database with:
- * - Concessions (food/drinks/merchandise)
- * - Promotions (discount codes)
- * - LoyaltyAccounts (user loyalty programs)
- * - Bookings (ticket orders with realistic data)
- * - Tickets (individual seat tickets)
- * - Payments (payment records)
- * - Refunds (for cancelled bookings)
- * - BookingConcessions (concession orders)
- * - LoyaltyTransactions (points earned/redeemed)
- *
- * Dependencies:
- * - seed_cinema must be run FIRST to create Showtimes and Seats
- *
- * Schema Alignment:
- * - TicketPricing: Only uses [hall_id, seat_type, day_type] - NO ticket_type or time_slot
- * - Showtimes: Only uses day_type - NO time_slot field
- * - Uses upsert where unique constraints allow for idempotency
+ * Determines how full a showtime should be based on movie rating, time, and day.
+ * Returns a target occupancy percentage (0.0 to 1.0).
  */
+function getTargetOccupancy(showtime, movieRating) {
+  const date = new Date(showtime.start_time);
+  const day = date.getDay();
+  const hour = date.getHours();
+  const isWeekend = day === 0 || day === 6;
+  const isPrimeTime = hour >= 18 && hour <= 21;
 
-function generateBookingCode() {
-  const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-  const numbers = '0123456789';
-  let result = '';
-  for (let i = 0; i < 2; i++)
-    result += letters.charAt(Math.floor(Math.random() * letters.length));
-  for (let i = 0; i < 6; i++)
-    result += numbers.charAt(Math.floor(Math.random() * numbers.length));
-  return result;
+  let baseOccupancy = 0.1; // Always at least 10% filled
+
+  // Movie Popularity Factor (simulated by rating 1-10)
+  // Higher rating = higher demand
+  const popularityFactor = (movieRating || 7) / 10;
+  baseOccupancy += popularityFactor * 0.3;
+
+  // Temporal Factors
+  if (isWeekend) baseOccupancy += 0.3;
+  if (isPrimeTime) baseOccupancy += 0.2;
+  if (hour < 12) baseOccupancy -= 0.1; // Mornings are quieter
+
+  // Cap at 1.0 (100%) and Min at 0.05 (5%)
+  return Math.max(0.05, Math.min(0.98, baseOccupancy));
 }
 
-function generateTicketCode() {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  let result = '';
-  for (let i = 0; i < 12; i++)
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
-  return result;
-}
+// ==========================================
+// 3. USER PERSONAS
+// ==========================================
+const PERSONAS = [
+  { email: 'admin@moviehub.com', name: 'Super Admin', type: 'ADMIN' },
+  { email: 'whale@moviehub.com', name: 'Whale Spender', type: 'WHALE' }, // Books VIP, Combos
+  { email: 'family@moviehub.com', name: 'Family Nguyen', type: 'FAMILY' }, // Books 3-4 seats
+  { email: 'student@moviehub.com', name: 'Student Le', type: 'STUDENT' }, // Books Standard, Discount codes
+  { email: 'newbie@moviehub.com', name: 'New User', type: 'NEWBIE' },
+];
 
-function randomDate(startDaysAgo, endDaysAgo) {
-  const end = new Date();
-  const start = new Date();
-  start.setDate(start.getDate() - startDaysAgo);
-  end.setDate(end.getDate() - endDaysAgo);
-  return new Date(
-    start.getTime() + Math.random() * (end.getTime() - start.getTime())
-  );
-}
-
-function randomElement(array) {
-  return array[Math.floor(Math.random() * array.length)];
-}
-
-function randomInt(min, max) {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
-}
-
-/**
- * Get ticket price from TicketPricing table
- * Schema fields: hall_id, seat_type, day_type, price
- * NOTE: ticket_type and time_slot are NOT in the schema!
- *
- * @param {string} hallId - UUID of the hall
- * @param {string} seatType - SeatType enum value (STANDARD, VIP, COUPLE, PREMIUM, WHEELCHAIR)
- * @param {string} dayType - DayType enum value (WEEKDAY, WEEKEND, HOLIDAY)
- * @returns {Promise<number>} - Price in VND
- */
-async function getTicketPrice(hallId, seatType, dayType) {
-  const pricing = await cinemaPrisma.ticketPricing.findFirst({
-    where: {
-      hall_id: hallId,
-      seat_type: seatType,
-      day_type: dayType,
-      // NOTE: ticket_type and time_slot removed - not in schema
-    },
-  });
-
-  if (pricing) {
-    return Number(pricing.price);
+function getRandomUser(personaType = null) {
+  // If persona requested, return that specific one
+  if (personaType) {
+    const persona = PERSONAS.find((p) => p.type === personaType);
+    if (persona)
+      return { ...persona, id: `user_${persona.type.toLowerCase()}` };
   }
 
-  // Fallback pricing if not found in database
-  const basePrices = {
-    STANDARD: 120000,
-    VIP: 180000,
-    COUPLE: 250000,
-    PREMIUM: 200000,
-    WHEELCHAIR: 100000,
+  // Otherwise weighted random
+  const rand = Math.random();
+  if (rand < 0.05) return { ...PERSONAS[1], id: 'user_whale' }; // 5% Whales
+  if (rand < 0.2) return { ...PERSONAS[3], id: 'user_student' }; // 15% Students
+  if (rand < 0.4) return { ...PERSONAS[2], id: 'user_family' }; // 20% Families
+
+  // 60% Random "Guest" or Regular users
+  return {
+    id: `user_guest_${Math.floor(Math.random() * 1000)}`,
+    name: 'Guest User',
+    email: 'guest@example.com',
   };
+}
 
-  let price = basePrices[seatType] || 120000;
+// Helper: Heatmap Seating (Pick seats from middle out)
+function pickBestSeats(seats, count) {
+  if (seats.length < count) return [];
 
-  // Apply day type multiplier
-  if (dayType === 'WEEKEND') {
-    price = Math.round(price * 1.15);
-  } else if (dayType === 'HOLIDAY') {
-    price = Math.round(price * 1.3);
-  }
+  // Simple heuristic: Middle of the array is roughly middle of the theater
+  // for a flat array sorted by Row/Number.
+  // Ideally we'd calculate distance from center (Rows/2, Cols/2).
 
-  return price;
+  // Sort logic to simulate preference (Middle rows, Middle columns)
+  // We'll assume the input 'seats' array is somewhat ordered by database insertion.
+  const centerIndex = Math.floor(seats.length / 2);
+
+  // Take a slice around the center
+  const start = Math.max(0, centerIndex - Math.floor(count / 2));
+  const selected = seats.slice(start, start + count);
+
+  // Remove selected from available pool (by filter or splice in the caller)
+  return selected;
 }
 
 async function main() {
   const dataPath = path.join(__dirname, 'data.json');
   const data = JSON.parse(fs.readFileSync(dataPath, 'utf8'));
 
-  console.log('🎟️ Starting Booking Service seed...');
-  console.log('📋 Schema-aligned version with proper relations\n');
+  console.log('🎟️ Starting Scenario-Based Booking Seed...');
 
-  if (!prisma) {
-    console.error(
-      '❌ Booking Service Prisma client not found. Connection failed!'
-    );
+  if (!prisma || !cinemaPrisma) {
+    console.error('❌ Missing Prisma Clients');
     process.exit(1);
   }
 
-  if (!cinemaPrisma) {
-    console.warn(
-      '⚠️ Cinema Service Prisma client not found. Data fetching will fail.'
-    );
-  }
-
-  // Clean existing data in correct order (respecting foreign keys)
+  // CLEANUP
   await prisma.$transaction([
-    prisma.loyaltyTransactions.deleteMany(),
-    prisma.loyaltyAccounts.deleteMany(),
     prisma.bookingConcessions.deleteMany(),
-    prisma.refunds.deleteMany(),
-    prisma.tickets.deleteMany(),
     prisma.payments.deleteMany(),
+    prisma.tickets.deleteMany(),
     prisma.bookings.deleteMany(),
     prisma.concessions.deleteMany(),
-    prisma.promotions.deleteMany(),
+    // Keep promotions/loyalty for brevity or recreate if needed
   ]);
 
-  console.log('✅ Cleaned existing data');
-
-  // ===========================
-  // PHASE 1: Create Concessions
-  // ===========================
-  console.log('\n🍿 Phase 1: Seeding concessions...');
+  // 1. SEED CONCESSIONS
   const concessions = await Promise.all(
     data.concessions.map((c) =>
       prisma.concessions.create({
-        data: c,
+        data: {
+          ...c,
+          image_url:
+            c.category === 'FOOD'
+              ? 'https://placehold.co/400x400?text=Popcorn'
+              : 'https://placehold.co/400x400?text=Drink',
+        },
       })
     )
   );
-  console.log(`✅ Created ${concessions.length} concessions`);
 
-  // ===========================
-  // PHASE 2: Create Promotions
-  // ===========================
-  console.log('\n🎁 Phase 2: Seeding promotions...');
-  const promotions = [];
-  for (const p of data.promotions) {
-    try {
-      // Use upsert based on unique code
-      const promotion = await prisma.promotions.upsert({
-        where: { code: p.code },
-        update: {
-          ...p,
-          valid_from: new Date(p.valid_from),
-          valid_to: new Date(p.valid_to),
-        },
-        create: {
-          ...p,
-          valid_from: new Date(p.valid_from),
-          valid_to: new Date(p.valid_to),
-        },
-      });
-      promotions.push(promotion);
-    } catch (error) {
-      console.warn(
-        `   ⚠️ Failed to create promotion ${p.code}: ${error.message}`
-      );
-    }
-  }
-  console.log(`✅ Created ${promotions.length} promotions`);
-
-  // ===========================
-  // PHASE 3: Create Loyalty Accounts
-  // ===========================
-  console.log('\n💎 Phase 3: Seeding loyalty accounts...');
-  const loyaltyAccounts = [];
-  for (const la of data.loyaltyAccounts) {
-    try {
-      // Use upsert based on unique user_id
-      const account = await prisma.loyaltyAccounts.upsert({
-        where: { user_id: la.user_id },
-        update: la,
-        create: la,
-      });
-      loyaltyAccounts.push(account);
-    } catch (error) {
-      console.warn(
-        `   ⚠️ Failed to create loyalty account ${la.user_id}: ${error.message}`
-      );
-    }
-  }
-  console.log(`✅ Created ${loyaltyAccounts.length} loyalty accounts`);
-
-  // ===========================
-  // PHASE 4: Fetch Showtimes and Seats
-  // ===========================
-  console.log(
-    '\n📅 Phase 4: Fetching showtimes and seats from Cinema service...'
-  );
-
+  // 2. FETCH SHOWTIMES
   const showtimes = await cinemaPrisma.showtimes.findMany({
     include: {
-      hall: {
-        include: {
-          seats: true,
-        },
-      },
+      hall: { include: { seats: true } },
+      cinema: true,
+      // We might need movie details for rating, but assume default rating=7 if not available easily
+      // In a real app we'd fetch movie details or include them if relation existed across services
     },
+    take: 50, // Focus on next few days
   });
 
   if (showtimes.length === 0) {
-    console.log('⚠️ No showtimes found. Please run seed_cinema first!');
-    console.log('   Exiting without creating bookings.');
-
-    // Still print summary of what was created
-    console.log('\n📊 =============== PARTIAL SEED SUMMARY ===============');
-    console.log(`🍿 Concessions: ${concessions.length}`);
-    console.log(`🎁 Promotions: ${promotions.length}`);
-    console.log(`💎 Loyalty Accounts: ${loyaltyAccounts.length}`);
-    console.log('======================================================\n');
+    console.log('⚠️ No showtimes. Run seed_cinema first.');
     return;
   }
 
-  console.log(`✅ Found ${showtimes.length} showtimes`);
+  // 3. SIMULATE TRAFFIC PER SHOWTIME
+  let totalBookings = 0;
+  let totalRevenue = 0;
 
-  // Get all seats for reference
-  const allSeats = await cinemaPrisma.seats.findMany();
-  console.log(`✅ Found ${allSeats.length} seats`);
+  console.log(`\n🚦 Simulating Traffic for ${showtimes.length} Showtimes...`);
 
-  // ===========================
-  // PHASE 5: Generate Bookings
-  // ===========================
-  console.log('\n🔄 Phase 5: Generating 600 bookings with realistic data...');
+  for (const showtime of showtimes) {
+    // Step A: Determine Traffic Volume
+    // Assume a random rating between 5-9 for simulation if we can't cross-fetch movie
+    const simulatedRating = Math.floor(Math.random() * 5) + 5;
+    const occupancyRate = getTargetOccupancy(showtime, simulatedRating);
 
-  const allBookings = [];
-  const bookingsToCreate = 600;
-  const usedBookingCodes = new Set();
+    const availableSeats = [...showtime.hall.seats]; // Copy array
+    const targetBookedCount = Math.floor(availableSeats.length * occupancyRate);
 
-  for (let i = 0; i < bookingsToCreate; i++) {
-    try {
-      // Random showtime
-      const showtime = randomElement(showtimes);
-      const hallSeats = showtime.hall.seats;
+    if (targetBookedCount === 0) continue;
 
-      if (hallSeats.length === 0) continue;
+    // Group booking logic
+    let seatsBooked = 0;
 
-      // Random number of tickets (1-4)
-      const numTickets = randomInt(1, 4);
+    while (seatsBooked < targetBookedCount && availableSeats.length > 0) {
+      // B. Determine User Persona & Group Size
+      const user = getRandomUser();
+      let groupSize = 1;
 
-      // Select random available seats
-      const selectedSeats = [];
-      const availableSeats = [...hallSeats];
-      for (let j = 0; j < numTickets && availableSeats.length > 0; j++) {
-        const randomIndex = randomInt(0, availableSeats.length - 1);
-        selectedSeats.push(availableSeats[randomIndex]);
-        availableSeats.splice(randomIndex, 1);
-      }
+      if (user.id === 'user_family') groupSize = 4;
+      else if (user.id === 'user_whale') groupSize = 2; // Couple
+      else groupSize = Math.floor(Math.random() * 3) + 1; // 1-3
 
-      if (selectedSeats.length === 0) continue;
-
-      // Calculate booking relative to showtime
-      const now = new Date();
-      const showtimeDate = new Date(showtime.start_time);
-
-      // Booking created 1-14 days before showtime
-      const daysBefore = randomInt(0, 14);
-      const bookingTime = new Date(
-        showtimeDate.getTime() -
-          daysBefore * 24 * 60 * 60 * 1000 -
-          randomInt(0, 86400000)
+      // C. Pick Seats (Heatmap logic simulated by picking chunks from center-ish)
+      // We randomly slice to avoid perfect sequential filling every time
+      const startIdx = Math.floor(
+        Math.random() * (availableSeats.length - groupSize)
       );
+      const selectedSeats = availableSeats.splice(startIdx, groupSize);
 
-      // Ensure booking time is not in the future relative to now
-      const createdAt = bookingTime > now ? now : bookingTime;
+      if (selectedSeats.length === 0) break;
 
-      // Skip if this implies we booked a showtime that hasn't been released yet (simple check)
-      // Assuming movies released 30+ days ago for simplicity or standard logic
+      // D. Create Booking
+      const showDate = new Date(showtime.start_time);
+      const now = new Date();
+      // Booking time relative to showtime
+      const bookingTime =
+        showDate > now
+          ? new Date(now.getTime() - Math.random() * 86400000) // Booked recently for future show
+          : new Date(showDate.getTime() - Math.random() * 86400000 * 3); // Booked 1-3 days before past show
 
-      // Random user
-      const userId = randomElement(data.userIds);
-      const customerName = randomElement(data.customerNames);
-      const customerEmail = `${customerName
-        .toLowerCase()
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .replace(/đ/g, 'd')
-        .replace(/Đ/g, 'D')
-        .replace(/\s+/g, '')}@email.com`;
-      const customerPhone = `09${randomInt(10000000, 99999999)}`;
-
-      // Calculate pricing using showtime's day_type (NO time_slot - not in schema!)
-      let subtotal = 0;
-      const ticketData = [];
+      let bookingSubtotal = 0;
+      const ticketItems = [];
 
       for (const seat of selectedSeats) {
-        // Get price from pricing table - only uses day_type now
-        const price = await getTicketPrice(
-          showtime.hall_id,
-          seat.type,
-          showtime.day_type
-          // NOTE: time_slot removed - not in schema
-        );
+        const price = calculatePrice(120000, seat.type, showDate);
+        bookingSubtotal += price;
+        ticketItems.push({ seat_id: seat.id, price, type: 'ADULT' });
+      }
 
-        subtotal += price;
-
-        // Ticket type is just for display/business logic, not for pricing lookup
-        let ticketType = 'ADULT';
-        if (seat.type === 'COUPLE') {
-          ticketType = 'COUPLE';
-        } else {
-          // 70% ADULT, 20% STUDENT, 10% CHILD
-          const roll = Math.random();
-          if (roll < 0.7) {
-            ticketType = 'ADULT';
-          } else if (roll < 0.9) {
-            ticketType = 'STUDENT';
-          } else {
-            ticketType = 'CHILD';
-          }
-        }
-
-        ticketData.push({
-          seat_id: seat.id,
-          price: price,
-          type: ticketType,
+      // Add Concessions for Whales/Families
+      let concessionTotal = 0;
+      const concessionItems = [];
+      if (user.id === 'user_whale' || user.id === 'user_family') {
+        const item = concessions[0]; // Popcorn
+        concessionItems.push({
+          concession_id: item.id,
+          quantity: 2,
+          unit_price: item.price,
+          total_price: item.price * 2,
         });
+        concessionTotal += Number(item.price) * 2;
       }
 
-      // Random promotion (30% chance)
-      let promotionCode = null;
-      let discount = 0;
-      if (Math.random() < 0.3) {
-        const promos = ['WELCOME20', 'STUDENT15'];
-        promotionCode = randomElement(promos);
-        discount =
-          promotionCode === 'WELCOME20' ? subtotal * 0.2 : subtotal * 0.15;
-        discount = Math.min(
-          discount,
-          promotionCode === 'WELCOME20' ? 50000 : 30000
-        );
-      }
+      const finalTotal = bookingSubtotal + concessionTotal;
 
-      // Random loyalty points (20% chance)
-      let pointsUsed = 0;
-      let pointsDiscount = 0;
-      if (Math.random() < 0.2 && userId.includes('user_')) {
-        pointsUsed = randomInt(100, 500);
-        pointsDiscount = pointsUsed * 50; // 50 VND per point
-      }
-
-      const finalAmount = Math.max(subtotal - discount - pointsDiscount, 0);
-
-      // Random status
-      // CHANGED: Use CONFIRMED for successful bookings so they appear in revenue reports immediately
-      let status = 'CONFIRMED';
-      let paymentStatus = 'COMPLETED';
-      let cancelledAt = null;
-      let cancellationReason = null;
-
-      const statusRoll = Math.random();
-      if (statusRoll < 0.05) {
-        // 5% Cancelled
-        status = 'CANCELLED';
-        paymentStatus = 'REFUNDED';
-        cancelledAt = new Date(
-          createdAt.getTime() + randomInt(1, 24) * 60 * 60 * 1000
-        );
-        cancellationReason = randomElement([
-          'Khách hàng hủy do thay đổi lịch trình',
-          'Khách hàng yêu cầu hoàn tiền',
-          'Không thể tham dự',
-        ]);
-      } else if (statusRoll < 0.1) {
-        // 5% Refunded (NEW)
-        status = 'REFUNDED';
-        paymentStatus = 'REFUNDED'; // Or whatever your system uses for refunded payment status
-        cancelledAt = new Date(
-          createdAt.getTime() + randomInt(1, 24) * 60 * 60 * 1000
-        );
-        cancellationReason = 'User requested refund (Voucher)';
-      } else if (statusRoll < 0.15) {
-        // 5% Pending
-        status = 'PENDING';
-        paymentStatus = 'PENDING';
-      } else if (statusRoll < 0.25) {
-        // 10% Completed (NEW)
-        status = 'COMPLETED';
-        paymentStatus = 'COMPLETED';
-      }
-
-      // Generate unique booking code
-      let bookingCode = generateBookingCode();
-      let attempts = 0;
-      while (usedBookingCodes.has(bookingCode) && attempts < 10) {
-        bookingCode = generateBookingCode();
-        attempts++;
-      }
-      usedBookingCodes.add(bookingCode);
-
-      // Create booking
-      const booking = await prisma.bookings.create({
-        data: {
-          booking_code: bookingCode,
-          user_id: userId,
-          showtime_id: showtime.id,
-          customer_name: customerName,
-          customer_email: customerEmail,
-          customer_phone: customerPhone,
-          subtotal: subtotal,
-          discount: discount,
-          points_used: pointsUsed,
-          points_discount: pointsDiscount,
-          final_amount: finalAmount,
-          promotion_code: promotionCode,
-          status: status,
-          payment_status: paymentStatus,
-          cancelled_at: cancelledAt,
-          cancellation_reason: cancellationReason,
-          created_at: createdAt,
-          updated_at: createdAt,
-        },
-      });
-
-      allBookings.push(booking);
-
-      // Create tickets
-      const usedTicketCodes = new Set();
-      for (const ticket of ticketData) {
-        let ticketCode = generateTicketCode();
-        while (usedTicketCodes.has(ticketCode)) {
-          ticketCode = generateTicketCode();
-        }
-        usedTicketCodes.add(ticketCode);
-
-        // Determine ticket status based on booking status
-        let ticketStatus = 'VALID';
-        let usedAt = null;
-
-        if (status === 'CANCELLED' || status === 'REFUNDED') {
-          ticketStatus = 'CANCELLED';
-        } else if (status === 'COMPLETED') {
-          ticketStatus = 'USED';
-          usedAt = new Date(
-            new Date(showtime.start_time).getTime() +
-              randomInt(0, 30) * 60 * 1000
-          );
-        } else if (status === 'CONFIRMED') {
-          if (
-            new Date(showtime.start_time) < new Date() &&
-            Math.random() > 0.2
-          ) {
-            ticketStatus = 'USED';
-            usedAt = new Date(
-              new Date(showtime.start_time).getTime() +
-                randomInt(0, 30) * 60 * 1000
-            );
-          } else {
-            ticketStatus = 'VALID';
-          }
-        }
-
-        await prisma.tickets.create({
+      // DB INSERT
+      try {
+        const booking = await prisma.bookings.create({
           data: {
-            booking_id: booking.id,
-            seat_id: ticket.seat_id,
-            ticket_code: ticketCode,
-            qr_code: `QR_${ticketCode}`,
-            ticket_type: ticket.type,
-            price: ticket.price,
-            status: ticketStatus,
-            used_at: usedAt,
-            created_at: createdAt,
-          },
-        });
-      }
-
-      // Create payment
-      const paymentMethod = randomElement([
-        'VNPAY',
-        'CREDIT_CARD',
-        'MOMO',
-        'ZALOPAY',
-      ]);
-
-      // Generate unique transaction ID
-      const transactionId = `TXN_${Date.now()}_${i}_${randomInt(1000, 9999)}`;
-
-      const payment = await prisma.payments.create({
-        data: {
-          booking_id: booking.id,
-          amount: finalAmount,
-          payment_method: paymentMethod,
-          status: paymentStatus,
-          transaction_id: transactionId,
-          provider_transaction_id:
-            paymentMethod + '_' + Date.now() + '_' + randomInt(1000, 9999),
-          paid_at: status !== 'PENDING' ? createdAt : null,
-          metadata:
-            paymentMethod === 'VNPAY'
-              ? { bankCode: 'VNPAYQR', responseCode: '00' }
-              : paymentMethod === 'CREDIT_CARD'
-              ? {
-                  cardType: 'VISA',
-                  last4: randomInt(1000, 9999).toString(),
-                }
-              : {},
-          created_at: createdAt,
-        },
-      });
-
-      // Create refund if cancelled or refunded
-      if ((status === 'CANCELLED' || status === 'REFUNDED') && cancelledAt) {
-        await prisma.refunds.create({
-          data: {
-            payment_id: payment.id,
-            amount: finalAmount,
-            reason: cancellationReason,
-            status: 'COMPLETED',
-            refunded_at: cancelledAt,
-            created_at: cancelledAt,
-          },
-        });
-      }
-
-      // Random concessions (40% of bookings)
-      if (
-        Math.random() < 0.4 &&
-        status !== 'CANCELLED' &&
-        status !== 'REFUNDED'
-      ) {
-        const numConcessions = randomInt(1, 3);
-        for (let k = 0; k < numConcessions; k++) {
-          const concession = randomElement(concessions);
-          const quantity = randomInt(1, 3);
-          await prisma.bookingConcessions.create({
-            data: {
-              booking_id: booking.id,
-              concession_id: concession.id,
-              quantity: quantity,
-              unit_price: concession.price,
-              total_price: Number(concession.price) * quantity,
-              created_at: createdAt,
+            booking_code: `BK${Date.now()}${Math.floor(Math.random() * 1000)}`,
+            user_id: user.id,
+            showtime_id: showtime.id,
+            customer_name: user.name,
+            customer_email: user.email,
+            subtotal: bookingSubtotal,
+            final_amount: finalTotal,
+            status: 'CONFIRMED',
+            payment_status: 'COMPLETED', // Simplify to completed for revenue reports
+            created_at: bookingTime,
+            updated_at: bookingTime,
+            tickets: {
+              create: ticketItems.map((t) => ({
+                seat_id: t.seat_id,
+                ticket_code: `TK${Math.floor(Math.random() * 1000000)}`,
+                ticket_type: t.type,
+                price: t.price,
+                status: showDate < now ? 'USED' : 'VALID', // Auto-use past tickets
+              })),
             },
-          });
-        }
-      }
-
-      // Loyalty transactions for confirmed/completed bookings
-      if (
-        (status === 'CONFIRMED' || status === 'COMPLETED') &&
-        userId.includes('user_')
-      ) {
-        const loyaltyAccount = loyaltyAccounts.find(
-          (acc) => acc.user_id === userId
-        );
-        if (loyaltyAccount) {
-          // Earn points
-          const earnedPoints = Math.floor(finalAmount / 1000);
-          await prisma.loyaltyTransactions.create({
-            data: {
-              loyalty_account_id: loyaltyAccount.id,
-              points: earnedPoints,
-              type: 'EARN',
-              transaction_id: booking.id,
-              description: 'Điểm thưởng từ đơn hàng ' + booking.booking_code,
-              created_at: createdAt,
+            booking_concessions: {
+              create: concessionItems,
             },
-          });
-
-          // Redeem points if used
-          if (pointsUsed > 0) {
-            await prisma.loyaltyTransactions.create({
-              data: {
-                loyalty_account_id: loyaltyAccount.id,
-                points: -pointsUsed,
-                type: 'REDEEM',
-                transaction_id: booking.id,
-                description:
-                  'Sử dụng điểm cho đơn hàng ' + booking.booking_code,
-                created_at: createdAt,
+            payments: {
+              create: {
+                amount: finalTotal,
+                payment_method: 'CREDIT_CARD',
+                status: 'COMPLETED',
+                transaction_id: `TX-${Date.now()}-${Math.random()}`,
               },
-            });
-          }
-        }
-      }
+            },
+          },
+        });
 
-      // Progress indicator
-      if ((i + 1) % 100 === 0) {
-        console.log(`   Generated ${i + 1}/${bookingsToCreate} bookings...`);
+        totalBookings++;
+        totalRevenue += finalTotal;
+        seatsBooked += selectedSeats.length;
+      } catch (e) {
+        // Ignore unique constraint bumps or glitches
       }
-    } catch (error) {
-      console.error(`Error creating booking ${i + 1}:`, error.message);
     }
   }
 
-  console.log(`✅ Created ${allBookings.length} bookings with realistic data`);
-
-  // ===========================
-  // Summary
-  // ===========================
-  const bookingCount = await prisma.bookings.count();
-  const confirmedBookings = await prisma.bookings.count({
-    where: { status: 'CONFIRMED' },
-  });
-  const cancelledBookings = await prisma.bookings.count({
-    where: { status: 'CANCELLED' },
-  });
-  const pendingBookings = await prisma.bookings.count({
-    where: { status: 'PENDING' },
-  });
-  const refundedBookings = await prisma.bookings.count({
-    where: { status: 'REFUNDED' },
-  });
-  const completedBookings = await prisma.bookings.count({
-    where: { status: 'COMPLETED' },
-  });
-  const ticketCount = await prisma.tickets.count();
-  const concessionCount = await prisma.concessions.count();
-  const bookingConcessionCount = await prisma.bookingConcessions.count();
-  const loyaltyAccountCount = await prisma.loyaltyAccounts.count();
-  const loyaltyTransactionCount = await prisma.loyaltyTransactions.count();
-  const refundCount = await prisma.refunds.count();
-
-  // Calculate total revenue (include CONFIRMED and COMPLETED)
-  const totalRevenue = await prisma.bookings.aggregate({
-    where: { status: { in: ['CONFIRMED', 'COMPLETED'] } },
-    _sum: { final_amount: true },
-  });
-  const totalConcessionRevenue = await prisma.bookingConcessions.aggregate({
-    _sum: { total_price: true },
-  });
-
   console.log('\n📊 =============== SEED SUMMARY ===============');
-  console.log(`📋 Total Bookings: ${bookingCount}`);
-  console.log(`   ✅ Confirmed: ${confirmedBookings}`);
-  console.log(`   🏁 Completed: ${completedBookings}`);
-  console.log(`   ⏳ Pending: ${pendingBookings}`);
-  console.log(`   ❌ Cancelled: ${cancelledBookings}`);
-  console.log(`   ↩️  Refunded: ${refundedBookings}`);
-  console.log(`🎫 Total Tickets: ${ticketCount}`);
-  console.log(`🍿 Concession Types: ${concessionCount}`);
-  console.log(`🛒 Concession Orders: ${bookingConcessionCount}`);
-  console.log(`💎 Loyalty Accounts: ${loyaltyAccountCount}`);
-  console.log(`💰 Loyalty Transactions: ${loyaltyTransactionCount}`);
-  console.log(`↩️  Refund Records: ${refundCount}`);
+  console.log(`✅ Total Bookings: ${totalBookings}`);
   console.log(
-    `\n💵 Total Revenue: ${Number(
-      totalRevenue._sum.final_amount || 0
-    ).toLocaleString('vi-VN')} VND`
+    `💰 Total Fake Revenue: ${totalRevenue.toLocaleString('vi-VN')} VND`
   );
-  console.log(
-    `🍿 Concession Revenue: ${Number(
-      totalConcessionRevenue._sum.total_price || 0
-    ).toLocaleString('vi-VN')} VND`
-  );
-  console.log(
-    `📊 Combined Revenue: ${(
-      Number(totalRevenue._sum.final_amount || 0) +
-      Number(totalConcessionRevenue._sum.total_price || 0)
-    ).toLocaleString('vi-VN')} VND`
-  );
+  console.log(`📅 Showtimes Simulated: ${showtimes.length}`);
   console.log('==============================================\n');
-  console.log('🎉 Booking Service seed completed successfully!');
 }
 
 main()
   .then(async () => {
     await prisma.$disconnect();
-    await cinemaPrisma.$disconnect();
+    if (cinemaPrisma) await cinemaPrisma.$disconnect();
   })
   .catch(async (e) => {
-    console.error('❌ Booking Service seed error:', e);
+    console.error(e);
     await prisma.$disconnect();
-    await cinemaPrisma.$disconnect();
+    if (cinemaPrisma) await cinemaPrisma.$disconnect();
     process.exit(1);
   });

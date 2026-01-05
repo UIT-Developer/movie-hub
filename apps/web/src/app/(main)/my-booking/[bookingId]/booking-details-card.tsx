@@ -159,7 +159,9 @@ export function BookingCard({ bookingId }: { bookingId: string }) {
               <p className="text-sm text-neutral-300">
                 Mã voucher:{' '}
                 <span className="text-white font-mono font-bold text-lg">
-                  {refundVoucher || 'Kiểm tra email của bạn'}
+                  {refundVoucher ||
+                    booking?.refundVoucherCode ||
+                    'Kiểm tra email của bạn'}
                 </span>
               </p>
               <p className="text-xs text-neutral-400">

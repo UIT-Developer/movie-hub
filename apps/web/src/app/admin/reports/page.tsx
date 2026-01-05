@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-dynamic';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { format } from 'date-fns';
 import {
   XAxis,
@@ -79,20 +79,41 @@ export default function ReportsPage() {
   const [topMovies, setTopMovies] = useState<TopMovieDto[]>([]);
   const [topCinemas, setTopCinemas] = useState<TopCinemaDto[]>([]);
 
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      const [cinemasRes, moviesRes, revenueRes, topMoviesRes, topCinemasRes] =
-        await Promise.all([
+  // Fetch static data (cinemas, movies) once
+  useEffect(() => {
+    const fetchStaticData = async () => {
+      try {
+        const [cinemasRes, moviesRes] = await Promise.all([
           cinemasApi.getAll(),
           moviesApi.getAll(),
-          getRevenueReport({ groupBy: 'day' }),
-          getTopMovies(5),
-          getTopCinemas(5),
         ]);
+        setCinemas(cinemasRes || []);
+        setMovies(moviesRes || []);
+      } catch (err) {
+        console.error('Failed to fetch static data:', err);
+      }
+    };
+    fetchStaticData();
+  }, []);
 
-      setCinemas(cinemasRes || []);
-      setMovies(moviesRes || []);
+  // Fetch report data based on date range
+  const fetchReportData = useCallback(async () => {
+    setLoading(true);
+    try {
+      // Format dates for API (YYYY-MM-DD format)
+      const startDate = format(dateRange.from, 'yyyy-MM-dd');
+      const endDate = format(dateRange.to, 'yyyy-MM-dd');
+
+      const [revenueRes, topMoviesRes, topCinemasRes] = await Promise.all([
+        getRevenueReport({
+          startDate,
+          endDate,
+          groupBy: 'day',
+        }),
+        getTopMovies(5),
+        getTopCinemas(5),
+      ]);
+
       setRevenueReport(revenueRes);
       setTopMovies(topMoviesRes || []);
       setTopCinemas(topCinemasRes || []);
@@ -101,14 +122,15 @@ export default function ReportsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [dateRange.from, dateRange.to]);
 
+  // Fetch report data when date range changes
   useEffect(() => {
-    fetchData();
-  }, []);
+    fetchReportData();
+  }, [fetchReportData]);
 
   const handleRefresh = () => {
-    fetchData();
+    fetchReportData();
   };
 
   const formatCurrency = (value: number) => {

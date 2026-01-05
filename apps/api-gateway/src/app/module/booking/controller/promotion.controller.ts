@@ -12,11 +12,11 @@ import {
 } from '@nestjs/common';
 import { PromotionService } from '../service/promotion.service';
 import { ClerkAuthGuard } from '../../../common/guard/clerk-auth.guard';
+import { OptionalClerkAuthGuard } from '../../../common/guard/optional-clerk-auth.guard';
+import { CurrentUserId } from '../../../common/decorator/current-user-id.decorator';
 import {
-  PromotionDto,
   PromotionType,
   ValidatePromotionDto,
-  ValidatePromotionResponseDto,
   CreatePromotionDto,
   UpdatePromotionDto,
 } from '@movie-hub/shared-types';
@@ -46,15 +46,21 @@ export class PromotionController {
 
   @Get('code/:code')
   async findByCode(@Param('code') code: string) {
-    return this.promotionService.findByCode(code);
+    return this.promotionService.findByCode(code.trim());
   }
 
   @Post('validate/:code')
+  @UseGuards(OptionalClerkAuthGuard)
   async validate(
     @Param('code') code: string,
-    @Body() validateDto: ValidatePromotionDto
+    @Body() validateDto: ValidatePromotionDto,
+    @CurrentUserId() userId?: string
   ) {
-    return this.promotionService.validate(code, validateDto);
+    // Inject userId from auth context into DTO for refund voucher validation
+    return this.promotionService.validate(code.trim(), {
+      ...validateDto,
+      userId,
+    });
   }
 
   @Post()

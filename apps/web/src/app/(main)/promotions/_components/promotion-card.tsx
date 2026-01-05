@@ -12,9 +12,9 @@ import { CalendarDays, TicketPercent } from 'lucide-react';
 
 export const PromotionCard = ({ data }: { data: PromotionDto }) => {
   return (
-    <Card className="w-full max-w-md rounded-2xl shadow-lg p-4 bg-rose-500/20 border border-rose-500">
+    <Card className="w-full max-w-md rounded-2xl shadow-lg p-4 bg-slate-200/5 border border-slate-200/10 hover:border-primary/50 transition-colors">
       <CardHeader>
-        <CardTitle className="text-xl font-bold flex items-center gap-2 text-rose-400">
+        <CardTitle className="text-xl font-bold flex items-center gap-2 text-primary">
           <TicketPercent className="w-5 h-5" /> {data.name}
         </CardTitle>
         <div className="text-sm text-neutral-300">Mã: {data.code}</div>

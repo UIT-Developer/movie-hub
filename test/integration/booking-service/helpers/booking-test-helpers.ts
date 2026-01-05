@@ -345,7 +345,7 @@ export interface CreateConcessionTestData {
   name: string;
   description: string;
   price: number;
-  category: 'FOOD' | 'DRINK' | 'COMBO' | 'SNACK';
+  category: 'FOOD' | 'BEVERAGE' | 'COMBO' | 'SNACK';
   imageUrl?: string;
   cinemaId?: string;
   available: boolean;
@@ -537,7 +537,7 @@ export async function seedTestConcessions(
   count: number = 3
 ): Promise<string[]> {
   const ids: string[] = [];
-  const categories = ['FOOD', 'DRINK', 'COMBO', 'SNACK'];
+  const categories = ['FOOD', 'BEVERAGE', 'COMBO', 'SNACK'];
   const names = ['Popcorn', 'Cola', 'Combo Large', 'Nachos'];
 
   for (let i = 0; i < count; i++) {

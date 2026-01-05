@@ -1,6 +1,13 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Query,
+  UseGuards,
+  UseInterceptors,
+} from '@nestjs/common';
 import { DashboardService } from './dashboard.service';
 import { ClerkAuthGuard } from '../../common/guard/clerk-auth.guard';
+import { TransformInterceptor } from '../../common/interceptor/transform.interceptor';
 
 /**
  * Dashboard Controller
@@ -13,6 +20,7 @@ import { ClerkAuthGuard } from '../../common/guard/clerk-auth.guard';
   path: 'dashboard',
 })
 @UseGuards(ClerkAuthGuard)
+@UseInterceptors(new TransformInterceptor())
 export class DashboardController {
   constructor(private readonly dashboardService: DashboardService) {}
 
@@ -22,7 +30,7 @@ export class DashboardController {
    */
   @Get('stats')
   async getStats() {
-    return this.dashboardService.getStats();
+    return { data: await this.dashboardService.getStats() };
   }
 
   /**
@@ -35,11 +43,12 @@ export class DashboardController {
     @Query('endDate') endDate?: string,
     @Query('groupBy') groupBy?: 'day' | 'week' | 'month'
   ) {
-    return this.dashboardService.getRevenueReport({
+    const result = await this.dashboardService.getRevenueReport({
       startDate,
       endDate,
       groupBy,
     });
+    return { data: result };
   }
 
   /**
@@ -49,7 +58,7 @@ export class DashboardController {
   @Get('top-movies')
   async getTopMovies(@Query('limit') limit?: string) {
     const parsedLimit = limit ? parseInt(limit, 10) : 5;
-    return this.dashboardService.getTopMovies(parsedLimit);
+    return { data: await this.dashboardService.getTopMovies(parsedLimit) };
   }
 
   /**
@@ -59,7 +68,7 @@ export class DashboardController {
   @Get('top-cinemas')
   async getTopCinemas(@Query('limit') limit?: string) {
     const parsedLimit = limit ? parseInt(limit, 10) : 5;
-    return this.dashboardService.getTopCinemas(parsedLimit);
+    return { data: await this.dashboardService.getTopCinemas(parsedLimit) };
   }
 
   /**
@@ -69,7 +78,7 @@ export class DashboardController {
   @Get('recent-bookings')
   async getRecentBookings(@Query('limit') limit?: string) {
     const parsedLimit = limit ? parseInt(limit, 10) : 10;
-    return this.dashboardService.getRecentBookings(parsedLimit);
+    return { data: await this.dashboardService.getRecentBookings(parsedLimit) };
   }
 
   /**
@@ -79,7 +88,7 @@ export class DashboardController {
   @Get('recent-reviews')
   async getRecentReviews(@Query('limit') limit?: string) {
     const parsedLimit = limit ? parseInt(limit, 10) : 10;
-    return this.dashboardService.getRecentReviews(parsedLimit);
+    return { data: await this.dashboardService.getRecentReviews(parsedLimit) };
   }
 
   /**
@@ -88,6 +97,6 @@ export class DashboardController {
    */
   @Get('occupancy')
   async getOccupancy(@Query('date') date?: string) {
-    return this.dashboardService.getOccupancy(date);
+    return { data: await this.dashboardService.getOccupancy(date) };
   }
 }

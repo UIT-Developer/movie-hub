@@ -154,12 +154,12 @@ body,
 }
 
 .custom-scroll::-webkit-scrollbar-thumb {
-  background: rgba(244, 63, 94, 0.2); /* rose-500/20 */
+  background: rgba(226, 232, 240, 0.2); /* slate-200/20 */
   border-radius: 9999px;
 }
 
 .custom-scroll::-webkit-scrollbar-thumb:hover {
-  background: rgba(244, 63, 94, 0.45); /* đậm hơn khi hover */
+  background: rgba(226, 232, 240, 0.45); /* slate-200/45 */
 }
 
 .perspective-1000 {

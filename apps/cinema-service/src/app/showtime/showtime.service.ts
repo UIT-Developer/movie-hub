@@ -128,6 +128,48 @@ export class ShowtimeService {
   }
 
   /**
+   * 🚀 Batch fetch multiple showtimes by IDs (for aggregation queries)
+   * Returns a map of showtimeId -> { movieId, cinemaId, hallId, hallName, cinemaName }
+   */
+  async getShowtimesByIds(showtimeIds: string[]): Promise<{
+    data: Array<{
+      showtimeId: string;
+      movieId: string;
+      cinemaId: string;
+      hallId: string;
+      hallName: string;
+      cinemaName: string;
+    }>;
+  }> {
+    if (!showtimeIds || showtimeIds.length === 0) {
+      return { data: [] };
+    }
+
+    const showtimes = await this.prisma.showtimes.findMany({
+      where: { id: { in: showtimeIds } },
+      select: {
+        id: true,
+        movie_id: true,
+        cinema_id: true,
+        hall_id: true,
+        hall: { select: { name: true } },
+        cinema: { select: { name: true } },
+      },
+    });
+
+    return {
+      data: showtimes.map((s) => ({
+        showtimeId: s.id,
+        movieId: s.movie_id,
+        cinemaId: s.cinema_id,
+        hallId: s.hall_id,
+        hallName: s.hall?.name ?? '',
+        cinemaName: s.cinema?.name ?? '',
+      })),
+    };
+  }
+
+  /**
    * 📅 Lấy danh sách suất chiếu của 1 phim tại 1 rạp (có cache)
    */
   async getMovieShowtimesAtCinema(

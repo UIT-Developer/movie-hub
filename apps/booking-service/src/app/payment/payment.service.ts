@@ -3,7 +3,10 @@ import { ConfigService } from '@nestjs/config';
 import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
 import { PrismaService } from '../prisma.service';
-import { NotificationService, TicketWithQRCode } from '../notification/notification.service';
+import {
+  NotificationService,
+  TicketWithQRCode,
+} from '../notification/notification.service';
 import { TicketService } from '../ticket/ticket.service';
 import {
   CreatePaymentDto,
@@ -40,10 +43,18 @@ export class PaymentService {
     private ticketService: TicketService
   ) {
     this.vnp_TmnCode = this.configService.get('VNPAY_TMN_CODE') || 'EX6ATLAM';
-    this.vnp_HashSecret = this.configService.get('VNPAY_HASH_SECRET') || 'ID4MX46WVEFNI39KLW9JUFHDR0I4U3IB';
-    this.vnp_Url = this.configService.get('VNPAY_URL') || 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html';
-    this.vnp_Api = this.configService.get('VNPAY_API') || 'https://sandbox.vnpayment.vn/merchant_webapi/api/transaction';
-    this.vnp_ReturnUrl = this.configService.get('VNPAY_RETURN_URL') || 'http://localhost:3000/payment/return';
+    this.vnp_HashSecret =
+      this.configService.get('VNPAY_HASH_SECRET') ||
+      'ID4MX46WVEFNI39KLW9JUFHDR0I4U3IB';
+    this.vnp_Url =
+      this.configService.get('VNPAY_URL') ||
+      'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html';
+    this.vnp_Api =
+      this.configService.get('VNPAY_API') ||
+      'https://sandbox.vnpayment.vn/merchant_webapi/api/transaction';
+    this.vnp_ReturnUrl =
+      this.configService.get('VNPAY_RETURN_URL') ||
+      'http://localhost:3000/payment/return';
   }
 
   async createPayment(
@@ -58,15 +69,13 @@ export class PaymentService {
     if (!booking) {
       throw new Error('Booking not found');
     }
-    
+
     if (booking.payment_status !== PaymentStatus.PENDING) {
       throw new Error('Booking is not pending payment');
     }
 
-        // Use booking's final_amount if no amount provided in DTO
+    // Use booking's final_amount if no amount provided in DTO
     const paymentAmount = Number(booking.final_amount);
-
-
 
     const payment = await this.prisma.payments.create({
       data: {
@@ -81,16 +90,21 @@ export class PaymentService {
       },
     });
 
-      // Use the validated paymentAmount instead of dto.amount
-      const paymentUrl = await this.createVNPayUrl(payment.id, booking.id, booking.expires_at, paymentAmount, ipAddr);
-      
-      await this.prisma.payments.update({
-        where: { id: payment.id },
-        data: { payment_url: paymentUrl },
-      });
+    // Use the validated paymentAmount instead of dto.amount
+    const paymentUrl = await this.createVNPayUrl(
+      payment.id,
+      booking.id,
+      booking.expires_at,
+      paymentAmount,
+      ipAddr
+    );
 
-      return { data: this.mapToDto({ ...payment, payment_url: paymentUrl }) };
-    
+    await this.prisma.payments.update({
+      where: { id: payment.id },
+      data: { payment_url: paymentUrl },
+    });
+
+    return { data: this.mapToDto({ ...payment, payment_url: paymentUrl }) };
 
     return { data: this.mapToDto(payment) };
   }
@@ -98,7 +112,7 @@ export class PaymentService {
   async createVNPayUrl(
     paymentId: string,
     bookingId: string,
-    expireAt : Date,
+    expireAt: Date,
     amount: number,
     ipAddr: string
   ): Promise<string> {
@@ -107,18 +121,25 @@ export class PaymentService {
       throw new Error('Invalid payment amount for VNPay URL generation');
     }
 
-    
-    
     // Use moment with timezone awareness - ensure all dates use Asia/Ho_Chi_Minh
-   
-    const createDate = moment.utc().utcOffset('+07:00').format('YYYYMMDDHHmmss');
-    
+
+    const createDate = moment
+      .utc()
+      .utcOffset('+07:00')
+      .format('YYYYMMDDHHmmss');
+
     // Convert expireAt to Vietnam timezone (UTC+7) and format
-    const expireDate = moment.utc(expireAt).utcOffset('+07:00').format('YYYYMMDDHHmmss');
-    
+    const expireDate = moment
+      .utc(expireAt)
+      .utcOffset('+07:00')
+      .format('YYYYMMDDHHmmss');
+
     const orderId = paymentId;
     const locale = 'vn';
     const currCode = 'VND';
+
+    // Clean IP address (remove ::ffff: prefix if present)
+    const cleanIpAddr = ipAddr.replace(/^.*:/, '');
 
     const vnp_Params = {
       vnp_Version: '2.1.0',
@@ -127,16 +148,14 @@ export class PaymentService {
       vnp_Locale: locale,
       vnp_CurrCode: currCode,
       vnp_TxnRef: orderId,
-      vnp_OrderInfo: `Thanh toan cho ma GD:${orderId}`, // No space after colon
+      vnp_OrderInfo: `Thanh toan cho ma GD:${orderId}`,
       vnp_OrderType: 'other',
       vnp_Amount: amount * 100, // Must multiply by 100 (remove decimal part)
       vnp_ReturnUrl: this.vnp_ReturnUrl,
-      vnp_IpAddr: ipAddr,
+      vnp_IpAddr: cleanIpAddr,
       vnp_CreateDate: createDate,
       vnp_ExpireDate: expireDate,
     };
-
-
 
     // Convert all parameters to strings first, then sort
     const stringParams: Record<string, string> = {};
@@ -153,17 +172,25 @@ export class PaymentService {
     const signed = hmac.update(Buffer.from(signData, 'utf-8')).digest('hex');
     sortedParams.vnp_SecureHash = signed;
 
-    const paymentUrl = this.vnp_Url + '?' + querystring.stringify(sortedParams, { encode: false });
-    
+    console.log('[VNPay Create] signData:', signData);
+    console.log('[VNPay Create] signed:', signed);
+
+    const paymentUrl =
+      this.vnp_Url +
+      '?' +
+      querystring.stringify(sortedParams, { encode: false });
+
     return paymentUrl;
   }
 
-  async handleVNPayIPN(vnpParams: Record<string, string>): Promise<ServiceResult<{ RspCode: string; Message: string }>> {
+  async handleVNPayIPN(
+    vnpParams: Record<string, string>
+  ): Promise<ServiceResult<{ RspCode: string; Message: string }>> {
     const secureHash = vnpParams.vnp_SecureHash;
     const orderId = vnpParams.vnp_TxnRef;
     const transactionId = vnpParams.vnp_TransactionNo;
     const transactionStatus = vnpParams.vnp_TransactionStatus;
-    
+
     delete vnpParams.vnp_SecureHash;
     delete vnpParams.vnp_SecureHashType;
 
@@ -180,7 +207,7 @@ export class PaymentService {
 
     const payment = await this.prisma.payments.findUnique({
       where: { id: orderId },
-      include: { 
+      include: {
         booking: {
           select: {
             id: true,
@@ -189,8 +216,8 @@ export class PaymentService {
             status: true,
             payment_status: true,
             expires_at: true,
-          }
-        } 
+          },
+        },
       },
     });
 
@@ -207,8 +234,16 @@ export class PaymentService {
       return { data: { RspCode: '04', Message: 'Amount invalid' } };
     }
 
-    if (payment.status !== PaymentStatus.PENDING || payment.booking.status !== BookingStatus.PENDING) {
-      return { data: { RspCode: '02', Message: 'This order has been updated to the payment status' } };
+    if (
+      payment.status !== PaymentStatus.PENDING ||
+      payment.booking.status !== BookingStatus.PENDING
+    ) {
+      return {
+        data: {
+          RspCode: '02',
+          Message: 'This order has been updated to the payment status',
+        },
+      };
     }
 
     try {
@@ -243,7 +278,6 @@ export class PaymentService {
         });
 
         await this.bookingEventService.publishBookingConfirmed({
-           
           userId: payment.booking.user_id,
           showtimeId: payment.booking.showtime_id,
           bookingId: payment.booking_id,
@@ -251,10 +285,15 @@ export class PaymentService {
         });
 
         // Send booking confirmation email ASYNCHRONOUSLY (fire-and-forget, don't block payment)
-        this.sendBookingConfirmationEmailAsync(payment.booking_id).catch(emailError => {
-          // Log but don't throw - email failure should not affect payment success
-          console.error('[Payment] Failed to send booking confirmation email (async):', emailError);
-        });
+        this.sendBookingConfirmationEmailAsync(payment.booking_id).catch(
+          (emailError) => {
+            // Log but don't throw - email failure should not affect payment success
+            console.error(
+              '[Payment] Failed to send booking confirmation email (async):',
+              emailError
+            );
+          }
+        );
 
         return { data: { RspCode: '00', Message: 'Success' } };
       } else {
@@ -279,13 +318,17 @@ export class PaymentService {
         return { data: { RspCode: '00', Message: 'Success' } };
       }
     } catch {
-      return { data: { RspCode: '99', Message: 'Update failed, please retry' } };
+      return {
+        data: { RspCode: '99', Message: 'Update failed, please retry' },
+      };
     }
   }
-//  //## DONT USE THIS , use ipn instead
-  async handleVNPayReturn(vnpParams: Record<string, string>): Promise<ServiceResult<{ status: string; code: string }>> {
+  //  //## DONT USE THIS , use ipn instead
+  async handleVNPayReturn(
+    vnpParams: Record<string, string>
+  ): Promise<ServiceResult<{ status: string; code: string }>> {
     const secureHash = vnpParams.vnp_SecureHash;
-    
+
     delete vnpParams.vnp_SecureHash;
     delete vnpParams.vnp_SecureHashType;
 
@@ -313,7 +356,9 @@ export class PaymentService {
     return { data: this.mapToDto(payment) };
   }
 
-  async findByBooking(bookingId: string): Promise<ServiceResult<PaymentDetailDto[]>> {
+  async findByBooking(
+    bookingId: string
+  ): Promise<ServiceResult<PaymentDetailDto[]>> {
     const payments = await this.prisma.payments.findMany({
       where: { booking_id: bookingId },
       orderBy: { created_at: 'desc' },
@@ -343,7 +388,10 @@ export class PaymentService {
         (k) => encodeURIComponent(k) === encodedKey
       );
       if (originalKey) {
-        sorted[encodedKey] = encodeURIComponent(obj[originalKey]).replace(/%20/g, '+');
+        sorted[encodedKey] = encodeURIComponent(obj[originalKey]).replace(
+          /%20/g,
+          '+'
+        );
       }
     }
 
@@ -459,13 +507,15 @@ export class PaymentService {
   /**
    * Find payments by date range
    */
-  async findPaymentsByDateRange(filters: {
-    startDate?: Date;
-    endDate?: Date;
-    status?: PaymentStatus;
-    page?: number;
-    limit?: number;
-  } = {}): Promise<ServiceResult<PaymentDetailDto[]>> {
+  async findPaymentsByDateRange(
+    filters: {
+      startDate?: Date;
+      endDate?: Date;
+      status?: PaymentStatus;
+      page?: number;
+      limit?: number;
+    } = {}
+  ): Promise<ServiceResult<PaymentDetailDto[]>> {
     const page = filters?.page || 1;
     const limit = filters?.limit || 10;
     const skip = (page - 1) * limit;
@@ -508,7 +558,9 @@ export class PaymentService {
   /**
    * Cancel a pending payment
    */
-  async cancelPayment(paymentId: string): Promise<ServiceResult<PaymentDetailDto>> {
+  async cancelPayment(
+    paymentId: string
+  ): Promise<ServiceResult<PaymentDetailDto>> {
     const payment = await this.prisma.payments.findUnique({
       where: { id: paymentId },
     });
@@ -532,11 +584,13 @@ export class PaymentService {
   /**
    * Get payment statistics
    */
-  async getPaymentStatistics(filters: {
-    startDate?: Date;
-    endDate?: Date;
-    paymentMethod?: string;
-  } = {}): Promise<ServiceResult<any>> {
+  async getPaymentStatistics(
+    filters: {
+      startDate?: Date;
+      endDate?: Date;
+      paymentMethod?: string;
+    } = {}
+  ): Promise<ServiceResult<any>> {
     const where: any = {};
 
     if (filters?.startDate || filters?.endDate) {
@@ -547,17 +601,34 @@ export class PaymentService {
 
     if (filters?.paymentMethod) where.payment_method = filters.paymentMethod;
 
-    const [totalPayments, successfulPayments, failedPayments, pendingPayments, payments] = await Promise.all([
+    const [
+      totalPayments,
+      successfulPayments,
+      failedPayments,
+      pendingPayments,
+      payments,
+    ] = await Promise.all([
       this.prisma.payments.count({ where }),
-      this.prisma.payments.count({ where: { ...where, status: PaymentStatus.COMPLETED } }),
-      this.prisma.payments.count({ where: { ...where, status: PaymentStatus.FAILED } }),
-      this.prisma.payments.count({ where: { ...where, status: PaymentStatus.PENDING } }),
+      this.prisma.payments.count({
+        where: { ...where, status: PaymentStatus.COMPLETED },
+      }),
+      this.prisma.payments.count({
+        where: { ...where, status: PaymentStatus.FAILED },
+      }),
+      this.prisma.payments.count({
+        where: { ...where, status: PaymentStatus.PENDING },
+      }),
       this.prisma.payments.findMany({ where }),
     ]);
 
     const totalAmount = payments.reduce((sum, p) => sum + Number(p.amount), 0);
-    const completedPayments = payments.filter((p) => p.status === PaymentStatus.COMPLETED);
-    const completedAmount = completedPayments.reduce((sum, p) => sum + Number(p.amount), 0);
+    const completedPayments = payments.filter(
+      (p) => p.status === PaymentStatus.COMPLETED
+    );
+    const completedAmount = completedPayments.reduce(
+      (sum, p) => sum + Number(p.amount),
+      0
+    );
 
     // Group by payment method
     const paymentsByMethod = payments.reduce((acc: any, p) => {
@@ -588,15 +659,20 @@ export class PaymentService {
         successfulPayments,
         failedPayments,
         pendingPayments,
-        successRate: totalPayments > 0 ? (successfulPayments / totalPayments) * 100 : 0,
-        averagePaymentAmount: totalPayments > 0 ? totalAmount / totalPayments : 0,
+        successRate:
+          totalPayments > 0 ? (successfulPayments / totalPayments) * 100 : 0,
+        averagePaymentAmount:
+          totalPayments > 0 ? totalAmount / totalPayments : 0,
         paymentsByMethod: Object.values(paymentsByMethod),
         paymentsByStatus: Object.values(paymentsByStatus),
-        period: filters.startDate && filters.endDate ? {
-          startDate: filters.startDate,
-          endDate: filters.endDate,
-        } : undefined,
-      }
+        period:
+          filters.startDate && filters.endDate
+            ? {
+                startDate: filters.startDate,
+                endDate: filters.endDate,
+              }
+            : undefined,
+      },
     };
   }
 
@@ -605,7 +681,9 @@ export class PaymentService {
    * This runs in background and never blocks the payment flow
    * Fetches user details (email, name, phone) from user service via event-driven TCP call
    */
-  private async sendBookingConfirmationEmailAsync(bookingId: string): Promise<void> {
+  private async sendBookingConfirmationEmailAsync(
+    bookingId: string
+  ): Promise<void> {
     try {
       const fullBooking = await this.prisma.bookings.findUnique({
         where: { id: bookingId },
@@ -626,13 +704,23 @@ export class PaymentService {
       let userDetails: UserDetailDto | null = null;
       try {
         userDetails = await firstValueFrom(
-          this.userClient.send<UserDetailDto>(UserMessage.GET_USER_DETAIL, fullBooking.user_id)
+          this.userClient.send<UserDetailDto>(
+            UserMessage.GET_USER_DETAIL,
+            fullBooking.user_id
+          )
         );
-        console.log(`[Email] Fetched user details from user service for user ${fullBooking.user_id}`);
+        console.log(
+          `[Email] Fetched user details from user service for user ${fullBooking.user_id}`
+        );
       } catch (userError) {
-        console.error(`[Email] Failed to fetch user details from user service:`, userError);
+        console.error(
+          `[Email] Failed to fetch user details from user service:`,
+          userError
+        );
         // Gracefully fall back to booking's stored customer info
-        console.log('[Email] Falling back to booking stored customer information');
+        console.log(
+          '[Email] Falling back to booking stored customer information'
+        );
       }
 
       // Use user details if available, otherwise use booking's stored customer info
@@ -653,7 +741,10 @@ export class PaymentService {
               qrCode: qrResult.data,
             };
           } catch (qrError) {
-            console.error(`[Email] Failed to generate QR for ticket ${ticket.id}:`, qrError);
+            console.error(
+              `[Email] Failed to generate QR for ticket ${ticket.id}:`,
+              qrError
+            );
             // Return ticket without QR code
             return {
               ticketCode: ticket.ticket_code,
@@ -680,21 +771,23 @@ export class PaymentService {
         hallName: 'Hall Name', // TODO: Fetch from cinema-service
         startTime: new Date(), // TODO: Fetch from cinema-service
         seatCount: fullBooking.tickets?.length || 0,
-        seats: fullBooking.tickets?.map(t => ({
-          seatId: t.seat_id,
-          row: 'A', // TODO: Parse from seat_id
-          number: 1, // TODO: Parse from seat_id
-          seatType: t.ticket_type,
-          ticketType: t.ticket_type,
-          price: Number(t.price),
-        })) || [],
-        concessions: fullBooking.booking_concessions?.map(bc => ({
-          concessionId: bc.concession_id,
-          name: bc.concession?.name || 'Item',
-          quantity: bc.quantity,
-          unitPrice: Number(bc.unit_price),
-          totalPrice: Number(bc.total_price),
-        })) || [],
+        seats:
+          fullBooking.tickets?.map((t) => ({
+            seatId: t.seat_id,
+            row: 'A', // TODO: Parse from seat_id
+            number: 1, // TODO: Parse from seat_id
+            seatType: t.ticket_type,
+            ticketType: t.ticket_type,
+            price: Number(t.price),
+          })) || [],
+        concessions:
+          fullBooking.booking_concessions?.map((bc) => ({
+            concessionId: bc.concession_id,
+            name: bc.concession?.name || 'Item',
+            quantity: bc.quantity,
+            unitPrice: Number(bc.unit_price),
+            totalPrice: Number(bc.total_price),
+          })) || [],
         subtotal: Number(fullBooking.subtotal),
         discount: Number(fullBooking.discount),
         pointsUsed: fullBooking.points_used,
@@ -717,13 +810,20 @@ export class PaymentService {
         tickets: ticketsWithQR,
       });
 
-      console.log(`[Email] Booking confirmation sent successfully to ${customerEmail}`);
+      console.log(
+        `[Email] Booking confirmation sent successfully to ${customerEmail}`
+      );
 
       // Also send SMS if phone number available (fire-and-forget)
       if (customerPhone) {
-        this.notificationService.sendBookingConfirmationSMS(bookingForEmail).catch(smsError => {
-          console.error('[SMS] Failed to send booking confirmation SMS:', smsError);
-        });
+        this.notificationService
+          .sendBookingConfirmationSMS(bookingForEmail)
+          .catch((smsError) => {
+            console.error(
+              '[SMS] Failed to send booking confirmation SMS:',
+              smsError
+            );
+          });
       }
     } catch (error) {
       console.error('[Email] Failed to send booking confirmation:', error);

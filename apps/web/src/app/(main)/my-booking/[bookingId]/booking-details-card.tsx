@@ -21,7 +21,7 @@ import {
   AlertDialogTrigger,
 } from '@movie-hub/shacdn-ui/alert-dialog';
 import { Button } from '@movie-hub/shacdn-ui/button';
-import { CalendarDays, Popcorn, User2, Ticket } from 'lucide-react';
+import { CalendarDays, Popcorn, Ticket } from 'lucide-react';
 import { formatPrice } from '../../../utils/format-price';
 import { bookingsApi } from '@/libs/api/services';
 import { useGetBookingById } from '@/hooks/booking-hooks';
@@ -124,12 +124,12 @@ export function BookingCard({ bookingId }: { bookingId: string }) {
     <div className="space-y-4 w-full">
       <Card
         ref={cardRef}
-        className="bg-rose-500/10 border border-rose-500/20 w-full "
+        className="bg-slate-200/5 border border-slate-200/10 w-full"
       >
         {/* Header */}
-        <CardHeader className="pb-4 border-b border-rose-500/20">
+        <CardHeader className="pb-4 border-b border-slate-200/10">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-xl text-rose-400 font-bold">
+            <CardTitle className="text-xl text-slate-100 font-bold">
               {booking?.movieTitle}
             </CardTitle>
             {booking?.status === BookingStatus.REFUNDED && (
@@ -170,8 +170,8 @@ export function BookingCard({ bookingId }: { bookingId: string }) {
           )}
 
           {/* Showtime */}
-          <div className="flex items-center gap-2 text-neutral-300">
-            <CalendarDays className="w-4 h-4 text-rose-500" />
+          <div className="flex items-center gap-2 text-slate-300">
+            <CalendarDays className="w-4 h-4 text-slate-100" />
             <span>
               {booking?.startTime
                 ? new Date(booking?.startTime).toLocaleString('vi-VN', {
@@ -194,7 +194,7 @@ export function BookingCard({ bookingId }: { bookingId: string }) {
               {booking?.seats.map((s: any) => (
                 <span
                   key={s.seatId}
-                  className="bg-rose-500/20 px-2 py-1 rounded text-neutral-300 text-sm"
+                  className="bg-slate-200/10 px-2 py-1 rounded text-slate-200 text-sm border border-slate-200/20"
                 >
                   {s.row}
                   {s.number}
@@ -210,7 +210,7 @@ export function BookingCard({ bookingId }: { bookingId: string }) {
                 {seatGroups.map((seat: any) => (
                   <div
                     key={seat.type}
-                    className="flex justify-between bg-rose-500/20 p-2 rounded text-sm gap-2"
+                    className="flex justify-between bg-slate-200/5 border border-slate-200/10 p-2 rounded text-sm gap-2"
                   >
                     <span className="text-neutral-300">
                       {seat.type} x{seat.quantity}
@@ -235,10 +235,10 @@ export function BookingCard({ bookingId }: { bookingId: string }) {
             {booking?.concessions?.map((c: any) => (
               <div
                 key={c.name}
-                className="flex justify-between bg-rose-500/20 p-2 rounded text-sm"
+                className="flex justify-between bg-slate-200/5 border border-slate-200/10 p-2 rounded text-sm"
               >
-                <span className="text-neutral-300">
-                  <Popcorn className="w-4 h-4 inline mr-1 text-rose-400" />
+                <span className="text-slate-300">
+                  <Popcorn className="w-4 h-4 inline mr-1 text-slate-100" />
                   {c.name} x{c.quantity}
                 </span>
                 <span className="text-white font-semibold">
@@ -270,18 +270,19 @@ export function BookingCard({ bookingId }: { bookingId: string }) {
           <span className="text-neutral-300">{booking?.paymentStatus}</span>
         </div> */}
           {booking?.status === BookingStatus.CONFIRMED && (
-            <div className="flex justify-center mt-4">
+            <div className="flex justify-center mt-4 bg-white/5 p-4 rounded-lg w-fit mx-auto">
               <QRCodeCanvas
                 value={booking?.bookingCode || '—'}
                 size={128}
-                fgColor="#F43F5E"
+                fgColor="#E2E8F0"
+                bgColor="transparent"
               />
             </div>
           )}
         </CardContent>
 
         {/* Total */}
-        <CardFooter className="pt-4 border-t border-rose-500/20">
+        <CardFooter className="pt-4 border-t border-slate-200/10">
           <div className="flex justify-between items-center w-full">
             <span className="font-semibold text-white">Tổng tiền:</span>
             <span className="font-bold text-lg text-neutral-200">
@@ -301,12 +302,12 @@ export function BookingCard({ bookingId }: { bookingId: string }) {
             <AlertDialogTrigger asChild>
               <Button
                 variant="outline"
-                className="flex-1 border-rose-500 text-rose-500 hover:bg-rose-500/10 hover:text-rose-400"
+                className="flex-1 border-slate-200 text-slate-200 hover:bg-slate-200/10 hover:text-white"
               >
                 Yêu cầu hoàn vé
               </Button>
             </AlertDialogTrigger>
-            <AlertDialogContent className="bg-zinc-900 border-rose-500/20">
+            <AlertDialogContent className="bg-zinc-900 border-slate-200/20">
               <AlertDialogHeader>
                 <AlertDialogTitle className="text-white">
                   Xác nhận hoàn vé
@@ -337,7 +338,7 @@ export function BookingCard({ bookingId }: { bookingId: string }) {
                 <AlertDialogAction
                   onClick={handleRefund}
                   disabled={isRefundLoading}
-                  className="bg-rose-600 hover:bg-rose-700 text-white"
+                  className="bg-slate-200 hover:bg-slate-100 text-slate-900 font-bold"
                 >
                   {isRefundLoading ? 'Đang xử lý...' : 'Đồng ý hoàn vé'}
                 </AlertDialogAction>

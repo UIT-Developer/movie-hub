@@ -427,10 +427,9 @@ export class BookingService {
       id: booking.id,
       bookingCode: booking.booking_code,
       showtimeId: booking.showtime_id,
-      // Cinema service returns cinemaName as string directly
-      movieTitle: 'Movie', // TODO: Need to fetch from movie service separately
+      movieTitle: showtimeData?.showtime?.movieTitle || 'Movie',
       cinemaName: showtimeData?.cinemaName || 'Cinema',
-      hallName: 'Hall', // TODO: Need to fetch from cinema service separately
+      hallName: showtimeData?.hallName || 'Hall',
       startTime: showtimeData?.showtime?.start_time || new Date(),
       seatCount: booking.tickets?.length || 0,
       totalAmount: Number(booking.final_amount),
@@ -679,17 +678,17 @@ export class BookingService {
     const summary: BookingCalculationDto = {
       bookingId: booking.id,
       movie: {
-        id: '', // TODO: Fetch from movie service
-        title: 'Movie', // TODO: Fetch from movie service
+        id: showtimeData?.showtime?.movieId || '',
+        title: showtimeData?.showtime?.movieTitle || 'Movie',
         posterUrl: undefined,
         duration: 0,
         rating: 'N/A',
       },
       cinema: {
-        id: '', // TODO: Fetch from cinema service
+        id: showtimeData?.cinemaId || '',
         name: showtimeData?.cinemaName || 'Cinema',
         address: '',
-        hallName: 'Hall', // TODO: Fetch from cinema service
+        hallName: showtimeData?.hallName || 'Hall',
       },
       showtime: {
         id: booking.showtime_id,
@@ -1357,24 +1356,26 @@ export class BookingService {
     // Get unique showtime IDs
     const showtimeIds = [...new Set(bookings.map((b) => b.showtime_id))];
 
-    // Fetch showtime details from Cinema service to get movieId
+    // 🚀 Batch fetch showtime details from Cinema service (single RPC call instead of N+1)
     const showtimeMap = new Map<string, string>(); // showtimeId -> movieId
 
-    for (const showtimeId of showtimeIds) {
-      try {
-        const showtimeData = await firstValueFrom(
-          this.cinemaClient.send(CinemaMessage.SHOWTIME.GET_SHOWTIME_SEATS, {
-            showtimeId,
-          })
-        );
-        if (showtimeData?.showtime?.movie_id) {
-          showtimeMap.set(showtimeId, showtimeData.showtime.movie_id);
+    try {
+      const showtimeResult = await firstValueFrom(
+        this.cinemaClient.send(CinemaMessage.SHOWTIME.GET_SHOWTIMES_BY_IDS, {
+          showtimeIds,
+        })
+      );
+      const showtimes = showtimeResult?.data || [];
+      for (const st of showtimes) {
+        if (st.movieId) {
+          showtimeMap.set(st.showtimeId, st.movieId);
         }
-      } catch {
-        this.logger.warn(
-          `Failed to fetch showtime ${showtimeId} for movie aggregation`
-        );
       }
+    } catch (error) {
+      this.logger.warn(
+        'Failed to batch fetch showtimes for movie aggregation',
+        error
+      );
     }
 
     // Aggregate by movieId
@@ -1407,13 +1408,21 @@ export class BookingService {
   /**
    * Get revenue grouped by cinema ID (for dashboard)
    * Fetches showtime details to get cinemaId, then aggregates
+   * Also calculates occupancy rate using hall capacities
    */
   async getRevenueGroupedByCinemaId(
     filters: {
       startDate?: Date;
       endDate?: Date;
     } = {}
-  ): Promise<Array<{ cinemaId: string; revenue: number; bookings: number }>> {
+  ): Promise<
+    Array<{
+      cinemaId: string;
+      revenue: number;
+      bookings: number;
+      occupancyRate: number;
+    }>
+  > {
     const where: Prisma.BookingsWhereInput = {
       status: { in: [BookingStatus.CONFIRMED, BookingStatus.COMPLETED] },
     };
@@ -1424,11 +1433,15 @@ export class BookingService {
       if (filters.endDate) where.created_at.lte = filters.endDate;
     }
 
+    // Fetch bookings with ticket count for occupancy calculation
     const bookings = await this.prisma.bookings.findMany({
       where,
       select: {
         showtime_id: true,
         final_amount: true,
+        tickets: {
+          select: { id: true },
+        },
       },
     });
 
@@ -1439,30 +1452,52 @@ export class BookingService {
     // Get unique showtime IDs
     const showtimeIds = [...new Set(bookings.map((b) => b.showtime_id))];
 
-    // Fetch showtime details from Cinema service to get cinemaId
+    // 🚀 Batch fetch showtime details from Cinema service (single RPC call instead of N+1)
     const showtimeMap = new Map<string, string>(); // showtimeId -> cinemaId
 
-    for (const showtimeId of showtimeIds) {
-      try {
-        const showtimeData = await firstValueFrom(
-          this.cinemaClient.send(CinemaMessage.SHOWTIME.GET_SHOWTIME_SEATS, {
-            showtimeId,
-          })
-        );
-        if (showtimeData?.showtime?.cinema_id) {
-          showtimeMap.set(showtimeId, showtimeData.showtime.cinema_id);
+    try {
+      const showtimeResult = await firstValueFrom(
+        this.cinemaClient.send(CinemaMessage.SHOWTIME.GET_SHOWTIMES_BY_IDS, {
+          showtimeIds,
+        })
+      );
+      const showtimes = showtimeResult?.data || [];
+      for (const st of showtimes) {
+        if (st.cinemaId) {
+          showtimeMap.set(st.showtimeId, st.cinemaId);
         }
-      } catch {
-        this.logger.warn(
-          `Failed to fetch showtime ${showtimeId} for cinema aggregation`
-        );
       }
+    } catch (error) {
+      this.logger.warn(
+        'Failed to batch fetch showtimes for cinema aggregation',
+        error
+      );
+    }
+
+    // Fetch hall capacities for occupancy calculation
+    const capacityMap = new Map<string, number>(); // cinemaId -> total capacity
+    try {
+      const capacitiesResult = await firstValueFrom(
+        this.cinemaClient.send(CinemaMessage.HALL.GET_HALL_CAPACITIES, {})
+      );
+      const capacities = capacitiesResult?.data || capacitiesResult || [];
+      for (const cap of capacities) {
+        if (cap.cinemaId) {
+          const current = capacityMap.get(cap.cinemaId) || 0;
+          capacityMap.set(cap.cinemaId, current + (cap.capacity || 0));
+        }
+      }
+    } catch (error) {
+      this.logger.warn(
+        'Failed to fetch hall capacities for occupancy calculation',
+        error
+      );
     }
 
     // Aggregate by cinemaId
     const cinemaStats = new Map<
       string,
-      { revenue: number; bookings: number }
+      { revenue: number; bookings: number; soldSeats: number }
     >();
 
     for (const booking of bookings) {
@@ -1470,22 +1505,31 @@ export class BookingService {
       if (!cinemaId) continue;
 
       if (!cinemaStats.has(cinemaId)) {
-        cinemaStats.set(cinemaId, { revenue: 0, bookings: 0 });
+        cinemaStats.set(cinemaId, { revenue: 0, bookings: 0, soldSeats: 0 });
       }
       const stats = cinemaStats.get(cinemaId);
       if (stats) {
         stats.revenue += Number(booking.final_amount);
         stats.bookings++;
+        stats.soldSeats += booking.tickets?.length || 0;
       }
     }
 
     // Convert to array and sort by revenue descending
     return Array.from(cinemaStats.entries())
-      .map(([cinemaId, stats]) => ({
-        cinemaId,
-        revenue: stats.revenue,
-        bookings: stats.bookings,
-      }))
+      .map(([cinemaId, stats]) => {
+        const totalCapacity = capacityMap.get(cinemaId) || 0;
+        const occupancyRate =
+          totalCapacity > 0
+            ? Math.round((stats.soldSeats / totalCapacity) * 100)
+            : 0;
+        return {
+          cinemaId,
+          revenue: stats.revenue,
+          bookings: stats.bookings,
+          occupancyRate,
+        };
+      })
       .sort((a, b) => b.revenue - a.revenue);
   }
 

@@ -1,7 +1,12 @@
 import { Injectable, Inject, Logger } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
-import { SERVICE_NAME } from '@movie-hub/shared-types';
+import {
+  SERVICE_NAME,
+  BookingMessage,
+  CinemaMessage,
+  MovieServiceMessage,
+} from '@movie-hub/shared-types';
 
 /**
  * Dashboard Aggregation Service
@@ -79,19 +84,24 @@ export class DashboardService {
   }): Promise<any> {
     this.logger.log('Fetching revenue report');
 
-    const result = await firstValueFrom(
-      this.bookingClient.send('booking.getRevenueReport', {
-        filters: {
-          startDate: filters.startDate
-            ? new Date(filters.startDate)
-            : undefined,
-          endDate: filters.endDate ? new Date(filters.endDate) : undefined,
-          groupBy: filters.groupBy || 'day',
-        },
-      })
-    );
+    try {
+      const result = await firstValueFrom(
+        this.bookingClient.send(BookingMessage.GET_REVENUE_REPORT, {
+          filters: {
+            startDate: filters.startDate
+              ? new Date(filters.startDate)
+              : undefined,
+            endDate: filters.endDate ? new Date(filters.endDate) : undefined,
+            groupBy: filters.groupBy || 'day',
+          },
+        })
+      );
 
-    return result.data || result;
+      return result.data || result;
+    } catch (error) {
+      this.logger.error('Failed to fetch revenue report', error);
+      throw error;
+    }
   }
 
   /**
@@ -108,38 +118,43 @@ export class DashboardService {
   > {
     this.logger.log(`Fetching top ${limit} movies by bookings`);
 
-    // Get revenue grouped by movie from booking service
-    const revenueByMovie = await firstValueFrom(
-      this.bookingClient.send('booking.getRevenueByMovieId', {
-        startDate: this.getWeekStart(),
-        endDate: new Date(),
-      })
-    );
+    try {
+      // Get revenue grouped by movie from booking service
+      const revenueByMovie = await firstValueFrom(
+        this.bookingClient.send(BookingMessage.GET_REVENUE_BY_MOVIE, {
+          startDate: this.getWeekStart(),
+          endDate: new Date(),
+        })
+      );
 
-    if (!revenueByMovie || revenueByMovie.length === 0) {
-      return [];
+      if (!revenueByMovie || revenueByMovie.length === 0) {
+        return [];
+      }
+
+      // Get movie IDs to fetch metadata
+      const movieIds = revenueByMovie
+        .slice(0, limit)
+        .map((item: any) => item.movieId);
+
+      // Batch fetch movie metadata
+      const movies = await this.getMoviesByIds(movieIds);
+      const movieMap = new Map(movies.map((m: any) => [m.id, m]));
+
+      // Combine data
+      return revenueByMovie.slice(0, limit).map((item: any) => {
+        const movie = movieMap.get(item.movieId);
+        return {
+          movieId: item.movieId,
+          title: movie?.title || 'Unknown Movie',
+          posterUrl: movie?.posterUrl,
+          totalBookings: item.bookings || 0,
+          totalRevenue: item.revenue || 0,
+        };
+      });
+    } catch (error) {
+      this.logger.error('Failed to fetch top movies', error);
+      throw error;
     }
-
-    // Get movie IDs to fetch metadata
-    const movieIds = revenueByMovie
-      .slice(0, limit)
-      .map((item: any) => item.movieId);
-
-    // Batch fetch movie metadata
-    const movies = await this.getMoviesByIds(movieIds);
-    const movieMap = new Map(movies.map((m: any) => [m.id, m]));
-
-    // Combine data
-    return revenueByMovie.slice(0, limit).map((item: any) => {
-      const movie = movieMap.get(item.movieId);
-      return {
-        movieId: item.movieId,
-        title: movie?.title || 'Unknown Movie',
-        posterUrl: movie?.posterUrl,
-        totalBookings: item.bookings || 0,
-        totalRevenue: item.revenue || 0,
-      };
-    });
   }
 
   /**
@@ -156,33 +171,38 @@ export class DashboardService {
   > {
     this.logger.log(`Fetching top ${limit} cinemas by revenue`);
 
-    // Get revenue grouped by cinema from booking service
-    const revenueByCinema = await firstValueFrom(
-      this.bookingClient.send('booking.getRevenueByCinemaId', {
-        startDate: this.getWeekStart(),
-        endDate: new Date(),
-      })
-    );
+    try {
+      // Get revenue grouped by cinema from booking service
+      const revenueByCinema = await firstValueFrom(
+        this.bookingClient.send(BookingMessage.GET_REVENUE_BY_CINEMA, {
+          startDate: this.getWeekStart(),
+          endDate: new Date(),
+        })
+      );
 
-    if (!revenueByCinema || revenueByCinema.length === 0) {
-      return [];
+      if (!revenueByCinema || revenueByCinema.length === 0) {
+        return [];
+      }
+
+      // Get all cinemas for metadata
+      const cinemas = await this.getCinemas();
+      const cinemaMap = new Map(cinemas.map((c: any) => [c.id, c]));
+
+      // Combine data
+      return revenueByCinema.slice(0, limit).map((item: any) => {
+        const cinema = cinemaMap.get(item.cinemaId);
+        return {
+          cinemaId: item.cinemaId,
+          name: cinema?.name || 'Unknown Cinema',
+          location: cinema?.location || cinema?.address || '',
+          totalRevenue: item.revenue || 0,
+          occupancyRate: item.occupancyRate || 0,
+        };
+      });
+    } catch (error) {
+      this.logger.error('Failed to fetch top cinemas', error);
+      throw error;
     }
-
-    // Get all cinemas for metadata
-    const cinemas = await this.getCinemas();
-    const cinemaMap = new Map(cinemas.map((c: any) => [c.id, c]));
-
-    // Combine data
-    return revenueByCinema.slice(0, limit).map((item: any) => {
-      const cinema = cinemaMap.get(item.cinemaId);
-      return {
-        cinemaId: item.cinemaId,
-        name: cinema?.name || 'Unknown Cinema',
-        location: cinema?.location || cinema?.address || '',
-        totalRevenue: item.revenue || 0,
-        occupancyRate: item.occupancyRate || 0,
-      };
-    });
   }
 
   /**
@@ -191,14 +211,19 @@ export class DashboardService {
   async getRecentBookings(limit = 10): Promise<any[]> {
     this.logger.log(`Fetching ${limit} recent bookings`);
 
-    const result = await firstValueFrom(
-      this.bookingClient.send('booking.admin.findAll', {
-        filters: { limit, sortBy: 'created_at', sortOrder: 'desc' },
-      })
-    );
+    try {
+      const result = await firstValueFrom(
+        this.bookingClient.send(BookingMessage.ADMIN_FIND_ALL, {
+          filters: { limit, sortBy: 'created_at', sortOrder: 'desc' },
+        })
+      );
 
-    const bookings = result.data || result || [];
-    return bookings;
+      const bookings = result.data || result || [];
+      return bookings;
+    } catch (error) {
+      this.logger.error('Failed to fetch recent bookings', error);
+      throw error;
+    }
   }
 
   /**
@@ -207,15 +232,32 @@ export class DashboardService {
   async getRecentReviews(limit = 10): Promise<any[]> {
     this.logger.log(`Fetching ${limit} recent reviews`);
 
-    const result = await firstValueFrom(
-      this.movieClient.send('review.list', {
-        limit,
-        sortBy: 'createdAt',
-        sortOrder: 'desc',
-      })
-    );
+    try {
+      const result = await firstValueFrom(
+        this.movieClient.send(MovieServiceMessage.REVIEW.GET_LIST, {
+          limit,
+          sortBy: 'createdAt',
+          sortOrder: 'desc',
+        })
+      );
 
-    return result.data || result || [];
+      const reviews = result.data || result || [];
+
+      // Map to RecentReviewDto format expected by frontend
+      return reviews.map((r: any) => ({
+        id: r.id,
+        movieId: r.movieId,
+        movieTitle: r.movie?.title || 'Unknown Movie',
+        userId: r.userId,
+        userName: r.userName || 'User', // May need to fetch from user service if not present
+        rating: r.rating,
+        comment: r.content || r.comment || '',
+        createdAt: r.createdAt,
+      }));
+    } catch (error) {
+      this.logger.error('Failed to fetch recent reviews', error);
+      throw error;
+    }
   }
 
   /**
@@ -232,65 +274,87 @@ export class DashboardService {
   > {
     this.logger.log('Fetching occupancy rates');
 
-    const targetDate = date ? new Date(date) : new Date();
-    const startOfDay = new Date(targetDate.setHours(0, 0, 0, 0));
-    const endOfDay = new Date(targetDate.setHours(23, 59, 59, 999));
+    try {
+      const targetDate = date ? new Date(date) : new Date();
+      const startOfDay = new Date(targetDate.setHours(0, 0, 0, 0));
+      const endOfDay = new Date(targetDate.setHours(23, 59, 59, 999));
 
-    // Get hall capacities
-    const capacities = await firstValueFrom(
-      this.cinemaClient.send('cinema.getHallCapacities', {})
-    );
+      // Get hall capacities
+      const capacities = await firstValueFrom(
+        this.cinemaClient.send(CinemaMessage.HALL.GET_HALL_CAPACITIES, {})
+      );
 
-    // Get bookings for the day
-    const bookingsResult = await firstValueFrom(
-      this.bookingClient.send('booking.findByDateRange', {
-        filters: {
-          startDate: startOfDay,
-          endDate: endOfDay,
-          status: 'CONFIRMED',
-        },
-      })
-    );
+      // Get bookings for the day
+      const bookingsResult = await firstValueFrom(
+        this.bookingClient.send(BookingMessage.FIND_BY_DATE_RANGE, {
+          filters: {
+            startDate: startOfDay,
+            endDate: endOfDay,
+            status: 'CONFIRMED',
+            limit: 10000, // Ensure we get all bookings for accurate stats
+          },
+        })
+      );
+      // ... (rest of the logic inside try)
+      const bookings = bookingsResult.data || bookingsResult || [];
 
-    const bookings = bookingsResult.data || bookingsResult || [];
+      // Aggregate by cinema
+      const cinemaOccupancy = new Map<
+        string,
+        { capacity: number; sold: number; name: string }
+      >();
 
-    // Aggregate by cinema
-    const cinemaOccupancy = new Map<
-      string,
-      { capacity: number; sold: number; name: string }
-    >();
-
-    for (const cap of capacities || []) {
-      if (!cinemaOccupancy.has(cap.cinemaId)) {
-        cinemaOccupancy.set(cap.cinemaId, {
-          capacity: 0,
-          sold: 0,
-          name: cap.cinemaName || '',
-        });
+      for (const cap of capacities || []) {
+        if (!cinemaOccupancy.has(cap.cinemaId)) {
+          cinemaOccupancy.set(cap.cinemaId, {
+            capacity: 0,
+            sold: 0,
+            name: cap.cinemaName || '',
+          });
+        }
+        const entry = cinemaOccupancy.get(cap.cinemaId)!;
+        entry.capacity += cap.capacity || 0;
       }
-      const entry = cinemaOccupancy.get(cap.cinemaId)!;
-      entry.capacity += cap.capacity || 0;
-    }
 
-    for (const booking of bookings) {
-      const cinemaId = booking.cinemaId;
-      if (cinemaId && cinemaOccupancy.has(cinemaId)) {
-        const entry = cinemaOccupancy.get(cinemaId)!;
-        entry.sold += booking.seatCount || 1;
+      for (const booking of bookings) {
+        const cinemaId = booking.cinemaId;
+        if (cinemaId && cinemaOccupancy.has(cinemaId)) {
+          const entry = cinemaOccupancy.get(cinemaId)!;
+          entry.sold += booking.seatCount || 1;
+        }
       }
-    }
 
-    return Array.from(cinemaOccupancy.entries()).map(([cinemaId, data]) => ({
-      cinemaId,
-      cinemaName: data.name,
-      totalCapacity: data.capacity,
-      soldSeats: data.sold,
-      occupancyRate:
-        data.capacity > 0 ? Math.round((data.sold / data.capacity) * 100) : 0,
-    }));
+      return Array.from(cinemaOccupancy.entries()).map(([cinemaId, data]) => ({
+        cinemaId,
+        cinemaName: data.name,
+        totalCapacity: data.capacity,
+        soldSeats: data.sold,
+        occupancyRate:
+          data.capacity > 0 ? Math.round((data.sold / data.capacity) * 100) : 0,
+      }));
+    } catch (error) {
+      this.logger.error('Failed to fetch occupancy rates', error);
+      throw error;
+    }
   }
 
   // ==================== Private Helper Methods ====================
+
+  private async getTodayShowtimesCount(): Promise<number> {
+    try {
+      const today = new Date();
+      const result = await firstValueFrom(
+        this.cinemaClient.send(CinemaMessage.MOVIE.GET_ALL_MOVIES_AT_CINEMAS, {
+          date: today.toISOString().split('T')[0],
+        })
+      );
+      const showtimes = result.data || result || [];
+      return Array.isArray(showtimes) ? showtimes.length : 0;
+    } catch (error) {
+      this.logger.warn('Failed to fetch today showtimes', error);
+      return 0;
+    }
+  }
 
   private async getBookingStatistics(filters: {
     startDate?: Date;
@@ -304,7 +368,7 @@ export class DashboardService {
         `Calling booking.getStatistics with filters: ${JSON.stringify(filters)}`
       );
       const result = await firstValueFrom(
-        this.bookingClient.send('booking.getStatistics', {
+        this.bookingClient.send(BookingMessage.GET_STATISTICS, {
           filters,
         })
       );
@@ -326,7 +390,7 @@ export class DashboardService {
   private async getCinemas(): Promise<any[]> {
     try {
       const result = await firstValueFrom(
-        this.cinemaClient.send('cinema.getAll', 'ACTIVE')
+        this.cinemaClient.send(CinemaMessage.GET_CINEMAS, 'ACTIVE')
       );
       return result.data || result || [];
     } catch (error) {
@@ -338,7 +402,11 @@ export class DashboardService {
   private async getMovies(): Promise<any[]> {
     try {
       const result = await firstValueFrom(
-        this.movieClient.send('movie.list', { status: 'PUBLISHED' })
+        this.movieClient.send(MovieServiceMessage.MOVIE.GET_LIST, {
+          status: 'PUBLISHED',
+          sortBy: 'createdAt',
+          sortOrder: 'desc',
+        })
       );
       return result.data || result || [];
     } catch (error) {
@@ -351,28 +419,12 @@ export class DashboardService {
     if (!ids || ids.length === 0) return [];
     try {
       const result = await firstValueFrom(
-        this.movieClient.send('movie.list.by-id', ids)
+        this.movieClient.send(MovieServiceMessage.MOVIE.GET_LIST_BY_ID, ids)
       );
       return result.data || result || [];
     } catch (error) {
       this.logger.warn('Failed to fetch movies by IDs', error);
       return [];
-    }
-  }
-
-  private async getTodayShowtimesCount(): Promise<number> {
-    try {
-      const today = new Date();
-      const result = await firstValueFrom(
-        this.cinemaClient.send('showtime.getByDate', {
-          date: today.toISOString().split('T')[0],
-        })
-      );
-      const showtimes = result.data || result || [];
-      return Array.isArray(showtimes) ? showtimes.length : 0;
-    } catch (error) {
-      this.logger.warn('Failed to fetch today showtimes', error);
-      return 0;
     }
   }
 

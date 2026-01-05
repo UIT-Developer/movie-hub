@@ -70,7 +70,7 @@ export class MovieService {
         },
       },
       orderBy: {
-        [query.sortBy]: query.sortOrder,
+        [query.sortBy || 'createdAt']: query.sortOrder || 'desc',
       },
       skip,
       take: limit,
@@ -126,6 +126,10 @@ export class MovieService {
         },
       },
     });
+
+    if (!movie) {
+      throw new ResourceNotFoundException('Movie', 'id', id);
+    }
 
     const stats = await this.prismaService.review.aggregate({
       where: { movieId: movie.id },

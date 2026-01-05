@@ -1281,6 +1281,7 @@ export default function SettingsPage() {
                     { value: 'none', label: 'None' },
                     { value: 'snow', label: 'Snow (Winter)' },
                     { value: 'sakura', label: 'Sakura (Spring)' },
+                    { value: 'glow', label: 'Glow (Fireflies)' },
                   ].map((effectOption) => (
                     <button
                       key={effectOption.value}

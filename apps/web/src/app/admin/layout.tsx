@@ -199,13 +199,36 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
   const { user } = useUser();
   const router = useRouter();
 
+  React.useEffect(() => {
+    const html = document.documentElement;
+    const body = document.body;
+
+    const hadDark = html.classList.contains('dark');
+    const hadLight = html.classList.contains('light');
+
+    html.classList.remove('dark');
+    html.classList.add('light');
+    body.classList.add('admin-light-mode');
+
+    return () => {
+      html.classList.remove('light');
+      if (hadDark) html.classList.add('dark');
+      if (!hadDark && !hadLight) {
+        // If it didn't have either, we might want to default back to dark
+        // since RootLayout has it hardcoded
+        html.classList.add('dark');
+      }
+      body.classList.remove('admin-light-mode');
+    };
+  }, []);
+
   const handleLogout = async () => {
     await signOut();
     router.push('/admin/login');
   };
 
   return (
-    <div className="flex h-screen bg-gray-50 admin-light-mode">
+    <div className="flex min-h-screen bg-gray-50 admin-light-mode">
       {/* Sidebar */}
       <aside
         className={cn(

@@ -90,6 +90,11 @@ export class ShowtimeController {
     );
   }
 
+  @MessagePattern(CinemaMessage.SHOWTIME.GET_SHOWTIMES_BY_IDS)
+  getShowtimesByIds(@Payload() payload: { showtimeIds: string[] }) {
+    return this.showtimeService.getShowtimesByIds(payload.showtimeIds);
+  }
+
   @MessagePattern(CinemaMessage.SHOWTIME.CREATE_SHOWTIME)
   createShowtime(@Payload() payload: CreateShowtimeRequest) {
     return this.showtimeCommandService.createShowtime(payload);

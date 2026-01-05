@@ -45,6 +45,8 @@ import { PromotionService } from '../../../../apps/booking-service/src/app/promo
 import { RefundController } from '../../../../apps/booking-service/src/app/refund/refund.controller';
 import { RefundService } from '../../../../apps/booking-service/src/app/refund/refund.service';
 import { NotificationService } from '../../../../apps/booking-service/src/app/notification/notification.service';
+import { BookingEventService } from '../../../../apps/booking-service/src/app/redis/booking-event.service';
+import { TicketService } from '../../../../apps/booking-service/src/app/ticket/ticket.service';
 
 // ============================================================================
 // MOCK PROVIDERS
@@ -217,6 +219,15 @@ export async function createBookingTestingModule(): Promise<BookingTestContext> 
       LoyaltyService,
       PromotionService,
       RefundService,
+      TicketService,
+      BookingEventService,
+      {
+        provide: 'REDIS_BOOKING',
+        useValue: {
+          publish: jest.fn(),
+          subscribe: jest.fn(),
+        },
+      },
       {
         provide: SERVICE_NAME.CINEMA,
         useValue: mockCinemaClient,
@@ -352,6 +363,7 @@ export function createTestPromotionRequest(
   const validTo = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days from now
 
   return {
+    name: `Promotion ${Date.now()}`,
     code: `PROMO${Date.now()}`,
     description: 'Test promotion',
     type: 'PERCENTAGE',
@@ -367,6 +379,7 @@ export function createTestPromotionRequest(
 }
 
 export interface CreatePromotionTestData {
+  name: string;
   code: string;
   description: string;
   type: 'PERCENTAGE' | 'FIXED_AMOUNT';
@@ -419,7 +432,7 @@ export async function seedPendingBooking(
         ticket_type: 'ADULT',
         price: 80000,
         ticket_code: `TK${Date.now()}1`,
-        status: TicketStatus.PENDING,
+        status: TicketStatus.VALID,
       },
       {
         booking_id: booking.id,
@@ -427,7 +440,7 @@ export async function seedPendingBooking(
         ticket_type: 'ADULT',
         price: 80000,
         ticket_code: `TK${Date.now()}2`,
-        status: TicketStatus.PENDING,
+        status: TicketStatus.VALID,
       },
     ],
   });
@@ -510,7 +523,6 @@ export async function seedLoyaltyAccount(
     data: {
       user_id: userId,
       current_points: points,
-      lifetime_points: points,
       tier,
     },
   });
@@ -534,9 +546,8 @@ export async function seedTestConcessions(
         name: names[i] || `Item ${i}`,
         description: `Test ${names[i] || 'item'}`,
         price: 30000 + i * 15000,
-        category: categories[i % categories.length],
+        category: categories[i % categories.length] as any,
         available: true,
-        inventory_count: 100,
       },
     });
     ids.push(concession.id);
@@ -556,6 +567,7 @@ export async function seedTestPromotion(
 ): Promise<string> {
   const promotion = await prisma.promotions.create({
     data: {
+      name: `Promotion ${code}`,
       code,
       description: 'Test promotion',
       type,

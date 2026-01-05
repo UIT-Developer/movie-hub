@@ -1,26 +1,44 @@
 const fs = require('fs');
 const path = require('path');
-const {
-  PrismaClient: CinemaClient,
-} = require('../../apps/cinema-service/generated/prisma');
-const {
-  PrismaClient: MovieClient,
-} = require('../../apps/movie-service/generated/prisma');
+
+// Helper to find PrismaClient in different environments (Local vs Docker)
+function getPrismaClient(serviceName, customPath) {
+  const possiblePaths = [
+    customPath || `../../apps/${serviceName}/generated/prisma`, // Local
+    '../../generated/prisma', // Docker (own service)
+    `../../apps/${serviceName}/generated/prisma`, // Docker (other service if mounted)
+  ];
+
+  for (const p of possiblePaths) {
+    try {
+      if (fs.existsSync(path.resolve(__dirname, p))) {
+        return require(p).PrismaClient;
+      }
+    } catch (e) {
+      /* skip */
+    }
+  }
+  return null;
+}
+
+const CinemaClient = getPrismaClient('cinema-service');
+const MovieClient = getPrismaClient('movie-service');
 
 // Initialize Cinema Service client
-const prisma = new CinemaClient();
+const prisma = CinemaClient ? new CinemaClient() : null;
 
 // Initialize Movie Service client for cross-service data fetching
-// In a microservice environment, these typically connect to different databases
-const moviePrisma = new MovieClient({
-  datasources: {
-    db: {
-      url:
-        process.env.MOVIE_DATABASE_URL ||
-        'postgresql://postgres:postgres@localhost:5436/movie_hub_movie',
-    },
-  },
-});
+const moviePrisma = MovieClient
+  ? new MovieClient({
+      datasources: {
+        db: {
+          url:
+            process.env.MOVIE_DATABASE_URL ||
+            'postgresql://postgres:postgres@localhost:5436/movie_hub_movie',
+        },
+      },
+    })
+  : null;
 
 /**
  * Cinema Service Seed Script
@@ -45,8 +63,21 @@ async function main() {
   const dataPath = path.join(__dirname, 'data.json');
   const data = JSON.parse(fs.readFileSync(dataPath, 'utf8'));
 
-  console.log('🎬 Starting Cinema Service seed...');
+  console.log('� Starting Cinema Service seed...');
   console.log('📋 Schema-aligned version with proper relations\n');
+
+  if (!prisma) {
+    console.error(
+      '❌ Cinema Service Prisma client not found. Connection failed!'
+    );
+    process.exit(1);
+  }
+
+  if (!moviePrisma) {
+    console.warn(
+      '⚠️ Movie Service Prisma client not found. Showtime generation may fail.'
+    );
+  }
 
   // Clean existing data in correct order (respecting foreign keys)
   await prisma.$transaction([
@@ -320,7 +351,8 @@ async function main() {
       return dayOfWeek === 0 || dayOfWeek === 6 ? 'WEEKEND' : 'WEEKDAY';
     };
 
-    for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
+    // Generate showtimes for past 30 days + next 7 days
+    for (let dayOffset = -30; dayOffset < 7; dayOffset++) {
       for (const hall of allHalls) {
         // Get the cinema for this hall
         const cinema = Object.values(cinemaMap).find(
@@ -359,6 +391,11 @@ async function main() {
           ); // Movie + 15min buffer
 
           const dayType = getDayType(startTime);
+
+          // LOGIC FIX: Do not generate showtime if before movie release
+          if (new Date(movieRelease.startDate) > startTime) {
+            continue;
+          }
 
           // Determine format based on hall type
           let format = 'TWO_D';

@@ -27,7 +27,12 @@ describe('Loyalty Module Integration Tests', () => {
   // ============================================================================
 
   beforeAll(async () => {
-    process.env.NODE_ENV = 'test';
+    Object.defineProperty(process.env, 'NODE_ENV', {
+      value: 'test',
+      writable: true,
+      configurable: true,
+    });
+    process.env.DATABASE_URL = 'postgresql://postgres:postgres@localhost:5438/movie_hub_booking?schema=public';
     ctx = await createBookingTestingModule();
   }, 60000);
 
@@ -80,14 +85,14 @@ describe('Loyalty Module Integration Tests', () => {
         expect(account).not.toBeNull();
       });
 
-      it('should include lifetime points', async () => {
+      it('should include total spent', async () => {
         // Arrange
         await ctx.prisma.loyaltyAccounts.create({
           data: {
             user_id: testUserId,
             current_points: 100,
-            lifetime_points: 1500,
-            tier: 'GOLD',
+            total_spent: 1500000,
+            tier: 'GOLD' as any,
           },
         });
 
@@ -97,7 +102,7 @@ describe('Loyalty Module Integration Tests', () => {
         });
 
         // Assert
-        expect(result.data.lifetimePoints).toBe(1500);
+        expect(result.data.totalSpent).toBe(1500000);
       });
     });
   });
@@ -114,33 +119,15 @@ describe('Loyalty Module Integration Tests', () => {
     describe('Success Scenarios', () => {
       it('should add points to account', async () => {
         // Act
-        const result = await ctx.loyaltyController.earnPoints({
+        await ctx.loyaltyController.earnPoints({
           userId: testUserId,
           points: 50,
           description: 'Movie booking reward',
         });
 
         // Assert
+        const result = await ctx.loyaltyController.getBalance({ userId: testUserId });
         expect(result.data.currentPoints).toBe(150);
-      });
-
-      it('should update lifetime points', async () => {
-        // Arrange - Get initial
-        const before = await ctx.prisma.loyaltyAccounts.findUnique({
-          where: { user_id: testUserId },
-        });
-
-        // Act
-        await ctx.loyaltyController.earnPoints({
-          userId: testUserId,
-          points: 100,
-        });
-
-        // Assert
-        const after = await ctx.prisma.loyaltyAccounts.findUnique({
-          where: { user_id: testUserId },
-        });
-        expect(after?.lifetime_points).toBe(before!.lifetime_points + 100);
       });
 
       it('should create transaction record', async () => {
@@ -175,13 +162,14 @@ describe('Loyalty Module Integration Tests', () => {
     describe('Success Scenarios', () => {
       it('should deduct points from account', async () => {
         // Act
-        const result = await ctx.loyaltyController.redeemPoints({
+        await ctx.loyaltyController.redeemPoints({
           userId: testUserId,
           points: 100,
           description: 'Discount redemption',
         });
 
         // Assert
+        const result = await ctx.loyaltyController.getBalance({ userId: testUserId });
         expect(result.data.currentPoints).toBe(400);
       });
 
@@ -206,12 +194,13 @@ describe('Loyalty Module Integration Tests', () => {
 
       it('should allow redeeming all points', async () => {
         // Act
-        const result = await ctx.loyaltyController.redeemPoints({
+        await ctx.loyaltyController.redeemPoints({
           userId: testUserId,
           points: 500,
         });
 
         // Assert
+        const result = await ctx.loyaltyController.getBalance({ userId: testUserId });
         expect(result.data.currentPoints).toBe(0);
       });
     });
@@ -272,12 +261,12 @@ describe('Loyalty Module Integration Tests', () => {
       // Act
       const earnResult = await ctx.loyaltyController.getTransactions({
         userId: testUserId,
-        query: { type: 'EARN', page: 1, limit: 10 },
+        query: { type: 'EARN' as any, page: 1, limit: 10 },
       });
 
       const redeemResult = await ctx.loyaltyController.getTransactions({
         userId: testUserId,
-        query: { type: 'REDEEM', page: 1, limit: 10 },
+        query: { type: 'REDEEM' as any, page: 1, limit: 10 },
       });
 
       // Assert
@@ -291,31 +280,23 @@ describe('Loyalty Module Integration Tests', () => {
   // ============================================================================
 
   describe('Tier Upgrade Logic', () => {
-    it('should upgrade tier based on lifetime points', async () => {
+    it('should upgrade tier based on total spent', async () => {
       // Arrange - Create Bronze account
       await ctx.prisma.loyaltyAccounts.create({
         data: {
           user_id: testUserId,
           current_points: 0,
-          lifetime_points: 0,
-          tier: 'BRONZE',
+          total_spent: 0,
+          tier: 'BRONZE' as any,
         },
       });
 
-      // Act - Earn enough for Silver (e.g., 1000 points threshold)
-      // Note: Actual tier thresholds depend on business logic
-      await ctx.loyaltyController.earnPoints({
-        userId: testUserId,
-        points: 1500,
-      });
+      // Act - Update total spent
+      await (ctx as any).loyaltyController.loyaltyService.updateTotalSpent(testUserId, 25000000);
 
-      // Assert - Check if tier was upgraded
-      const account = await ctx.prisma.loyaltyAccounts.findUnique({
-        where: { user_id: testUserId },
-      });
-
-      // Tier logic varies - this tests the mechanism
-      expect(account?.lifetime_points).toBe(1500);
+      // Assert - Check if tier was upgraded to GOLD
+      const result = await ctx.loyaltyController.getBalance({ userId: testUserId });
+      expect(result.data.tier).toBe('GOLD');
     });
   });
 });

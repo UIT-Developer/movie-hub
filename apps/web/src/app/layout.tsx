@@ -5,6 +5,7 @@ import { Inter } from 'next/font/google';
 import { Toaster } from 'sonner';
 import PageWrapper from '../components/providers/page-wrapper';
 import QueryClientProviders from '../components/providers/query-client-provider';
+import ThemeWrapper from '../components/theme/theme-wrapper';
 import { siteConfig } from '../config/site-config';
 import './global.css';
 
@@ -37,8 +38,7 @@ export default function RootLayout({
           >
             <PageWrapper>
               <Toaster theme="light" richColors closeButton />
-
-              {children}
+              <ThemeWrapper>{children}</ThemeWrapper>
             </PageWrapper>
           </ClerkProvider>
         </QueryClientProviders>

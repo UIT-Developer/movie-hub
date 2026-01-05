@@ -232,13 +232,13 @@ export function createTestStaffRequest(
     email: `staff${Date.now()}@test.com`,
     phone: '0901234567',
     gender: 'MALE',
-    dob: '1990-01-15',
+    dob: new Date('1990-01-15'),
     position: 'TICKET_CLERK',
     status: 'ACTIVE',
     workType: 'FULL_TIME',
     shiftType: 'MORNING',
     salary: 10000000,
-    hireDate: '2024-01-01',
+    hireDate: new Date('2024-01-01'),
     ...overrides,
   };
 }
@@ -249,7 +249,7 @@ export interface CreateStaffTestData {
   email: string;
   phone: string;
   gender: 'MALE' | 'FEMALE' | 'OTHER';
-  dob: string;
+  dob: Date;
   position:
     | 'TICKET_CLERK'
     | 'CINEMA_MANAGER'
@@ -261,7 +261,7 @@ export interface CreateStaffTestData {
   workType: 'FULL_TIME' | 'PART_TIME';
   shiftType: 'MORNING' | 'AFTERNOON' | 'EVENING' | 'NIGHT';
   salary: number;
-  hireDate: string;
+  hireDate: Date;
 }
 
 // ============================================================================

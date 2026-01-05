@@ -182,4 +182,5 @@ export const RefundMessage = {
   PROCESS: 'refund.process',
   APPROVE: 'refund.approve',
   REJECT: 'refund.reject',
+  PROCESS_VOUCHER: 'refund.processVoucher',
 };

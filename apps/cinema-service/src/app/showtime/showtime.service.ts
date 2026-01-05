@@ -135,22 +135,33 @@ export class ShowtimeService {
     movieId: string,
     query: GetShowtimesQuery
   ): Promise<ServiceResult<ShowtimeSummaryResponse[]>> {
-    const cacheKey = `showtime:list:${cinemaId}:${movieId}:${query.date}`;
+    const cacheKey = `showtime:list:${cinemaId}:${movieId}:${
+      query.date ?? 'all'
+    }`;
 
     const data = await this.realtimeService.getOrSetCache(
       cacheKey,
       60,
       async () => {
+        const where: Prisma.ShowtimesWhereInput = {
+          cinema_id: cinemaId,
+          movie_id: movieId,
+          status: ShowtimeStatus.SELLING,
+        };
+
+        if (query.date) {
+          where.start_time = {
+            gte: new Date(`${query.date}T00:00:00.000Z`),
+            lt: new Date(`${query.date}T23:59:59.999Z`),
+          };
+        } else {
+          where.start_time = {
+            gte: new Date(),
+          };
+        }
+
         const showtimes = await this.prisma.showtimes.findMany({
-          where: {
-            cinema_id: cinemaId,
-            movie_id: movieId,
-            start_time: {
-              gte: new Date(`${query.date}T00:00:00.000Z`),
-              lt: new Date(`${query.date}T23:59:59.999Z`),
-            },
-            status: ShowtimeStatus.SELLING,
-          },
+          where,
           orderBy: { start_time: 'asc' },
         });
 

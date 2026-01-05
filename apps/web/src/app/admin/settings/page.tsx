@@ -51,6 +51,8 @@ import {
 } from '@movie-hub/shacdn-ui/tabs';
 import { Separator } from '@movie-hub/shacdn-ui/separator';
 import { useToast } from '../_libs/use-toast';
+import { configApi } from '../../../libs/api/services';
+import type { ThemeEffectType } from '../../../components/theme/theme-effects';
 
 // Frontend-specific settings types
 interface ProfileSettings {
@@ -113,6 +115,7 @@ interface AppearanceSettings {
   compactMode: boolean;
   animations: boolean;
   sidebarCollapsed: boolean;
+  effect: ThemeEffectType;
 }
 
 export default function SettingsPage() {
@@ -121,7 +124,7 @@ export default function SettingsPage() {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  
+
   const [profile, setProfile] = useState<ProfileSettings>({
     name: 'Admin User',
     email: 'admin@moviehub.com',
@@ -182,6 +185,7 @@ export default function SettingsPage() {
     compactMode: false,
     animations: true,
     sidebarCollapsed: false,
+    effect: 'none',
   });
 
   const { toast } = useToast();
@@ -198,13 +202,32 @@ export default function SettingsPage() {
       if (parsed.billing) setBilling(parsed.billing);
       if (parsed.appearance) setAppearance(parsed.appearance);
     }
+
+    // Fetch Appearance from API (Source of Truth for Theme)
+    const fetchConfig = async () => {
+      try {
+        const configs = await configApi.getAll();
+        // Handle potential response wrapper or direct array
+        const dataList = (configs as any).data || configs;
+        const appConfig = Array.isArray(dataList)
+          ? dataList.find((c: any) => c.key === 'appearance')
+          : null;
+
+        if (appConfig?.value) {
+          setAppearance((prev) => ({ ...prev, ...appConfig.value }));
+        }
+      } catch (error) {
+        console.error('Failed to sync settings from backend:', error);
+      }
+    };
+    fetchConfig();
   }, []);
 
   const saveSettings = async (section: string) => {
     setLoading(true);
     try {
       await new Promise((resolve) => setTimeout(resolve, 500));
-      
+
       const allSettings = {
         profile,
         notifications,
@@ -214,10 +237,23 @@ export default function SettingsPage() {
         appearance,
       };
       localStorage.setItem('adminSettings', JSON.stringify(allSettings));
-      
+
+      // Sync Appearance to Backend
+      if (section === 'Appearance') {
+        await configApi.update('appearance', {
+          key: 'appearance',
+          value: {
+            theme: appearance.theme,
+            effect: appearance.effect,
+          },
+          description: 'Global Appearance Settings',
+        });
+      }
+
       toast({
         title: 'Settings Saved',
         description: `${section} settings have been updated successfully.`,
+        variant: 'default', // Added variant explicitly
       });
     } catch {
       toast({
@@ -288,7 +324,7 @@ export default function SettingsPage() {
     a.download = 'admin-settings.json';
     a.click();
     URL.revokeObjectURL(url);
-    
+
     toast({
       title: 'Settings Exported',
       description: 'Your settings have been exported successfully.',
@@ -331,7 +367,10 @@ export default function SettingsPage() {
             <User className="h-4 w-4" />
             <span className="hidden sm:inline">Hồ Sơ</span>
           </TabsTrigger>
-          <TabsTrigger value="notifications" className="flex items-center gap-2">
+          <TabsTrigger
+            value="notifications"
+            className="flex items-center gap-2"
+          >
             <Bell className="h-4 w-4" />
             <span className="hidden sm:inline">Thông Báo</span>
           </TabsTrigger>
@@ -489,7 +528,10 @@ export default function SettingsPage() {
               </div>
 
               <div className="flex justify-end">
-                <Button onClick={() => saveSettings('Profile')} disabled={loading}>
+                <Button
+                  onClick={() => saveSettings('Profile')}
+                  disabled={loading}
+                >
                   {loading ? (
                     <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
                   ) : (
@@ -939,7 +981,10 @@ export default function SettingsPage() {
                     type="number"
                     value={system.cacheTTL}
                     onChange={(e) =>
-                      setSystem({ ...system, cacheTTL: parseInt(e.target.value) })
+                      setSystem({
+                        ...system,
+                        cacheTTL: parseInt(e.target.value),
+                      })
                     }
                   />
                 </div>
@@ -999,14 +1044,18 @@ export default function SettingsPage() {
                   onClick={() => {
                     toast({
                       title: 'Cache Cleared',
-                      description: 'System cache has been cleared successfully.',
+                      description:
+                        'System cache has been cleared successfully.',
                     });
                   }}
                 >
                   <Trash2 className="h-4 w-4 mr-2" />
                   Clear Cache
                 </Button>
-                <Button onClick={() => saveSettings('System')} disabled={loading}>
+                <Button
+                  onClick={() => saveSettings('System')}
+                  disabled={loading}
+                >
                   {loading ? (
                     <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
                   ) : (
@@ -1206,7 +1255,10 @@ export default function SettingsPage() {
                     <button
                       key={color.value}
                       onClick={() =>
-                        setAppearance({ ...appearance, accentColor: color.value })
+                        setAppearance({
+                          ...appearance,
+                          accentColor: color.value,
+                        })
                       }
                       className={`w-10 h-10 rounded-full transition-transform ${
                         appearance.accentColor === color.value
@@ -1216,6 +1268,36 @@ export default function SettingsPage() {
                       style={{ backgroundColor: color.value }}
                       title={color.label}
                     />
+                  ))}
+                </div>
+              </div>
+
+              <Separator />
+
+              <div className="space-y-4">
+                <Label>Seasonal Effect</Label>
+                <div className="flex gap-4">
+                  {[
+                    { value: 'none', label: 'None' },
+                    { value: 'snow', label: 'Snow (Winter)' },
+                    { value: 'sakura', label: 'Sakura (Spring)' },
+                  ].map((effectOption) => (
+                    <button
+                      key={effectOption.value}
+                      onClick={() =>
+                        setAppearance({
+                          ...appearance,
+                          effect: effectOption.value as ThemeEffectType,
+                        })
+                      }
+                      className={`flex-1 p-3 rounded-lg border text-sm font-medium transition-all ${
+                        appearance.effect === effectOption.value
+                          ? 'border-purple-500 bg-purple-50 text-purple-700 shadow-sm'
+                          : 'border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      {effectOption.label}
+                    </button>
                   ))}
                 </div>
               </div>
@@ -1282,7 +1364,10 @@ export default function SettingsPage() {
                   <Switch
                     checked={appearance.sidebarCollapsed}
                     onCheckedChange={(checked) =>
-                      setAppearance({ ...appearance, sidebarCollapsed: checked })
+                      setAppearance({
+                        ...appearance,
+                        sidebarCollapsed: checked,
+                      })
                     }
                   />
                 </div>

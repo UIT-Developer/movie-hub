@@ -125,30 +125,44 @@ export default function QuickBooking() {
         );
 
         if (response.data && response.data.length > 0) {
-          // Extract unique dates from showtimes
-          const uniqueDates = response.data.map((st: any) => ({
-            value: st.date,
-            label: new Date(st.date).toLocaleDateString('vi-VN', {
-              day: '2-digit',
-              month: '2-digit',
-              year: 'numeric',
-            }),
-          }));
-          setDates(uniqueDates);
-
-          // Store all showtimes for filtering
-          const allShowtimes = response.data.flatMap((st: any) =>
-            st.showtimes.map((s: any) => ({
-              id: s.id,
-              startTime: s.startTime,
-              date: st.date,
-              label: new Date(s.startTime).toLocaleTimeString('vi-VN', {
+          // Process flat list of showtimes
+          const processedShowtimes = response.data.map((st: any) => {
+            const startDate = new Date(st.startTime);
+            const dateStr = startDate.toISOString().split('T')[0]; // YYYY-MM-DD
+            return {
+              id: st.id,
+              startTime: st.startTime,
+              date: dateStr,
+              label: startDate.toLocaleTimeString('vi-VN', {
                 hour: '2-digit',
                 minute: '2-digit',
+                timeZone: 'UTC',
               }),
-            }))
+            };
+          });
+
+          // Extract unique dates
+          const uniqueDatesMap = new Map();
+          processedShowtimes.forEach((st: any) => {
+            if (!uniqueDatesMap.has(st.date)) {
+              uniqueDatesMap.set(st.date, {
+                value: st.date,
+                label: new Date(st.startTime).toLocaleDateString('vi-VN', {
+                  day: '2-digit',
+                  month: '2-digit',
+                  year: 'numeric',
+                  timeZone: 'UTC',
+                }),
+              });
+            }
+          });
+
+          const uniqueDates = Array.from(uniqueDatesMap.values()).sort((a, b) =>
+            a.value.localeCompare(b.value)
           );
-          setShowtimes(allShowtimes as ShowtimeOption[]);
+
+          setDates(uniqueDates);
+          setShowtimes(processedShowtimes);
         } else {
           toast.info('Không có suất chiếu khả dụng');
         }

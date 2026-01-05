@@ -26,14 +26,19 @@ describe('Staff Module Integration Tests', () => {
   let ctx: UserTestContext;
 
   // Use a fixed cinema ID for testing
-  const testCinemaId = 'cinema-test-id-123';
+  const testCinemaId = '123e4567-e89b-12d3-a456-426614174000';
 
   // ============================================================================
   // TEST LIFECYCLE
   // ============================================================================
 
   beforeAll(async () => {
-    process.env.NODE_ENV = 'test';
+    Object.defineProperty(process.env, 'NODE_ENV', {
+      value: 'test',
+      writable: true,
+      configurable: true,
+    });
+    process.env.DATABASE_URL = 'postgresql://postgres:postgres@localhost:5435/movie_hub_user?schema=public';
     ctx = await createUserTestingModule();
   }, 60000);
 
@@ -110,14 +115,14 @@ describe('Staff Module Integration Tests', () => {
         const eveningShiftRequest = createTestStaffRequest(testCinemaId, {
           fullName: 'Evening Worker',
           email: 'evening@test.com',
-          shiftType: 'EVENING',
+          shiftType: 'NIGHT',
         });
 
         // Act
         const result = await ctx.staffController.create(eveningShiftRequest);
 
         // Assert
-        expect(result.data.shiftType).toBe('EVENING');
+        expect(result.data.shiftType).toBe('NIGHT');
       });
 
       it('should set timestamps on creation', async () => {
@@ -180,12 +185,12 @@ describe('Staff Module Integration Tests', () => {
             fullName: 'John Manager',
             email: 'john.manager@test.com',
             phone: '0901234567',
-            gender: 'MALE',
+            gender: 'MALE' as any,
             dob: new Date('1985-05-15'),
-            position: 'CINEMA_MANAGER',
-            status: 'ACTIVE',
-            workType: 'FULL_TIME',
-            shiftType: 'MORNING',
+            position: 'CINEMA_MANAGER' as any,
+            status: 'ACTIVE' as any,
+            workType: 'FULL_TIME' as any,
+            shiftType: 'MORNING' as any,
             salary: 25000000,
             hireDate: new Date('2020-01-01'),
           },
@@ -194,12 +199,12 @@ describe('Staff Module Integration Tests', () => {
             fullName: 'Jane Clerk',
             email: 'jane.clerk@test.com',
             phone: '0901234568',
-            gender: 'FEMALE',
+            gender: 'FEMALE' as any,
             dob: new Date('1990-08-20'),
-            position: 'TICKET_CLERK',
-            status: 'ACTIVE',
-            workType: 'FULL_TIME',
-            shiftType: 'AFTERNOON',
+            position: 'TICKET_CLERK' as any,
+            status: 'ACTIVE' as any,
+            workType: 'FULL_TIME' as any,
+            shiftType: 'AFTERNOON' as any,
             salary: 12000000,
             hireDate: new Date('2022-06-15'),
           },
@@ -208,12 +213,12 @@ describe('Staff Module Integration Tests', () => {
             fullName: 'Bob Security',
             email: 'bob.security@test.com',
             phone: '0901234569',
-            gender: 'MALE',
+            gender: 'MALE' as any,
             dob: new Date('1988-12-01'),
-            position: 'SECURITY',
-            status: 'INACTIVE',
-            workType: 'PART_TIME',
-            shiftType: 'EVENING',
+            position: 'SECURITY' as any,
+            status: 'INACTIVE' as any,
+            workType: 'PART_TIME' as any,
+            shiftType: 'NIGHT' as any,
             salary: 8000000,
             hireDate: new Date('2023-01-10'),
           },
@@ -222,12 +227,12 @@ describe('Staff Module Integration Tests', () => {
             fullName: 'Alice Other',
             email: 'alice.other@test.com',
             phone: '0901234570',
-            gender: 'FEMALE',
+            gender: 'FEMALE' as any,
             dob: new Date('1992-03-25'),
-            position: 'CONCESSION_STAFF',
-            status: 'ACTIVE',
-            workType: 'FULL_TIME',
-            shiftType: 'MORNING',
+            position: 'CONCESSION_STAFF' as any,
+            status: 'ACTIVE' as any,
+            workType: 'FULL_TIME' as any,
+            shiftType: 'MORNING' as any,
             salary: 10000000,
             hireDate: new Date('2023-03-01'),
           },
@@ -270,7 +275,7 @@ describe('Staff Module Integration Tests', () => {
       it('should filter staff by gender', async () => {
         // Act
         const result = await ctx.staffController.findAll({
-          gender: 'FEMALE',
+          gender: 'FEMALE' as any,
           page: 1,
           limit: 10,
         });
@@ -285,7 +290,7 @@ describe('Staff Module Integration Tests', () => {
       it('should filter staff by position', async () => {
         // Act
         const result = await ctx.staffController.findAll({
-          position: 'CINEMA_MANAGER',
+          position: 'CINEMA_MANAGER' as any,
           page: 1,
           limit: 10,
         });
@@ -298,13 +303,13 @@ describe('Staff Module Integration Tests', () => {
       it('should filter staff by status', async () => {
         // Act
         const activeResult = await ctx.staffController.findAll({
-          status: 'ACTIVE',
+          status: 'ACTIVE' as any,
           page: 1,
           limit: 10,
         });
 
         const inactiveResult = await ctx.staffController.findAll({
-          status: 'INACTIVE',
+          status: 'INACTIVE' as any,
           page: 1,
           limit: 10,
         });
@@ -318,7 +323,7 @@ describe('Staff Module Integration Tests', () => {
       it('should filter staff by workType', async () => {
         // Act
         const result = await ctx.staffController.findAll({
-          workType: 'PART_TIME',
+          workType: 'PART_TIME' as any,
           page: 1,
           limit: 10,
         });
@@ -331,7 +336,7 @@ describe('Staff Module Integration Tests', () => {
       it('should filter staff by shiftType', async () => {
         // Act
         const result = await ctx.staffController.findAll({
-          shiftType: 'MORNING',
+          shiftType: 'MORNING' as any,
           page: 1,
           limit: 10,
         });
@@ -360,8 +365,8 @@ describe('Staff Module Integration Tests', () => {
         // Act
         const result = await ctx.staffController.findAll({
           cinemaId: testCinemaId,
-          gender: 'MALE',
-          status: 'ACTIVE',
+          gender: 'MALE' as any,
+          status: 'ACTIVE' as any,
           page: 1,
           limit: 10,
         });
@@ -395,7 +400,7 @@ describe('Staff Module Integration Tests', () => {
       it('should return empty array when no staff match filters', async () => {
         // Act
         const result = await ctx.staffController.findAll({
-          position: 'PROJECTIONIST', // No one has this position
+          position: 'PROJECTIONIST' as any, // No one has this position
           page: 1,
           limit: 10,
         });
@@ -594,7 +599,7 @@ describe('Staff Module Integration Tests', () => {
           fullName: 'Multi Update',
           position: 'SECURITY',
           salary: 15000000,
-          shiftType: 'EVENING',
+          shiftType: 'NIGHT',
         };
 
         // Act
@@ -607,7 +612,7 @@ describe('Staff Module Integration Tests', () => {
         expect(result.data.fullName).toBe('Multi Update');
         expect(result.data.position).toBe('SECURITY');
         expect(result.data.salary).toBe(15000000);
-        expect(result.data.shiftType).toBe('EVENING');
+        expect(result.data.shiftType).toBe('NIGHT');
       });
 
       it('should not modify fields not included in update', async () => {
@@ -682,8 +687,8 @@ describe('Staff Module Integration Tests', () => {
 
         // Assert - Response
         expect(result.message).toBe('Delete staff successfully!');
-        expect(result.data.id).toBe(testStaffId);
-        expect(result.data.fullName).toBe('Delete Test Staff');
+        expect((result.data as any).id).toBe(testStaffId);
+        expect((result.data as any).fullName).toBe('Delete Test Staff');
 
         // Verify deleted
         const afterDelete = await ctx.prisma.staff.findUnique({

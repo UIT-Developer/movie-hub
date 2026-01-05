@@ -34,7 +34,12 @@ describe('User Module Integration Tests', () => {
   // ============================================================================
 
   beforeAll(async () => {
-    process.env.NODE_ENV = 'test';
+    Object.defineProperty(process.env, 'NODE_ENV', {
+      value: 'test',
+      writable: true,
+      configurable: true,
+    });
+    process.env.DATABASE_URL = 'postgresql://postgres:postgres@localhost:5435/movie_hub_user?schema=public';
     ctx = await createUserTestingModule();
   }, 60000);
 

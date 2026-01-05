@@ -67,7 +67,11 @@ export class MovieController {
   }
 
   @Post(':id/reviews')
-  async createReview(@Body() request: CreateReviewRequest) {
+  async createReview(
+    @Param('id') id: string,
+    @Body() request: CreateReviewRequest
+  ) {
+    request.movieId = id;
     return this.movieService.createReviews(request);
   }
 

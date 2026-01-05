@@ -1,26 +1,44 @@
 const fs = require('fs');
 const path = require('path');
-const {
-  PrismaClient: BookingClient,
-} = require('../../apps/booking-service/generated/prisma');
-const {
-  PrismaClient: CinemaClient,
-} = require('../../apps/cinema-service/generated/prisma');
+
+// Helper to find PrismaClient in different environments (Local vs Docker)
+function getPrismaClient(serviceName, customPath) {
+  const possiblePaths = [
+    customPath || `../../apps/${serviceName}/generated/prisma`, // Local
+    '../../generated/prisma', // Docker (own service)
+    `../../apps/${serviceName}/generated/prisma`, // Docker (other service if mounted)
+  ];
+
+  for (const p of possiblePaths) {
+    try {
+      if (fs.existsSync(path.resolve(__dirname, p))) {
+        return require(p).PrismaClient;
+      }
+    } catch (e) {
+      /* skip */
+    }
+  }
+  return null;
+}
+
+const BookingClient = getPrismaClient('booking-service');
+const CinemaClient = getPrismaClient('cinema-service');
 
 // Initialize Booking Service client
-const prisma = new BookingClient();
+const prisma = BookingClient ? new BookingClient() : null;
 
 // Initialize Cinema Service client for cross-service data fetching
-// In a microservice environment, these connect to different databases
-const cinemaPrisma = new CinemaClient({
-  datasources: {
-    db: {
-      url:
-        process.env.CINEMA_DATABASE_URL ||
-        'postgresql://postgres:postgres@localhost:5437/movie_hub_cinema',
-    },
-  },
-});
+const cinemaPrisma = CinemaClient
+  ? new CinemaClient({
+      datasources: {
+        db: {
+          url:
+            process.env.CINEMA_DATABASE_URL ||
+            'postgresql://postgres:postgres@localhost:5437/movie_hub_cinema',
+        },
+      },
+    })
+  : null;
 
 /**
  * Booking Service Seed Script
@@ -133,6 +151,19 @@ async function main() {
 
   console.log('🎟️ Starting Booking Service seed...');
   console.log('📋 Schema-aligned version with proper relations\n');
+
+  if (!prisma) {
+    console.error(
+      '❌ Booking Service Prisma client not found. Connection failed!'
+    );
+    process.exit(1);
+  }
+
+  if (!cinemaPrisma) {
+    console.warn(
+      '⚠️ Cinema Service Prisma client not found. Data fetching will fail.'
+    );
+  }
 
   // Clean existing data in correct order (respecting foreign keys)
   await prisma.$transaction([
@@ -281,8 +312,23 @@ async function main() {
 
       if (selectedSeats.length === 0) continue;
 
-      // Calculate booking dates (spread over last 6 months)
-      const createdAt = randomDate(180, 0);
+      // Calculate booking relative to showtime
+      const now = new Date();
+      const showtimeDate = new Date(showtime.start_time);
+
+      // Booking created 1-14 days before showtime
+      const daysBefore = randomInt(0, 14);
+      const bookingTime = new Date(
+        showtimeDate.getTime() -
+          daysBefore * 24 * 60 * 60 * 1000 -
+          randomInt(0, 86400000)
+      );
+
+      // Ensure booking time is not in the future relative to now
+      const createdAt = bookingTime > now ? now : bookingTime;
+
+      // Skip if this implies we booked a showtime that hasn't been released yet (simple check)
+      // Assuming movies released 30+ days ago for simplicity or standard logic
 
       // Random user
       const userId = randomElement(data.userIds);
@@ -358,14 +404,16 @@ async function main() {
 
       const finalAmount = Math.max(subtotal - discount - pointsDiscount, 0);
 
-      // Random status (70% completed, 20% pending, 10% cancelled)
-      let status = 'COMPLETED';
+      // Random status
+      // CHANGED: Use CONFIRMED for successful bookings so they appear in revenue reports immediately
+      let status = 'CONFIRMED';
       let paymentStatus = 'COMPLETED';
       let cancelledAt = null;
       let cancellationReason = null;
 
       const statusRoll = Math.random();
-      if (statusRoll < 0.1) {
+      if (statusRoll < 0.05) {
+        // 5% Cancelled
         status = 'CANCELLED';
         paymentStatus = 'REFUNDED';
         cancelledAt = new Date(
@@ -376,9 +424,22 @@ async function main() {
           'Khách hàng yêu cầu hoàn tiền',
           'Không thể tham dự',
         ]);
-      } else if (statusRoll < 0.3) {
+      } else if (statusRoll < 0.1) {
+        // 5% Refunded (NEW)
+        status = 'REFUNDED';
+        paymentStatus = 'REFUNDED'; // Or whatever your system uses for refunded payment status
+        cancelledAt = new Date(
+          createdAt.getTime() + randomInt(1, 24) * 60 * 60 * 1000
+        );
+        cancellationReason = 'User requested refund (Voucher)';
+      } else if (statusRoll < 0.15) {
+        // 5% Pending
         status = 'PENDING';
         paymentStatus = 'PENDING';
+      } else if (statusRoll < 0.25) {
+        // 10% Completed (NEW)
+        status = 'COMPLETED';
+        paymentStatus = 'COMPLETED';
       }
 
       // Generate unique booking code
@@ -425,6 +486,33 @@ async function main() {
         }
         usedTicketCodes.add(ticketCode);
 
+        // Determine ticket status based on booking status
+        let ticketStatus = 'VALID';
+        let usedAt = null;
+
+        if (status === 'CANCELLED' || status === 'REFUNDED') {
+          ticketStatus = 'CANCELLED';
+        } else if (status === 'COMPLETED') {
+          ticketStatus = 'USED';
+          usedAt = new Date(
+            new Date(showtime.start_time).getTime() +
+              randomInt(0, 30) * 60 * 1000
+          );
+        } else if (status === 'CONFIRMED') {
+          if (
+            new Date(showtime.start_time) < new Date() &&
+            Math.random() > 0.2
+          ) {
+            ticketStatus = 'USED';
+            usedAt = new Date(
+              new Date(showtime.start_time).getTime() +
+                randomInt(0, 30) * 60 * 1000
+            );
+          } else {
+            ticketStatus = 'VALID';
+          }
+        }
+
         await prisma.tickets.create({
           data: {
             booking_id: booking.id,
@@ -433,20 +521,8 @@ async function main() {
             qr_code: `QR_${ticketCode}`,
             ticket_type: ticket.type,
             price: ticket.price,
-            status:
-              status === 'CANCELLED'
-                ? 'CANCELLED'
-                : status === 'COMPLETED'
-                ? Math.random() > 0.1
-                  ? 'USED'
-                  : 'VALID'
-                : 'VALID',
-            used_at:
-              status === 'COMPLETED' && Math.random() > 0.1
-                ? new Date(
-                    createdAt.getTime() + randomInt(1, 48) * 60 * 60 * 1000
-                  )
-                : null,
+            status: ticketStatus,
+            used_at: usedAt,
             created_at: createdAt,
           },
         });
@@ -486,8 +562,8 @@ async function main() {
         },
       });
 
-      // Create refund if cancelled
-      if (status === 'CANCELLED' && cancelledAt) {
+      // Create refund if cancelled or refunded
+      if ((status === 'CANCELLED' || status === 'REFUNDED') && cancelledAt) {
         await prisma.refunds.create({
           data: {
             payment_id: payment.id,
@@ -501,7 +577,11 @@ async function main() {
       }
 
       // Random concessions (40% of bookings)
-      if (Math.random() < 0.4 && status !== 'CANCELLED') {
+      if (
+        Math.random() < 0.4 &&
+        status !== 'CANCELLED' &&
+        status !== 'REFUNDED'
+      ) {
         const numConcessions = randomInt(1, 3);
         for (let k = 0; k < numConcessions; k++) {
           const concession = randomElement(concessions);
@@ -519,8 +599,11 @@ async function main() {
         }
       }
 
-      // Loyalty transactions for completed bookings
-      if (status === 'COMPLETED' && userId.includes('user_')) {
+      // Loyalty transactions for confirmed/completed bookings
+      if (
+        (status === 'CONFIRMED' || status === 'COMPLETED') &&
+        userId.includes('user_')
+      ) {
         const loyaltyAccount = loyaltyAccounts.find(
           (acc) => acc.user_id === userId
         );
@@ -570,14 +653,20 @@ async function main() {
   // Summary
   // ===========================
   const bookingCount = await prisma.bookings.count();
-  const completedBookings = await prisma.bookings.count({
-    where: { status: 'COMPLETED' },
+  const confirmedBookings = await prisma.bookings.count({
+    where: { status: 'CONFIRMED' },
   });
   const cancelledBookings = await prisma.bookings.count({
     where: { status: 'CANCELLED' },
   });
   const pendingBookings = await prisma.bookings.count({
     where: { status: 'PENDING' },
+  });
+  const refundedBookings = await prisma.bookings.count({
+    where: { status: 'REFUNDED' },
+  });
+  const completedBookings = await prisma.bookings.count({
+    where: { status: 'COMPLETED' },
   });
   const ticketCount = await prisma.tickets.count();
   const concessionCount = await prisma.concessions.count();
@@ -586,9 +675,9 @@ async function main() {
   const loyaltyTransactionCount = await prisma.loyaltyTransactions.count();
   const refundCount = await prisma.refunds.count();
 
-  // Calculate total revenue
+  // Calculate total revenue (include CONFIRMED and COMPLETED)
   const totalRevenue = await prisma.bookings.aggregate({
-    where: { status: 'COMPLETED' },
+    where: { status: { in: ['CONFIRMED', 'COMPLETED'] } },
     _sum: { final_amount: true },
   });
   const totalConcessionRevenue = await prisma.bookingConcessions.aggregate({
@@ -597,29 +686,31 @@ async function main() {
 
   console.log('\n📊 =============== SEED SUMMARY ===============');
   console.log(`📋 Total Bookings: ${bookingCount}`);
-  console.log(`   ✅ Completed: ${completedBookings}`);
+  console.log(`   ✅ Confirmed: ${confirmedBookings}`);
+  console.log(`   🏁 Completed: ${completedBookings}`);
   console.log(`   ⏳ Pending: ${pendingBookings}`);
   console.log(`   ❌ Cancelled: ${cancelledBookings}`);
+  console.log(`   ↩️  Refunded: ${refundedBookings}`);
   console.log(`🎫 Total Tickets: ${ticketCount}`);
   console.log(`🍿 Concession Types: ${concessionCount}`);
   console.log(`🛒 Concession Orders: ${bookingConcessionCount}`);
   console.log(`💎 Loyalty Accounts: ${loyaltyAccountCount}`);
   console.log(`💰 Loyalty Transactions: ${loyaltyTransactionCount}`);
-  console.log(`↩️  Refunds: ${refundCount}`);
+  console.log(`↩️  Refund Records: ${refundCount}`);
   console.log(
-    `\n💵 Total Revenue: ${(totalRevenue._sum.final_amount || 0).toLocaleString(
-      'vi-VN'
-    )} VND`
+    `\n💵 Total Revenue: ${Number(
+      totalRevenue._sum.final_amount || 0
+    ).toLocaleString('vi-VN')} VND`
   );
   console.log(
-    `🍿 Concession Revenue: ${(
+    `🍿 Concession Revenue: ${Number(
       totalConcessionRevenue._sum.total_price || 0
     ).toLocaleString('vi-VN')} VND`
   );
   console.log(
     `📊 Combined Revenue: ${(
-      (totalRevenue._sum.final_amount || 0) +
-      (totalConcessionRevenue._sum.total_price || 0)
+      Number(totalRevenue._sum.final_amount || 0) +
+      Number(totalConcessionRevenue._sum.total_price || 0)
     ).toLocaleString('vi-VN')} VND`
   );
   console.log('==============================================\n');

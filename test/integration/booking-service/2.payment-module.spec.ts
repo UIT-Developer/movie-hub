@@ -43,7 +43,12 @@ describe('Payment Module Integration Tests', () => {
   // ============================================================================
 
   beforeAll(async () => {
-    process.env.NODE_ENV = 'test';
+    Object.defineProperty(process.env, 'NODE_ENV', {
+      value: 'test',
+      writable: true,
+      configurable: true,
+    });
+    process.env.DATABASE_URL = 'postgresql://postgres:postgres@localhost:5438/movie_hub_booking?schema=public';
     process.env.VNPAY_HASH_SECRET = VNPAY_SECRET;
     ctx = await createBookingTestingModule();
   }, 60000);
@@ -74,7 +79,7 @@ describe('Payment Module Integration Tests', () => {
         // Act
         const result = await ctx.paymentController.create({
           bookingId: testBookingId,
-          dto: { paymentMethod: 'VNPAY' },
+          dto: { paymentMethod: 'VNPAY' as any },
           ipAddr: '127.0.0.1',
         });
 
@@ -96,7 +101,7 @@ describe('Payment Module Integration Tests', () => {
         // Act
         const result = await ctx.paymentController.create({
           bookingId: testBookingId,
-          dto: { paymentMethod: 'VNPAY' },
+          dto: { paymentMethod: 'VNPAY' as any },
           ipAddr: '192.168.1.1',
         });
 
@@ -115,7 +120,7 @@ describe('Payment Module Integration Tests', () => {
         await expect(
           ctx.paymentController.create({
             bookingId: '00000000-0000-0000-0000-000000000000',
-            dto: { paymentMethod: 'VNPAY' },
+            dto: { paymentMethod: 'VNPAY' as any },
             ipAddr: '127.0.0.1',
           })
         ).rejects.toThrow();
@@ -420,13 +425,13 @@ describe('Payment Module Integration Tests', () => {
           {
             booking_id: booking1,
             amount: 100000,
-            payment_method: 'VNPAY',
+            payment_method: 'VNPAY' as any,
             status: PaymentStatus.PENDING,
           },
           {
             booking_id: booking2,
             amount: 200000,
-            payment_method: 'VNPAY',
+            payment_method: 'VNPAY' as any,
             status: PaymentStatus.COMPLETED,
           },
         ],

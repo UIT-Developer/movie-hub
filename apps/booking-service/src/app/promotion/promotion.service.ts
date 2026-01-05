@@ -1,5 +1,10 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
+import { Promotions } from '../../../generated/prisma';
 import {
   PromotionDto,
   PromotionType,
@@ -19,13 +24,13 @@ export class PromotionService {
     type?: PromotionType
   ): Promise<ServiceResult<PromotionDto[]>> {
     const where: any = {};
-    
+
     if (active !== undefined) {
       where.active = active;
       where.valid_from = { lte: new Date() };
       where.valid_to = { gte: new Date() };
     }
-    
+
     if (type) {
       where.type = type;
     }
@@ -88,6 +93,24 @@ export class PromotionService {
       };
     }
 
+    // Check if this is a refund voucher and if it belongs to the requesting user
+    const conditions = promotion.conditions as {
+      isRefundVoucher?: boolean;
+      userId?: string;
+    } | null;
+
+    if (conditions?.isRefundVoucher && conditions?.userId) {
+      if (!dto.userId || dto.userId !== conditions.userId) {
+        return {
+          data: {
+            valid: false,
+            message:
+              'This refund voucher can only be used by its original owner',
+          },
+        };
+      }
+    }
+
     if (
       promotion.min_purchase &&
       dto.bookingAmount < Number(promotion.min_purchase)
@@ -113,6 +136,9 @@ export class PromotionService {
     } else if (promotion.type === PromotionType.FIXED_AMOUNT) {
       discountAmount = Number(promotion.value);
     }
+
+    // Ensure discount doesn't exceed booking amount
+    discountAmount = Math.min(discountAmount, dto.bookingAmount);
 
     const finalAmount = dto.bookingAmount - discountAmount;
 
@@ -198,7 +224,10 @@ export class PromotionService {
     };
   }
 
-  async update(id: string, dto: UpdatePromotionDto): Promise<ServiceResult<PromotionDto>> {
+  async update(
+    id: string,
+    dto: UpdatePromotionDto
+  ): Promise<ServiceResult<PromotionDto>> {
     // Check if promotion exists
     const existing = await this.prisma.promotions.findUnique({
       where: { id },
@@ -296,11 +325,63 @@ export class PromotionService {
 
     return {
       data: this.mapToDto(updated),
-      message: `Promotion ${updated.active ? 'activated' : 'deactivated'} successfully`,
+      message: `Promotion ${
+        updated.active ? 'activated' : 'deactivated'
+      } successfully`,
     };
   }
 
-  private mapToDto(promotion: any): PromotionDto {
+  /**
+   * Generate a refund voucher for a specific booking
+   * Creates a promotion code with 100% of the ticket value, single-use, valid for 1 year
+   */
+  async generateRefundVoucher(params: {
+    userId: string;
+    bookingId: string;
+    amount: number;
+    bookingCode: string;
+  }): Promise<ServiceResult<PromotionDto>> {
+    const code = `REFUND-${params.bookingCode}-${Date.now()
+      .toString(36)
+      .toUpperCase()}`;
+
+    const now = new Date();
+    const validTo = new Date(now);
+    validTo.setFullYear(validTo.getFullYear() + 1); // Valid for 1 year
+
+    const promotion = await this.prisma.promotions.create({
+      data: {
+        code,
+        name: `Refund Voucher - ${params.bookingCode}`,
+        description: `Refund voucher for booking ${
+          params.bookingCode
+        }. Original value: ${params.amount.toLocaleString()} VND`,
+        type: PromotionType.FIXED_AMOUNT,
+        value: params.amount,
+        min_purchase: 0,
+        max_discount: params.amount,
+        valid_from: now,
+        valid_to: validTo,
+        usage_limit: 1,
+        usage_per_user: 1,
+        current_usage: 0,
+        applicable_for: ['REFUND'],
+        conditions: {
+          originalBookingId: params.bookingId,
+          userId: params.userId,
+          isRefundVoucher: true,
+        },
+        active: true,
+      },
+    });
+
+    return {
+      data: this.mapToDto(promotion),
+      message: `Refund voucher generated successfully. Code: ${code}`,
+    };
+  }
+
+  public mapToDto(promotion: Promotions): PromotionDto {
     return {
       id: promotion.id,
       code: promotion.code,
@@ -308,15 +389,19 @@ export class PromotionService {
       description: promotion.description,
       type: promotion.type as PromotionType,
       value: Number(promotion.value),
-      minPurchase: promotion.min_purchase ? Number(promotion.min_purchase) : undefined,
-      maxDiscount: promotion.max_discount ? Number(promotion.max_discount) : undefined,
+      minPurchase: promotion.min_purchase
+        ? Number(promotion.min_purchase)
+        : undefined,
+      maxDiscount: promotion.max_discount
+        ? Number(promotion.max_discount)
+        : undefined,
       validFrom: promotion.valid_from,
       validTo: promotion.valid_to,
       usageLimit: promotion.usage_limit,
       usagePerUser: promotion.usage_per_user,
       currentUsage: promotion.current_usage,
       applicableFor: promotion.applicable_for,
-      conditions: promotion.conditions,
+      conditions: promotion.conditions as any,
       active: promotion.active,
     };
   }

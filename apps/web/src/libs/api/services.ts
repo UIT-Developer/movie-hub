@@ -43,6 +43,10 @@ import type {
   Concession,
   CreateConcessionRequest,
   UpdateConcessionRequest,
+  SystemConfig,
+  UpdateSystemConfigRequest,
+  CreateReviewRequest,
+  UpdateReviewRequest,
 } from './types';
 
 // ============================================================================
@@ -53,17 +57,27 @@ export const moviesApi = {
   getAll: (params?: MoviesListParams) =>
     api.get<Movie[]>('/api/v1/movies', { params }),
 
-  getById: (id: string) =>
-    api.get<Movie>(`/api/v1/movies/${id}`),
+  getById: (id: string) => api.get<Movie>(`/api/v1/movies/${id}`),
 
-  create: (data: CreateMovieRequest) =>
-    api.post<Movie>('/api/v1/movies', data),
+  create: (data: CreateMovieRequest) => api.post<Movie>('/api/v1/movies', data),
 
   update: (id: string, data: UpdateMovieRequest) =>
     api.put<Movie>(`/api/v1/movies/${id}`, data),
 
-  delete: (id: string) =>
-    api.delete(`/api/v1/movies/${id}`),
+  delete: (id: string) => api.delete(`/api/v1/movies/${id}`),
+
+  // Reviews
+  getReviews: (movieId: string, params?: ReviewFiltersParams) =>
+    api.get<Review[]>(`/api/v1/movies/${movieId}/reviews`, { params }),
+
+  createReview: (movieId: string, data: CreateReviewRequest) =>
+    api.post<Review>(`/api/v1/movies/${movieId}/reviews`, data),
+
+  updateReview: (
+    movieId: string,
+    reviewId: string,
+    data: UpdateReviewRequest
+  ) => api.put<Review>(`/api/v1/movies/${movieId}/reviews/${reviewId}`, data),
 };
 
 // ============================================================================
@@ -71,20 +85,16 @@ export const moviesApi = {
 // ============================================================================
 
 export const genresApi = {
-  getAll: () =>
-    api.get<Genre[]>('/api/v1/genres'),
+  getAll: () => api.get<Genre[]>('/api/v1/genres'),
 
-  getById: (id: string) =>
-    api.get<Genre>(`/api/v1/genres/${id}`),
+  getById: (id: string) => api.get<Genre>(`/api/v1/genres/${id}`),
 
-  create: (data: CreateGenreRequest) =>
-    api.post<Genre>('/api/v1/genres', data),
+  create: (data: CreateGenreRequest) => api.post<Genre>('/api/v1/genres', data),
 
   update: (id: string, data: UpdateGenreRequest) =>
     api.put<Genre>(`/api/v1/genres/${id}`, data),
 
-  delete: (id: string) =>
-    api.delete(`/api/v1/genres/${id}`),
+  delete: (id: string) => api.delete(`/api/v1/genres/${id}`),
 };
 
 // ============================================================================
@@ -93,15 +103,11 @@ export const genresApi = {
 
 export const cinemasApi = {
   getAll: async (params?: CinemaFiltersParams): Promise<Cinema[]> => {
-    const response = await api.get<Cinema[]>(
-      '/api/v1/cinemas',
-      { params }
-    );
+    const response = await api.get<Cinema[]>('/api/v1/cinemas', { params });
     return response || [];
   },
 
-  getById: (id: string) =>
-    api.get<Cinema>(`/api/v1/cinemas/${id}`),
+  getById: (id: string) => api.get<Cinema>(`/api/v1/cinemas/${id}`),
 
   create: (data: CreateCinemaRequest) =>
     api.post<Cinema>('/api/v1/cinemas/cinema', data),
@@ -118,8 +124,7 @@ export const cinemasApi = {
 // ============================================================================
 
 export const hallsApi = {
-  getById: (hallId: string) =>
-    api.get<Hall>(`/api/v1/halls/hall/${hallId}`),
+  getById: (hallId: string) => api.get<Hall>(`/api/v1/halls/hall/${hallId}`),
 
   getByCinema: (cinemaId: string) =>
     api.get<Hall[]>(`/api/v1/halls/cinema/${cinemaId}`),
@@ -134,7 +139,7 @@ export const hallsApi = {
         try {
           const halls = await hallsApi.getByCinema(cinema.id);
           // Ensure each hall has cinemaId set (in case BE doesn't return it)
-          const hallsWithCinemaId = (halls || []).map(hall => ({
+          const hallsWithCinemaId = (halls || []).map((hall) => ({
             ...hall,
             cinemaId: hall.cinemaId || cinema.id,
           }));
@@ -155,8 +160,7 @@ export const hallsApi = {
   update: (hallId: string, data: UpdateHallRequest) =>
     api.patch<Hall>(`/api/v1/halls/hall/${hallId}`, data),
 
-  delete: (hallId: string) =>
-    api.delete(`/api/v1/halls/hall/${hallId}`),
+  delete: (hallId: string) => api.delete(`/api/v1/halls/hall/${hallId}`),
 
   updateSeatStatus: (seatId: string, data: UpdateSeatStatusRequest) =>
     api.patch<void>(`/api/v1/halls/seat/${seatId}/status`, data),
@@ -168,7 +172,9 @@ export const hallsApi = {
 
 export const showtimesApi = {
   // Use BE endpoint with proper filters
-  getWithFilters: async (filters: ShowtimeFiltersParams): Promise<Showtime[]> => {
+  getWithFilters: async (
+    filters: ShowtimeFiltersParams
+  ): Promise<Showtime[]> => {
     const { cinemaId, movieId, date, hallId } = filters;
 
     // Build query params for BE endpoint
@@ -179,7 +185,10 @@ export const showtimesApi = {
     if (hallId) params.hallId = hallId;
 
     try {
-      console.log('[ShowtimesAPI] Fetching showtimes with filters:', { filters, params });
+      console.log('[ShowtimesAPI] Fetching showtimes with filters:', {
+        filters,
+        params,
+      });
       // Call BE GET /api/v1/showtimes with filters
       const result = await api.get<Showtime[]>('/api/v1/showtimes', { params });
       console.log('[ShowtimesAPI] Got showtimes:', result);
@@ -190,8 +199,7 @@ export const showtimesApi = {
     }
   },
 
-  getById: (id: string) =>
-    api.get<Showtime>(`/api/v1/showtimes/${id}`),
+  getById: (id: string) => api.get<Showtime>(`/api/v1/showtimes/${id}`),
 
   // Backend endpoint: POST /api/v1/showtimes/showtime
   create: (data: CreateShowtimeRequest) =>
@@ -202,8 +210,7 @@ export const showtimesApi = {
     api.patch<Showtime>(`/api/v1/showtimes/showtime/${id}`, data),
 
   // Backend endpoint: DELETE /api/v1/showtimes/showtime/:id
-  delete: (id: string) =>
-    api.delete(`/api/v1/showtimes/showtime/${id}`),
+  delete: (id: string) => api.delete(`/api/v1/showtimes/showtime/${id}`),
 
   // Backend endpoint: POST /api/v1/showtimes/batch
   batchCreate: (data: BatchCreateShowtimesRequest) =>
@@ -225,13 +232,15 @@ export const movieReleasesApi = {
   getAll: async (params?: MovieReleasesListParams): Promise<MovieRelease[]> => {
     // When movieId is provided, fetch releases for that specific movie
     if (params?.movieId) {
-      return api.get<MovieRelease[]>(`/api/v1/movies/${params.movieId}/releases`);
+      return api.get<MovieRelease[]>(
+        `/api/v1/movies/${params.movieId}/releases`
+      );
     }
-    
+
     // Otherwise, fetch all movies and then fetch releases for each
     // (Workaround for missing GET /api/v1/movie-releases endpoint)
     let movies: Movie[] = [];
-    
+
     try {
       movies = await moviesApi.getAll();
     } catch (error) {
@@ -240,9 +249,9 @@ export const movieReleasesApi = {
       // This fallback won't work for the full list, but is better than complete failure
       return [];
     }
-    
+
     const allReleases: MovieRelease[] = [];
-    
+
     // Fetch releases for each movie and combine
     for (const movie of movies) {
       try {
@@ -250,7 +259,7 @@ export const movieReleasesApi = {
           `/api/v1/movies/${movie.id}/releases`
         );
         // Enrich releases with movie data so dialog can populate fields
-        const enrichedReleases = (releases || []).map(r => ({
+        const enrichedReleases = (releases || []).map((r) => ({
           ...r,
           // Ensure movieId is present for FE usage; backend may omit it
           movieId: r.movieId || movie.id,
@@ -259,17 +268,21 @@ export const movieReleasesApi = {
         allReleases.push(...enrichedReleases);
       } catch {
         // Skip if error fetching for this movie
-        console.warn(`[MovieReleasesAPI] Failed to fetch releases for movie ${movie.id}`);
+        console.warn(
+          `[MovieReleasesAPI] Failed to fetch releases for movie ${movie.id}`
+        );
       }
     }
-    
+
     return allReleases;
   },
 
   getById: async (id: string): Promise<MovieRelease | null> => {
     try {
-      const release = await api.get<MovieRelease>(`/api/v1/movie-releases/${id}`);
-      
+      const release = await api.get<MovieRelease>(
+        `/api/v1/movie-releases/${id}`
+      );
+
       // Enrich with movie data if movieId is present and movie is not already loaded
       if (release && release.movieId && !release.movie) {
         try {
@@ -279,10 +292,12 @@ export const movieReleasesApi = {
           }
         } catch {
           // If movie fetch fails, return release without movie data
-          console.warn(`[MovieReleasesAPI] Failed to fetch movie details for release ${id}`);
+          console.warn(
+            `[MovieReleasesAPI] Failed to fetch movie details for release ${id}`
+          );
         }
       }
-      
+
       return release;
     } catch {
       return null;
@@ -296,8 +311,7 @@ export const movieReleasesApi = {
   update: (id: string, data: UpdateMovieReleaseRequest) =>
     api.put<MovieRelease>(`/api/v1/movie-releases/${id}`, data),
 
-  delete: (id: string) =>
-    api.delete(`/api/v1/movie-releases/${id}`),
+  delete: (id: string) => api.delete(`/api/v1/movie-releases/${id}`),
 };
 
 // ============================================================================
@@ -308,7 +322,9 @@ export const ticketPricingApi = {
   // Backend endpoint: GET /api/v1/ticket-pricings/hall/:hallId
   getAll: (params?: TicketPricingFiltersParams): Promise<TicketPricing[]> => {
     if (params?.hallId) {
-      return api.get<TicketPricing[]>(`/api/v1/ticket-pricings/hall/${params.hallId}`);
+      return api.get<TicketPricing[]>(
+        `/api/v1/ticket-pricings/hall/${params.hallId}`
+      );
     }
     // If no hallId, return empty array (consider implementing fetch for all halls if needed)
     return Promise.resolve([] as TicketPricing[]);
@@ -319,7 +335,10 @@ export const ticketPricingApi = {
 
   // Backend endpoint: PATCH /api/v1/ticket-pricings/pricing/:pricingId
   update: (pricingId: string, data: UpdateTicketPricingRequest) =>
-    api.patch<TicketPricing>(`/api/v1/ticket-pricings/pricing/${pricingId}`, data),
+    api.patch<TicketPricing>(
+      `/api/v1/ticket-pricings/pricing/${pricingId}`,
+      data
+    ),
 };
 
 // ============================================================================
@@ -330,18 +349,15 @@ export const staffApi = {
   getAll: (params?: StaffFiltersParams) =>
     api.get<Staff[]>('/api/v1/staffs', { params }),
 
-  getById: (id: string) =>
-    api.get<Staff>(`/api/v1/staffs/${id}`),
+  getById: (id: string) => api.get<Staff>(`/api/v1/staffs/${id}`),
 
-  create: (data: CreateStaffRequest) =>
-    api.post<Staff>('/api/v1/staffs', data),
+  create: (data: CreateStaffRequest) => api.post<Staff>('/api/v1/staffs', data),
 
   update: (id: string, data: UpdateStaffRequest) =>
     api.put<Staff>(`/api/v1/staffs/${id}`, data),
 
   // Note: Backend might not have DELETE endpoint, adjust if needed
-  delete: (id: string) =>
-    api.delete(`/api/v1/staffs/${id}`),
+  delete: (id: string) => api.delete(`/api/v1/staffs/${id}`),
 };
 
 // ============================================================================
@@ -356,7 +372,12 @@ export const bookingsApi = {
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
         // Skip undefined, null, empty strings, and "all" sentinel values
-        if (value !== undefined && value !== null && value !== '' && value !== 'all') {
+        if (
+          value !== undefined &&
+          value !== null &&
+          value !== '' &&
+          value !== 'all'
+        ) {
           cleanParams[key] = value as string | number | boolean;
         }
       });
@@ -377,7 +398,11 @@ export const bookingsApi = {
     }),
 
   // Get bookings by date range
-  getByDateRange: (startDate: string | Date, endDate: string | Date, status?: BookingStatus) =>
+  getByDateRange: (
+    startDate: string | Date,
+    endDate: string | Date,
+    status?: BookingStatus
+  ) =>
     api.get<BookingSummary[]>('/api/v1/bookings/admin/date-range', {
       params: { startDate, endDate, status },
     }),
@@ -389,6 +414,13 @@ export const bookingsApi = {
   // Confirm booking
   confirm: (bookingId: string) =>
     api.post<BookingDetail>(`/api/v1/bookings/admin/${bookingId}/confirm`),
+
+  // Refund as Voucher
+  refundAsVoucher: (bookingId: string, reason: string) =>
+    api.post<{ voucher: { code: string } }>(
+      `/api/v1/refunds/booking/${bookingId}/voucher`,
+      { reason }
+    ),
 };
 
 // ============================================================================
@@ -399,8 +431,7 @@ export const reviewsApi = {
   getAll: (params?: ReviewFiltersParams) =>
     api.get<Review[]>('/api/v1/reviews', { params }),
 
-  delete: (id: string) =>
-    api.delete(`/api/v1/reviews/${id}`),
+  delete: (id: string) => api.delete(`/api/v1/reviews/${id}`),
 };
 
 // ============================================================================
@@ -408,11 +439,13 @@ export const reviewsApi = {
 // ============================================================================
 
 export const concessionsApi = {
-  getAll: (params?: { cinemaId?: string; category?: string; available?: boolean }) =>
-    api.get<Concession[]>('/api/v1/concessions', { params }),
+  getAll: (params?: {
+    cinemaId?: string;
+    category?: string;
+    available?: boolean;
+  }) => api.get<Concession[]>('/api/v1/concessions', { params }),
 
-  getById: (id: string) =>
-    api.get<Concession>(`/api/v1/concessions/${id}`),
+  getById: (id: string) => api.get<Concession>(`/api/v1/concessions/${id}`),
 
   create: (data: CreateConcessionRequest) =>
     api.post<Concession>('/api/v1/concessions', data),
@@ -420,9 +453,19 @@ export const concessionsApi = {
   update: (id: string, data: UpdateConcessionRequest) =>
     api.put<Concession>(`/api/v1/concessions/${id}`, data),
 
-  delete: (id: string) =>
-    api.delete(`/api/v1/concessions/${id}`),
+  delete: (id: string) => api.delete(`/api/v1/concessions/${id}`),
 
   updateInventory: (id: string, quantity: number) =>
     api.patch<Concession>(`/api/v1/concessions/${id}/inventory`, { quantity }),
+};
+
+// ============================================================================
+// CONFIG API
+// ============================================================================
+
+export const configApi = {
+  getAll: () => api.get<SystemConfig[]>('/api/v1/config'),
+
+  update: (key: string, data: UpdateSystemConfigRequest) =>
+    api.put<SystemConfig>(`/api/v1/config/${key}`, data),
 };

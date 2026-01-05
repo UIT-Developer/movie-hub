@@ -70,11 +70,16 @@ export class UserService {
     description?: string;
   }) {
     return {
-      data: await this.prismaService.setting.update({
+      data: await this.prismaService.setting.upsert({
         where: { key: dto.key },
-        data: {
+        update: {
           value: dto.value ?? undefined,
           description: dto.description ? dto.description : undefined,
+        },
+        create: {
+          key: dto.key,
+          value: dto.value ?? {},
+          description: dto.description || '',
         },
       }),
       message: 'Update setting variable successfully!',

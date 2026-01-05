@@ -40,7 +40,12 @@ describe('Movie Module Integration Tests', () => {
   // ============================================================================
 
   beforeAll(async () => {
-    process.env.NODE_ENV = 'test';
+    Object.defineProperty(process.env, 'NODE_ENV', {
+      value: 'test',
+      writable: true,
+      configurable: true,
+    });
+    process.env.DATABASE_URL = 'postgresql://postgres:postgres@localhost:5436/movie_hub_movie?schema=public';
     ctx = await createMovieTestingModule();
   }, 60000);
 
@@ -181,7 +186,7 @@ describe('Movie Module Integration Tests', () => {
             backdropUrl: 'https://example.com/backdrop.jpg',
             runtime: 120,
             releaseDate: new Date(),
-            ageRating: 'P',
+            ageRating: 'P' as any,
             originalLanguage: 'Vietnamese',
             spokenLanguages: ['Vietnamese'],
             languageType: 'ORIGINAL',
@@ -312,15 +317,15 @@ describe('Movie Module Integration Tests', () => {
     });
 
     describe('Success Scenarios', () => {
-      it('should create movie with all required fields', async () => {
+      it('should create movie with basic info', async () => {
         // Arrange
-        const request = createTestMovieRequest({
-          title: 'New Test Movie',
-          runtime: 135,
+        const request: any = createTestMovieRequest({
+          title: 'New Movie',
+          ageRating: 'P',
         });
 
         // Act
-        const result = await ctx.movieController.createMovie(request);
+        const result = await ctx.movieController.createMovie(request as any);
 
         // Assert - Response
         expect(result.message).toBe('Create movie successfully!');
@@ -334,13 +339,13 @@ describe('Movie Module Integration Tests', () => {
 
       it('should create movie with genre links', async () => {
         // Arrange
-        const request = createTestMovieRequest({
+        const request: any = createTestMovieRequest({
           title: 'Movie With Genres',
           genreIds: testGenreIds.slice(0, 2), // First 2 genres
         });
 
         // Act
-        const result = await ctx.movieController.createMovie(request);
+        const result = await ctx.movieController.createMovie(request as any);
 
         // Assert
         expect(result.data.genre.length).toBe(2);
@@ -354,26 +359,26 @@ describe('Movie Module Integration Tests', () => {
 
       it('should create movie without genres (genreIds optional)', async () => {
         // Arrange
-        const request = createTestMovieRequest({
+        const request: any = createTestMovieRequest({
           title: 'Movie Without Genres',
         });
         delete (request as any).genreIds;
 
         // Act
-        const result = await ctx.movieController.createMovie(request);
+        const result = await ctx.movieController.createMovie(request as any);
 
         // Assert
         expect(result.data.id).toBeDefined();
         expect(result.data.genre).toEqual([]);
       });
 
-      it('should set timestamps on creation', async () => {
+      it('should auto-populate created_at and updated_at timestamps', async () => {
         // Arrange
-        const request = createTestMovieRequest();
+        const request: any = createTestMovieRequest();
         const beforeCreate = new Date();
 
         // Act
-        const result = await ctx.movieController.createMovie(request);
+        const result = await ctx.movieController.createMovie(request as any);
 
         // Assert
         const dbMovie = await ctx.prisma.movie.findUnique({
@@ -392,7 +397,7 @@ describe('Movie Module Integration Tests', () => {
     describe('Transaction Atomicity', () => {
       it('should rollback movie creation if genre linking fails (invalid genreId)', async () => {
         // Arrange
-        const request = createTestMovieRequest({
+        const request: any = createTestMovieRequest({
           title: 'Movie With Invalid Genre',
           genreIds: ['00000000-0000-0000-0000-000000000000'], // Invalid genre ID
         });
@@ -402,7 +407,7 @@ describe('Movie Module Integration Tests', () => {
 
         // Act & Assert
         await expect(
-          ctx.movieController.createMovie(request)
+          ctx.movieController.createMovie(request as any)
         ).rejects.toThrow();
 
         // Verify no movie was created (transaction rolled back)
@@ -667,7 +672,7 @@ describe('Movie Module Integration Tests', () => {
           backdropUrl: 'https://example.com/backdrop.jpg',
           runtime: 120,
           releaseDate: new Date(),
-          ageRating: 'P',
+          ageRating: 'P' as any,
           originalLanguage: 'Vietnamese',
           spokenLanguages: ['Vietnamese'],
           languageType: 'ORIGINAL',

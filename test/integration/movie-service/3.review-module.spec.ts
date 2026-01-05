@@ -32,7 +32,12 @@ describe('Review Module Integration Tests', () => {
   // ============================================================================
 
   beforeAll(async () => {
-    process.env.NODE_ENV = 'test';
+    Object.defineProperty(process.env, 'NODE_ENV', {
+      value: 'test',
+      writable: true,
+      configurable: true,
+    });
+    process.env.DATABASE_URL = 'postgresql://postgres:postgres@localhost:5436/movie_hub_movie?schema=public';
     ctx = await createMovieTestingModule();
   }, 60000);
 
@@ -112,7 +117,7 @@ describe('Review Module Integration Tests', () => {
           movieId: testMovieId,
           page: 1,
           limit: 10,
-        });
+        } as any);
 
         // Assert
         expect(result.message).toBe('Get reviews successfully');
@@ -142,10 +147,10 @@ describe('Review Module Integration Tests', () => {
         // Act
         const result = await ctx.movieController.getReviews({
           movieId: testMovieId,
-          rating: 4,
+          rating: '4',
           page: 1,
           limit: 10,
-        });
+        } as any);
 
         // Assert
         expect(result.data.length).toBe(1);
@@ -158,13 +163,13 @@ describe('Review Module Integration Tests', () => {
           movieId: testMovieId,
           page: 1,
           limit: 2,
-        });
+        } as any);
 
         const page2 = await ctx.movieController.getReviews({
           movieId: testMovieId,
           page: 2,
           limit: 2,
-        });
+        } as any);
 
         // Assert
         expect(page1.data.length).toBe(2);
@@ -179,7 +184,7 @@ describe('Review Module Integration Tests', () => {
           movieId: testMovieId,
           page: 1,
           limit: 10,
-        });
+        } as any);
 
         // Assert - Reviews should be in reverse chronological order
         const dates = result.data.map((r) => new Date(r.createdAt).getTime());
@@ -193,7 +198,7 @@ describe('Review Module Integration Tests', () => {
           movieId: '00000000-0000-0000-0000-000000000000',
           page: 1,
           limit: 10,
-        });
+        } as any);
 
         // Assert
         expect(result.data).toEqual([]);
@@ -251,7 +256,7 @@ describe('Review Module Integration Tests', () => {
         movieId: testMovieId,
         page: 1,
         limit: 10,
-      });
+      } as any);
 
       const reviewControllerResult = await ctx.reviewController.findAll({
         movieId: testMovieId,

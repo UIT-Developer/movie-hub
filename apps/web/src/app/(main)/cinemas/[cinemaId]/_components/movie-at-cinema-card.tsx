@@ -38,6 +38,7 @@ export const MovieAtCinemaCard = ({
         day: '2-digit',
         month: '2-digit',
         year: 'numeric',
+        timeZone: 'UTC',
       });
 
       if (!acc[dateLabel]) acc[dateLabel] = [];
@@ -144,6 +145,7 @@ export const MovieAtCinemaCard = ({
                               {
                                 hour: '2-digit',
                                 minute: '2-digit',
+                                timeZone: 'UTC',
                               }
                             );
 

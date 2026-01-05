@@ -34,7 +34,12 @@ describe('Showtime Module Integration Tests', () => {
   // ============================================================================
 
   beforeAll(async () => {
-    process.env.NODE_ENV = 'test';
+    Object.defineProperty(process.env, 'NODE_ENV', {
+      value: 'test',
+      writable: true,
+      configurable: true,
+    });
+    process.env.DATABASE_URL = 'postgresql://postgres:postgres@localhost:5437/movie_hub_cinema?schema=public';
     ctx = await createCinemaTestingModule();
   }, 60000);
 
@@ -134,6 +139,7 @@ describe('Showtime Module Integration Tests', () => {
       status: string;
       startTime: Date;
       movieId: string;
+      movieReleaseId: string;
     }> = {}
   ) {
     const startTime =
@@ -145,16 +151,17 @@ describe('Showtime Module Integration Tests', () => {
         cinema_id: cinemaId,
         hall_id: hallId,
         movie_id: options.movieId || 'mock-movie-id',
+        movie_release_id: options.movieReleaseId || 'mock-release-id',
         start_time: startTime,
         end_time: endTime,
-        format: 'TWO_D',
+        format: 'TWO_D' as any,
         language: 'Vietnamese',
         subtitles: ['English'],
-        status: options.status || 'SELLING',
+        status: (options.status as any) || 'SELLING',
         total_seats: 100,
         available_seats: 100,
-        day_type: 'WEEKDAY',
-      },
+        day_type: 'WEEKDAY' as any,
+      } as any,
     });
   }
 
@@ -179,14 +186,17 @@ describe('Showtime Module Integration Tests', () => {
       await createTestShowtime(testCinemaId, testHallId, {
         startTime: new Date(today.setHours(10, 0, 0, 0)),
         movieId: 'movie-1',
+        movieReleaseId: 'mock-release-id',
       });
       await createTestShowtime(testCinemaId, testHallId, {
         startTime: new Date(today.setHours(14, 0, 0, 0)),
         movieId: 'movie-1',
+        movieReleaseId: 'mock-release-id',
       });
       await createTestShowtime(testCinemaId, testHallId, {
         startTime: tomorrow,
         movieId: 'movie-2',
+        movieReleaseId: 'mock-release-id',
       });
 
       // Mock movie service
@@ -325,11 +335,13 @@ describe('Showtime Module Integration Tests', () => {
         startTime: today,
         movieId: 'target-movie',
         status: 'SELLING',
+        movieReleaseId: 'mock-release-id',
       });
       await createTestShowtime(testCinemaId, testHallId, {
         startTime: new Date(today.getTime() + 3 * 60 * 60 * 1000),
         movieId: 'target-movie',
         status: 'SCHEDULED', // Should NOT be returned
+        movieReleaseId: 'mock-release-id',
       });
     });
 
@@ -545,10 +557,11 @@ describe('Showtime Module Integration Tests', () => {
           format: 'TWO_D' as const,
           language: 'Vietnamese',
           subtitles: ['English'],
+          status: 'SCHEDULED' as any,
         };
 
         // Act
-        const result = await ctx.showtimeController.createShowtime(request);
+        const result = await ctx.showtimeController.createShowtime(request as any);
 
         // Assert
         expect(result.message).toBe('Showtime created successfully');
@@ -578,10 +591,12 @@ describe('Showtime Module Integration Tests', () => {
           startTime: startTime.toISOString(),
           format: 'TWO_D' as const,
           language: 'Vietnamese',
+          subtitles: [],
+          status: 'SCHEDULED' as any,
         };
 
         // Act
-        const result = await ctx.showtimeController.createShowtime(request);
+        const result = await ctx.showtimeController.createShowtime(request as any);
 
         // Assert
         const dbShowtime = await ctx.prisma.showtimes.findUnique({
@@ -615,7 +630,7 @@ describe('Showtime Module Integration Tests', () => {
 
         // Act & Assert
         await expect(
-          ctx.showtimeController.createShowtime(request)
+          ctx.showtimeController.createShowtime(request as any)
         ).rejects.toMatchObject({
           error: expect.objectContaining({
             code: 'CINEMA_INACTIVE',
@@ -645,7 +660,7 @@ describe('Showtime Module Integration Tests', () => {
 
         // Act & Assert
         await expect(
-          ctx.showtimeController.createShowtime(request)
+          ctx.showtimeController.createShowtime(request as any)
         ).rejects.toMatchObject({
           error: expect.objectContaining({
             code: 'HALL_INACTIVE',

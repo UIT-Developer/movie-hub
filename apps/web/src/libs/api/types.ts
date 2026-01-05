@@ -40,13 +40,7 @@ import {
 } from '@movie-hub/shared-types/booking/enum';
 
 // Re-export with aliases for consistency
-export {
-  Gender,
-  StaffStatus,
-  WorkType,
-  StaffPosition,
-  ShiftType,
-};
+export { Gender, StaffStatus, WorkType, StaffPosition, ShiftType };
 
 export type AgeRating = AgeRatingEnum | string;
 export type LanguageType = LanguageOptionEnum | string;
@@ -60,7 +54,7 @@ export type ShowtimeStatus = ShowtimeStatusEnum | string;
 export type CinemaStatus = CinemaStatusEnum | string;
 
 export type {
-  BookingStatus,  
+  BookingStatus,
   PaymentStatus,
   PaymentMethod,
   RefundStatus,
@@ -70,6 +64,32 @@ export type {
   LoyaltyTransactionType,
   LoyaltyTier,
 };
+
+export interface Promotion {
+  id: string;
+  code: string;
+  name: string;
+  description?: string;
+  type: PromotionType;
+  value: number;
+  minPurchase?: number;
+  maxDiscount?: number;
+  validFrom: string | Date;
+  validTo: string | Date;
+  usageLimit?: number;
+  currentUsage: number;
+  active: boolean;
+}
+
+export interface Refund {
+  id: string;
+  paymentId: string;
+  amount: number;
+  reason: string;
+  status: RefundStatus;
+  refundedAt?: string | Date;
+  createdAt: string | Date;
+}
 
 // ============================================================================
 // CUSTOM INTERFACES
@@ -345,11 +365,11 @@ export interface BatchCreateShowtimesRequest {
   movieReleaseId: string; // Backend requires this
   cinemaId: string;
   hallId: string;
-  startDate: string;      // yyyy-MM-dd (unwrapped from dateRange)
-  endDate: string;        // yyyy-MM-dd (unwrapped from dateRange)
-  timeSlots: string[];    // ["10:00", "14:30", "19:00"]
+  startDate: string; // yyyy-MM-dd (unwrapped from dateRange)
+  endDate: string; // yyyy-MM-dd (unwrapped from dateRange)
+  timeSlots: string[]; // ["10:00", "14:30", "19:00"]
   repeatType: 'DAILY' | 'WEEKLY' | 'CUSTOM_WEEKDAYS';
-  weekdays?: number[];    // [0-6] for CUSTOM_WEEKDAYS mode
+  weekdays?: number[]; // [0-6] for CUSTOM_WEEKDAYS mode
   format: ShowtimeFormat;
   language: string;
   subtitles?: string[];
@@ -787,4 +807,36 @@ export interface ConcessionFiltersParams {
   cinemaId?: string;
   category?: ConcessionCategory | string;
   available?: boolean;
+}
+
+// ============================================================================
+// SYSTEM CONFIG TYPES (API Config)
+// ============================================================================
+
+export interface SystemConfig {
+  key: string;
+  value: any;
+  description?: string;
+  updatedAt?: string;
+}
+
+export interface UpdateSystemConfigRequest {
+  key: string;
+  value: any;
+  description?: string;
+}
+
+// ============================================================================
+// REVIEW REQUEST TYPES
+// ============================================================================
+export interface CreateReviewRequest {
+  movieId: string;
+  userId: string;
+  rating: number;
+  content: string;
+}
+
+export interface UpdateReviewRequest {
+  rating?: number;
+  content?: string;
 }

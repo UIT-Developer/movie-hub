@@ -29,7 +29,12 @@ describe('Promotion Module Integration Tests', () => {
   // ============================================================================
 
   beforeAll(async () => {
-    process.env.NODE_ENV = 'test';
+    Object.defineProperty(process.env, 'NODE_ENV', {
+      value: 'test',
+      writable: true,
+      configurable: true,
+    });
+    process.env.DATABASE_URL = 'postgresql://postgres:postgres@localhost:5438/movie_hub_booking?schema=public';
     ctx = await createBookingTestingModule();
   }, 60000);
 
@@ -52,6 +57,7 @@ describe('Promotion Module Integration Tests', () => {
       await ctx.prisma.promotions.createMany({
         data: [
           {
+            name: 'Active Promotion 1',
             code: 'ACTIVE1',
             description: 'Active promo 1',
             type: 'PERCENTAGE',
@@ -61,6 +67,7 @@ describe('Promotion Module Integration Tests', () => {
             active: true,
           },
           {
+            name: 'Active Promotion 2',
             code: 'ACTIVE2',
             description: 'Active promo 2',
             type: 'FIXED_AMOUNT',
@@ -70,6 +77,7 @@ describe('Promotion Module Integration Tests', () => {
             active: true,
           },
           {
+            name: 'Inactive Promotion',
             code: 'INACTIVE1',
             description: 'Inactive promo',
             type: 'PERCENTAGE',
@@ -104,12 +112,11 @@ describe('Promotion Module Integration Tests', () => {
       expect(inactiveResult.data.length).toBe(1);
     });
 
-    it('should filter by type', async () => {
-      // Act
-      const result = await ctx.promotionController.findAll({
-        type: 'PERCENTAGE',
-      });
-
+          it('should filter by type', async () => {
+            // Act
+            const result = await ctx.promotionController.findAll({
+              type: 'PERCENTAGE' as any,
+            });
       // Assert
       expect(result.data.length).toBe(2);
       result.data.forEach((p) => {
@@ -128,6 +135,7 @@ describe('Promotion Module Integration Tests', () => {
         // Arrange
         await ctx.prisma.promotions.create({
           data: {
+            name: 'Percentage Promotion',
             code: 'PERCENT10',
             description: '10% off',
             type: 'PERCENTAGE',
@@ -155,6 +163,7 @@ describe('Promotion Module Integration Tests', () => {
         // Arrange
         await ctx.prisma.promotions.create({
           data: {
+            name: 'Capped Promotion',
             code: 'CAPPED',
             description: '50% off max 30k',
             type: 'PERCENTAGE',
@@ -180,6 +189,7 @@ describe('Promotion Module Integration Tests', () => {
         // Arrange
         await ctx.prisma.promotions.create({
           data: {
+            name: 'Fixed Amount Promotion',
             code: 'FIXED50K',
             description: '50k off',
             type: 'FIXED_AMOUNT',
@@ -207,6 +217,7 @@ describe('Promotion Module Integration Tests', () => {
         // Arrange
         await ctx.prisma.promotions.create({
           data: {
+            name: 'Expired Promotion',
             code: 'EXPIRED',
             description: 'Expired promo',
             type: 'PERCENTAGE',
@@ -231,6 +242,7 @@ describe('Promotion Module Integration Tests', () => {
         // Arrange
         await ctx.prisma.promotions.create({
           data: {
+            name: 'Limit Reached Promotion',
             code: 'LIMITREACHED',
             description: 'Limit reached',
             type: 'PERCENTAGE',
@@ -257,6 +269,7 @@ describe('Promotion Module Integration Tests', () => {
         // Arrange
         await ctx.prisma.promotions.create({
           data: {
+            name: 'Min Purchase Promotion',
             code: 'MINPURCHASE',
             description: 'Min purchase 100k',
             type: 'PERCENTAGE',
@@ -282,6 +295,7 @@ describe('Promotion Module Integration Tests', () => {
         // Arrange
         await ctx.prisma.promotions.create({
           data: {
+            name: 'Inactive Promotion',
             code: 'INACTIVE',
             description: 'Inactive',
             type: 'PERCENTAGE',
@@ -329,7 +343,7 @@ describe('Promotion Module Integration Tests', () => {
       });
 
       // Act
-      const result = await ctx.promotionController.create({ dto });
+      const result = await ctx.promotionController.create({ dto: dto as any });
 
       // Assert
       expect(result.data).toBeDefined();
@@ -343,12 +357,11 @@ describe('Promotion Module Integration Tests', () => {
       await seedTestPromotion(ctx.prisma, 'DUPLICATE');
 
       // Act & Assert
-      await expect(
-        ctx.promotionController.create({
-          dto: createTestPromotionRequest({ code: 'DUPLICATE' }),
-        })
-      ).rejects.toThrow();
-    });
+              await expect(
+                ctx.promotionController.create({
+                  dto: createTestPromotionRequest({ code: 'DUPLICATE' }) as any,
+                })
+              ).rejects.toThrow();    });
   });
 
   // ============================================================================

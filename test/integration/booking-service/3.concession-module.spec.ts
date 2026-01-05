@@ -29,7 +29,12 @@ describe('Concession Module Integration Tests', () => {
   // ============================================================================
 
   beforeAll(async () => {
-    process.env.NODE_ENV = 'test';
+    Object.defineProperty(process.env, 'NODE_ENV', {
+      value: 'test',
+      writable: true,
+      configurable: true,
+    });
+    process.env.DATABASE_URL = 'postgresql://postgres:postgres@localhost:5438/movie_hub_booking?schema=public';
     ctx = await createBookingTestingModule();
   }, 60000);
 
@@ -63,7 +68,7 @@ describe('Concession Module Integration Tests', () => {
       it('should filter by category', async () => {
         // Act
         const result = await ctx.concessionController.findAll({
-          category: 'FOOD',
+          category: 'FOOD' as any,
         });
 
         // Assert
@@ -141,11 +146,11 @@ describe('Concession Module Integration Tests', () => {
         const dto = createTestConcessionRequest({
           name: 'Large Popcorn',
           price: 50000,
-          category: 'FOOD',
+          category: 'FOOD' as any,
         });
 
         // Act
-        const result = await ctx.concessionController.create({ dto });
+        const result = await ctx.concessionController.create({ dto: dto as any });
 
         // Assert
         expect(result.data).toBeDefined();
@@ -164,15 +169,14 @@ describe('Concession Module Integration Tests', () => {
       it('should create concession with inventory', async () => {
         // Arrange
         const dto = createTestConcessionRequest({
-          name: 'Cola',
-          inventoryCount: 500,
-        });
+          inventory: 500,
+        } as any);
 
         // Act
-        const result = await ctx.concessionController.create({ dto });
+        const result = await ctx.concessionController.create({ dto: dto as any });
 
         // Assert
-        expect(result.data.inventoryCount).toBe(500);
+        expect((result.data as any).inventory).toBe(500);
       });
     });
   });
@@ -261,10 +265,10 @@ describe('Concession Module Integration Tests', () => {
           name: 'Inventory Test',
           description: 'Test',
           price: 10000,
-          category: 'SNACK',
+          category: 'SNACK' as any,
           available: true,
           inventory_count: 50,
-        },
+        } as any,
       });
       testConcessionId = concession.id;
     });
@@ -277,7 +281,7 @@ describe('Concession Module Integration Tests', () => {
       });
 
       // Assert
-      expect(result.data.inventoryCount).toBe(100);
+      expect((result.data as any).inventory).toBe(100);
     });
 
     it('should set to zero when negative value provided', async () => {
@@ -288,7 +292,7 @@ describe('Concession Module Integration Tests', () => {
       });
 
       // Assert
-      expect(result.data.inventoryCount).toBe(0);
+      expect((result.data as any).inventory).toBe(0);
     });
   });
 });

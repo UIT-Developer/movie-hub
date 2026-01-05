@@ -7,6 +7,7 @@ import {
   Param,
   Query,
   UseGuards,
+  Header,
 } from '@nestjs/common';
 import { BookingService } from '../service/booking.service';
 import { ClerkAuthGuard } from '../../../common/guard/clerk-auth.guard';
@@ -34,7 +35,6 @@ export class BookingController {
 
   @Post()
   @UseGuards(ClerkAuthGuard)
-  
   async create(
     @CurrentUserId() userId: string,
     @Body() createBookingDto: CreateBookingDto
@@ -44,7 +44,6 @@ export class BookingController {
 
   @Get()
   @UseGuards(ClerkAuthGuard)
-  
   async findAll(
     @CurrentUserId() userId: string,
     @Query('status') status?: BookingStatus,
@@ -60,16 +59,14 @@ export class BookingController {
 
   @Get(':id')
   @UseGuards(ClerkAuthGuard)
- 
   async findOne(@CurrentUserId() userId: string, @Param('id') id: string) {
     return this.bookingService.findOne(id, userId);
   }
 
   @Post(':id/cancel')
   @UseGuards(ClerkAuthGuard)
-
   async cancel(
-    @CurrentUserId() userId: string ,
+    @CurrentUserId() userId: string,
     @Param('id') id: string,
     @Body('reason') reason?: string
   ) {
@@ -78,10 +75,7 @@ export class BookingController {
 
   @Get(':id/summary')
   @UseGuards(ClerkAuthGuard)
-  async getSummary(
-    @CurrentUserId() userId: string,
-    @Param('id') id: string
-  ) {
+  async getSummary(@CurrentUserId() userId: string, @Param('id') id: string) {
     return this.bookingService.getBookingSummary(id, userId);
   }
 
@@ -98,8 +92,8 @@ export class BookingController {
     @Query('includeStatuses') includeStatuses?: string
   ) {
     // Parse comma-separated statuses if provided
-    const statuses = includeStatuses 
-      ? includeStatuses.split(',').map(s => s.trim() as BookingStatus)
+    const statuses = includeStatuses
+      ? includeStatuses.split(',').map((s) => s.trim() as BookingStatus)
       : undefined;
 
     return this.bookingService.findUserBookingByShowtime(
@@ -196,6 +190,8 @@ export class BookingController {
 
   @Get(':id/refund-calculation')
   @UseGuards(ClerkAuthGuard)
+  @Header('Deprecation', 'true')
+  @Header('X-Deprecation-Notice', 'Use POST /refunds/booking/:id/voucher')
   async calculateRefund(
     @CurrentUserId() userId: string,
     @Param('id') id: string
@@ -205,6 +201,8 @@ export class BookingController {
 
   @Post(':id/cancel-with-refund')
   @UseGuards(ClerkAuthGuard)
+  @Header('Deprecation', 'true')
+  @Header('X-Deprecation-Notice', 'Use POST /refunds/booking/:id/voucher')
   async cancelWithRefund(
     @CurrentUserId() userId: string,
     @Param('id') id: string,

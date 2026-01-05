@@ -1,6 +1,28 @@
 const fs = require('fs');
 const path = require('path');
-const { PrismaClient } = require('../../apps/movie-service/generated/prisma');
+
+// Helper to find PrismaClient in different environments (Local vs Docker)
+function getPrismaClient() {
+  const possiblePaths = [
+    '../../apps/movie-service/generated/prisma', // Local development
+    '../../generated/prisma', // Docker container (flattened)
+  ];
+
+  for (const p of possiblePaths) {
+    try {
+      // Check if the path exists before requiring
+      if (fs.existsSync(path.resolve(__dirname, p))) {
+        return require(p);
+      }
+    } catch (e) {
+      // Ignore errors and try next path
+    }
+  }
+  // Fallback to default
+  return require('../../apps/movie-service/generated/prisma');
+}
+
+const { PrismaClient } = getPrismaClient();
 const prisma = new PrismaClient();
 
 /**
@@ -113,13 +135,21 @@ async function main() {
       }
 
       // Build release dates (CRITICAL: these are needed for Showtimes)
-      const releaseDates = (m.release_dates || []).map((r) => ({
+      let releaseDates = (m.release_dates || []).map((r) => ({
         startDate: new Date(r),
       }));
 
       // Ensure at least one release if none provided
       if (releaseDates.length === 0 && m.release_date) {
         releaseDates.push({ startDate: new Date(m.release_date) });
+      }
+
+      // OVERRIDE: Make 'TRON: Ares' upcoming (2026) for testing
+      if (
+        (m.title && m.title.includes('TRON: Ares')) ||
+        (m.original_title && m.original_title.includes('TRON: Ares'))
+      ) {
+        releaseDates = [{ startDate: new Date('2026-02-15') }];
       }
 
       // Handle backdrop URL - data already contains full URLs, don't add prefix again

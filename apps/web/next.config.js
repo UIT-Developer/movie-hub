@@ -51,14 +51,13 @@ const nextConfig = {
         '@grpc/proto-loader': false,
         '@opencensus/propagation-stackdriver': false,
         '@nestjs/swagger': false,
-        'nestjs-zod': false,
       };
     }
 
     config.plugins.push(
       new webpack.IgnorePlugin({
         resourceRegExp:
-          /@nestjs\/microservices|@nestjs\/swagger|nestjs-zod|class-transformer\/storage|class-validator|@grpc\/proto-loader/,
+          /class-transformer\/storage|class-validator|@grpc\/proto-loader/,
       })
     );
 

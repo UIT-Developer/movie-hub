@@ -37,7 +37,7 @@ export class MovieService {
 
     const where: any = {};
 
-    if (query.status === 'now_show') {
+    if (query.status === 'now_showing') {
       where.movieReleases = {
         some: {
           startDate: { lte: today },

@@ -19,7 +19,7 @@ import {
   SERVICE_NAME,
 } from '@movie-hub/shared-types';
 import * as crypto from 'crypto';
-import moment from 'moment';
+import * as moment from 'moment';
 import * as querystring from 'qs';
 import { BookingEventService } from '../redis/booking-event.service';
 

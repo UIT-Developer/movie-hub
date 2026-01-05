@@ -34,7 +34,13 @@ describe('Hall Module Integration Tests', () => {
   // ============================================================================
 
   beforeAll(async () => {
-    process.env.NODE_ENV = 'test';
+    // Set test environment variables
+    Object.defineProperty(process.env, 'NODE_ENV', {
+      value: 'test',
+      writable: true,
+      configurable: true,
+    });
+    process.env.DATABASE_URL = 'postgresql://postgres:postgres@localhost:5437/movie_hub_cinema?schema=public';
     ctx = await createCinemaTestingModule();
   }, 60000);
 
@@ -317,7 +323,7 @@ describe('Hall Module Integration Tests', () => {
     describe('Success Scenarios', () => {
       it('should create hall with STANDARD layout and auto-generate seats', async () => {
         // Arrange
-        const request = createTestHallRequest(activeCinemaId, {
+        const request: any = createTestHallRequest(activeCinemaId, {
           name: 'New Standard Hall',
           type: 'STANDARD',
           layoutType: 'STANDARD',
@@ -347,7 +353,7 @@ describe('Hall Module Integration Tests', () => {
 
       it('should auto-create ticket pricing for each seat type', async () => {
         // Arrange
-        const request = createTestHallRequest(activeCinemaId);
+        const request: any = createTestHallRequest(activeCinemaId);
 
         // Act
         const result = await ctx.hallController.createHall(request);
@@ -376,7 +382,7 @@ describe('Hall Module Integration Tests', () => {
           },
         });
 
-        const request = createTestHallRequest(inactiveCinema.id);
+        const request: any = createTestHallRequest(inactiveCinema.id);
 
         // Act & Assert
         await expect(
@@ -391,7 +397,7 @@ describe('Hall Module Integration Tests', () => {
 
       it('should throw ResourceNotFoundException for non-existent cinema', async () => {
         // Arrange
-        const request = createTestHallRequest(
+        const request: any = createTestHallRequest(
           '00000000-0000-0000-0000-000000000000'
         );
 
@@ -466,7 +472,7 @@ describe('Hall Module Integration Tests', () => {
 
       it('should update hall status', async () => {
         // Arrange
-        const updateRequest = { status: 'MAINTENANCE' };
+        const updateRequest: any = { status: 'MAINTENANCE' };
 
         // Act
         const result = await ctx.hallController.updateHall({
@@ -536,7 +542,7 @@ describe('Hall Module Integration Tests', () => {
 
       it('should cascade delete seats and pricing', async () => {
         // Arrange - Create hall through controller (which creates pricing)
-        const request = createTestHallRequest(testCinemaId);
+        const request: any = createTestHallRequest(testCinemaId);
         const createResult = await ctx.hallController.createHall(request);
         const hallId = createResult.data.id;
 
@@ -590,15 +596,17 @@ describe('Hall Module Integration Tests', () => {
           data: {
             cinema_id: testCinemaId,
             hall_id: hallId,
-            movie_id: 'mock-movie-id',
+            movie_id: '123e4567-e89b-12d3-a456-426614174001',
+            movie_release_id: '123e4567-e89b-12d3-a456-426614174002',
             start_time: new Date(),
             end_time: new Date(Date.now() + 2 * 60 * 60 * 1000),
-            status: 'SCHEDULED',
-            format: 'TWO_D',
+            status: 'SCHEDULED' as any,
+            format: 'TWO_D' as any,
             language: 'Vietnamese',
             total_seats: 100,
             available_seats: 100,
-          },
+            day_type: 'WEEKDAY' as any,
+          } as any,
         });
 
         // Act & Assert

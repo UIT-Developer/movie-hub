@@ -215,4 +215,50 @@ export class HallService {
       data: undefined,
     };
   }
+
+  /**
+   * Get hall capacities for all halls (or filtered by cinema IDs)
+   * Used for occupancy rate calculations in dashboard
+   */
+  async getHallCapacities(cinemaIds?: string[]): Promise<
+    Array<{
+      hallId: string;
+      hallName: string;
+      cinemaId: string;
+      cinemaName: string;
+      capacity: number;
+    }>
+  > {
+    const where =
+      cinemaIds && cinemaIds.length > 0
+        ? { cinema_id: { in: cinemaIds }, status: 'ACTIVE' as const }
+        : { status: 'ACTIVE' as const };
+
+    const halls = await this.prisma.halls.findMany({
+      where,
+      include: {
+        cinema: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        _count: {
+          select: {
+            seats: {
+              where: { status: 'ACTIVE' },
+            },
+          },
+        },
+      },
+    });
+
+    return halls.map((hall) => ({
+      hallId: hall.id,
+      hallName: hall.name,
+      cinemaId: hall.cinema_id,
+      cinemaName: hall.cinema?.name || '',
+      capacity: hall._count?.seats || 0,
+    }));
+  }
 }

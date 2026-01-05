@@ -29,7 +29,13 @@ describe('Cinema Location Module Integration Tests', () => {
   // ============================================================================
 
   beforeAll(async () => {
-    process.env.NODE_ENV = 'test';
+    // Set test environment variables
+    Object.defineProperty(process.env, 'NODE_ENV', {
+      value: 'test',
+      writable: true,
+      configurable: true,
+    });
+    process.env.DATABASE_URL = 'postgresql://postgres:postgres@localhost:5437/movie_hub_cinema?schema=public';
     ctx = await createCinemaTestingModule();
   }, 60000);
 
@@ -275,7 +281,7 @@ describe('Cinema Location Module Integration Tests', () => {
         expect(result.message).toBe('Get cinemas with filters successfully!');
         expect(result.data.cinemas.length).toBe(2);
         result.data.cinemas.forEach((cinema) => {
-          expect(cinema.location.city?.toLowerCase()).toContain('ho chi minh');
+          expect(cinema.city?.toLowerCase()).toContain('ho chi minh');
         });
       });
 
@@ -399,8 +405,7 @@ describe('Cinema Location Module Integration Tests', () => {
         expect(result.message).toBe('Get cinema detail successfully!');
         expect(result.data.id).toBe(testCinemaId);
         expect(result.data.name).toBe('Test Cinema');
-        expect(result.data.halls).toBeDefined();
-        expect(result.data.halls?.length).toBe(2);
+        expect(result.data.totalHalls).toBe(2);
       });
 
       it('should calculate distance when user location provided', async () => {

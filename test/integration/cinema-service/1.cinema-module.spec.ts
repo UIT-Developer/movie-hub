@@ -34,12 +34,14 @@ describe('Cinema Module Integration Tests', () => {
   // ============================================================================
 
   beforeAll(async () => {
-    // Set test environment
-    process.env.NODE_ENV = 'test';
-
-    // Create the testing module with real DB and mocked external services
+    Object.defineProperty(process.env, 'NODE_ENV', {
+      value: 'test',
+      writable: true,
+      configurable: true,
+    });
+    process.env.DATABASE_URL = 'postgresql://postgres:postgres@localhost:5437/movie_hub_cinema?schema=public';
     ctx = await createCinemaTestingModule();
-  }, 60000); // Increased timeout for module compilation
+  }, 60000);
 
   afterAll(async () => {
     // Clean up test data
@@ -62,14 +64,14 @@ describe('Cinema Module Integration Tests', () => {
     describe('Success Scenarios', () => {
       it('should create a cinema with all required fields', async () => {
         // Arrange
-        const request = createTestCinemaRequest({
+        const request: any = createTestCinemaRequest({
           name: 'CGV Vincom Center',
           address: '72 Le Thanh Ton, District 1',
           city: 'Ho Chi Minh City',
         });
 
         // Act
-        const result = await ctx.cinemaController.createCinema(request);
+        const result = await ctx.cinemaController.createCinema(request as any);
 
         // Assert - Response structure
         expect(result).toHaveProperty('data');
@@ -88,7 +90,7 @@ describe('Cinema Module Integration Tests', () => {
 
       it('should create a cinema with all optional fields', async () => {
         // Arrange
-        const request = createTestCinemaRequest({
+        const request: any = createTestCinemaRequest({
           name: 'Galaxy Cinema Nguyen Du',
           address: '116 Nguyen Du, District 1',
           city: 'Ho Chi Minh City',
@@ -109,7 +111,7 @@ describe('Cinema Module Integration Tests', () => {
         });
 
         // Act
-        const result = await ctx.cinemaController.createCinema(request);
+        const result = await ctx.cinemaController.createCinema(request as any);
 
         // Assert - Response data
         const cinema = result.data;
@@ -135,7 +137,7 @@ describe('Cinema Module Integration Tests', () => {
 
       it('should set default status to ACTIVE if not provided', async () => {
         // Arrange
-        const request = createTestCinemaRequest();
+        const request: any = createTestCinemaRequest();
         delete (request as any).status;
 
         // Act
@@ -153,7 +155,7 @@ describe('Cinema Module Integration Tests', () => {
 
       it('should set default timezone to Asia/Ho_Chi_Minh', async () => {
         // Arrange
-        const request = createTestCinemaRequest();
+        const request: any = createTestCinemaRequest();
 
         // Act
         const result = await ctx.cinemaController.createCinema(request);
@@ -170,7 +172,7 @@ describe('Cinema Module Integration Tests', () => {
 
       it('should auto-populate created_at and updated_at timestamps', async () => {
         // Arrange
-        const request = createTestCinemaRequest();
+        const request: any = createTestCinemaRequest();
         const beforeCreate = new Date();
 
         // Act
@@ -196,7 +198,7 @@ describe('Cinema Module Integration Tests', () => {
 
       it('should generate a valid UUID for the cinema id', async () => {
         // Arrange
-        const request = createTestCinemaRequest();
+        const request: any = createTestCinemaRequest();
 
         // Act
         const result = await ctx.cinemaController.createCinema(request);
@@ -214,7 +216,7 @@ describe('Cinema Module Integration Tests', () => {
 
       it('should handle duplicate cinema creation gracefully', async () => {
         // Arrange
-        const request = createTestCinemaRequest({
+        const request: any = createTestCinemaRequest({
           name: 'Unique Cinema Name',
         });
 
@@ -272,7 +274,7 @@ describe('Cinema Module Integration Tests', () => {
 
       it('should update cinema status to MAINTENANCE', async () => {
         // Arrange
-        const updateRequest = { status: 'MAINTENANCE' as const };
+        const updateRequest: any = { status: 'MAINTENANCE' as const };
 
         // Act
         const result = await ctx.cinemaController.updateCinema({
@@ -362,7 +364,7 @@ describe('Cinema Module Integration Tests', () => {
     describe('Success Scenarios', () => {
       it('should delete cinema with no dependencies', async () => {
         // Arrange - Create a cinema with no halls
-        const request = createTestCinemaRequest();
+        const request: any = createTestCinemaRequest();
         const created = await ctx.cinemaController.createCinema(request);
         const cinemaId = created.data.id;
 
@@ -405,7 +407,7 @@ describe('Cinema Module Integration Tests', () => {
 
       it('should throw CINEMA_IN_USE when cinema has halls', async () => {
         // Arrange - Create cinema with a hall
-        const cinemaRequest = createTestCinemaRequest();
+        const cinemaRequest: any = createTestCinemaRequest();
         const cinemaResult = await ctx.cinemaController.createCinema(
           cinemaRequest
         );
@@ -568,7 +570,7 @@ describe('Cinema Module Integration Tests', () => {
     beforeEach(async () => {
       // Create a cinema
       const cinemaResult = await ctx.cinemaController.createCinema(
-        createTestCinemaRequest({ name: 'Cinema With Movies' })
+        createTestCinemaRequest({ name: 'Cinema With Movies' }) as any
       );
       testCinemaId = cinemaResult.data.id;
 
@@ -637,12 +639,13 @@ describe('Cinema Module Integration Tests', () => {
             movie_id: 'mock-movie-id',
             start_time: futureDate,
             end_time: new Date(futureDate.getTime() + 2 * 60 * 60 * 1000),
-            status: 'SELLING',
-            format: 'TWO_D',
+            status: 'SELLING' as any,
+            format: 'TWO_D' as any,
             language: 'Vietnamese',
             total_seats: 100,
             available_seats: 100,
-          },
+            day_type: 'WEEKDAY' as any,
+          } as any,
         });
 
         // Mock movie service response

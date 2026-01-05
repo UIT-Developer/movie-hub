@@ -9,21 +9,31 @@ import {
   CardHeader,
   CardTitle,
 } from '@movie-hub/shacdn-ui/card';
-
-import { CalendarDays, Popcorn, User2 } from 'lucide-react';
-import { formatPrice } from '../../../utils/format-price';
 import {
-  BookingDetailDto,
-  BookingStatus,
-} from '@/libs/types/booking.type';
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@movie-hub/shacdn-ui/alert-dialog';
+import { Button } from '@movie-hub/shacdn-ui/button';
+import { CalendarDays, Popcorn, User2, Ticket } from 'lucide-react';
+import { formatPrice } from '../../../utils/format-price';
+import { bookingsApi } from '@/libs/api/services';
 import { useGetBookingById } from '@/hooks/booking-hooks';
+import { BookingStatus } from '@/libs/types/booking.type';
+import { toast } from 'sonner';
+import { useState, useRef } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { QRCodeCanvas } from 'qrcode.react';
+import { Loader } from '@/components/loader';
 import { ErrorFallback } from '@/components/error-fallback';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
-import { useRef } from 'react';
-import { Button } from '@movie-hub/shacdn-ui/button';
-import { QRCodeCanvas } from 'qrcode.react';
-import { Loader } from '@/components/loader';
 
 export function BookingCard({ bookingId }: { bookingId: string }) {
   const {
@@ -32,12 +42,9 @@ export function BookingCard({ bookingId }: { bookingId: string }) {
     isError,
     error,
   } = useGetBookingById(bookingId);
-
-  // const statusColor = {
-  //   COMPLETED: 'bg-green-500/20 text-green-300',
-  //   PENDING: 'bg-yellow-500/20 text-yellow-300',
-  //   CANCELLED: 'bg-red-500/20 text-red-300',
-  // };
+  const queryClient = useQueryClient();
+  const [isRefundLoading, setIsRefundLoading] = useState(false);
+  const [refundVoucher, setRefundVoucher] = useState<string | null>(null);
 
   const cardRef = useRef<HTMLDivElement>(null);
 
@@ -54,11 +61,42 @@ export function BookingCard({ bookingId }: { bookingId: string }) {
     pdf.save(`booking-${booking?.bookingCode}.pdf`);
   };
 
-  if (isLoading) return (
-     <div className="flex h-full items-center justify-center">
-    <Loader size={32} />
-  </div>
-  )
+  const handleRefund = async () => {
+    if (!booking) return;
+
+    // Client-side validation for 24h
+    const showtimeDate = new Date(booking.startTime);
+    const now = new Date();
+    const hoursDiff =
+      (showtimeDate.getTime() - now.getTime()) / (1000 * 60 * 60);
+
+    if (hoursDiff <= 24) {
+      toast.error('Chỉ được hoàn vé trước giờ chiếu ít nhất 24 tiếng.');
+      return;
+    }
+
+    try {
+      setIsRefundLoading(true);
+      const result = await bookingsApi.refundAsVoucher(
+        booking.id,
+        'User requested refund'
+      );
+      setRefundVoucher(result.voucher.code);
+      toast.success('Hoàn vé thành công! Voucher của bạn đã được tạo.');
+      queryClient.invalidateQueries({ queryKey: ['booking', bookingId] });
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Có lỗi xảy ra khi hoàn vé');
+    } finally {
+      setIsRefundLoading(false);
+    }
+  };
+
+  if (isLoading)
+    return (
+      <div className="flex h-full items-center justify-center">
+        <Loader size={32} />
+      </div>
+    );
 
   if (isError) return <ErrorFallback message={error.message} />;
 
@@ -76,6 +114,12 @@ export function BookingCard({ bookingId }: { bookingId: string }) {
     }, {})
   );
 
+  // Logic to check if refundable
+  const isRefundable =
+    booking?.status === BookingStatus.CONFIRMED &&
+    new Date(booking.startTime).getTime() - new Date().getTime() >
+      24 * 60 * 60 * 1000;
+
   return (
     <div className="space-y-4 w-full">
       <Card
@@ -88,10 +132,11 @@ export function BookingCard({ bookingId }: { bookingId: string }) {
             <CardTitle className="text-xl text-rose-400 font-bold">
               {booking?.movieTitle}
             </CardTitle>
-
-            {/* <Badge className={statusColor[booking.status]}>
-            {booking.status}
-          </Badge> */}
+            {booking?.status === BookingStatus.REFUNDED && (
+              <Badge className="bg-orange-500/20 text-orange-300 border-orange-500/50">
+                ĐÃ HOÀN VÉ
+              </Badge>
+            )}
           </div>
 
           <CardDescription className="text-neutral-400 text-sm">
@@ -104,6 +149,26 @@ export function BookingCard({ bookingId }: { bookingId: string }) {
 
         {/* Content */}
         <CardContent className="space-y-6 mt-4">
+          {/* Refund Voucher Display */}
+          {(refundVoucher || booking?.status === BookingStatus.REFUNDED) && (
+            <div className="bg-orange-500/10 border border-orange-500/30 p-4 rounded-lg space-y-2">
+              <div className="flex items-center gap-2 text-orange-300 font-semibold">
+                <Ticket className="w-5 h-5" />
+                <span>Voucher hoàn tiền</span>
+              </div>
+              <p className="text-sm text-neutral-300">
+                Mã voucher:{' '}
+                <span className="text-white font-mono font-bold text-lg">
+                  {refundVoucher || 'Kiểm tra email của bạn'}
+                </span>
+              </p>
+              <p className="text-xs text-neutral-400">
+                Voucher có giá trị 100% tiền vé và có hạn 1 năm. Chỉ áp dụng cho
+                tài khoản của bạn.
+              </p>
+            </div>
+          )}
+
           {/* Showtime */}
           <div className="flex items-center gap-2 text-neutral-300">
             <CalendarDays className="w-4 h-4 text-rose-500" />
@@ -225,9 +290,62 @@ export function BookingCard({ bookingId }: { bookingId: string }) {
           </div>
         </CardFooter>
       </Card>
-      <Button onClick={handleDownloadPDF} className="mt-4 w-full">
-        Tải vé (PDF)
-      </Button>
+
+      <div className="flex gap-2">
+        <Button onClick={handleDownloadPDF} className="flex-1">
+          Tải vé (PDF)
+        </Button>
+
+        {isRefundable && (
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="outline"
+                className="flex-1 border-rose-500 text-rose-500 hover:bg-rose-500/10 hover:text-rose-400"
+              >
+                Yêu cầu hoàn vé
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent className="bg-zinc-900 border-rose-500/20">
+              <AlertDialogHeader>
+                <AlertDialogTitle className="text-white">
+                  Xác nhận hoàn vé
+                </AlertDialogTitle>
+                <AlertDialogDescription className="text-neutral-300">
+                  Bạn có chắc chắn muốn hoàn vé này không?
+                  <br />
+                  <br />
+                  Chính sách hoàn vé:
+                  <ul className="list-disc list-inside mt-2 space-y-1 text-sm">
+                    <li>Chỉ áp dụng cho vé đặt trước giờ chiếu 24h.</li>
+                    <li>
+                      Hoàn tiền dưới dạng <strong>Voucher</strong> (Mã khuyến
+                      mãi) trị giá 100% tiền vé.
+                    </li>
+                    <li>
+                      Voucher có hạn sử dụng 1 năm và chỉ áp dụng cho tài khoản
+                      của bạn.
+                    </li>
+                    <li>Tiền bắp nước (nếu có) sẽ không được hoàn lại.</li>
+                  </ul>
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel className="bg-transparent border-neutral-700 text-white hover:bg-neutral-800">
+                  Hủy
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleRefund}
+                  disabled={isRefundLoading}
+                  className="bg-rose-600 hover:bg-rose-700 text-white"
+                >
+                  {isRefundLoading ? 'Đang xử lý...' : 'Đồng ý hoàn vé'}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        )}
+      </div>
     </div>
   );
 }

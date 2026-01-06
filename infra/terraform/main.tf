@@ -32,6 +32,10 @@ provider "azurerm" {
   subscription_id = var.subscription_id
 }
 
+locals {
+  vnpay_return_url = var.vnpay_return_base_url != "" ? var.vnpay_return_base_url : var.vnpay_config.return_url
+}
+
 # ===========================================
 # RESOURCE GROUP
 # ===========================================
@@ -499,7 +503,7 @@ resource "azurerm_container_app" "booking_service" {
 
       env {
         name  = "VNPAY_RETURN_URL"
-        value = var.vnpay_config.return_url
+        value = local.vnpay_return_url
       }
 
       env {
@@ -652,4 +656,85 @@ resource "azurerm_container_app" "api_gateway" {
     azurerm_container_app.cinema_service,
     azurerm_container_app.booking_service
   ]
+}
+
+# Web Frontend
+resource "azurerm_container_app" "web" {
+  name                         = "web"
+  container_app_environment_id = azurerm_container_app_environment.main.id
+  resource_group_name          = azurerm_resource_group.main.name
+  revision_mode                = "Single"
+  tags                         = merge(var.tags, { Service = "web" })
+
+  secret {
+    name  = "acr-password"
+    value = azurerm_container_registry.main.admin_password
+  }
+
+  registry {
+    server               = azurerm_container_registry.main.login_server
+    username             = azurerm_container_registry.main.admin_username
+    password_secret_name = "acr-password"
+  }
+
+  ingress {
+    external_enabled = var.web_is_external
+    target_port      = var.services["web"].port
+    transport        = "http"
+
+    traffic_weight {
+      percentage      = 100
+      latest_revision = true
+    }
+  }
+
+  template {
+    min_replicas = var.services["web"].min_replicas
+    max_replicas = var.services["web"].max_replicas
+
+    container {
+      name   = "web"
+      image  = "${azurerm_container_registry.main.login_server}/web:${var.web_image_tag}"
+      cpu    = var.services["web"].cpu
+      memory = var.services["web"].memory
+
+      env {
+        name  = "NODE_ENV"
+        value = "production"
+      }
+
+      env {
+        name  = "PORT"
+        value = tostring(var.services["web"].port)
+      }
+
+      env {
+        name  = "NEXT_PUBLIC_API_BASE_URL"
+        value = "https://${azurerm_container_app.api_gateway.ingress[0].fqdn}"
+      }
+
+      env {
+        name  = "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY"
+        value = var.clerk_publishable_key
+      }
+
+      env {
+        name  = "NEXT_PUBLIC_VNPAY_RETURN_URL"
+        value = local.vnpay_return_url
+      }
+
+      env {
+        name  = "WEB_BASE_URL"
+        value = var.web_host != "" ? "https://${var.web_host}" : ""
+      }
+
+      dynamic "env" {
+        for_each = var.web_env
+        content {
+          name  = env.key
+          value = env.value
+        }
+      }
+    }
+  }
 }

@@ -62,12 +62,25 @@ output "api_gateway_fqdn" {
 output "service_internal_urls" {
   description = "Internal URLs for all services"
   value = {
+    web             = "web:${var.services["web"].port}"
     user_service    = "user-service:${var.services["user-service"].port}"
     movie_service   = "movie-service:${var.services["movie-service"].port}"
     cinema_service  = "cinema-service:${var.services["cinema-service"].port}"
     booking_service = "booking-service:${var.services["booking-service"].port}"
     api_gateway     = "api-gateway:${var.services["api-gateway"].port}"
   }
+}
+
+# ===== WEB FRONTEND =====
+
+output "web_fqdn" {
+  description = "The FQDN of the web frontend"
+  value       = azurerm_container_app.web.ingress[0].fqdn
+}
+
+output "web_url" {
+  description = "The public URL of the web frontend"
+  value       = "https://${azurerm_container_app.web.ingress[0].fqdn}"
 }
 
 # ===== LOG ANALYTICS =====
@@ -98,6 +111,7 @@ output "deployment_summary" {
     ACR Login Server: ${azurerm_container_registry.main.login_server}
     
     Services Deployed:
+    - web (external)
     - api-gateway (external)
     - user-service (internal)
     - movie-service (internal)

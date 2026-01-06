@@ -18,6 +18,13 @@ environment                  = "dev"  # dev, staging, prod
 acr_name = "moviehubacr"  # Must be globally unique, alphanumeric only
 acr_sku  = "Basic"         # Basic, Standard, Premium
 
+# ===== WEB FRONTEND =====
+web_image_tag = "latest"               # Tag pushed to ACR for the web app
+web_host      = ""                     # Optional custom domain (leave empty to use ACA FQDN)
+web_env = {                             # Extra env vars for the web app (optional)
+  # NEXTAUTH_URL = "https://your-web-domain"
+}
+
 # ===== CONTAINER APPS ENVIRONMENT =====
 aca_environment_name         = "moviehub-env"
 log_analytics_workspace_name = "moviehub-logs"
@@ -52,11 +59,12 @@ email_config = {
 }
 
 # ===== VNPAY CONFIGURATION (OPTIONAL) =====
+vnpay_return_base_url = "https://your-web-domain/checkout"
 vnpay_config = {
   tmn_code    = "0GEGLRAD"
   hash_secret = "KB2XXMTTDUA1HTSW68JIG0U963AC7TOV"
   url         = "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html"
-  return_url  = "https://your-api-gateway-url/api/bookings/vnpay_return"
+  return_url  = "https://your-web-domain/checkout"
   api_url     = "https://sandbox.vnpayment.vn/merchant_webapi/merchant.html"
 }
 

@@ -80,6 +80,16 @@ variable "services" {
     transport      = string  # "http" or "tcp"
   }))
   default = {
+    web = {
+      port         = 4200
+      cpu          = 0.5
+      memory       = "1Gi"
+      min_replicas = 1
+      max_replicas = 2
+      is_external  = true
+      health_path  = "/api/health"
+      transport    = "http"
+    }
     api-gateway = {
       port         = 3000
       cpu          = 0.5
@@ -131,6 +141,32 @@ variable "services" {
       transport    = "tcp"
     }
   }
+}
+
+# ===== WEB APP CONFIGURATION =====
+
+variable "web_image_tag" {
+  description = "Container image tag for the web frontend"
+  type        = string
+  default     = "latest"
+}
+
+variable "web_host" {
+  description = "Custom domain for the web frontend (leave empty to use default ACA FQDN)"
+  type        = string
+  default     = ""
+}
+
+variable "web_env" {
+  description = "Additional environment variables for the web frontend"
+  type        = map(string)
+  default     = {}
+}
+
+variable "web_is_external" {
+  description = "Expose the web frontend publicly"
+  type        = bool
+  default     = true
 }
 
 # ===== EXTERNAL SERVICES (OUTSOURCED) =====
@@ -212,6 +248,12 @@ variable "vnpay_config" {
     return_url  = ""
     api_url     = "https://sandbox.vnpayment.vn/merchant_webapi/merchant.html"
   }
+}
+
+variable "vnpay_return_base_url" {
+  description = "Public return URL for VNPay (web checkout page)"
+  type        = string
+  default     = ""
 }
 
 # ===== TAGS =====

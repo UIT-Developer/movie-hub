@@ -267,28 +267,28 @@ services:
       start_period: 10s
     command: sh -c "node main.js"
 
-  # web:
-  #   build:
-  #     context: .
-  #     dockerfile: apps/web/Dockerfile
-  #     target: production
-  #   container_name: moviehub-web
-  #   restart: unless-stopped
-  #   env_file:
-  #     - ./apps/web/.env
-  #   ports:
-  #     - "5200:4200"
-  #   depends_on:
-  #     - api-gateway
-  #   networks:
-  #     - moviehub-network
-  #   healthcheck:
-  #     test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:4200/"]
-  #     interval: 30s
-  #     timeout: 5s
-  #     retries: 3
-  #     start_period: 5s
-  #   command: sh -c "node apps/web/server.js"
+  web:
+    env_file:
+      - ./apps/web/.env
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      target: production
+    container_name: moviehub-web
+    restart: unless-stopped
+    ports:
+      - "5200:4200"
+    depends_on:
+      - api-gateway
+    networks:
+      - moviehub-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:4200/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    command: sh -c "node apps/web/server.js"
       
 
 # ===========================================

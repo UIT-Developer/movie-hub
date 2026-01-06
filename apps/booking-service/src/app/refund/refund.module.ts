@@ -20,6 +20,14 @@ import { NotificationModule } from '../notification/notification.module';
           port: parseInt(process.env.CINEMA_PORT) || 3003,
         },
       },
+      {
+        name: SERVICE_NAME.USER,
+        transport: Transport.TCP,
+        options: {
+          host: process.env.USER_HOST || 'localhost',
+          port: parseInt(process.env.USER_PORT) || 3001,
+        },
+      },
     ]),
   ],
   controllers: [RefundController],

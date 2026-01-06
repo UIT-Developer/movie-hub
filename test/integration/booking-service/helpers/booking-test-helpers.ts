@@ -29,6 +29,7 @@ import {
   TicketStatus,
 } from '@movie-hub/shared-types';
 import * as crypto from 'crypto';
+import { of } from 'rxjs';
 
 // Import services and controllers
 import { PrismaService } from '../../../../apps/booking-service/src/app/prisma.service';
@@ -58,10 +59,11 @@ import { TicketService } from '../../../../apps/booking-service/src/app/ticket/t
 export const createMockCinemaClient = () => ({
   send: jest.fn().mockImplementation((pattern: string, data: any) => {
     // Mock responses based on message pattern
-    if (pattern === 'SHOWTIME.GET_SHOWTIME_SEATS') {
-      return Promise.resolve({
+    if (pattern === 'showtime.get_showtime_seats') {
+      return of({
         showtime: {
           id: data.showtimeId,
+          movieTitle: 'Mock Movie',
           start_time: new Date(),
           end_time: new Date(Date.now() + 2 * 60 * 60 * 1000),
           format: '2D',
@@ -74,35 +76,35 @@ export const createMockCinemaClient = () => ({
             row: 'A',
             seats: [
               {
-                id: 'seat-1',
+                id: '20000000-0000-0000-0000-000000000001',
                 number: 1,
                 seatType: 'STANDARD',
                 status: 'AVAILABLE',
               },
               {
-                id: 'seat-2',
+                id: '20000000-0000-0000-0000-000000000002',
                 number: 2,
                 seatType: 'STANDARD',
                 status: 'AVAILABLE',
               },
-              { id: 'seat-3', number: 3, seatType: 'VIP', status: 'AVAILABLE' },
+              { id: '20000000-0000-0000-0000-000000000003', number: 3, seatType: 'VIP', status: 'AVAILABLE' },
             ],
           },
         ],
       });
     }
-    if (pattern === 'SHOWTIME.GET_SEATS_HELD_BY_USER') {
-      return Promise.resolve({
+    if (pattern === 'showtime.get_seats_held_by_user') {
+      return of({
         seats: [
           {
-            id: 'seat-1',
+            id: '20000000-0000-0000-0000-000000000001',
             row: 'A',
             number: 1,
             seatType: 'STANDARD',
             price: 80000,
           },
           {
-            id: 'seat-2',
+            id: '20000000-0000-0000-0000-000000000002',
             row: 'A',
             number: 2,
             seatType: 'STANDARD',
@@ -112,7 +114,7 @@ export const createMockCinemaClient = () => ({
         ttl: 900, // 15 minutes
       });
     }
-    return Promise.resolve({});
+    return of({});
   }),
   emit: jest.fn(),
   connect: jest.fn().mockResolvedValue(undefined),
@@ -124,8 +126,8 @@ export const createMockCinemaClient = () => ({
  */
 export const createMockUserClient = () => ({
   send: jest.fn().mockImplementation((pattern: string, data: any) => {
-    if (pattern === 'USER.GET_USER_DETAIL') {
-      return Promise.resolve({
+    if (pattern === 'user.getDetail') {
+      return of({
         id: data,
         email: `${data}@test.com`,
         firstName: 'Test',
@@ -135,7 +137,7 @@ export const createMockUserClient = () => ({
         imageUrl: 'https://example.com/avatar.jpg',
       });
     }
-    return Promise.resolve({});
+    return of({});
   }),
   emit: jest.fn(),
   connect: jest.fn().mockResolvedValue(undefined),
@@ -146,10 +148,11 @@ export const createMockUserClient = () => ({
  * Mock for Notification Service (Email/SMS)
  */
 export const createMockNotificationService = () => ({
-  sendBookingConfirmationEmail: jest.fn().mockResolvedValue(undefined),
-  sendPaymentReceiptEmail: jest.fn().mockResolvedValue(undefined),
-  sendBookingCancellationEmail: jest.fn().mockResolvedValue(undefined),
-  sendRefundNotificationEmail: jest.fn().mockResolvedValue(undefined),
+  sendBookingConfirmation: jest.fn().mockResolvedValue(undefined),
+  sendBookingConfirmationSMS: jest.fn().mockResolvedValue(undefined),
+  sendBookingCancellation: jest.fn().mockResolvedValue(undefined),
+  sendPaymentReceipt: jest.fn().mockResolvedValue(undefined),
+  sendRefundNotification: jest.fn().mockResolvedValue(undefined),
 });
 
 export type MockNotificationService = ReturnType<
@@ -318,7 +321,7 @@ export async function cleanupBookingsOnly(
  * Creates a test booking request
  */
 export function createTestBookingRequest(
-  showtimeId: string = 'test-showtime-id'
+  showtimeId: string = '123e4567-e89b-12d3-a456-426614174000'
 ): { showtimeId: string } {
   return { showtimeId };
 }
@@ -345,7 +348,7 @@ export interface CreateConcessionTestData {
   name: string;
   description: string;
   price: number;
-  category: 'FOOD' | 'BEVERAGE' | 'COMBO' | 'SNACK';
+  category: 'FOOD' | 'DRINK' | 'COMBO' | 'MERCHANDISE';
   imageUrl?: string;
   cinemaId?: string;
   available: boolean;
@@ -402,11 +405,11 @@ export interface CreatePromotionTestData {
 export async function seedPendingBooking(
   prisma: PrismaService,
   userId: string,
-  showtimeId: string = 'test-showtime'
+  showtimeId: string = '123e4567-e89b-12d3-a456-426614174000'
 ): Promise<string> {
   const booking = await prisma.bookings.create({
     data: {
-      booking_code: `BK${Date.now()}`,
+      booking_code: `BK${Date.now()}${Math.floor(Math.random() * 10000)}`,
       user_id: userId,
       showtime_id: showtimeId,
       customer_name: 'Test User',
@@ -428,18 +431,18 @@ export async function seedPendingBooking(
     data: [
       {
         booking_id: booking.id,
-        seat_id: 'seat-1',
+        seat_id: '20000000-0000-0000-0000-000000000001',
         ticket_type: 'ADULT',
         price: 80000,
-        ticket_code: `TK${Date.now()}1`,
+        ticket_code: `TK${Date.now()}1-${Math.floor(Math.random() * 10000)}`,
         status: TicketStatus.VALID,
       },
       {
         booking_id: booking.id,
-        seat_id: 'seat-2',
+        seat_id: '20000000-0000-0000-0000-000000000002',
         ticket_type: 'ADULT',
         price: 80000,
-        ticket_code: `TK${Date.now()}2`,
+        ticket_code: `TK${Date.now()}2-${Math.floor(Math.random() * 10000)}`,
         status: TicketStatus.VALID,
       },
     ],
@@ -454,11 +457,11 @@ export async function seedPendingBooking(
 export async function seedConfirmedBooking(
   prisma: PrismaService,
   userId: string,
-  showtimeId: string = 'test-showtime'
+  showtimeId: string = '123e4567-e89b-12d3-a456-426614174000'
 ): Promise<{ bookingId: string; paymentId: string }> {
   const booking = await prisma.bookings.create({
     data: {
-      booking_code: `BK${Date.now()}`,
+      booking_code: `BK${Date.now()}${Math.floor(Math.random() * 10000)}`,
       user_id: userId,
       showtime_id: showtimeId,
       customer_name: 'Test User',
@@ -479,18 +482,18 @@ export async function seedConfirmedBooking(
     data: [
       {
         booking_id: booking.id,
-        seat_id: 'seat-1',
+        seat_id: '20000000-0000-0000-0000-000000000001',
         ticket_type: 'ADULT',
         price: 80000,
-        ticket_code: `TK${Date.now()}1`,
+        ticket_code: `TK${Date.now()}1-${Math.floor(Math.random() * 10000)}`,
         status: TicketStatus.VALID,
       },
       {
         booking_id: booking.id,
-        seat_id: 'seat-2',
+        seat_id: '20000000-0000-0000-0000-000000000002',
         ticket_type: 'ADULT',
         price: 80000,
-        ticket_code: `TK${Date.now()}2`,
+        ticket_code: `TK${Date.now()}2-${Math.floor(Math.random() * 10000)}`,
         status: TicketStatus.VALID,
       },
     ],
@@ -537,7 +540,7 @@ export async function seedTestConcessions(
   count: number = 3
 ): Promise<string[]> {
   const ids: string[] = [];
-  const categories = ['FOOD', 'BEVERAGE', 'COMBO', 'SNACK'];
+  const categories = ['FOOD', 'DRINK', 'COMBO', 'MERCHANDISE'];
   const names = ['Popcorn', 'Cola', 'Combo Large', 'Nachos'];
 
   for (let i = 0; i < count; i++) {
@@ -616,7 +619,7 @@ export function generateVNPayChecksum(
  * Creates a mock VNPay IPN payload with valid checksum
  */
 export function createMockVNPayIPN(
-  bookingId: string,
+  paymentId: string,
   transactionId: string,
   amount: number,
   responseCode: string = '00', // 00 = success
@@ -628,7 +631,7 @@ export function createMockVNPayIPN(
     vnp_BankCode: 'NCB',
     vnp_BankTranNo: `NCB${Date.now()}`,
     vnp_CardType: 'ATM',
-    vnp_OrderInfo: bookingId,
+    vnp_OrderInfo: paymentId,
     vnp_PayDate: new Date()
       .toISOString()
       .replace(/[-:T.Z]/g, '')
@@ -636,7 +639,7 @@ export function createMockVNPayIPN(
     vnp_ResponseCode: responseCode,
     vnp_TransactionNo: transactionId,
     vnp_TransactionStatus: responseCode,
-    vnp_TxnRef: bookingId,
+    vnp_TxnRef: paymentId,
   };
 
   // Add checksum

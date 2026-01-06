@@ -105,6 +105,13 @@ const TIME_SLOTS = [
   '23:00',
 ];
 
+const FORMAT_LABELS: Record<string, string> = {
+  TWO_D: '2D',
+  THREE_D: '3D',
+  IMAX: 'IMAX',
+  FOUR_DX: '4DX',
+};
+
 function BatchShowtimesContent() {
   const searchParams = useSearchParams();
   const preSelectedMovieId = searchParams.get('movieId');
@@ -147,7 +154,7 @@ function BatchShowtimesContent() {
     timeSlots: [],
     repeatType: 'DAILY',
     weekdays: [],
-    format: '2D',
+    format: 'TWO_D',
     language: 'vi',
     subtitles: [],
   });
@@ -699,10 +706,10 @@ function BatchShowtimesContent() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="2D">2D</SelectItem>
-                      <SelectItem value="3D">3D</SelectItem>
+                      <SelectItem value="TWO_D">2D</SelectItem>
+                      <SelectItem value="THREE_D">3D</SelectItem>
                       <SelectItem value="IMAX">IMAX</SelectItem>
-                      <SelectItem value="4DX">4DX</SelectItem>
+                      <SelectItem value="FOUR_DX">4DX</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -851,7 +858,7 @@ function BatchShowtimesContent() {
                       Định Dạng:
                     </span>
                     <Badge className="bg-purple-100 text-purple-700 border-purple-200">
-                      🎬 {formData.format}
+                      🎬 {FORMAT_LABELS[formData.format] || formData.format}
                     </Badge>
                   </div>
 

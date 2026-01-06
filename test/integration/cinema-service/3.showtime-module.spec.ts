@@ -150,8 +150,8 @@ describe('Showtime Module Integration Tests', () => {
       data: {
         cinema_id: cinemaId,
         hall_id: hallId,
-        movie_id: options.movieId || 'mock-movie-id',
-        movie_release_id: options.movieReleaseId || 'mock-release-id',
+        movie_id: options.movieId || '00000000-0000-0000-0000-000000000001',
+        movie_release_id: options.movieReleaseId || '00000000-0000-0000-0000-000000000002',
         start_time: startTime,
         end_time: endTime,
         format: 'TWO_D' as any,
@@ -182,29 +182,35 @@ describe('Showtime Module Integration Tests', () => {
       const today = new Date();
       const tomorrow = new Date(today);
       tomorrow.setDate(tomorrow.getDate() + 1);
+      const dayAfterTomorrow = new Date(today);
+      dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 2);
+      const threeDaysLater = new Date(today);
+      threeDaysLater.setDate(threeDaysLater.getDate() + 3);
 
       await createTestShowtime(testCinemaId, testHallId, {
-        startTime: new Date(today.setHours(10, 0, 0, 0)),
-        movieId: 'movie-1',
-        movieReleaseId: 'mock-release-id',
+        startTime: new Date(tomorrow.setHours(10, 0, 0, 0)),
+        movieId: '00000000-0000-0000-0000-000000000001',
+        movieReleaseId: '00000000-0000-0000-0000-000000000001',
       });
       await createTestShowtime(testCinemaId, testHallId, {
-        startTime: new Date(today.setHours(14, 0, 0, 0)),
-        movieId: 'movie-1',
-        movieReleaseId: 'mock-release-id',
+        startTime: new Date(tomorrow.setHours(14, 0, 0, 0)),
+        movieId: '00000000-0000-0000-0000-000000000001',
+        movieReleaseId: '00000000-0000-0000-0000-000000000001',
       });
       await createTestShowtime(testCinemaId, testHallId, {
-        startTime: tomorrow,
-        movieId: 'movie-2',
-        movieReleaseId: 'mock-release-id',
+        startTime: threeDaysLater,
+        movieId: '00000000-0000-0000-0000-000000000002',
+        movieReleaseId: '00000000-0000-0000-0000-000000000001',
       });
 
       // Mock movie service
       ctx.mockMovieClient.send.mockImplementation(() =>
-        of([
-          { id: 'movie-1', title: 'Test Movie 1' },
-          { id: 'movie-2', title: 'Test Movie 2' },
-        ])
+        of({
+          data: [
+            { id: '00000000-0000-0000-0000-000000000001', title: 'Test Movie 1' },
+            { id: '00000000-0000-0000-0000-000000000002', title: 'Test Movie 2' },
+          ],
+        })
       );
     });
 
@@ -225,15 +231,17 @@ describe('Showtime Module Integration Tests', () => {
 
       it('should filter showtimes by date', async () => {
         // Arrange
-        const today = new Date().toISOString().split('T')[0];
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const tomorrowStr = tomorrow.toLocaleDateString('en-CA'); // YYYY-MM-DD format in local time
 
         // Act
         const result = await ctx.showtimeController.getShowtimes({
           cinemaId: testCinemaId,
-          date: today,
+          date: tomorrowStr,
         });
 
-        // Assert - Should only return today's showtimes
+        // Assert - Should only return tomorrow's showtimes
         expect(result.data.length).toBe(2);
       });
 
@@ -241,13 +249,13 @@ describe('Showtime Module Integration Tests', () => {
         // Act
         const result = await ctx.showtimeController.getShowtimes({
           cinemaId: testCinemaId,
-          movieId: 'movie-1',
+          movieId: '00000000-0000-0000-0000-000000000001',
         });
 
         // Assert
         expect(result.data.length).toBe(2);
         result.data.forEach((showtime) => {
-          expect(showtime.movieId).toBe('movie-1');
+          expect(showtime.movieId).toBe('00000000-0000-0000-0000-000000000001');
         });
       });
 
@@ -327,34 +335,37 @@ describe('Showtime Module Integration Tests', () => {
       testCinemaId = cinema.id;
       testHallId = hall.id;
 
-      const today = new Date();
-      today.setHours(16, 0, 0, 0);
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      tomorrow.setHours(16, 0, 0, 0);
 
       // Only SELLING status showtimes should be returned
       await createTestShowtime(testCinemaId, testHallId, {
-        startTime: today,
-        movieId: 'target-movie',
+        startTime: tomorrow,
+        movieId: '00000000-0000-0000-0000-000000000003',
         status: 'SELLING',
-        movieReleaseId: 'mock-release-id',
+        movieReleaseId: '00000000-0000-0000-0000-000000000001',
       });
       await createTestShowtime(testCinemaId, testHallId, {
-        startTime: new Date(today.getTime() + 3 * 60 * 60 * 1000),
-        movieId: 'target-movie',
+        startTime: new Date(tomorrow.getTime() + 3 * 60 * 60 * 1000),
+        movieId: '00000000-0000-0000-0000-000000000003',
         status: 'SCHEDULED', // Should NOT be returned
-        movieReleaseId: 'mock-release-id',
+        movieReleaseId: '00000000-0000-0000-0000-000000000001',
       });
     });
 
     describe('Success Scenarios', () => {
       it('should return only SELLING status showtimes', async () => {
         // Arrange
-        const today = new Date().toISOString().split('T')[0];
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const tomorrowStr = tomorrow.toLocaleDateString('en-CA'); // YYYY-MM-DD format in local time
 
         // Act
         const result = await ctx.showtimeController.getMovieShowtimesAtCinema({
           cinemaId: testCinemaId,
-          movieId: 'target-movie',
-          query: { date: today },
+          movieId: '00000000-0000-0000-0000-000000000003',
+          query: { date: tomorrowStr },
         });
 
         // Assert
@@ -365,13 +376,15 @@ describe('Showtime Module Integration Tests', () => {
 
       it('should use cache via RealtimeService.getOrSetCache', async () => {
         // Arrange
-        const today = new Date().toISOString().split('T')[0];
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const tomorrowStr = tomorrow.toLocaleDateString('en-CA'); // YYYY-MM-DD format in local time
 
         // Act
         await ctx.showtimeController.getMovieShowtimesAtCinema({
           cinemaId: testCinemaId,
-          movieId: 'target-movie',
-          query: { date: today },
+          movieId: '00000000-0000-0000-0000-000000000003',
+          query: { date: tomorrowStr },
         });
 
         // Assert - Cache should be accessed
@@ -380,13 +393,15 @@ describe('Showtime Module Integration Tests', () => {
 
       it('should return empty array when no showtimes for movie', async () => {
         // Arrange
-        const today = new Date().toISOString().split('T')[0];
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const tomorrowStr = tomorrow.toLocaleDateString('en-CA'); // YYYY-MM-DD format in local time
 
         // Act
         const result = await ctx.showtimeController.getMovieShowtimesAtCinema({
           cinemaId: testCinemaId,
-          movieId: 'non-existent-movie',
-          query: { date: today },
+          movieId: '00000000-0000-0000-0000-000000000000',
+          query: { date: tomorrowStr },
         });
 
         // Assert
@@ -523,21 +538,23 @@ describe('Showtime Module Integration Tests', () => {
         if (pattern.includes('GET_DETAIL')) {
           return of({
             data: {
-              id: 'mock-movie-id',
+              id: '00000000-0000-0000-0000-000000000001',
               title: 'Test Movie',
               runtime: 120,
             },
           });
         }
         // For GET_LIST_RELEASE
-        return of([
-          {
-            id: 'mock-release-id',
-            movieId: 'mock-movie-id',
-            releaseStartDate: new Date('2020-01-01'),
-            releaseEndDate: new Date('2030-12-31'),
-          },
-        ]);
+        return of({
+          data: [
+            {
+              id: '00000000-0000-0000-0000-000000000001',
+              movieId: '00000000-0000-0000-0000-000000000001',
+              releaseStartDate: new Date('2020-01-01'),
+              releaseEndDate: new Date('2030-12-31'),
+            },
+          ],
+        });
       });
     });
 
@@ -549,8 +566,8 @@ describe('Showtime Module Integration Tests', () => {
         startTime.setHours(14, 0, 0, 0);
 
         const request = {
-          movieId: 'mock-movie-id',
-          movieReleaseId: 'mock-release-id',
+          movieId: '00000000-0000-0000-0000-000000000001',
+          movieReleaseId: '00000000-0000-0000-0000-000000000001',
           cinemaId: testCinemaId,
           hallId: testHallId,
           startTime: startTime.toISOString(),
@@ -584,8 +601,8 @@ describe('Showtime Module Integration Tests', () => {
         startTime.setHours(18, 0, 0, 0);
 
         const request = {
-          movieId: 'mock-movie-id',
-          movieReleaseId: 'mock-release-id',
+          movieId: '00000000-0000-0000-0000-000000000001',
+          movieReleaseId: '00000000-0000-0000-0000-000000000001',
           cinemaId: testCinemaId,
           hallId: testHallId,
           startTime: startTime.toISOString(),
@@ -619,8 +636,8 @@ describe('Showtime Module Integration Tests', () => {
         startTime.setDate(startTime.getDate() + 1);
 
         const request = {
-          movieId: 'mock-movie-id',
-          movieReleaseId: 'mock-release-id',
+          movieId: '00000000-0000-0000-0000-000000000001',
+          movieReleaseId: '00000000-0000-0000-0000-000000000001',
           cinemaId: testCinemaId,
           hallId: testHallId,
           startTime: startTime.toISOString(),
@@ -649,8 +666,8 @@ describe('Showtime Module Integration Tests', () => {
         startTime.setDate(startTime.getDate() + 1);
 
         const request = {
-          movieId: 'mock-movie-id',
-          movieReleaseId: 'mock-release-id',
+          movieId: '00000000-0000-0000-0000-000000000001',
+          movieReleaseId: '00000000-0000-0000-0000-000000000001',
           cinemaId: testCinemaId,
           hallId: testHallId,
           startTime: startTime.toISOString(),
@@ -695,7 +712,7 @@ describe('Showtime Module Integration Tests', () => {
         });
 
         // Assert
-        expect(result.message).toBe('Showtime cancelled successfully');
+        expect(result.message).toBe('Showtime deleted successfully');
 
         // Verify deleted
         const dbShowtime = await ctx.prisma.showtimes.findUnique({

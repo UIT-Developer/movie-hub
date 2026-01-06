@@ -11,13 +11,27 @@ import { PromotionDto } from '@/libs/types/promotion.type';
 import { CalendarDays, TicketPercent } from 'lucide-react';
 
 export const PromotionCard = ({ data }: { data: PromotionDto }) => {
+  const isRefund = data.conditions?.isRefundVoucher;
+
   return (
-    <Card className="w-full max-w-md rounded-2xl shadow-lg p-4 bg-slate-200/5 border border-slate-200/10 hover:border-primary/50 transition-colors">
+    <Card
+      className={`w-full max-w-md rounded-2xl shadow-lg p-4 transition-colors ${
+        isRefund
+          ? 'bg-amber-500/10 border-amber-500/30 hover:border-amber-500'
+          : 'bg-slate-200/5 border-slate-200/10 hover:border-primary/50'
+      }`}
+    >
       <CardHeader>
-        <CardTitle className="text-xl font-bold flex items-center gap-2 text-primary">
+        <CardTitle
+          className={`text-xl font-bold flex items-center gap-2 ${
+            isRefund ? 'text-amber-500' : 'text-primary'
+          }`}
+        >
           <TicketPercent className="w-5 h-5" /> {data.name}
         </CardTitle>
-        <div className="text-sm text-neutral-300">Mã: {data.code}</div>
+        <div className="text-sm text-neutral-300 break-all">
+          Mã: <span className="font-mono text-white">{data.code}</span>
+        </div>
       </CardHeader>
 
       <CardContent className="space-y-3">
@@ -26,10 +40,19 @@ export const PromotionCard = ({ data }: { data: PromotionDto }) => {
         )}
 
         <div className="flex flex-wrap gap-2">
-          <Badge variant="secondary">{data.type}</Badge>
-          <Badge variant="destructive">Giá trị: {data.value}</Badge>
+          {isRefund ? (
+            <Badge className="bg-amber-600 hover:bg-amber-700">Hoàn tiền</Badge>
+          ) : (
+            <Badge variant="secondary">{data.type}</Badge>
+          )}
+          <Badge variant="destructive">
+            Giá trị: {new Intl.NumberFormat('vi-VN').format(data.value)} đ
+          </Badge>
           {data.maxDiscount && (
-            <Badge variant="secondary">Tối đa: {data.maxDiscount}</Badge>
+            <Badge variant="secondary">
+              Tối đa: {new Intl.NumberFormat('vi-VN').format(data.maxDiscount)}{' '}
+              đ
+            </Badge>
           )}
         </div>
 
@@ -40,7 +63,12 @@ export const PromotionCard = ({ data }: { data: PromotionDto }) => {
         </div>
 
         <div className="text-sm text-gray-400">
-          Áp dụng cho: {data.applicableFor.join(', ')}
+          Áp dụng cho:{' '}
+          {isRefund
+            ? 'Toàn bộ hệ thống'
+            : data.applicableFor
+                .map((item) => (item === 'tickets' ? 'Vé phim' : item))
+                .join(', ')}
         </div>
 
         <div className="text-sm text-neutral-300">

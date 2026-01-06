@@ -4,6 +4,7 @@ import {
   Query,
   UseGuards,
   UseInterceptors,
+  Req,
 } from '@nestjs/common';
 import { DashboardService } from './dashboard.service';
 import { ClerkAuthGuard } from '../../common/guard/clerk-auth.guard';
@@ -29,8 +30,9 @@ export class DashboardController {
    * Returns KPI summary: total movies, cinemas, revenue, bookings, etc.
    */
   @Get('stats')
-  async getStats() {
-    return { data: await this.dashboardService.getStats() };
+  async getStats(@Req() req: any, @Query('cinemaId') cinemaId?: string) {
+    const activeCinemaId = req.staffContext?.cinemaId || cinemaId;
+    return { data: await this.dashboardService.getStats(activeCinemaId) };
   }
 
   /**
@@ -39,14 +41,18 @@ export class DashboardController {
    */
   @Get('revenue')
   async getRevenueReport(
+    @Req() req: any,
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
-    @Query('groupBy') groupBy?: 'day' | 'week' | 'month'
+    @Query('groupBy') groupBy?: 'day' | 'week' | 'month',
+    @Query('cinemaId') cinemaId?: string
   ) {
+    const activeCinemaId = req.staffContext?.cinemaId || cinemaId;
     const result = await this.dashboardService.getRevenueReport({
       startDate,
       endDate,
       groupBy,
+      cinemaId: activeCinemaId,
     });
     return { data: result };
   }
@@ -56,9 +62,23 @@ export class DashboardController {
    * Returns top movies by bookings with movie metadata
    */
   @Get('top-movies')
-  async getTopMovies(@Query('limit') limit?: string) {
+  async getTopMovies(
+    @Req() req: any,
+    @Query('limit') limit?: string,
+    @Query('cinemaId') cinemaId?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string
+  ) {
     const parsedLimit = limit ? parseInt(limit, 10) : 5;
-    return { data: await this.dashboardService.getTopMovies(parsedLimit) };
+    const activeCinemaId = req.staffContext?.cinemaId || cinemaId;
+    return {
+      data: await this.dashboardService.getTopMovies(
+        parsedLimit,
+        activeCinemaId,
+        startDate ? new Date(startDate) : undefined,
+        endDate ? new Date(endDate) : undefined
+      ),
+    };
   }
 
   /**
@@ -66,9 +86,23 @@ export class DashboardController {
    * Returns top cinemas by revenue with cinema metadata
    */
   @Get('top-cinemas')
-  async getTopCinemas(@Query('limit') limit?: string) {
+  async getTopCinemas(
+    @Req() req: any,
+    @Query('limit') limit?: string,
+    @Query('cinemaId') cinemaId?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string
+  ) {
     const parsedLimit = limit ? parseInt(limit, 10) : 5;
-    return { data: await this.dashboardService.getTopCinemas(parsedLimit) };
+    const activeCinemaId = req.staffContext?.cinemaId || cinemaId;
+    return {
+      data: await this.dashboardService.getTopCinemas(
+        parsedLimit,
+        activeCinemaId,
+        startDate ? new Date(startDate) : undefined,
+        endDate ? new Date(endDate) : undefined
+      ),
+    };
   }
 
   /**
@@ -76,9 +110,20 @@ export class DashboardController {
    * Returns latest bookings with enriched movie/cinema data
    */
   @Get('recent-bookings')
-  async getRecentBookings(@Query('limit') limit?: string) {
+  @Get('recent-bookings')
+  async getRecentBookings(
+    @Req() req: any,
+    @Query('limit') limit?: string,
+    @Query('cinemaId') cinemaId?: string
+  ) {
     const parsedLimit = limit ? parseInt(limit, 10) : 10;
-    return { data: await this.dashboardService.getRecentBookings(parsedLimit) };
+    const activeCinemaId = req.staffContext?.cinemaId || cinemaId;
+    return {
+      data: await this.dashboardService.getRecentBookings(
+        parsedLimit,
+        activeCinemaId
+      ),
+    };
   }
 
   /**
@@ -96,7 +141,15 @@ export class DashboardController {
    * Returns hall occupancy rates for a given date (defaults to today)
    */
   @Get('occupancy')
-  async getOccupancy(@Query('date') date?: string) {
-    return { data: await this.dashboardService.getOccupancy(date) };
+  @Get('occupancy')
+  async getOccupancy(
+    @Req() req: any,
+    @Query('date') date?: string,
+    @Query('cinemaId') cinemaId?: string
+  ) {
+    const activeCinemaId = req.staffContext?.cinemaId || cinemaId;
+    return {
+      data: await this.dashboardService.getOccupancy(date, activeCinemaId),
+    };
   }
 }

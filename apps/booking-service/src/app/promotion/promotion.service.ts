@@ -20,15 +20,17 @@ export class PromotionService {
   constructor(private prisma: PrismaService) {}
 
   async findAll(
-    active = true,
+    active?: boolean,
     type?: PromotionType
   ): Promise<ServiceResult<PromotionDto[]>> {
     const where: any = {};
 
     if (active !== undefined) {
       where.active = active;
-      where.valid_from = { lte: new Date() };
-      where.valid_to = { gte: new Date() };
+      if (active === true) {
+        where.valid_from = { lte: new Date() };
+        where.valid_to = { gte: new Date() };
+      }
     }
 
     if (type) {
@@ -191,8 +193,12 @@ export class PromotionService {
       throw new BadRequestException('Promotion code already exists');
     }
 
+    // Convert string dates to Date objects
+    const validFrom = new Date(dto.validFrom);
+    const validTo = new Date(dto.validTo);
+
     // Validate dates
-    if (dto.validFrom >= dto.validTo) {
+    if (validFrom >= validTo) {
       throw new BadRequestException(
         'Valid from date must be before valid to date'
       );
@@ -207,8 +213,8 @@ export class PromotionService {
         value: dto.value,
         min_purchase: dto.minPurchase,
         max_discount: dto.maxDiscount,
-        valid_from: dto.validFrom,
-        valid_to: dto.validTo,
+        valid_from: validFrom,
+        valid_to: validTo,
         usage_limit: dto.usageLimit,
         usage_per_user: dto.usagePerUser,
         current_usage: 0,
@@ -238,8 +244,10 @@ export class PromotionService {
     }
 
     // Validate dates if provided
-    const validFrom = dto.validFrom || existing.valid_from;
-    const validTo = dto.validTo || existing.valid_to;
+    const validFrom = dto.validFrom
+      ? new Date(dto.validFrom)
+      : existing.valid_from;
+    const validTo = dto.validTo ? new Date(dto.validTo) : existing.valid_to;
 
     if (validFrom >= validTo) {
       throw new BadRequestException(
@@ -256,8 +264,8 @@ export class PromotionService {
         value: dto.value,
         min_purchase: dto.minPurchase,
         max_discount: dto.maxDiscount,
-        valid_from: dto.validFrom,
-        valid_to: dto.validTo,
+        valid_from: validFrom,
+        valid_to: validTo,
         usage_limit: dto.usageLimit,
         usage_per_user: dto.usagePerUser,
         applicable_for: dto.applicableFor,

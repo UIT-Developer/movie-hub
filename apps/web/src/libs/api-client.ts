@@ -3,6 +3,9 @@ import axios from 'axios';
 const rawBaseTop = process.env.NEXT_PUBLIC_BACKEND_API_URL || '';
 const normalizedTop = rawBaseTop.replace(/\/+$|\s+$/g, '') || undefined;
 
+// Debug: Log actual base URL being used
+console.log(`[API] Initialized with base URL: ${normalizedTop}`);
+
 const api = axios.create({
   baseURL: normalizedTop,
   headers: { 'Content-Type': 'application/json' },

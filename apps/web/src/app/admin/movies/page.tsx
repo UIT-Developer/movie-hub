@@ -4,13 +4,21 @@
 export const dynamic = 'force-dynamic';
 
 import { useState, useEffect, useMemo } from 'react';
-import { Plus, Search, Check, MoreVertical, Edit, Trash2, Film as FilmIcon, Calendar, X } from 'lucide-react';
+import { useUser } from '@clerk/nextjs';
+import {
+  Plus,
+  Search,
+  Check,
+  MoreVertical,
+  Edit,
+  Trash2,
+  Film as FilmIcon,
+  Calendar,
+  X,
+} from 'lucide-react';
 import { Button } from '@movie-hub/shacdn-ui/button';
 import { Input } from '@movie-hub/shacdn-ui/input';
-import {
-  Card,
-  CardContent,
-} from '@movie-hub/shacdn-ui/card';
+import { Card, CardContent } from '@movie-hub/shacdn-ui/card';
 import {
   Dialog,
   DialogContent,
@@ -35,9 +43,26 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@movie-hub/shacdn-ui/dropdown-menu';
-import { useMovies, useCreateMovie, useUpdateMovie, useDeleteMovie, useGenres, moviesApi, movieReleasesApi } from '@/libs/api';
-import type { Movie, CreateMovieRequest, AgeRating, LanguageType, MovieCast } from '@/libs/api/types';
-import { AgeRatingEnum, LanguageOptionEnum } from '@movie-hub/shared-types/movie/enum';
+import {
+  useMovies,
+  useCreateMovie,
+  useUpdateMovie,
+  useDeleteMovie,
+  useGenres,
+  moviesApi,
+  movieReleasesApi,
+} from '@/libs/api';
+import type {
+  Movie,
+  CreateMovieRequest,
+  AgeRating,
+  LanguageType,
+  MovieCast,
+} from '@/libs/api/types';
+import {
+  AgeRatingEnum,
+  LanguageOptionEnum,
+} from '@movie-hub/shared-types/movie/enum';
 import Image from 'next/image';
 import MovieReleaseDialog from '../_components/forms/MovieReleaseDialog';
 
@@ -49,6 +74,10 @@ interface EnrichedMovie extends Movie {
 }
 
 export default function MoviesPage() {
+  const { user } = useUser();
+  const userRole = user?.publicMetadata?.role as string;
+  const isManager = userRole === 'CINEMA_MANAGER';
+
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGenreIds, setSelectedGenreIds] = useState<string[]>([]);
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
@@ -60,8 +89,11 @@ export default function MoviesPage() {
   const [validationErrorMessage, setValidationErrorMessage] = useState('');
   const [addReleaseDialogOpen, setAddReleaseDialogOpen] = useState(false);
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
-  const [selectedMovieIdForRelease, setSelectedMovieIdForRelease] = useState<string>('');
-  const [enrichedMovies, setEnrichedMovies] = useState<Map<string, EnrichedMovie>>(new Map());
+  const [selectedMovieIdForRelease, setSelectedMovieIdForRelease] =
+    useState<string>('');
+  const [enrichedMovies, setEnrichedMovies] = useState<
+    Map<string, EnrichedMovie>
+  >(new Map());
   const [formData, setFormData] = useState<Partial<CreateMovieRequest>>({
     title: '',
     overview: '',
@@ -89,19 +121,38 @@ export default function MoviesPage() {
   const filteredGenres = useMemo(() => {
     const q = genreSearch.trim().toLowerCase();
     if (!q) return genres;
-    return genres.filter((g: any) => String(g.name || '').toLowerCase().includes(q));
+    return genres.filter((g: any) =>
+      String(g.name || '')
+        .toLowerCase()
+        .includes(q)
+    );
   }, [genres, genreSearch]);
   const createMovie = useCreateMovie();
   const updateMovie = useUpdateMovie();
   const deleteMovie = useDeleteMovie();
 
-  const loading = createMovie.isPending || updateMovie.isPending || deleteMovie.isPending;
+  const loading =
+    createMovie.isPending || updateMovie.isPending || deleteMovie.isPending;
 
-  const ageRatingOptions: AgeRating[] = [AgeRatingEnum.P, AgeRatingEnum.K, AgeRatingEnum.T13, AgeRatingEnum.T16, AgeRatingEnum.T18, AgeRatingEnum.C];
-  const languageTypeOptions: LanguageType[] = [LanguageOptionEnum.ORIGINAL, LanguageOptionEnum.SUBTITLE, LanguageOptionEnum.DUBBED];
+  const ageRatingOptions: AgeRating[] = [
+    AgeRatingEnum.P,
+    AgeRatingEnum.K,
+    AgeRatingEnum.T13,
+    AgeRatingEnum.T16,
+    AgeRatingEnum.T18,
+    AgeRatingEnum.C,
+  ];
+  const languageTypeOptions: LanguageType[] = [
+    LanguageOptionEnum.ORIGINAL,
+    LanguageOptionEnum.SUBTITLE,
+    LanguageOptionEnum.DUBBED,
+  ];
 
   // Function to calculate movie status based on releases
-  const calculateMovieStatus = (releaseDate?: string | Date | null, releases?: Array<{startDate: string; endDate?: string | null}>): string => {
+  const calculateMovieStatus = (
+    releaseDate?: string | Date | null,
+    releases?: Array<{ startDate: string; endDate?: string | null }>
+  ): string => {
     // Priority 1: Use movieRelease dates if available
     if (releases && releases.length > 0) {
       const today = new Date();
@@ -110,7 +161,7 @@ export default function MoviesPage() {
       for (const release of releases) {
         const startDate = new Date(release.startDate);
         const endDate = release.endDate ? new Date(release.endDate) : null;
-        
+
         startDate.setHours(0, 0, 0, 0);
         if (endDate) endDate.setHours(0, 0, 0, 0);
 
@@ -135,10 +186,10 @@ export default function MoviesPage() {
     if (releaseDate) {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      
+
       const release = new Date(releaseDate);
       release.setHours(0, 0, 0, 0);
-      
+
       if (release > today) {
         return 'COMING_SOON';
       } else {
@@ -158,17 +209,31 @@ export default function MoviesPage() {
         try {
           // Fetch full movie details to get overview and director
           const detailResponse = await moviesApi.getById(movie.id);
-          const fullMovie = typeof detailResponse === 'object' && 'data' in detailResponse 
-            ? (detailResponse as { data: Movie }).data 
-            : (detailResponse as Movie);
+          const fullMovie =
+            typeof detailResponse === 'object' && 'data' in detailResponse
+              ? (detailResponse as { data: Movie }).data
+              : (detailResponse as Movie);
 
           // Fetch movie releases for status calculation
-          let releases: Array<{ startDate: string; endDate?: string | null }> = [];
+          let releases: Array<{ startDate: string; endDate?: string | null }> =
+            [];
           try {
-            const releasesResponse = await movieReleasesApi.getAll({ movieId: movie.id });
+            const releasesResponse = await movieReleasesApi.getAll({
+              movieId: movie.id,
+            });
             releases = Array.isArray(releasesResponse)
-              ? (releasesResponse as Array<{ startDate: string; endDate?: string | null }> )
-              : ((releasesResponse as { data?: Array<{ startDate: string; endDate?: string | null }> })?.data ?? []);
+              ? (releasesResponse as Array<{
+                  startDate: string;
+                  endDate?: string | null;
+                }>)
+              : (
+                  releasesResponse as {
+                    data?: Array<{
+                      startDate: string;
+                      endDate?: string | null;
+                    }>;
+                  }
+                )?.data ?? [];
           } catch {
             // If releases fetch fails, continue with empty array
             releases = [];
@@ -176,18 +241,26 @@ export default function MoviesPage() {
 
           const enrichedMovie: EnrichedMovie = {
             ...movie,
-            displayOverview: fullMovie.overview && fullMovie.overview.trim() ? fullMovie.overview : undefined,
-            displayDirector: fullMovie.director && fullMovie.director.trim() ? fullMovie.director : undefined,
+            displayOverview:
+              fullMovie.overview && fullMovie.overview.trim()
+                ? fullMovie.overview
+                : undefined,
+            displayDirector:
+              fullMovie.director && fullMovie.director.trim()
+                ? fullMovie.director
+                : undefined,
             calculatedStatus: calculateMovieStatus(movie.releaseDate, releases),
             // include full detail fields so overlay can read cast/genre/etc
             cast: fullMovie.cast || movie.cast || [],
             genre: fullMovie.genre || movie.genre || [],
-            spokenLanguages: fullMovie.spokenLanguages || movie.spokenLanguages || [],
-            productionCountry: fullMovie.productionCountry || movie.productionCountry,
+            spokenLanguages:
+              fullMovie.spokenLanguages || movie.spokenLanguages || [],
+            productionCountry:
+              fullMovie.productionCountry || movie.productionCountry,
           };
 
           // update progressively so UI shows enriched data per movie as soon as available
-          setEnrichedMovies(prev => {
+          setEnrichedMovies((prev) => {
             const m = new Map(prev);
             m.set(movie.id, enrichedMovie);
             return m;
@@ -197,11 +270,17 @@ export default function MoviesPage() {
           // If detail fetch fails, use list data with calculated status based on releaseDate only
           const enrichedMovie: EnrichedMovie = {
             ...movie,
-            displayOverview: movie.overview && movie.overview.trim() ? movie.overview : undefined,
-            displayDirector: movie.director && movie.director.trim() ? movie.director : undefined,
+            displayOverview:
+              movie.overview && movie.overview.trim()
+                ? movie.overview
+                : undefined,
+            displayDirector:
+              movie.director && movie.director.trim()
+                ? movie.director
+                : undefined,
             calculatedStatus: calculateMovieStatus(movie.releaseDate),
           };
-          setEnrichedMovies(prev => {
+          setEnrichedMovies((prev) => {
             const m = new Map(prev);
             m.set(movie.id, enrichedMovie);
             return m;
@@ -316,7 +395,7 @@ export default function MoviesPage() {
     try {
       // Fetch full movie detail to ensure all fields are populated
       const fullMovieDetail = await moviesApi.getById(movie.id);
-      
+
       // Parse releaseDate safely - handle ISO string, Date object, or malformed input
       let releaseDateStr = '';
       if (typeof fullMovieDetail.releaseDate === 'string') {
@@ -327,7 +406,9 @@ export default function MoviesPage() {
           releaseDateStr = fullMovieDetail.releaseDate;
         }
       } else if (fullMovieDetail.releaseDate instanceof Date) {
-        releaseDateStr = fullMovieDetail.releaseDate.toISOString().split('T')[0];
+        releaseDateStr = fullMovieDetail.releaseDate
+          .toISOString()
+          .split('T')[0];
       } else {
         try {
           // Last resort: try to parse as Date
@@ -339,7 +420,7 @@ export default function MoviesPage() {
           releaseDateStr = '';
         }
       }
-      
+
       setFormData({
         title: fullMovieDetail.title,
         overview: fullMovieDetail.overview,
@@ -357,12 +438,18 @@ export default function MoviesPage() {
         director: fullMovieDetail.director || '',
         cast: fullMovieDetail.cast || [],
         genreIds: (() => {
-          const raw = (fullMovieDetail as any).genre ?? (fullMovieDetail as any).genres ?? (fullMovieDetail as any).genreIds ?? [];
+          const raw =
+            (fullMovieDetail as any).genre ??
+            (fullMovieDetail as any).genres ??
+            (fullMovieDetail as any).genreIds ??
+            [];
           if (Array.isArray(raw)) {
-            if (raw.length > 0 && typeof raw[0] === 'object') return raw.map((g: any) => String(g.id));
+            if (raw.length > 0 && typeof raw[0] === 'object')
+              return raw.map((g: any) => String(g.id));
             return raw.map((v: any) => String(v));
           }
-          if (raw && typeof raw === 'object' && 'id' in raw) return [String(raw.id)];
+          if (raw && typeof raw === 'object' && 'id' in raw)
+            return [String(raw.id)];
           if (raw != null) return [String(raw)];
           return [];
         })(),
@@ -388,12 +475,18 @@ export default function MoviesPage() {
         director: movie.director || '',
         cast: movie.cast || [],
         genreIds: (() => {
-          const raw = (movie as any).genre ?? (movie as any).genres ?? (movie as any).genreIds ?? [];
+          const raw =
+            (movie as any).genre ??
+            (movie as any).genres ??
+            (movie as any).genreIds ??
+            [];
           if (Array.isArray(raw)) {
-            if (raw.length > 0 && typeof raw[0] === 'object') return raw.map((g: any) => String(g.id));
+            if (raw.length > 0 && typeof raw[0] === 'object')
+              return raw.map((g: any) => String(g.id));
             return raw.map((v: any) => String(v));
           }
-          if (raw && typeof raw === 'object' && 'id' in raw) return [String(raw.id)];
+          if (raw && typeof raw === 'object' && 'id' in raw)
+            return [String(raw.id)];
           if (raw != null) return [String(raw)];
           return [];
         })(),
@@ -429,7 +522,9 @@ export default function MoviesPage() {
 
     // movie.genreIds explicit array
     if (Array.isArray((movie as any).genreIds)) {
-      ((movie as any).genreIds as any[]).forEach(gid => ids.push(String(gid)));
+      ((movie as any).genreIds as any[]).forEach((gid) =>
+        ids.push(String(gid))
+      );
     }
 
     // dedupe
@@ -444,10 +539,15 @@ export default function MoviesPage() {
     if (rawGenre) {
       if (Array.isArray(rawGenre)) {
         rawGenre.forEach((g: any) => {
-          if (g && typeof g === 'object' && 'name' in g) names.push(String(g.name));
+          if (g && typeof g === 'object' && 'name' in g)
+            names.push(String(g.name));
           else if (g != null) names.push(String(g));
         });
-      } else if (rawGenre && typeof rawGenre === 'object' && 'name' in rawGenre) {
+      } else if (
+        rawGenre &&
+        typeof rawGenre === 'object' &&
+        'name' in rawGenre
+      ) {
         names.push(String(rawGenre.name));
       } else if (rawGenre != null) {
         names.push(String(rawGenre));
@@ -455,7 +555,7 @@ export default function MoviesPage() {
     }
 
     if (Array.isArray((movie as any).genreIds)) {
-      ((movie as any).genreIds as string[]).forEach(gid => {
+      ((movie as any).genreIds as string[]).forEach((gid) => {
         // try to resolve name from loaded genres list
         const g = genres.find((x: any) => String(x.id) === String(gid));
         if (g && g.name) names.push(g.name);
@@ -468,38 +568,52 @@ export default function MoviesPage() {
 
   // Filter by iterating original movies and preferring enriched data where present,
   // but always falling back to the original movie for missing fields (e.g., releaseDate)
-  const filteredSources = movies.filter((movie) => {
-    const enriched = enrichedMovies.get(movie.id) as EnrichedMovie | undefined;
-    const source: Movie | EnrichedMovie = enriched || movie;
+  const filteredSources = movies
+    .filter((movie) => {
+      const enriched = enrichedMovies.get(movie.id) as
+        | EnrichedMovie
+        | undefined;
+      const source: Movie | EnrichedMovie = enriched || movie;
 
-    // Search filter (title should come from original movie to match listing behavior)
-    if (searchQuery && !String(movie.title || '').toLowerCase().includes(searchQuery.toLowerCase())) {
-      return false;
-    }
+      // Search filter (title should come from original movie to match listing behavior)
+      if (
+        searchQuery &&
+        !String(movie.title || '')
+          .toLowerCase()
+          .includes(searchQuery.toLowerCase())
+      ) {
+        return false;
+      }
 
-    // Genre filter (must have ALL selected genres) - use enriched if available
-    if (selectedGenreIds.length > 0) {
-      const movieGenreIds = getMovieGenreIds(source as Movie);
-      const hasAllGenres = selectedGenreIds.every(genreId => movieGenreIds.includes(genreId));
-      if (!hasAllGenres) return false;
-    }
+      // Genre filter (must have ALL selected genres) - use enriched if available
+      if (selectedGenreIds.length > 0) {
+        const movieGenreIds = getMovieGenreIds(source as Movie);
+        const hasAllGenres = selectedGenreIds.every((genreId) =>
+          movieGenreIds.includes(genreId)
+        );
+        if (!hasAllGenres) return false;
+      }
 
-    // Release year filter removed — filtering now relies on genres, status and rating only
+      // Release year filter removed — filtering now relies on genres, status and rating only
 
-    // Rating filter - prefer enriched then fallback
-    const ratingToCheck = (source as any).ageRating ?? movie.ageRating;
-    if (selectedRating !== 'all' && ratingToCheck !== selectedRating) {
-      return false;
-    }
+      // Rating filter - prefer enriched then fallback
+      const ratingToCheck = (source as any).ageRating ?? movie.ageRating;
+      if (selectedRating !== 'all' && ratingToCheck !== selectedRating) {
+        return false;
+      }
 
-    // Status filter - use enriched calculatedStatus if available, else fallback to movie.status
-    if (selectedStatus !== 'all') {
-      const statusToCheck = (enriched && enriched.calculatedStatus) || (movie as any).status || undefined;
-      if (statusToCheck !== selectedStatus) return false;
-    }
+      // Status filter - use enriched calculatedStatus if available, else fallback to movie.status
+      if (selectedStatus !== 'all') {
+        const statusToCheck =
+          (enriched && enriched.calculatedStatus) ||
+          (movie as any).status ||
+          undefined;
+        if (statusToCheck !== selectedStatus) return false;
+      }
 
-    return true;
-  }).map(m => enrichedMovies.get(m.id) || m) as EnrichedMovie[];
+      return true;
+    })
+    .map((m) => enrichedMovies.get(m.id) || m) as EnrichedMovie[];
 
   const displayedMovies = useMemo(() => filteredSources, [filteredSources]);
 
@@ -508,7 +622,12 @@ export default function MoviesPage() {
     if (!rd) return '';
     if (typeof rd === 'string') return rd.includes('T') ? rd.split('T')[0] : rd;
     if (rd instanceof Date) return rd.toISOString().split('T')[0];
-    try { const d = new Date(rd as any); if (!isNaN(d.getTime())) return d.toISOString().split('T')[0]; } catch (e) { /* ignore */ }
+    try {
+      const d = new Date(rd as any);
+      if (!isNaN(d.getTime())) return d.toISOString().split('T')[0];
+    } catch (e) {
+      /* ignore */
+    }
     return '';
   })();
 
@@ -519,16 +638,18 @@ export default function MoviesPage() {
           <h1 className="text-3xl font-bold tracking-tight">Phim</h1>
           <p className="text-gray-500 mt-1">Quản lý danh mục phim của bạn</p>
         </div>
-        <Button
-          onClick={() => {
-            resetForm();
-            setDialogOpen(true);
-          }}
-          className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          Thêm phim
-        </Button>
+        {!isManager && (
+          <Button
+            onClick={() => {
+              resetForm();
+              setDialogOpen(true);
+            }}
+            className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Thêm phim
+          </Button>
+        )}
       </div>
 
       <Card>
@@ -550,8 +671,13 @@ export default function MoviesPage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {/* Status filter */}
               <div>
-                <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2 block">📊 Trạng Thái</label>
-                <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2 block">
+                  📊 Trạng Thái
+                </label>
+                <Select
+                  value={selectedStatus}
+                  onValueChange={setSelectedStatus}
+                >
                   <SelectTrigger className="h-10 bg-white border border-purple-200 hover:border-purple-300 focus:border-purple-400 font-medium">
                     <SelectValue placeholder="Tất Cả Trạng Thái" />
                   </SelectTrigger>
@@ -566,8 +692,13 @@ export default function MoviesPage() {
 
               {/* Age rating filter */}
               <div>
-                <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2 block">🎫 Xếp Hạng Tuổi</label>
-                <Select value={selectedRating} onValueChange={setSelectedRating}>
+                <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2 block">
+                  🎫 Xếp Hạng Tuổi
+                </label>
+                <Select
+                  value={selectedRating}
+                  onValueChange={setSelectedRating}
+                >
                   <SelectTrigger className="h-10 bg-white border border-purple-200 hover:border-purple-300 focus:border-purple-400 font-medium">
                     <SelectValue placeholder="Tất Cả Xếp Hạng" />
                   </SelectTrigger>
@@ -585,7 +716,9 @@ export default function MoviesPage() {
 
               {/* Genres Multi-select (compact) */}
               <div>
-                <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2 block">🎬 Thể Loại</label>
+                <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2 block">
+                  🎬 Thể Loại
+                </label>
                 <div className="border border-purple-200 rounded-lg bg-white p-2 max-h-40 overflow-y-auto shadow-sm">
                   <div className="mb-2">
                     <Input
@@ -596,7 +729,9 @@ export default function MoviesPage() {
                     />
                   </div>
                   {filteredGenres.length === 0 ? (
-                    <p className="text-xs text-gray-500 p-2">Không có thể loại</p>
+                    <p className="text-xs text-gray-500 p-2">
+                      Không có thể loại
+                    </p>
                   ) : (
                     <div className="space-y-1">
                       {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
@@ -607,16 +742,33 @@ export default function MoviesPage() {
                             key={genre.id}
                             className="flex items-center gap-2 cursor-pointer p-1.5 rounded-md transition-all hover:bg-purple-50"
                           >
-                            <div className={`h-4 w-4 rounded border ${checked ? 'bg-purple-600 border-purple-600' : 'bg-white border-gray-300'}`}>
-                              {checked && <Check className="h-3 w-3 text-white" />}
+                            <div
+                              className={`h-4 w-4 rounded border ${
+                                checked
+                                  ? 'bg-purple-600 border-purple-600'
+                                  : 'bg-white border-gray-300'
+                              }`}
+                            >
+                              {checked && (
+                                <Check className="h-3 w-3 text-white" />
+                              )}
                             </div>
-                            <span className="text-xs text-gray-700">{genre.name}</span>
+                            <span className="text-xs text-gray-700">
+                              {genre.name}
+                            </span>
                             <input
                               type="checkbox"
                               checked={checked}
                               onChange={(e) => {
-                                if (e.target.checked) setSelectedGenreIds(prev => [...prev, genre.id]);
-                                else setSelectedGenreIds(prev => prev.filter(id => id !== genre.id));
+                                if (e.target.checked)
+                                  setSelectedGenreIds((prev) => [
+                                    ...prev,
+                                    genre.id,
+                                  ]);
+                                else
+                                  setSelectedGenreIds((prev) =>
+                                    prev.filter((id) => id !== genre.id)
+                                  );
                               }}
                               className="sr-only"
                             />
@@ -630,30 +782,73 @@ export default function MoviesPage() {
             </div>
 
             {/* Active filters and clear button */}
-            {(searchQuery || selectedStatus !== 'all' || selectedRating !== 'all' || selectedGenreIds.length > 0) && (
+            {(searchQuery ||
+              selectedStatus !== 'all' ||
+              selectedRating !== 'all' ||
+              selectedGenreIds.length > 0) && (
               <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-purple-200/50">
                 {searchQuery && (
                   <div className="inline-flex items-center gap-2 px-3 py-1 bg-white rounded-full border border-purple-200 shadow-sm">
-                  <span className="text-xs text-gray-600">Tìm kiếm: <span className="font-semibold text-purple-700">{searchQuery}</span></span>
-                    <button onClick={() => setSearchQuery('')} className="text-purple-400 hover:text-purple-600">✕</button>
+                    <span className="text-xs text-gray-600">
+                      Tìm kiếm:{' '}
+                      <span className="font-semibold text-purple-700">
+                        {searchQuery}
+                      </span>
+                    </span>
+                    <button
+                      onClick={() => setSearchQuery('')}
+                      className="text-purple-400 hover:text-purple-600"
+                    >
+                      ✕
+                    </button>
                   </div>
                 )}
                 {selectedStatus !== 'all' && (
                   <div className="inline-flex items-center gap-2 px-3 py-1 bg-white rounded-full border border-purple-200 shadow-sm">
-                    <span className="text-xs text-gray-600">Trạng Thái: <span className="font-semibold text-purple-700">{selectedStatus}</span></span>
-                    <button onClick={() => setSelectedStatus('all')} className="text-purple-400 hover:text-purple-600">✕</button>
+                    <span className="text-xs text-gray-600">
+                      Trạng Thái:{' '}
+                      <span className="font-semibold text-purple-700">
+                        {selectedStatus}
+                      </span>
+                    </span>
+                    <button
+                      onClick={() => setSelectedStatus('all')}
+                      className="text-purple-400 hover:text-purple-600"
+                    >
+                      ✕
+                    </button>
                   </div>
                 )}
                 {selectedRating !== 'all' && (
                   <div className="inline-flex items-center gap-2 px-3 py-1 bg-white rounded-full border border-purple-200 shadow-sm">
-                    <span className="text-xs text-gray-600">Xếp Hạng: <span className="font-semibold text-purple-700">{selectedRating}</span></span>
-                    <button onClick={() => setSelectedRating('all')} className="text-purple-400 hover:text-purple-600">✕</button>
+                    <span className="text-xs text-gray-600">
+                      Xếp Hạng:{' '}
+                      <span className="font-semibold text-purple-700">
+                        {selectedRating}
+                      </span>
+                    </span>
+                    <button
+                      onClick={() => setSelectedRating('all')}
+                      className="text-purple-400 hover:text-purple-600"
+                    >
+                      ✕
+                    </button>
                   </div>
                 )}
                 {selectedGenreIds.length > 0 && (
                   <div className="inline-flex items-center gap-2 px-3 py-1 bg-white rounded-full border border-purple-200 shadow-sm">
-                    <span className="text-xs text-gray-600">Thể loại: <span className="font-semibold text-purple-700">{selectedGenreIds.length}</span></span>
-                    <button onClick={() => setSelectedGenreIds([])} className="text-purple-400 hover:text-purple-600">✕</button>
+                    <span className="text-xs text-gray-600">
+                      Thể loại:{' '}
+                      <span className="font-semibold text-purple-700">
+                        {selectedGenreIds.length}
+                      </span>
+                    </span>
+                    <button
+                      onClick={() => setSelectedGenreIds([])}
+                      className="text-purple-400 hover:text-purple-600"
+                    >
+                      ✕
+                    </button>
                   </div>
                 )}
                 <Button
@@ -680,14 +875,19 @@ export default function MoviesPage() {
         {loading ? (
           <div className="col-span-full text-center py-12">Đang tải...</div>
         ) : displayedMovies.length === 0 ? (
-          <div className="col-span-full text-center py-12">Không tìm thấy phim nào</div>
+          <div className="col-span-full text-center py-12">
+            Không tìm thấy phim nào
+          </div>
         ) : (
           displayedMovies.map((movie) => (
             <Card
               key={movie.id}
               className="overflow-hidden hover:shadow-2xl transition-all duration-300 border-0 bg-white group flex flex-col h-full"
             >
-              <div className="relative w-full overflow-hidden" style={{ aspectRatio: '2/3' }}>
+              <div
+                className="relative w-full overflow-hidden"
+                style={{ aspectRatio: '2/3' }}
+              >
                 {movie.posterUrl ? (
                   <Image
                     src={movie.posterUrl}
@@ -703,51 +903,91 @@ export default function MoviesPage() {
                   </div>
                 )}
 
-                <div className="absolute top-3 right-3 z-30">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="secondary"
-                        size="icon"
-                        className="h-9 w-9 bg-white/90 hover:bg-white shadow-lg backdrop-blur"
-                      >
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-48">
-                      <DropdownMenuItem onClick={() => openEditDialog(movie)} className="cursor-pointer">
-                        <Edit className="mr-2 h-4 w-4" /> Chỉnh sửa phim
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => { setSelectedMovieIdForRelease(movie.id); setAddReleaseDialogOpen(true); }} className="cursor-pointer">
-                        <Calendar className="mr-2 h-4 w-4" /> Lịch phát hành
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => { setSelectedMovie(movie); setDeleteDialogOpen(true); }} className="text-red-600 cursor-pointer">
-                        <Trash2 className="mr-2 h-4 w-4" /> Xóa phim
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
+                {!isManager && (
+                  <div className="absolute top-3 right-3 z-30">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="secondary"
+                          size="icon"
+                          className="h-9 w-9 bg-white/90 hover:bg-white shadow-lg backdrop-blur"
+                        >
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-48">
+                        <DropdownMenuItem
+                          onClick={() => openEditDialog(movie)}
+                          className="cursor-pointer"
+                        >
+                          <Edit className="mr-2 h-4 w-4" /> Chỉnh sửa phim
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => {
+                            setSelectedMovieIdForRelease(movie.id);
+                            setAddReleaseDialogOpen(true);
+                          }}
+                          className="cursor-pointer"
+                        >
+                          <Calendar className="mr-2 h-4 w-4" /> Lịch phát hành
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => {
+                            setSelectedMovie(movie);
+                            setDeleteDialogOpen(true);
+                          }}
+                          className="text-red-600 cursor-pointer"
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" /> Xóa phim
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                )}
 
                 <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-all duration-300 z-20 pointer-events-none group-hover:pointer-events-auto">
                   <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
                   <div className="relative h-full w-full flex items-center justify-center pointer-events-auto">
-                    <div className="w-full max-w-xl bg-black/60 rounded-lg p-4 text-center text-white shadow-2xl mx-4 overflow-y-auto" style={{ maxHeight: '70%' }}>
+                    <div
+                      className="w-full max-w-xl bg-black/60 rounded-lg p-4 text-center text-white shadow-2xl mx-4 overflow-y-auto"
+                      style={{ maxHeight: '70%' }}
+                    >
                       {ensureArray(movie.cast).length > 0 && (
                         <div className="mb-2">
-                            <p className="text-xs text-yellow-300 font-semibold mb-1 uppercase tracking-wider">Diễn Viên</p>
-                          <p className="text-sm">{ensureArray(movie.cast).slice(0,6).map(a => typeof a === 'object' && a && 'name' in a ? (a as { name?: string }).name : String(a)).filter(Boolean).join(', ')}</p>
+                          <p className="text-xs text-yellow-300 font-semibold mb-1 uppercase tracking-wider">
+                            Diễn Viên
+                          </p>
+                          <p className="text-sm">
+                            {ensureArray(movie.cast)
+                              .slice(0, 6)
+                              .map((a) =>
+                                typeof a === 'object' && a && 'name' in a
+                                  ? (a as { name?: string }).name
+                                  : String(a)
+                              )
+                              .filter(Boolean)
+                              .join(', ')}
+                          </p>
                         </div>
                       )}
                       {getMovieGenreNames(movie).length > 0 && (
                         <div className="mb-2">
-                          <p className="text-xs text-yellow-300 font-semibold mb-1 uppercase tracking-wider">Thể loại</p>
-                          <p className="text-sm">{getMovieGenreNames(movie).join(', ')}</p>
+                          <p className="text-xs text-yellow-300 font-semibold mb-1 uppercase tracking-wider">
+                            Thể loại
+                          </p>
+                          <p className="text-sm">
+                            {getMovieGenreNames(movie).join(', ')}
+                          </p>
                         </div>
                       )}
                       {ensureArray(movie.spokenLanguages).length > 0 && (
                         <div>
-                          <p className="text-xs text-yellow-300 font-semibold mb-1 uppercase tracking-wider">Ngôn ngữ</p>
-                          <p className="text-sm">{ensureArray(movie.spokenLanguages).join(', ')}</p>
+                          <p className="text-xs text-yellow-300 font-semibold mb-1 uppercase tracking-wider">
+                            Ngôn ngữ
+                          </p>
+                          <p className="text-sm">
+                            {ensureArray(movie.spokenLanguages).join(', ')}
+                          </p>
                         </div>
                       )}
                     </div>
@@ -756,17 +996,37 @@ export default function MoviesPage() {
               </div>
 
               <div className="p-4 flex-1 flex flex-col">
-                <h3 className="font-bold text-base line-clamp-2 mb-2 text-gray-900">{movie.title}</h3>
+                <h3 className="font-bold text-base line-clamp-2 mb-2 text-gray-900">
+                  {movie.title}
+                </h3>
                 {movie.displayDirector && (
                   <div className="mb-3 pb-2 border-b border-gray-200">
-                    <p className="text-sm text-gray-700"><span className="font-semibold">🎬 {movie.displayDirector}</span></p>
+                    <p className="text-sm text-gray-700">
+                      <span className="font-semibold">
+                        🎬 {movie.displayDirector}
+                      </span>
+                    </p>
                   </div>
                 )}
-                <p className="text-sm text-gray-600 line-clamp-3 mb-4 flex-1">{movie.displayOverview ? movie.displayOverview : 'Không có mô tả'}</p>
+                <p className="text-sm text-gray-600 line-clamp-3 mb-4 flex-1">
+                  {movie.displayOverview
+                    ? movie.displayOverview
+                    : 'Không có mô tả'}
+                </p>
                 <div className="flex items-center justify-between text-xs bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg p-3 border border-gray-200 mt-auto">
-                  <div className="flex items-center gap-1.5"><span className="text-base">⏱</span><span className="font-semibold text-gray-800">{movie.runtime} min</span></div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-base">⏱</span>
+                    <span className="font-semibold text-gray-800">
+                      {movie.runtime} min
+                    </span>
+                  </div>
                   <div className="w-px h-5 bg-gray-300" />
-                  <div className="flex items-center gap-1.5"><span className="text-base">📊</span><span className="font-semibold text-gray-800">{movie.ageRating}</span></div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-base">📊</span>
+                    <span className="font-semibold text-gray-800">
+                      {movie.ageRating}
+                    </span>
+                  </div>
                 </div>
               </div>
             </Card>
@@ -867,7 +1127,10 @@ export default function MoviesPage() {
                   type="number"
                   value={formData.runtime}
                   onChange={(e) =>
-                    setFormData({ ...formData, runtime: parseInt(e.target.value) || 0 })
+                    setFormData({
+                      ...formData,
+                      runtime: parseInt(e.target.value) || 0,
+                    })
                   }
                   placeholder="120"
                 />
@@ -912,7 +1175,10 @@ export default function MoviesPage() {
                   id="originalLanguage"
                   value={formData.originalLanguage}
                   onChange={(e) =>
-                    setFormData({ ...formData, originalLanguage: e.target.value })
+                    setFormData({
+                      ...formData,
+                      originalLanguage: e.target.value,
+                    })
                   }
                   placeholder="en"
                 />
@@ -922,7 +1188,10 @@ export default function MoviesPage() {
                 <Select
                   value={formData.languageType}
                   onValueChange={(value) =>
-                    setFormData({ ...formData, languageType: value as LanguageType })
+                    setFormData({
+                      ...formData,
+                      languageType: value as LanguageType,
+                    })
                   }
                 >
                   <SelectTrigger>
@@ -943,7 +1212,10 @@ export default function MoviesPage() {
                   id="productionCountry"
                   value={formData.productionCountry}
                   onChange={(e) =>
-                    setFormData({ ...formData, productionCountry: e.target.value })
+                    setFormData({
+                      ...formData,
+                      productionCountry: e.target.value,
+                    })
                   }
                   placeholder="US"
                 />
@@ -963,14 +1235,19 @@ export default function MoviesPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="spokenLanguages">Ngôn Ngữ Phát Âm * (cách nhau bằng dấu phẩy)</Label>
+                <Label htmlFor="spokenLanguages">
+                  Ngôn Ngữ Phát Âm * (cách nhau bằng dấu phẩy)
+                </Label>
                 <Input
                   id="spokenLanguages"
                   value={formData.spokenLanguages?.join(', ') || 'en'}
                   onChange={(e) =>
-                    setFormData({ 
-                      ...formData, 
-                      spokenLanguages: e.target.value.split(',').map(s => s.trim()).filter(Boolean) 
+                    setFormData({
+                      ...formData,
+                      spokenLanguages: e.target.value
+                        .split(',')
+                        .map((s) => s.trim())
+                        .filter(Boolean),
                     })
                   }
                   placeholder="en, vi, zh"
@@ -987,7 +1264,10 @@ export default function MoviesPage() {
                       value={actor.name}
                       onChange={(e) => {
                         const newCast = [...(formData.cast || [])];
-                        newCast[index] = { ...newCast[index], name: e.target.value };
+                        newCast[index] = {
+                          ...newCast[index],
+                          name: e.target.value,
+                        };
                         setFormData({ ...formData, cast: newCast });
                       }}
                       placeholder="Tên diễn viên"
@@ -997,7 +1277,10 @@ export default function MoviesPage() {
                       value={actor.character || ''}
                       onChange={(e) => {
                         const newCast = [...(formData.cast || [])];
-                        newCast[index] = { ...newCast[index], character: e.target.value };
+                        newCast[index] = {
+                          ...newCast[index],
+                          character: e.target.value,
+                        };
                         setFormData({ ...formData, cast: newCast });
                       }}
                       placeholder="Tên vai (tùy chọn)"
@@ -1008,7 +1291,9 @@ export default function MoviesPage() {
                       variant="outline"
                       size="icon"
                       onClick={() => {
-                        const newCast = (formData.cast || []).filter((_, i) => i !== index);
+                        const newCast = (formData.cast || []).filter(
+                          (_, i) => i !== index
+                        );
                         setFormData({ ...formData, cast: newCast });
                       }}
                     >
@@ -1023,7 +1308,10 @@ export default function MoviesPage() {
                   onClick={() => {
                     setFormData({
                       ...formData,
-                      cast: [...(formData.cast || []), { name: '', character: '' }],
+                      cast: [
+                        ...(formData.cast || []),
+                        { name: '', character: '' },
+                      ],
                     });
                   }}
                   className="w-full"
@@ -1041,7 +1329,11 @@ export default function MoviesPage() {
                   <Button
                     key={genre.id}
                     type="button"
-                    variant={formData.genreIds?.includes(genre.id) ? 'default' : 'outline'}
+                    variant={
+                      formData.genreIds?.includes(genre.id)
+                        ? 'default'
+                        : 'outline'
+                    }
                     size="sm"
                     onClick={() => {
                       setFormData({
@@ -1088,7 +1380,10 @@ export default function MoviesPage() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteDialogOpen(false)}
+            >
               Hủy
             </Button>
             <Button variant="destructive" onClick={handleDelete}>
@@ -1122,9 +1417,7 @@ export default function MoviesPage() {
           </DialogHeader>
           <p className="text-sm text-gray-600">{validationErrorMessage}</p>
           <DialogFooter>
-            <Button onClick={() => setValidationErrorOpen(false)}>
-              OK
-            </Button>
+            <Button onClick={() => setValidationErrorOpen(false)}>OK</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

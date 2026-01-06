@@ -12,6 +12,7 @@ import {
   bookingsApi,
   reviewsApi,
   concessionsApi,
+  promotionsApi,
 } from './services';
 import type {
   CreateMovieRequest,
@@ -41,6 +42,9 @@ import type {
   CreateConcessionRequest,
   UpdateConcessionRequest,
   ConcessionFiltersParams,
+  CreatePromotionRequest,
+  UpdatePromotionRequest,
+  PromotionFiltersParams,
 } from './types';
 
 // ============================================================================
@@ -51,7 +55,8 @@ export const queryKeys = {
   movies: {
     all: ['movies'] as const,
     lists: () => [...queryKeys.movies.all, 'list'] as const,
-    list: (params?: { page?: number; limit?: number; search?: string }) => [...queryKeys.movies.lists(), params] as const,
+    list: (params?: { page?: number; limit?: number; search?: string }) =>
+      [...queryKeys.movies.lists(), params] as const,
     details: () => [...queryKeys.movies.all, 'detail'] as const,
     detail: (id: string) => [...queryKeys.movies.details(), id] as const,
   },
@@ -64,14 +69,16 @@ export const queryKeys = {
   cinemas: {
     all: ['cinemas'] as const,
     lists: () => [...queryKeys.cinemas.all, 'list'] as const,
-    list: (params?: { page?: number; limit?: number; search?: string }) => [...queryKeys.cinemas.lists(), params] as const,
+    list: (params?: { page?: number; limit?: number; search?: string }) =>
+      [...queryKeys.cinemas.lists(), params] as const,
     details: () => [...queryKeys.cinemas.all, 'detail'] as const,
     detail: (id: string) => [...queryKeys.cinemas.details(), id] as const,
   },
   halls: {
     all: ['halls'] as const,
     lists: () => [...queryKeys.halls.all, 'list'] as const,
-    byCinema: (cinemaId: string) => [...queryKeys.halls.lists(), 'cinema', cinemaId] as const,
+    byCinema: (cinemaId: string) =>
+      [...queryKeys.halls.lists(), 'cinema', cinemaId] as const,
     grouped: () => [...queryKeys.halls.lists(), 'grouped'] as const,
     details: () => [...queryKeys.halls.all, 'detail'] as const,
     detail: (id: string) => [...queryKeys.halls.details(), id] as const,
@@ -79,51 +86,68 @@ export const queryKeys = {
   showtimes: {
     all: ['showtimes'] as const,
     lists: () => [...queryKeys.showtimes.all, 'list'] as const,
-    list: (filters?: ShowtimeFiltersParams) => [...queryKeys.showtimes.lists(), filters] as const,
+    list: (filters?: ShowtimeFiltersParams) =>
+      [...queryKeys.showtimes.lists(), filters] as const,
     details: () => [...queryKeys.showtimes.all, 'detail'] as const,
     detail: (id: string) => [...queryKeys.showtimes.details(), id] as const,
-    seats: (id: string) => [...queryKeys.showtimes.detail(id), 'seats'] as const,
+    seats: (id: string) =>
+      [...queryKeys.showtimes.detail(id), 'seats'] as const,
   },
   movieReleases: {
     all: ['movie-releases'] as const,
     lists: () => [...queryKeys.movieReleases.all, 'list'] as const,
-    list: (params?: { cinemaId?: string; movieId?: string }) => [...queryKeys.movieReleases.lists(), params] as const,
+    list: (params?: { cinemaId?: string; movieId?: string }) =>
+      [...queryKeys.movieReleases.lists(), params] as const,
     details: () => [...queryKeys.movieReleases.all, 'detail'] as const,
     detail: (id: string) => [...queryKeys.movieReleases.details(), id] as const,
   },
   ticketPricing: {
     all: ['ticket-pricing'] as const,
     lists: () => [...queryKeys.ticketPricing.all, 'list'] as const,
-    list: (params?: TicketPricingFiltersParams) => [...queryKeys.ticketPricing.lists(), params] as const,
+    list: (params?: TicketPricingFiltersParams) =>
+      [...queryKeys.ticketPricing.lists(), params] as const,
     details: () => [...queryKeys.ticketPricing.all, 'detail'] as const,
     detail: (id: string) => [...queryKeys.ticketPricing.details(), id] as const,
   },
   staff: {
     all: ['staff'] as const,
     lists: () => [...queryKeys.staff.all, 'list'] as const,
-    list: (params?: StaffFiltersParams) => [...queryKeys.staff.lists(), params] as const,
+    list: (params?: StaffFiltersParams) =>
+      [...queryKeys.staff.lists(), params] as const,
     details: () => [...queryKeys.staff.all, 'detail'] as const,
     detail: (id: string) => [...queryKeys.staff.details(), id] as const,
   },
   bookings: {
     all: ['bookings'] as const,
     lists: () => [...queryKeys.bookings.all, 'list'] as const,
-    list: (params?: BookingFiltersParams) => [...queryKeys.bookings.lists(), params] as const,
+    list: (params?: BookingFiltersParams) =>
+      [...queryKeys.bookings.lists(), params] as const,
     details: () => [...queryKeys.bookings.all, 'detail'] as const,
     detail: (id: string) => [...queryKeys.bookings.details(), id] as const,
-    byShowtime: (showtimeId: string) => [...queryKeys.bookings.lists(), 'showtime', showtimeId] as const,
+    byShowtime: (showtimeId: string) =>
+      [...queryKeys.bookings.lists(), 'showtime', showtimeId] as const,
   },
   reviews: {
     all: ['reviews'] as const,
     lists: () => [...queryKeys.reviews.all, 'list'] as const,
-    list: (params?: ReviewFiltersParams) => [...queryKeys.reviews.lists(), params] as const,
+    list: (params?: ReviewFiltersParams) =>
+      [...queryKeys.reviews.lists(), params] as const,
   },
   concessions: {
     all: ['concessions'] as const,
     lists: () => [...queryKeys.concessions.all, 'list'] as const,
-    list: (params?: ConcessionFiltersParams) => [...queryKeys.concessions.lists(), params] as const,
+    list: (params?: ConcessionFiltersParams) =>
+      [...queryKeys.concessions.lists(), params] as const,
     details: () => [...queryKeys.concessions.all, 'detail'] as const,
     detail: (id: string) => [...queryKeys.concessions.details(), id] as const,
+  },
+  promotions: {
+    all: ['promotions'] as const,
+    lists: () => [...queryKeys.promotions.all, 'list'] as const,
+    list: (params?: PromotionFiltersParams) =>
+      [...queryKeys.promotions.lists(), params] as const,
+    details: () => [...queryKeys.promotions.all, 'detail'] as const,
+    detail: (id: string) => [...queryKeys.promotions.details(), id] as const,
   },
 };
 
@@ -131,7 +155,11 @@ export const queryKeys = {
 // MOVIES HOOKS
 // ============================================================================
 
-export const useMovies = (params?: { page?: number; limit?: number; search?: string }) => {
+export const useMovies = (params?: {
+  page?: number;
+  limit?: number;
+  search?: string;
+}) => {
   return useQuery({
     queryKey: queryKeys.movies.list(params),
     queryFn: () => moviesApi.getAll(params),
@@ -166,7 +194,9 @@ export const useUpdateMovie = () => {
       moviesApi.update(id, data),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.movies.lists() });
-      queryClient.invalidateQueries({ queryKey: queryKeys.movies.detail(variables.id) });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.movies.detail(variables.id),
+      });
       toast.success('Movie updated successfully');
     },
   });
@@ -223,7 +253,9 @@ export const useUpdateGenre = () => {
       genresApi.update(id, data),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.genres.lists() });
-      queryClient.invalidateQueries({ queryKey: queryKeys.genres.detail(variables.id) });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.genres.detail(variables.id),
+      });
       toast.success('Genre updated successfully');
     },
   });
@@ -245,7 +277,11 @@ export const useDeleteGenre = () => {
 // CINEMAS HOOKS
 // ============================================================================
 
-export const useCinemas = (params?: { page?: number; limit?: number; search?: string }) => {
+export const useCinemas = (params?: {
+  page?: number;
+  limit?: number;
+  search?: string;
+}) => {
   return useQuery({
     queryKey: queryKeys.cinemas.list(params),
     queryFn: () => cinemasApi.getAll(params),
@@ -280,7 +316,9 @@ export const useUpdateCinema = () => {
       cinemasApi.update(id, data),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.cinemas.lists() });
-      queryClient.invalidateQueries({ queryKey: queryKeys.cinemas.detail(variables.id) });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.cinemas.detail(variables.id),
+      });
       toast.success('Cinema updated successfully');
     },
   });
@@ -331,7 +369,9 @@ export const useCreateHall = () => {
   return useMutation({
     mutationFn: (data: CreateHallRequest) => hallsApi.create(data),
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.halls.byCinema(variables.cinemaId) });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.halls.byCinema(variables.cinemaId),
+      });
       queryClient.invalidateQueries({ queryKey: queryKeys.halls.grouped() });
       toast.success('Hall created successfully');
     },
@@ -346,7 +386,9 @@ export const useUpdateHall = () => {
       hallsApi.update(id, data),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.halls.lists() });
-      queryClient.invalidateQueries({ queryKey: queryKeys.halls.detail(variables.id) });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.halls.detail(variables.id),
+      });
       queryClient.invalidateQueries({ queryKey: queryKeys.halls.grouped() });
       toast.success('Hall updated successfully');
     },
@@ -408,7 +450,9 @@ export const useUpdateShowtime = () => {
       showtimesApi.update(id, data),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.showtimes.lists() });
-      queryClient.invalidateQueries({ queryKey: queryKeys.showtimes.detail(variables.id) });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.showtimes.detail(variables.id),
+      });
       toast.success('Showtime updated successfully');
     },
   });
@@ -430,7 +474,8 @@ export const useBatchCreateShowtimes = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: BatchCreateShowtimesRequest) => showtimesApi.batchCreate(data),
+    mutationFn: (data: BatchCreateShowtimesRequest) =>
+      showtimesApi.batchCreate(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.showtimes.lists() });
       toast.success('Showtimes created successfully');
@@ -438,13 +483,13 @@ export const useBatchCreateShowtimes = () => {
     onError: (error: unknown) => {
       // Properly extract error details from various error types
       let errorInfo: Record<string, unknown> = {};
-      
+
       if (error instanceof Error) {
         errorInfo = {
           message: error.message,
           name: error.name,
         };
-        
+
         // Check if it's an axios error
         const axiosErr = error as unknown as Record<string, unknown>;
         if (axiosErr.response && typeof axiosErr.response === 'object') {
@@ -464,7 +509,7 @@ export const useBatchCreateShowtimes = () => {
       } else if (typeof error === 'object' && error !== null) {
         errorInfo = error as Record<string, unknown>;
       }
-      
+
       console.error('[useBatchCreateShowtimes] Mutation error:', errorInfo);
     },
   });
@@ -474,7 +519,10 @@ export const useBatchCreateShowtimes = () => {
 // MOVIE RELEASES HOOKS
 // ============================================================================
 
-export const useMovieReleases = (params?: { cinemaId?: string; movieId?: string }) => {
+export const useMovieReleases = (params?: {
+  cinemaId?: string;
+  movieId?: string;
+}) => {
   return useQuery({
     queryKey: queryKeys.movieReleases.list(params),
     queryFn: () => movieReleasesApi.getAll(params),
@@ -497,10 +545,13 @@ export const useCreateMovieRelease = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: CreateMovieReleaseRequest) => movieReleasesApi.create(data),
+    mutationFn: (data: CreateMovieReleaseRequest) =>
+      movieReleasesApi.create(data),
     onSuccess: async (created, variables: CreateMovieReleaseRequest) => {
       // Invalidate general lists, then try to fetch releases for the affected movie
-      queryClient.invalidateQueries({ queryKey: queryKeys.movieReleases.lists() });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.movieReleases.lists(),
+      });
       toast.success('Movie release created successfully');
 
       try {
@@ -509,9 +560,18 @@ export const useCreateMovieRelease = () => {
           const releases = await movieReleasesApi.getAll({ movieId });
 
           // Try to find the created release by id or by matching dates
-          const createdId = (created as unknown as Record<string, unknown>)?.id as string | undefined;
+          const createdId = (created as unknown as Record<string, unknown>)
+            ?.id as string | undefined;
           const found = Array.isArray(releases)
-            ? releases.find((r: MovieRelease) => r.id === createdId) || releases.find((r: MovieRelease) => r.startDate === (created as unknown as Record<string, unknown>)?.startDate && r.endDate === (created as unknown as Record<string, unknown>)?.endDate)
+            ? releases.find((r: MovieRelease) => r.id === createdId) ||
+              releases.find(
+                (r: MovieRelease) =>
+                  r.startDate ===
+                    (created as unknown as Record<string, unknown>)
+                      ?.startDate &&
+                  r.endDate ===
+                    (created as unknown as Record<string, unknown>)?.endDate
+              )
             : null;
 
           if (found) {
@@ -523,14 +583,21 @@ export const useCreateMovieRelease = () => {
               // Merge ensuring dedup by id
               const byId = new Map<string, MovieRelease>();
               for (const it of [...old, ...releases]) {
-                if (it && (it as unknown as MovieRelease).id) byId.set((it as unknown as MovieRelease).id, it as unknown as MovieRelease);
+                if (it && (it as unknown as MovieRelease).id)
+                  byId.set(
+                    (it as unknown as MovieRelease).id,
+                    it as unknown as MovieRelease
+                  );
               }
               return Array.from(byId.values());
             });
 
             // Ensure detail cache exists for the created release
             if ((found as MovieRelease).id) {
-              queryClient.setQueryData(queryKeys.movieReleases.detail(found.id), found);
+              queryClient.setQueryData(
+                queryKeys.movieReleases.detail(found.id),
+                found
+              );
             }
           }
         }
@@ -542,29 +609,41 @@ export const useCreateMovieRelease = () => {
       // If error was wrapped by api-client, it may include status and responseData
       const errAny = error as Record<string, unknown>;
       const status = errAny.status as number | undefined;
-      const responseData = errAny.responseData as Record<string, unknown> | undefined;
-      const errors = responseData?.errors as Array<Record<string, string>> | undefined;
+      const responseData = errAny.responseData as
+        | Record<string, unknown>
+        | undefined;
+      const errors = responseData?.errors as
+        | Array<Record<string, string>>
+        | undefined;
 
       // Build detailed error message from validation errors
       let detailMsg = '';
       if (Array.isArray(errors) && errors.length > 0) {
-        const errorDetails = errors.map((e) => `${e.field || 'field'}: ${e.message || e.code || 'invalid'}`).join(', ');
+        const errorDetails = errors
+          .map(
+            (e) => `${e.field || 'field'}: ${e.message || e.code || 'invalid'}`
+          )
+          .join(', ');
         detailMsg = `Validation: ${errorDetails}`;
       } else if (responseData?.message) {
         detailMsg = String(responseData.message);
       }
 
       // Show concise toast with status, and log full details to console
-      const toastMsg = detailMsg || (status ? `${String(errAny.message)} (status: ${status})` : String(errAny.message) || 'Failed to create movie release');
+      const toastMsg =
+        detailMsg ||
+        (status
+          ? `${String(errAny.message)} (status: ${status})`
+          : String(errAny.message) || 'Failed to create movie release');
       toast.error(toastMsg);
-      
+
       // Log everything for debugging
-      console.error('[MovieRelease] create error:', { 
-        status, 
+      console.error('[MovieRelease] create error:', {
+        status,
         message: errAny.message,
         errors,
-        responseData, 
-        raw: errAny.raw || errAny 
+        responseData,
+        raw: errAny.raw || errAny,
       });
     },
   });
@@ -574,21 +653,34 @@ export const useUpdateMovieRelease = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: UpdateMovieReleaseRequest }) =>
-      movieReleasesApi.update(id, data),
+    mutationFn: ({
+      id,
+      data,
+    }: {
+      id: string;
+      data: UpdateMovieReleaseRequest;
+    }) => movieReleasesApi.update(id, data),
     onSuccess: async (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.movieReleases.lists() });
-      queryClient.invalidateQueries({ queryKey: queryKeys.movieReleases.detail(variables.id) });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.movieReleases.lists(),
+      });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.movieReleases.detail(variables.id),
+      });
       toast.success('Movie release updated successfully');
 
       try {
         // After update, refetch releases for the movie and update cache for the updated item
-        const movieId = (variables.data as Record<string, unknown>)?.movieId as string | undefined;
+        const movieId = (variables.data as Record<string, unknown>)?.movieId as
+          | string
+          | undefined;
         const updatedId = variables.id;
         if (movieId) {
           const releases = await movieReleasesApi.getAll({ movieId });
           if (Array.isArray(releases)) {
-            const found = releases.find((r: MovieRelease) => r.id === updatedId);
+            const found = releases.find(
+              (r: MovieRelease) => r.id === updatedId
+            );
             if (found) {
               // Update specific list cache and detail cache
               const listKey = queryKeys.movieReleases.list({ movieId });
@@ -596,12 +688,16 @@ export const useUpdateMovieRelease = () => {
                 if (!Array.isArray(old)) return releases;
                 const byId = new Map<string, MovieRelease>();
                 for (const it of [...old, ...releases]) {
-                  if (it && (it as MovieRelease).id) byId.set((it as MovieRelease).id, it as MovieRelease);
+                  if (it && (it as MovieRelease).id)
+                    byId.set((it as MovieRelease).id, it as MovieRelease);
                 }
                 return Array.from(byId.values());
               });
 
-              queryClient.setQueryData(queryKeys.movieReleases.detail(found.id), found);
+              queryClient.setQueryData(
+                queryKeys.movieReleases.detail(found.id),
+                found
+              );
             }
           }
         }
@@ -613,9 +709,15 @@ export const useUpdateMovieRelease = () => {
       const errInfo = error as Record<string, unknown>;
       const status = errInfo?.status;
       const responseData = errInfo?.responseData;
-      const toastMsg = status ? `${errInfo?.message} (status: ${status})` : (errInfo?.message as string) || 'Failed to update movie release';
+      const toastMsg = status
+        ? `${errInfo?.message} (status: ${status})`
+        : (errInfo?.message as string) || 'Failed to update movie release';
       toast.error(toastMsg);
-      console.error('[MovieRelease] update error details:', { status, responseData, raw: (errInfo?.raw || errInfo) });
+      console.error('[MovieRelease] update error details:', {
+        status,
+        responseData,
+        raw: errInfo?.raw || errInfo,
+      });
     },
   });
 };
@@ -626,7 +728,9 @@ export const useDeleteMovieRelease = () => {
   return useMutation({
     mutationFn: (id: string) => movieReleasesApi.delete(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.movieReleases.lists() });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.movieReleases.lists(),
+      });
       toast.success('Movie release deleted successfully');
     },
   });
@@ -647,10 +751,17 @@ export const useUpdateTicketPricing = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: UpdateTicketPricingRequest }) =>
-      ticketPricingApi.update(id, data),
+    mutationFn: ({
+      id,
+      data,
+    }: {
+      id: string;
+      data: UpdateTicketPricingRequest;
+    }) => ticketPricingApi.update(id, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.ticketPricing.lists() });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.ticketPricing.lists(),
+      });
       toast.success('Ticket pricing updated successfully');
     },
   });
@@ -675,8 +786,13 @@ export const useUpdateSeatStatus = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ seatId, data }: { seatId: string; data: UpdateSeatStatusRequest }) =>
-      hallsApi.updateSeatStatus(seatId, data),
+    mutationFn: ({
+      seatId,
+      data,
+    }: {
+      seatId: string;
+      data: UpdateSeatStatusRequest;
+    }) => hallsApi.updateSeatStatus(seatId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.showtimes.all });
       toast.success('Seat status updated successfully');
@@ -714,26 +830,32 @@ export const useCreateStaff = () => {
     },
     onError: (error: unknown) => {
       let errorMessage = 'Failed to create staff member';
-      
+
       if (error instanceof Error) {
         errorMessage = error.message;
-        
+
         // Check for additional error details
         const err = error as Error & { responseData?: Record<string, unknown> };
-        if (err.responseData?.errors && Array.isArray(err.responseData.errors)) {
-          const details = (err.responseData.errors as unknown[]).map((e: unknown) => {
-            if (typeof e === 'string') return e;
-            if (e && typeof e === 'object') {
-              const errObj = e as Record<string, unknown>;
-              if (errObj.message) return String(errObj.message);
-              if (errObj.path) return `${errObj.path}: ${errObj.message || errObj.code}`;
-            }
-            return JSON.stringify(e);
-          }).join('; ');
+        if (
+          err.responseData?.errors &&
+          Array.isArray(err.responseData.errors)
+        ) {
+          const details = (err.responseData.errors as unknown[])
+            .map((e: unknown) => {
+              if (typeof e === 'string') return e;
+              if (e && typeof e === 'object') {
+                const errObj = e as Record<string, unknown>;
+                if (errObj.message) return String(errObj.message);
+                if (errObj.path)
+                  return `${errObj.path}: ${errObj.message || errObj.code}`;
+              }
+              return JSON.stringify(e);
+            })
+            .join('; ');
           errorMessage = `Validation failed: ${details}`;
         }
       }
-      
+
       console.error('[useCreateStaff] Error:', { error, errorMessage });
       toast.error(errorMessage);
     },
@@ -748,7 +870,9 @@ export const useUpdateStaff = () => {
       staffApi.update(id, data),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.staff.lists() });
-      queryClient.invalidateQueries({ queryKey: queryKeys.staff.detail(variables.id) });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.staff.detail(variables.id),
+      });
       toast.success('Staff member updated successfully');
     },
     onError: (error: unknown) => {
@@ -803,14 +927,21 @@ export const useUpdateBookingStatus = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: UpdateBookingStatusRequest }) =>
-      bookingsApi.updateStatus(id, data),
+    mutationFn: ({
+      id,
+      data,
+    }: {
+      id: string;
+      data: UpdateBookingStatusRequest;
+    }) => bookingsApi.updateStatus(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.bookings.lists() });
       toast.success('Booking status updated successfully');
     },
     onError: (error: unknown) => {
-      toast.error((error as Error)?.message || 'Failed to update booking status');
+      toast.error(
+        (error as Error)?.message || 'Failed to update booking status'
+      );
     },
   });
 };
@@ -877,7 +1008,9 @@ export const useCreateConcession = () => {
   return useMutation({
     mutationFn: (data: CreateConcessionRequest) => concessionsApi.create(data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.concessions.lists() });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.concessions.lists(),
+      });
       toast.success('Concession created successfully');
     },
     onError: (error: unknown) => {
@@ -893,8 +1026,12 @@ export const useUpdateConcession = () => {
     mutationFn: ({ id, data }: { id: string; data: UpdateConcessionRequest }) =>
       concessionsApi.update(id, data),
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.concessions.lists() });
-      queryClient.invalidateQueries({ queryKey: queryKeys.concessions.detail(variables.id) });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.concessions.lists(),
+      });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.concessions.detail(variables.id),
+      });
       toast.success('Concession updated successfully');
     },
     onError: (error: unknown) => {
@@ -909,7 +1046,9 @@ export const useDeleteConcession = () => {
   return useMutation({
     mutationFn: (id: string) => concessionsApi.delete(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.concessions.lists() });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.concessions.lists(),
+      });
       toast.success('Concession deleted successfully');
     },
     onError: (error: unknown) => {
@@ -925,8 +1064,12 @@ export const useUpdateConcessionInventory = () => {
     mutationFn: ({ id, quantity }: { id: string; quantity: number }) =>
       concessionsApi.updateInventory(id, quantity),
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.concessions.lists() });
-      queryClient.invalidateQueries({ queryKey: queryKeys.concessions.detail(variables.id) });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.concessions.lists(),
+      });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.concessions.detail(variables.id),
+      });
       toast.success('Inventory updated successfully');
     },
     onError: (error: unknown) => {
@@ -935,3 +1078,90 @@ export const useUpdateConcessionInventory = () => {
   });
 };
 
+// ============================================================================
+// PROMOTIONS HOOKS
+// ============================================================================
+
+export const usePromotions = (params?: PromotionFiltersParams) => {
+  return useQuery({
+    queryKey: queryKeys.promotions.list(params),
+    queryFn: () => promotionsApi.getAll(params),
+  });
+};
+
+export const usePromotion = (id: string) => {
+  return useQuery({
+    queryKey: queryKeys.promotions.detail(id),
+    queryFn: () => promotionsApi.getById(id),
+    enabled: !!id,
+  });
+};
+
+export const useCreatePromotion = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: CreatePromotionRequest) => promotionsApi.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.promotions.lists() });
+      toast.success('Khuyến mãi đã được tạo thành công');
+    },
+    onError: (error: unknown) => {
+      toast.error((error as Error)?.message || 'Không thể tạo khuyến mãi');
+    },
+  });
+};
+
+export const useUpdatePromotion = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: UpdatePromotionRequest }) =>
+      promotionsApi.update(id, data),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.promotions.lists() });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.promotions.detail(variables.id),
+      });
+      toast.success('Khuyến mãi đã được cập nhật thành công');
+    },
+    onError: (error: unknown) => {
+      toast.error((error as Error)?.message || 'Không thể cập nhật khuyến mãi');
+    },
+  });
+};
+
+export const useDeletePromotion = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => promotionsApi.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.promotions.lists() });
+      toast.success('Khuyến mãi đã được xóa thành công');
+    },
+    onError: (error: unknown) => {
+      toast.error((error as Error)?.message || 'Không thể xóa khuyến mãi');
+    },
+  });
+};
+
+export const useTogglePromotionActive = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => promotionsApi.toggleActive(id),
+    onSuccess: (_, id) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.promotions.lists() });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.promotions.detail(id),
+      });
+      toast.success('Trạng thái khuyến mãi đã được cập nhật');
+    },
+    onError: (error: unknown) => {
+      toast.error(
+        (error as Error)?.message || 'Không thể cập nhật trạng thái khuyến mãi'
+      );
+    },
+  });
+};

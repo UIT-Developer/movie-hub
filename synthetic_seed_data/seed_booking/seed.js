@@ -161,11 +161,12 @@ async function main() {
     prisma.payments.deleteMany(),
     prisma.tickets.deleteMany(),
     prisma.bookings.deleteMany(),
+    prisma.promotions.deleteMany(),
     prisma.concessions.deleteMany(),
-    // Keep promotions/loyalty for brevity or recreate if needed
   ]);
 
-  // 1. SEED CONCESSIONS
+  // 1. SEED CONCESSIONS & PROMOTIONS
+  console.log('🍿 Seeding Concessions...');
   const concessions = await Promise.all(
     data.concessions.map((c) =>
       prisma.concessions.create({
@@ -179,6 +180,18 @@ async function main() {
       })
     )
   );
+
+  console.log('🏷️ Seeding Promotions...');
+  await prisma.promotions.createMany({
+    data: data.promotions.map((p) => ({
+      ...p,
+      value: Number(p.value), // Ensure numeric types
+      min_purchase: Number(p.min_purchase),
+      max_discount: p.max_discount ? Number(p.max_discount) : null,
+      valid_from: new Date(p.valid_from),
+      valid_to: new Date(p.valid_to),
+    })),
+  });
 
   // 2. FETCH SHOWTIMES
   const showtimes = await cinemaPrisma.showtimes.findMany({

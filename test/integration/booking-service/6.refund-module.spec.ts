@@ -29,8 +29,10 @@ import {
 import {
   BookingStatus,
   PaymentStatus,
+  TicketStatus,
   RefundStatus,
 } from '@movie-hub/shared-types';
+import { of } from 'rxjs';
 
 describe('Refund Module Integration Tests', () => {
   let ctx: BookingTestContext;
@@ -433,20 +435,21 @@ describe('Refund Module Integration Tests', () => {
     describe('Success Scenarios', () => {
       it('should process refund as voucher when >24h before showtime', async () => {
         // Arrange
-        const futureShowtimeId = 'future-showtime-48h';
+        const futureShowtimeId = '10000000-0000-0000-0000-000000000048';
 
         // Mock Cinema Service to return future showtime
         ctx.mockCinemaClient.send.mockImplementation(
           (pattern: string, data: any) => {
             if (
-              pattern === 'SHOWTIME.GET_SHOWTIME_SEATS' &&
+              pattern === 'showtime.get_showtime_seats' &&
               data.showtimeId === futureShowtimeId
             ) {
               const futureDate = new Date();
               futureDate.setHours(futureDate.getHours() + 48);
-              return Promise.resolve({
+              return of({
                 showtime: {
                   id: futureShowtimeId,
+                  movieTitle: 'Mock Movie',
                   start_time: futureDate,
                   end_time: new Date(futureDate.getTime() + 2 * 60 * 60 * 1000),
                   format: '2D',
@@ -457,7 +460,7 @@ describe('Refund Module Integration Tests', () => {
                 seat_map: [],
               });
             }
-            return Promise.resolve({});
+            return of({});
           }
         );
 
@@ -498,20 +501,21 @@ describe('Refund Module Integration Tests', () => {
       });
       it('should reject refund when <24h before showtime', async () => {
         // Arrange
-        const nearShowtimeId = 'near-showtime-12h';
+        const nearShowtimeId = '10000000-0000-0000-0000-000000000012';
 
         // Mock Cinema Service
         ctx.mockCinemaClient.send.mockImplementation(
           (pattern: string, data: any) => {
             if (
-              pattern === 'SHOWTIME.GET_SHOWTIME_SEATS' &&
+              pattern === 'showtime.get_showtime_seats' &&
               data.showtimeId === nearShowtimeId
             ) {
               const nearDate = new Date();
               nearDate.setHours(nearDate.getHours() + 12);
-              return Promise.resolve({
+              return of({
                 showtime: {
                   id: nearShowtimeId,
+                  movieTitle: 'Mock Movie',
                   start_time: nearDate,
                   end_time: new Date(nearDate.getTime() + 2 * 60 * 60 * 1000),
                   format: '2D',
@@ -522,7 +526,7 @@ describe('Refund Module Integration Tests', () => {
                 seat_map: [],
               });
             }
-            return Promise.resolve({});
+            return of({});
           }
         );
 
@@ -547,7 +551,7 @@ describe('Refund Module Integration Tests', () => {
         const { bookingId } = await seedConfirmedBooking(
           ctx.prisma,
           testUserId,
-          'any-showtime'
+          '10000000-0000-0000-0000-000000000000'
         );
         await ctx.prisma.bookings.update({
           where: { id: bookingId },
@@ -568,7 +572,7 @@ describe('Refund Module Integration Tests', () => {
         const { bookingId } = await seedConfirmedBooking(
           ctx.prisma,
           'other-user',
-          'any-showtime'
+          '10000000-0000-0000-0000-000000000000'
         );
 
         // Act & Assert

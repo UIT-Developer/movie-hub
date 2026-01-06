@@ -60,7 +60,7 @@ describe('Payment Module Integration Tests', () => {
 
   beforeEach(async () => {
     await cleanupBookingsOnly(ctx.prisma);
-    ctx.mockNotificationService.sendBookingConfirmationEmail.mockClear();
+    ctx.mockNotificationService.sendBookingConfirmation.mockClear();
   });
 
   // ============================================================================
@@ -110,7 +110,7 @@ describe('Payment Module Integration Tests', () => {
           where: { booking_id: testBookingId },
         });
         expect(payment?.payment_url).toBeDefined();
-        expect(payment?.payment_url).toContain(testBookingId);
+        expect(payment?.payment_url).toContain(payment?.id);
       });
     });
 
@@ -157,23 +157,25 @@ describe('Payment Module Integration Tests', () => {
         const invalidParams = {
           vnp_TmnCode: 'TESTCODE',
           vnp_Amount: '16000000',
-          vnp_OrderInfo: testBookingId,
+          vnp_OrderInfo: testPaymentId,
           vnp_ResponseCode: '00',
-          vnp_TxnRef: testBookingId,
+          vnp_TxnRef: testPaymentId,
           vnp_SecureHash: 'INVALID_HASH',
           vnp_SecureHashType: 'SHA512',
         };
 
-        // Act & Assert
-        await expect(
-          ctx.paymentController.handleVNPayIPN({ params: invalidParams })
-        ).rejects.toThrow();
+        // Act
+        const result = await ctx.paymentController.handleVNPayIPN({ params: invalidParams });
+
+        // Assert
+        expect(result.data.RspCode).toBe('97');
+        expect(result.data.Message).toContain('Checksum failed');
       });
 
       it('should accept IPN with valid checksum', async () => {
         // Arrange - Create IPN with valid checksum
         const validParams = createMockVNPayIPN(
-          testBookingId,
+          testPaymentId,
           `TXN${Date.now()}`,
           160000,
           '00',
@@ -194,7 +196,7 @@ describe('Payment Module Integration Tests', () => {
       it('should update payment to COMPLETED', async () => {
         // Arrange
         const params = createMockVNPayIPN(
-          testBookingId,
+          testPaymentId,
           `TXN${Date.now()}`,
           160000,
           '00',
@@ -214,7 +216,7 @@ describe('Payment Module Integration Tests', () => {
       it('should update booking to CONFIRMED', async () => {
         // Arrange
         const params = createMockVNPayIPN(
-          testBookingId,
+          testPaymentId,
           `TXN${Date.now()}`,
           160000,
           '00',
@@ -236,7 +238,7 @@ describe('Payment Module Integration Tests', () => {
       it('should update tickets to VALID', async () => {
         // Arrange
         const params = createMockVNPayIPN(
-          testBookingId,
+          testPaymentId,
           `TXN${Date.now()}`,
           160000,
           '00',
@@ -257,7 +259,7 @@ describe('Payment Module Integration Tests', () => {
       it('should trigger notification service for email', async () => {
         // Arrange
         const params = createMockVNPayIPN(
-          testBookingId,
+          testPaymentId,
           `TXN${Date.now()}`,
           160000,
           '00',
@@ -278,7 +280,7 @@ describe('Payment Module Integration Tests', () => {
         // Arrange
         const transactionId = `TXN${Date.now()}`;
         const params = createMockVNPayIPN(
-          testBookingId,
+          testPaymentId,
           transactionId,
           160000,
           '00',
@@ -300,7 +302,7 @@ describe('Payment Module Integration Tests', () => {
       it('should update payment to FAILED for declined transaction', async () => {
         // Arrange - Response code 24 = cancelled by user
         const params = createMockVNPayIPN(
-          testBookingId,
+          testPaymentId,
           `TXN${Date.now()}`,
           160000,
           '24',
@@ -320,7 +322,7 @@ describe('Payment Module Integration Tests', () => {
       it('should update booking to CANCELLED for failed payment', async () => {
         // Arrange
         const params = createMockVNPayIPN(
-          testBookingId,
+          testPaymentId,
           `TXN${Date.now()}`,
           160000,
           '51', // Insufficient funds
@@ -341,7 +343,7 @@ describe('Payment Module Integration Tests', () => {
       it('should update tickets to CANCELLED for failed payment', async () => {
         // Arrange
         const params = createMockVNPayIPN(
-          testBookingId,
+          testPaymentId,
           `TXN${Date.now()}`,
           160000,
           '75', // Transaction limit exceeded

@@ -3,8 +3,16 @@
 
 export const dynamic = 'force-dynamic';
 
-import { useState } from 'react';
-import { Plus, Search, MoreVertical, Edit, Trash2, DoorOpen } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { useUser } from '@clerk/nextjs';
+import {
+  Plus,
+  Search,
+  MoreVertical,
+  Edit,
+  Trash2,
+  DoorOpen,
+} from 'lucide-react';
 import { Button } from '@movie-hub/shacdn-ui/button';
 import { Input } from '@movie-hub/shacdn-ui/input';
 import {
@@ -38,9 +46,19 @@ import {
   SelectValue,
 } from '@movie-hub/shacdn-ui/select';
 import { useToast } from '../_libs/use-toast';
-import { useHallsGroupedByCinema, useCreateHall, useUpdateHall, useDeleteHall, useCinemas, hallsApi } from '@/libs/api';
+import {
+  useHallsGroupedByCinema,
+  useCreateHall,
+  useUpdateHall,
+  useDeleteHall,
+  useCinemas,
+  hallsApi,
+} from '@/libs/api';
 import type { Hall, HallType, CreateHallRequest } from '@/libs/api/types';
-import { HallTypeEnum, LayoutTypeEnum } from '@movie-hub/shared-types/cinema/enum';
+import {
+  HallTypeEnum,
+  LayoutTypeEnum,
+} from '@movie-hub/shared-types/cinema/enum';
 
 export default function HallsPage() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -61,8 +79,22 @@ export default function HallsPage() {
   });
   useToast();
 
+  // RBAC State - use Clerk metadata directly
+  const { user } = useUser();
+  const userRole = user?.publicMetadata?.role as string | undefined;
+  const userCinemaId = user?.publicMetadata?.cinemaId as string | undefined;
+  const isManager = userRole === 'CINEMA_MANAGER';
+
+  // Initialize selectedCinemaId for managers (lock to their cinema)
+  useEffect(() => {
+    if (isManager && userCinemaId) {
+      setSelectedCinemaId(userCinemaId);
+    }
+  }, [isManager, userCinemaId]);
+
   // API hooks - using workaround hook for grouped data
-  const { data: hallsByCinema = {}, isLoading: loading } = useHallsGroupedByCinema();
+  const { data: hallsByCinema = {}, isLoading: loading } =
+    useHallsGroupedByCinema();
   const createHall = useCreateHall();
   const updateHall = useUpdateHall();
   const deleteHall = useDeleteHall();
@@ -71,9 +103,17 @@ export default function HallsPage() {
   const { data: cinemasData = [] } = useCinemas();
   const cinemasDataArray = Array.isArray(cinemasData) ? cinemasData : [];
   // Extract all halls and cinemas from grouped data
-  const derivedCinemas = Object.values(hallsByCinema).map(group => group.cinema);
-  const cinemas = cinemasDataArray.length > 0 ? cinemasDataArray : derivedCinemas;
-  const halls = Object.values(hallsByCinema).flatMap(group => group.halls);
+  const derivedCinemas = Object.values(hallsByCinema).map(
+    (group) => group.cinema
+  );
+  const allCinemas =
+    cinemasDataArray.length > 0 ? cinemasDataArray : derivedCinemas;
+  // Filter cinemas for managers - only show their assigned cinema
+  const cinemas =
+    isManager && userCinemaId
+      ? allCinemas.filter((c) => c.id === userCinemaId)
+      : allCinemas;
+  const halls = Object.values(hallsByCinema).flatMap((group) => group.halls);
 
   const handleSubmit = async () => {
     try {
@@ -149,8 +189,14 @@ export default function HallsPage() {
   };
 
   const filteredHalls = halls.filter((hall) => {
-    const matchSearch = hall.name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchCinema = selectedCinemaId === 'all' || hall.cinemaId === selectedCinemaId;
+    const matchSearch = hall.name
+      .toLowerCase()
+      .includes(searchQuery.toLowerCase());
+    // For managers, always enforce their cinema restriction
+    const effectiveCinemaId =
+      isManager && userCinemaId ? userCinemaId : selectedCinemaId;
+    const matchCinema =
+      effectiveCinemaId === 'all' || hall.cinemaId === effectiveCinemaId;
     return matchSearch && matchCinema;
   });
 
@@ -188,8 +234,12 @@ export default function HallsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Phòng Chiếu (Phòng Phát Hành)</h1>
-          <p className="text-gray-500 mt-1">Quản lý các phòng chiếu phim và phòng lên phim</p>
+          <h1 className="text-3xl font-bold tracking-tight">
+            Phòng Chiếu (Phòng Phát Hành)
+          </h1>
+          <p className="text-gray-500 mt-1">
+            Quản lý các phòng chiếu phim và phòng lên phim
+          </p>
         </div>
         <Button
           onClick={() => {
@@ -210,7 +260,9 @@ export default function HallsPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Search Input */}
               <div>
-                <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2 block">🔍 Tìm Kiếm</label>
+                <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2 block">
+                  🔍 Tìm Kiếm
+                </label>
                 <div className="relative">
                   <Search className="absolute left-3 top-3 h-4 w-4 text-purple-600" />
                   <Input
@@ -224,13 +276,25 @@ export default function HallsPage() {
 
               {/* Cinema Filter */}
               <div>
-                <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2 block">🏢 Rạp</label>
-                <Select value={selectedCinemaId} onValueChange={setSelectedCinemaId}>
-                  <SelectTrigger className="h-11 bg-white border border-purple-200 hover:border-purple-300 focus:border-purple-400 font-medium">
+                <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2 block">
+                  🏢 Rạp
+                </label>
+                <Select
+                  value={selectedCinemaId}
+                  onValueChange={setSelectedCinemaId}
+                >
+                  <SelectTrigger
+                    className={`h-11 bg-white border border-purple-200 hover:border-purple-300 focus:border-purple-400 font-medium ${
+                      isManager ? 'opacity-60 cursor-not-allowed' : ''
+                    }`}
+                    disabled={isManager}
+                  >
                     <SelectValue placeholder="Tất Cả Rạp" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">Tất Cả Rạp</SelectItem>
+                    {!isManager && (
+                      <SelectItem value="all">Tất Cả Rạp</SelectItem>
+                    )}
                     {cinemas.map((cinema) => (
                       <SelectItem key={cinema.id} value={cinema.id}>
                         {cinema.name}
@@ -246,14 +310,34 @@ export default function HallsPage() {
               <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-purple-200/50">
                 {searchQuery && (
                   <div className="inline-flex items-center gap-2 px-3 py-1 bg-white rounded-full border border-purple-200 shadow-sm">
-                    <span className="text-xs text-gray-600">Search: <span className="font-semibold text-purple-700">{searchQuery}</span></span>
-                    <button onClick={() => setSearchQuery('')} className="text-purple-400 hover:text-purple-600">✕</button>
+                    <span className="text-xs text-gray-600">
+                      Search:{' '}
+                      <span className="font-semibold text-purple-700">
+                        {searchQuery}
+                      </span>
+                    </span>
+                    <button
+                      onClick={() => setSearchQuery('')}
+                      className="text-purple-400 hover:text-purple-600"
+                    >
+                      ✕
+                    </button>
                   </div>
                 )}
                 {selectedCinemaId !== 'all' && (
                   <div className="inline-flex items-center gap-2 px-3 py-1 bg-white rounded-full border border-purple-200 shadow-sm">
-                    <span className="text-xs text-gray-600">Cinema: <span className="font-semibold text-purple-700">{cinemas.find(c => c.id === selectedCinemaId)?.name}</span></span>
-                    <button onClick={() => setSelectedCinemaId('all')} className="text-purple-400 hover:text-purple-600">✕</button>
+                    <span className="text-xs text-gray-600">
+                      Cinema:{' '}
+                      <span className="font-semibold text-purple-700">
+                        {cinemas.find((c) => c.id === selectedCinemaId)?.name}
+                      </span>
+                    </span>
+                    <button
+                      onClick={() => setSelectedCinemaId('all')}
+                      className="text-purple-400 hover:text-purple-600"
+                    >
+                      ✕
+                    </button>
                   </div>
                 )}
                 <Button
@@ -286,104 +370,140 @@ export default function HallsPage() {
           ) : Object.keys(groupedFilteredHalls).length === 0 ? (
             <div className="text-center py-8">Không tìm thấy phòng</div>
           ) : (
-            Object.entries(groupedFilteredHalls).map(([cinemaId, cinemaHalls]) => {
-              const cinema = cinemas.find((c) => c.id === cinemaId);
-              const headerCinema = cinemaHalls[0]?.cinema || cinema;
-              return (
-                <div key={cinemaId} className="space-y-4">
-                  {/* Cinema Header */}
-                  <div className="flex items-center gap-3 pb-3 border-b-2 border-purple-100">
-                    <div className="p-2 bg-gradient-to-br from-purple-100 to-pink-100 rounded-lg">
-                      <DoorOpen className="h-5 w-5 text-purple-600" />
+            Object.entries(groupedFilteredHalls).map(
+              ([cinemaId, cinemaHalls]) => {
+                const cinema = cinemas.find((c) => c.id === cinemaId);
+                const headerCinema = cinemaHalls[0]?.cinema || cinema;
+                return (
+                  <div key={cinemaId} className="space-y-4">
+                    {/* Cinema Header */}
+                    <div className="flex items-center gap-3 pb-3 border-b-2 border-purple-100">
+                      <div className="p-2 bg-gradient-to-br from-purple-100 to-pink-100 rounded-lg">
+                        <DoorOpen className="h-5 w-5 text-purple-600" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-bold text-gray-900">
+                          {headerCinema?.name || 'Unknown Cinema'}
+                        </h3>
+                        <p className="text-sm text-gray-500">
+                          {headerCinema?.city || ''} • {cinemaHalls.length}{' '}
+                          halls
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <h3 className="text-lg font-bold text-gray-900">{headerCinema?.name || 'Unknown Cinema'}</h3>
-                      <p className="text-sm text-gray-500">{headerCinema?.city || ''} • {cinemaHalls.length} halls</p>
-                    </div>
-                  </div>
 
-                  {/* Halls Grid */}
-                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    {cinemaHalls.map((hall) => (
-                      <Card key={hall.id} className="border-0 shadow-md hover:shadow-xl transition-all hover:-translate-y-1">
-                        <CardContent className="p-5">
-                          <div className="flex items-start justify-between mb-3">
-                            <div>
-                              <div className="flex items-center gap-2 mb-1">
-                                <DoorOpen className="h-4 w-4 text-purple-600" />
-                                <h4 className="font-bold text-lg">{hall.name}</h4>
-                              </div>
-                              <Badge className={getTypeColor(hall.type)}>
-                                {hall.type}
-                              </Badge>
-                            </div>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-8 w-8">
-                                  <MoreVertical className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => openEditDialog(hall)}>
-                                  <Edit className="mr-2 h-4 w-4" />
-                                  Chỉnh sửa
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => {
-                                    setSelectedHall(hall);
-                                    setDeleteDialogOpen(true);
-                                  }}
-                                  className="text-red-600"
-                                >
-                                  <Trash2 className="mr-2 h-4 w-4" />
-                                  Xóa
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </div>
-
-                          <div className="space-y-2 text-sm">
-                            <div className="flex items-center justify-between">
-                              <span className="text-gray-600">Sức Chứa</span>
-                              <span className="font-semibold">{hall.capacity} ghế</span>
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <span className="text-gray-600">Hàng</span>
-                              <span className="font-semibold">{hall.rows} hàng</span>
-                            </div>
-                            <div className="pt-2 border-t">
-                              <div className="text-gray-600 mb-1">Màn Hình</div>
-                              <div className="font-medium">{hall.screenType || 'Tiêu Chuẩn'}</div>
-                            </div>
-                            <div>
-                              <div className="text-gray-600 mb-1">Âm Thanh</div>
-                              <div className="font-medium">{hall.soundSystem || 'Âm Thanh Tiêu Chuẩn'}</div>
-                            </div>
-                            {hall.features && hall.features.length > 0 && (
+                    {/* Halls Grid */}
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                      {cinemaHalls.map((hall) => (
+                        <Card
+                          key={hall.id}
+                          className="border-0 shadow-md hover:shadow-xl transition-all hover:-translate-y-1"
+                        >
+                          <CardContent className="p-5">
+                            <div className="flex items-start justify-between mb-3">
                               <div>
-                                <div className="text-gray-600 mb-1">Tính Năng</div>
-                                <div className="flex flex-wrap gap-1">
-                                  {hall.features.map((feature, idx) => (
-                                    <Badge key={idx} variant="outline" className="text-xs">
-                                      {feature}
-                                    </Badge>
-                                  ))}
+                                <div className="flex items-center gap-2 mb-1">
+                                  <DoorOpen className="h-4 w-4 text-purple-600" />
+                                  <h4 className="font-bold text-lg">
+                                    {hall.name}
+                                  </h4>
+                                </div>
+                                <Badge className={getTypeColor(hall.type)}>
+                                  {hall.type}
+                                </Badge>
+                              </div>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                  >
+                                    <MoreVertical className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem
+                                    onClick={() => openEditDialog(hall)}
+                                  >
+                                    <Edit className="mr-2 h-4 w-4" />
+                                    Chỉnh sửa
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() => {
+                                      setSelectedHall(hall);
+                                      setDeleteDialogOpen(true);
+                                    }}
+                                    className="text-red-600"
+                                  >
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Xóa
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
+
+                            <div className="space-y-2 text-sm">
+                              <div className="flex items-center justify-between">
+                                <span className="text-gray-600">Sức Chứa</span>
+                                <span className="font-semibold">
+                                  {hall.capacity} ghế
+                                </span>
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <span className="text-gray-600">Hàng</span>
+                                <span className="font-semibold">
+                                  {hall.rows} hàng
+                                </span>
+                              </div>
+                              <div className="pt-2 border-t">
+                                <div className="text-gray-600 mb-1">
+                                  Màn Hình
+                                </div>
+                                <div className="font-medium">
+                                  {hall.screenType || 'Tiêu Chuẩn'}
                                 </div>
                               </div>
-                            )}
-                            <div className="pt-2">
-                              <Badge className={getStatusColor(hall.status)}>
-                                {hall.status}
-                              </Badge>
+                              <div>
+                                <div className="text-gray-600 mb-1">
+                                  Âm Thanh
+                                </div>
+                                <div className="font-medium">
+                                  {hall.soundSystem || 'Âm Thanh Tiêu Chuẩn'}
+                                </div>
+                              </div>
+                              {hall.features && hall.features.length > 0 && (
+                                <div>
+                                  <div className="text-gray-600 mb-1">
+                                    Tính Năng
+                                  </div>
+                                  <div className="flex flex-wrap gap-1">
+                                    {hall.features.map((feature, idx) => (
+                                      <Badge
+                                        key={idx}
+                                        variant="outline"
+                                        className="text-xs"
+                                      >
+                                        {feature}
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                              <div className="pt-2">
+                                <Badge className={getStatusColor(hall.status)}>
+                                  {hall.status}
+                                </Badge>
+                              </div>
                             </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              );
-            })
+                );
+              }
+            )
           )}
         </CardContent>
       </Card>
@@ -445,8 +565,12 @@ export default function HallsPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value={HallTypeEnum.STANDARD}>Tiêu Chuẩn</SelectItem>
-                    <SelectItem value={HallTypeEnum.PREMIUM}>Premium</SelectItem>
+                    <SelectItem value={HallTypeEnum.STANDARD}>
+                      Tiêu Chuẩn
+                    </SelectItem>
+                    <SelectItem value={HallTypeEnum.PREMIUM}>
+                      Premium
+                    </SelectItem>
                     <SelectItem value={HallTypeEnum.IMAX}>IMAX</SelectItem>
                     <SelectItem value={HallTypeEnum.FOUR_DX}>4DX</SelectItem>
                   </SelectContent>
@@ -484,16 +608,25 @@ export default function HallsPage() {
               <Select
                 value={formData.layoutType}
                 onValueChange={(value) =>
-                  setFormData({ ...formData, layoutType: value as LayoutTypeEnum })
+                  setFormData({
+                    ...formData,
+                    layoutType: value as LayoutTypeEnum,
+                  })
                 }
               >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={LayoutTypeEnum.STANDARD}>Tiêu Chuẩn</SelectItem>
-                  <SelectItem value={LayoutTypeEnum.DUAL_AISLE}>Hai Lối Đi</SelectItem>
-                  <SelectItem value={LayoutTypeEnum.STADIUM}>Sân Vận Động</SelectItem>
+                  <SelectItem value={LayoutTypeEnum.STANDARD}>
+                    Tiêu Chuẩn
+                  </SelectItem>
+                  <SelectItem value={LayoutTypeEnum.DUAL_AISLE}>
+                    Hai Lối Đi
+                  </SelectItem>
+                  <SelectItem value={LayoutTypeEnum.STADIUM}>
+                    Sân Vận Động
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -502,11 +635,15 @@ export default function HallsPage() {
               <div className="grid grid-cols-2 gap-4 p-3 bg-gray-50 rounded border">
                 <div>
                   <Label className="text-xs text-gray-600">Sức Chứa</Label>
-                  <div className="text-lg font-semibold">{selectedHall.capacity} ghế</div>
+                  <div className="text-lg font-semibold">
+                    {selectedHall.capacity} ghế
+                  </div>
                 </div>
                 <div>
                   <Label className="text-xs text-gray-600">Hàng</Label>
-                  <div className="text-lg font-semibold">{selectedHall.rows} hàng</div>
+                  <div className="text-lg font-semibold">
+                    {selectedHall.rows} hàng
+                  </div>
                 </div>
               </div>
             )}
@@ -516,7 +653,13 @@ export default function HallsPage() {
               <Input
                 value={(formData.features || []).join(', ')}
                 onChange={(e) =>
-                  setFormData({ ...formData, features: e.target.value.split(',').map(f => f.trim()).filter(Boolean) })
+                  setFormData({
+                    ...formData,
+                    features: e.target.value
+                      .split(',')
+                      .map((f) => f.trim())
+                      .filter(Boolean),
+                  })
                 }
                 placeholder="3D, ATMOS, Wheelchair access (ngăn cách bằng dấu phẩy)"
               />
@@ -552,7 +695,10 @@ export default function HallsPage() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteDialogOpen(false)}
+            >
               Hủy bỏ
             </Button>
             <Button variant="destructive" onClick={handleDelete}>
@@ -570,9 +716,7 @@ export default function HallsPage() {
           </DialogHeader>
           <p className="text-sm text-gray-600">{validationErrorMessage}</p>
           <DialogFooter>
-            <Button onClick={() => setValidationErrorOpen(false)}>
-              OK
-            </Button>
+            <Button onClick={() => setValidationErrorOpen(false)}>OK</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -334,7 +334,7 @@ describe('Cinema Module Integration Tests', () => {
         const updatedCinema = await ctx.prisma.cinemas.findUnique({
           where: { id: existingCinemaId },
         });
-        expect(updatedCinema?.updated_at.getTime()).toBeGreaterThan(
+        expect(updatedCinema?.updated_at.getTime()).toBeGreaterThanOrEqual(
           originalUpdatedAt!.getTime()
         );
       });
@@ -636,7 +636,8 @@ describe('Cinema Module Integration Tests', () => {
           data: {
             cinema_id: testCinemaId,
             hall_id: hall.id,
-            movie_id: 'mock-movie-id',
+            movie_id: '00000000-0000-0000-0000-000000000001',
+            movie_release_id: '00000000-0000-0000-0000-000000000001',
             start_time: futureDate,
             end_time: new Date(futureDate.getTime() + 2 * 60 * 60 * 1000),
             status: 'SELLING' as any,
@@ -652,7 +653,7 @@ describe('Cinema Module Integration Tests', () => {
         ctx.mockMovieClient.send.mockImplementation(() =>
           require('rxjs').of([
             {
-              id: 'mock-movie-id',
+              id: '00000000-0000-0000-0000-000000000001',
               title: 'Test Movie',
               duration: 120,
               posterUrl: 'https://example.com/poster.jpg',

@@ -26,6 +26,7 @@ import { ShowtimeCommandService } from '../../../../apps/cinema-service/src/app/
 import { ShowtimeMapper } from '../../../../apps/cinema-service/src/app/showtime/showtime.mapper';
 import { ShowtimeSeatMapper } from '../../../../apps/cinema-service/src/app/showtime/showtime-seat.mapper';
 import { RealtimeService } from '../../../../apps/cinema-service/src/app/realtime/realtime.service';
+import { ResolveBookingService } from '../../../../apps/cinema-service/src/app/realtime/resolve-booking.service';
 import { ConfigModule } from '@nestjs/config';
 import { of } from 'rxjs';
 
@@ -38,7 +39,30 @@ import { of } from 'rxjs';
  * Used for mocking inter-service communication
  */
 export const createMockMovieClient = () => ({
-  send: jest.fn().mockImplementation(() => of([])),
+  send: jest.fn().mockImplementation((pattern: string, data: any) => {
+    if (pattern === 'movie.detail') {
+      return of({
+        data: {
+          id: data,
+          title: 'Mock Movie',
+          runtime: 120,
+        },
+      });
+    }
+    if (pattern === 'movie.release.list') {
+      return of({
+        data: [
+          {
+            id: '00000000-0000-0000-0000-000000000002',
+            movieId: data,
+            startDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+            endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+          },
+        ],
+      });
+    }
+    return of({ data: [] });
+  }),
   emit: jest.fn().mockImplementation(() => of(undefined)),
 });
 
@@ -75,6 +99,7 @@ export const createMockRedisPubSubService = () => ({
 export const createMockRealtimeService = () => ({
   getAllHeldSeats: jest.fn().mockResolvedValue({}),
   getUserHeldSeats: jest.fn().mockResolvedValue([]),
+  hasHeldSeats: jest.fn().mockResolvedValue(false),
   getUserTTL: jest.fn().mockResolvedValue(-2),
   getOrSetCache: jest
     .fn()
@@ -144,6 +169,7 @@ export async function createCinemaTestingModule(): Promise<CinemaTestContext> {
       ShowtimeCommandService,
       ShowtimeMapper,
       ShowtimeSeatMapper,
+      ResolveBookingService,
 
       // External service mocks
       {
@@ -304,6 +330,7 @@ export function createTestCinemaRequest(
     latitude: 10.8231,
     longitude: 106.6297,
     amenities: ['parking', 'wifi'],
+    images: [],
     timezone: 'Asia/Ho_Chi_Minh',
     ...overrides,
   };
@@ -322,9 +349,9 @@ export interface CreateCinemaTestData {
   description?: string;
   amenities: string[];
   facilities?: Record<string, unknown>;
-  images?: string[];
+  images: string[];
   virtualTour360Url?: string;
-  timezone?: string;
+  timezone: string;
   status?: 'ACTIVE' | 'MAINTENANCE' | 'CLOSED';
 }
 

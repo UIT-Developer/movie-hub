@@ -27,7 +27,7 @@ export class DashboardService {
   /**
    * Get aggregated dashboard statistics
    */
-  async getStats(): Promise<{
+  async getStats(cinemaId?: string): Promise<{
     totalMovies: number;
     totalCinemas: number;
     todayShowtimes: number;
@@ -44,17 +44,18 @@ export class DashboardService {
       // Parallel fetch from all services
       const [allTimeBookingStats, weeklyBookingStats, cinemas, movies] =
         await Promise.all([
-          this.getBookingStatistics({}), // All time (no filters)
+          this.getBookingStatistics({ cinemaId }), // All time (no filters)
           this.getBookingStatistics({
             startDate: this.getWeekStart(),
             endDate: new Date(),
+            cinemaId,
           }), // Weekly (filtered)
-          this.getCinemas(),
+          this.getCinemas(cinemaId),
           this.getMovies(),
         ]);
 
       // Calculate today's showtimes
-      const todayShowtimes = await this.getTodayShowtimesCount();
+      const todayShowtimes = await this.getTodayShowtimesCount(cinemaId);
 
       this.logger.log(
         `Aggregation Complete. Data: Movies=${movies.length}, Cinemas=${cinemas.length}, Showtimes=${todayShowtimes}, AllTimeBookings=${allTimeBookingStats.totalBookings}, WeekRevenue=${weeklyBookingStats.totalRevenue}`
@@ -81,6 +82,7 @@ export class DashboardService {
     startDate?: string;
     endDate?: string;
     groupBy?: 'day' | 'week' | 'month';
+    cinemaId?: string;
   }): Promise<any> {
     this.logger.log('Fetching revenue report');
 
@@ -93,6 +95,7 @@ export class DashboardService {
               : undefined,
             endDate: filters.endDate ? new Date(filters.endDate) : undefined,
             groupBy: filters.groupBy || 'day',
+            cinemaId: filters.cinemaId,
           },
         })
       );
@@ -107,7 +110,12 @@ export class DashboardService {
   /**
    * Get top movies by bookings (with movie metadata)
    */
-  async getTopMovies(limit = 5): Promise<
+  async getTopMovies(
+    limit = 5,
+    cinemaId?: string,
+    startDate?: Date,
+    endDate?: Date
+  ): Promise<
     Array<{
       movieId: string;
       title: string;
@@ -122,8 +130,9 @@ export class DashboardService {
       // Get revenue grouped by movie from booking service
       const revenueByMovie = await firstValueFrom(
         this.bookingClient.send(BookingMessage.GET_REVENUE_BY_MOVIE, {
-          startDate: this.getWeekStart(),
-          endDate: new Date(),
+          startDate: startDate || this.getWeekStart(),
+          endDate: endDate || new Date(),
+          cinemaId,
         })
       );
 
@@ -160,7 +169,12 @@ export class DashboardService {
   /**
    * Get top cinemas by revenue (with cinema metadata)
    */
-  async getTopCinemas(limit = 5): Promise<
+  async getTopCinemas(
+    limit = 5,
+    cinemaId?: string,
+    startDate?: Date,
+    endDate?: Date
+  ): Promise<
     Array<{
       cinemaId: string;
       name: string;
@@ -175,8 +189,9 @@ export class DashboardService {
       // Get revenue grouped by cinema from booking service
       const revenueByCinema = await firstValueFrom(
         this.bookingClient.send(BookingMessage.GET_REVENUE_BY_CINEMA, {
-          startDate: this.getWeekStart(),
-          endDate: new Date(),
+          startDate: startDate || this.getWeekStart(),
+          endDate: endDate || new Date(),
+          cinemaId, // Also pass cinemaId if we want to filter the "Top Cinemas" list to just one
         })
       );
 
@@ -208,13 +223,13 @@ export class DashboardService {
   /**
    * Get recent bookings with enriched movie/cinema data
    */
-  async getRecentBookings(limit = 10): Promise<any[]> {
+  async getRecentBookings(limit = 10, cinemaId?: string): Promise<any[]> {
     this.logger.log(`Fetching ${limit} recent bookings`);
 
     try {
       const result = await firstValueFrom(
         this.bookingClient.send(BookingMessage.ADMIN_FIND_ALL, {
-          filters: { limit, sortBy: 'created_at', sortOrder: 'desc' },
+          filters: { limit, sortBy: 'created_at', sortOrder: 'desc', cinemaId },
         })
       );
 
@@ -263,7 +278,10 @@ export class DashboardService {
   /**
    * Get occupancy rates for cinemas
    */
-  async getOccupancy(date?: string): Promise<
+  async getOccupancy(
+    date?: string,
+    cinemaId?: string
+  ): Promise<
     Array<{
       cinemaId: string;
       cinemaName: string;
@@ -292,6 +310,7 @@ export class DashboardService {
             endDate: endOfDay,
             status: 'CONFIRMED',
             limit: 10000, // Ensure we get all bookings for accurate stats
+            cinemaId,
           },
         })
       );
@@ -340,12 +359,13 @@ export class DashboardService {
 
   // ==================== Private Helper Methods ====================
 
-  private async getTodayShowtimesCount(): Promise<number> {
+  private async getTodayShowtimesCount(cinemaId?: string): Promise<number> {
     try {
       const today = new Date();
       const result = await firstValueFrom(
         this.cinemaClient.send(CinemaMessage.MOVIE.GET_ALL_MOVIES_AT_CINEMAS, {
           date: today.toISOString().split('T')[0],
+          cinemaId,
         })
       );
       const showtimes = result.data || result || [];
@@ -359,6 +379,7 @@ export class DashboardService {
   private async getBookingStatistics(filters: {
     startDate?: Date;
     endDate?: Date;
+    cinemaId?: string;
   }): Promise<{
     totalBookings: number;
     totalRevenue: number;
@@ -387,12 +408,18 @@ export class DashboardService {
     }
   }
 
-  private async getCinemas(): Promise<any[]> {
+  private async getCinemas(cinemaId?: string): Promise<any[]> {
     try {
       const result = await firstValueFrom(
         this.cinemaClient.send(CinemaMessage.GET_CINEMAS, 'ACTIVE')
       );
-      return result.data || result || [];
+      const allCinemas: any[] = result.data || result || [];
+      if (cinemaId) {
+        return allCinemas.filter(
+          (c) => c.id === cinemaId || c.cinemaId === cinemaId
+        );
+      }
+      return allCinemas;
     } catch (error) {
       this.logger.warn('Failed to fetch cinemas', error);
       return [];

@@ -3,11 +3,12 @@ export const UserMessage = {
   GET_USERS: 'user.getAll',
   GET_USER_DETAIL: 'user.getDetail',
   STAFF: {
-    GET_LIST: 'movie.list',
-    CREATED: 'movie.created',
-    UPDATED: 'movie.updated',
-    GET_DETAIL: 'movie.detail',
-    DELETED: 'movie.deleted',
+    GET_LIST: 'staff.list',
+    CREATED: 'staff.created',
+    UPDATED: 'staff.updated',
+    GET_DETAIL: 'staff.detail',
+    DELETED: 'staff.deleted',
+    FIND_BY_EMAIL: 'staff.findByEmail',
   },
   CONFIG: {
     GET_LIST: 'config.list',
@@ -79,6 +80,8 @@ export const CinemaMessage = {
     GET_SEATS_HELD_BY_USER: 'showtime.get_seats_held_by_user',
     GET_SESSION_TTL: 'showtime.get_session_ttl',
     GET_SHOWTIMES_BY_IDS: 'showtime.get_showtimes_by_ids',
+    // Event-based seat release (for refunds)
+    RELEASE_SEATS: 'showtime.release_seats',
   },
   TICKET_PRICING: {
     GET_PRICING_FOR_HALL: 'ticket_pricing.get_pricing_for_hall',

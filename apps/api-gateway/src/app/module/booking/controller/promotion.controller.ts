@@ -33,8 +33,11 @@ export class PromotionController {
     @Query('active') active?: string,
     @Query('type') type?: PromotionType
   ) {
+    // Default to active=true for public API if not specified
+    const activeFilter = active === 'false' ? false : active === 'undefined' ? undefined : true;
+    
     return this.promotionService.findAll(
-      active === 'true' ? true : active === 'false' ? false : undefined,
+      activeFilter,
       type
     );
   }

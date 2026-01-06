@@ -4,13 +4,24 @@
 export const dynamic = 'force-dynamic';
 
 import { useState } from 'react';
-import { Plus, Search, MoreVertical, Edit, Trash2, MapPin, Phone, Mail, Star, Clock, Users, ChevronDown } from 'lucide-react';
+import { useUser } from '@clerk/nextjs';
+import {
+  Plus,
+  Search,
+  MoreVertical,
+  Edit,
+  Trash2,
+  MapPin,
+  Phone,
+  Mail,
+  Star,
+  Clock,
+  Users,
+  ChevronDown,
+} from 'lucide-react';
 import { Button } from '@movie-hub/shacdn-ui/button';
 import { Input } from '@movie-hub/shacdn-ui/input';
-import {
-  Card,
-  CardContent,
-} from '@movie-hub/shacdn-ui/card';
+import { Card, CardContent } from '@movie-hub/shacdn-ui/card';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,7 +40,13 @@ import {
 import { Label } from '@movie-hub/shacdn-ui/label';
 import { Textarea } from '@movie-hub/shacdn-ui/textarea';
 // removed unused toast import
-import { useCinemas, useCreateCinema, useUpdateCinema, useDeleteCinema, useHallsGroupedByCinema } from '@/libs/api';
+import {
+  useCinemas,
+  useCreateCinema,
+  useUpdateCinema,
+  useDeleteCinema,
+  useHallsGroupedByCinema,
+} from '@/libs/api';
 import type { CreateCinemaRequest as ApiCreateCinemaRequest } from '@/libs/api';
 import type { Cinema, CreateCinemaRequest } from '@/libs/api/types';
 
@@ -46,6 +63,11 @@ const PRESET_AMENITIES = [
 ] as const;
 
 export default function CinemasPage() {
+  const { user } = useUser();
+  const userRole = user?.publicMetadata?.role as string;
+  const userCinemaId = user?.publicMetadata?.cinemaId as string | undefined;
+  const isManager = userRole === 'CINEMA_MANAGER';
+
   const [searchQuery, setSearchQuery] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -88,30 +110,33 @@ export default function CinemasPage() {
   // Parse operating hours to display format
   const getOperatingHoursDisplay = (cinema: Cinema) => {
     if (!cinema.operatingHours) return '24/7';
-    
+
     // Check if it's a GenericObject with common patterns
     const hours = cinema.operatingHours as Record<string, string | undefined>;
-    
+
     // Pattern 1: { mon_sun: "9:00 - 24:00" }
     if (hours.mon_sun) {
       // Check if it's 24/7
-      if (hours.mon_sun === '0:00 - 24:00' || hours.mon_sun === '00:00 - 24:00') {
+      if (
+        hours.mon_sun === '0:00 - 24:00' ||
+        hours.mon_sun === '00:00 - 24:00'
+      ) {
         return '24/7';
       }
       return hours.mon_sun;
     }
-    
+
     // Pattern 2: { open: "9:00", close: "24:00" }
     if (hours.open && hours.close) {
       return `${hours.open} - ${hours.close}`;
     }
-    
+
     // Pattern 3: { monday: "9:00-24:00", ... } - show first day
     const firstDay = Object.values(hours)[0];
     if (typeof firstDay === 'string') {
       return firstDay;
     }
-    
+
     // Default fallback
     return '24/7';
   };
@@ -119,14 +144,14 @@ export default function CinemasPage() {
   // Normalize operating hours from DB format to form format (open/close time inputs)
   const normalizeOperatingHours = (hours: any) => {
     if (!hours) return { open: '', close: '' };
-    
+
     const h = hours as Record<string, any>;
-    
+
     // Already in open/close format
     if (h.open && h.close) {
       return { open: h.open, close: h.close };
     }
-    
+
     // Parse from mon_sun format (e.g., "9:00 - 24:00")
     if (h.mon_sun && typeof h.mon_sun === 'string') {
       const parts = h.mon_sun.split(' - ');
@@ -137,7 +162,7 @@ export default function CinemasPage() {
         };
       }
     }
-    
+
     // Parse from day format (e.g., "9:00-24:00")
     const firstValue = Object.values(h)[0];
     if (typeof firstValue === 'string' && firstValue.includes('-')) {
@@ -149,7 +174,7 @@ export default function CinemasPage() {
         };
       }
     }
-    
+
     return { open: '', close: '' };
   };
 
@@ -162,12 +187,18 @@ export default function CinemasPage() {
           mon_sun: `${formData.operatingHours.open} - ${formData.operatingHours.close}`,
         };
       }
-      
+
       if (selectedCinema) {
-        await updateCinema.mutateAsync({ id: selectedCinema.id, data: submitData });
+        await updateCinema.mutateAsync({
+          id: selectedCinema.id,
+          data: submitData,
+        });
       } else {
         // ensure API-required fields have defaults
-        const apiPayload = { ...submitData, district: submitData?.district ?? '' } as ApiCreateCinemaRequest;
+        const apiPayload = {
+          ...submitData,
+          district: submitData?.district ?? '',
+        } as ApiCreateCinemaRequest;
         await createCinema.mutateAsync(apiPayload);
       }
       setDialogOpen(false);
@@ -236,10 +267,18 @@ export default function CinemasPage() {
     setDialogOpen(true);
   };
 
-  const filteredCinemas = cinemas.filter((cinema) =>
-    cinema.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    cinema.city.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Filter cinemas for managers - only show their assigned cinema
+  const filteredCinemas = cinemas.filter((cinema) => {
+    // Manager can only see their assigned cinema
+    if (isManager && userCinemaId && cinema.id !== userCinemaId) {
+      return false;
+    }
+    // Then apply search filter
+    return (
+      cinema.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      cinema.city.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  });
 
   const getStatusColor = (status: string | undefined) => {
     switch (status) {
@@ -262,18 +301,22 @@ export default function CinemasPage() {
           <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
             Rạp Chiếu Phim
           </h1>
-          <p className="text-gray-500 mt-1">Quản lý các vị trí rạp chiếu phim của bạn trên toàn hệ thống</p>
+          <p className="text-gray-500 mt-1">
+            Quản lý các vị trí rạp chiếu phim của bạn trên toàn hệ thống
+          </p>
         </div>
-        <Button
-          onClick={() => {
-            resetForm();
-            setDialogOpen(true);
-          }}
-          className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 shadow-lg"
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          Thêm Rạp
-        </Button>
+        {!isManager && (
+          <Button
+            onClick={() => {
+              resetForm();
+              setDialogOpen(true);
+            }}
+            className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 shadow-lg"
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Thêm Rạp
+          </Button>
+        )}
       </div>
 
       {/* Search Bar & Stats */}
@@ -291,10 +334,12 @@ export default function CinemasPage() {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card className="border-0 shadow-lg bg-gradient-to-br from-purple-600 to-pink-600 text-white">
           <CardContent className="pt-6 text-center">
-            <div className="text-3xl font-bold mb-1">{filteredCinemas.length}</div>
+            <div className="text-3xl font-bold mb-1">
+              {filteredCinemas.length}
+            </div>
             <p className="text-sm text-white/80">Tổng số Rạp</p>
           </CardContent>
         </Card>
@@ -316,8 +361,8 @@ export default function CinemasPage() {
           </Card>
         ) : (
           filteredCinemas.map((cinema) => (
-            <Card 
-              key={cinema.id} 
+            <Card
+              key={cinema.id}
               className="group border-0 shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 overflow-hidden"
             >
               {/* Cinema Image/Header */}
@@ -325,37 +370,43 @@ export default function CinemasPage() {
                 <div className="absolute inset-0 bg-black/20" />
                 <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-32 translate-x-32" />
                 <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/10 rounded-full translate-y-24 -translate-x-24" />
-                
+
                 <div className="relative h-full p-6 flex flex-col justify-between">
                   <div className="flex items-start justify-between">
-                    <Badge className={`${getStatusColor(cinema.status)} shadow-lg`}>
+                    <Badge
+                      className={`${getStatusColor(cinema.status)} shadow-lg`}
+                    >
                       {cinema.status}
                     </Badge>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           className="h-8 w-8 text-white hover:bg-white/20"
                         >
                           <MoreVertical className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => openEditDialog(cinema)}>
+                        <DropdownMenuItem
+                          onClick={() => openEditDialog(cinema)}
+                        >
                           <Edit className="mr-2 h-4 w-4" />
                           Chỉnh Sửa
                         </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => {
-                            setSelectedCinema(cinema);
-                            setDeleteDialogOpen(true);
-                          }}
-                          className="text-red-600"
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Xóa
-                        </DropdownMenuItem>
+                        {!isManager && (
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setSelectedCinema(cinema);
+                              setDeleteDialogOpen(true);
+                            }}
+                            className="text-red-600"
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Xóa
+                          </DropdownMenuItem>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
@@ -379,7 +430,9 @@ export default function CinemasPage() {
                   <div className="flex items-start gap-2 text-sm">
                     <MapPin className="h-4 w-4 text-purple-600 mt-0.5 flex-shrink-0" />
                     <div>
-                      <p className="font-medium text-gray-900">{cinema.address}</p>
+                      <p className="font-medium text-gray-900">
+                        {cinema.address}
+                      </p>
                       <p className="text-gray-500">{cinema.district}</p>
                     </div>
                   </div>
@@ -411,7 +464,9 @@ export default function CinemasPage() {
                       </span>
                     </div>
                     <p className="text-xs text-gray-600">
-                      {cinema.totalReviews === 0 ? 'No reviews' : `${cinema.totalReviews} reviews`}
+                      {cinema.totalReviews === 0
+                        ? 'No reviews'
+                        : `${cinema.totalReviews} reviews`}
                     </p>
                   </div>
 
@@ -450,9 +505,9 @@ export default function CinemasPage() {
                   <div className="pt-2 border-t">
                     <div className="flex flex-wrap gap-1">
                       {cinema.amenities.slice(0, 3).map((amenity, idx) => (
-                        <Badge 
-                          key={idx} 
-                          variant="outline" 
+                        <Badge
+                          key={idx}
+                          variant="outline"
                           className="text-xs bg-purple-50 text-purple-700 border-purple-200"
                         >
                           {amenity}
@@ -582,7 +637,12 @@ export default function CinemasPage() {
                   step="any"
                   value={formData.latitude || ''}
                   onChange={(e) =>
-                    setFormData({ ...formData, latitude: e.target.value ? parseFloat(e.target.value) : undefined })
+                    setFormData({
+                      ...formData,
+                      latitude: e.target.value
+                        ? parseFloat(e.target.value)
+                        : undefined,
+                    })
                   }
                   placeholder="10.762622"
                 />
@@ -595,7 +655,12 @@ export default function CinemasPage() {
                   step="any"
                   value={formData.longitude || ''}
                   onChange={(e) =>
-                    setFormData({ ...formData, longitude: e.target.value ? parseFloat(e.target.value) : undefined })
+                    setFormData({
+                      ...formData,
+                      longitude: e.target.value
+                        ? parseFloat(e.target.value)
+                        : undefined,
+                    })
                   }
                   placeholder="106.660172"
                 />
@@ -633,7 +698,10 @@ export default function CinemasPage() {
                 id="virtualTour360Url"
                 value={formData.virtualTour360Url}
                 onChange={(e) =>
-                  setFormData({ ...formData, virtualTour360Url: e.target.value })
+                  setFormData({
+                    ...formData,
+                    virtualTour360Url: e.target.value,
+                  })
                 }
                 placeholder="https://example.com/virtual-tour"
               />
@@ -641,23 +709,39 @@ export default function CinemasPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="amenities">Tiện Nghi (phân tách bằng dấu phẩy)</Label>
+                <Label htmlFor="amenities">
+                  Tiện Nghi (phân tách bằng dấu phẩy)
+                </Label>
                 <Input
                   id="amenities"
                   value={formData.amenities?.join(', ') || ''}
                   onChange={(e) =>
-                    setFormData({ ...formData, amenities: e.target.value.split(',').map(s => s.trim()).filter(Boolean) })
+                    setFormData({
+                      ...formData,
+                      amenities: e.target.value
+                        .split(',')
+                        .map((s) => s.trim())
+                        .filter(Boolean),
+                    })
                   }
                   placeholder="WiFi, Parking, Food Court"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="images">Hình Ảnh (URL phân tách bằng dấu phẩy)</Label>
+                <Label htmlFor="images">
+                  Hình Ảnh (URL phân tách bằng dấu phẩy)
+                </Label>
                 <Input
                   id="images"
                   value={formData.images?.join(', ') || ''}
                   onChange={(e) =>
-                    setFormData({ ...formData, images: e.target.value.split(',').map(s => s.trim()).filter(Boolean) })
+                    setFormData({
+                      ...formData,
+                      images: e.target.value
+                        .split(',')
+                        .map((s) => s.trim())
+                        .filter(Boolean),
+                    })
                   }
                   placeholder="https://example.com/image1.jpg, https://example.com/image2.jpg"
                 />
@@ -682,7 +766,9 @@ export default function CinemasPage() {
                       <DropdownMenuItem
                         key={amenity.name}
                         onClick={() => {
-                          const fac = { ...(formData.facilities || {}) } as Record<string, any>;
+                          const fac = {
+                            ...(formData.facilities || {}),
+                          } as Record<string, any>;
                           // Only add if not already exists
                           if (!fac[amenity.name]) {
                             fac[amenity.name] = amenity.defaultValue;
@@ -697,14 +783,21 @@ export default function CinemasPage() {
                 </DropdownMenu>
               </div>
               <div className="space-y-2 flex-1">
-                {(Object.entries(formData.facilities || {}) as [string, any][]).map(([key, value], idx) => (
-                  <div key={key || idx} className="grid grid-cols-[2fr_3fr_auto] gap-2 items-end">
+                {(
+                  Object.entries(formData.facilities || {}) as [string, any][]
+                ).map(([key, value], idx) => (
+                  <div
+                    key={key || idx}
+                    className="grid grid-cols-[2fr_3fr_auto] gap-2 items-end"
+                  >
                     <Input
                       value={key}
                       placeholder="Ví dụ: WiFi, Parking, ATM, Food Court..."
                       onChange={(e) => {
                         const newKey = e.target.value;
-                        const fac = { ...(formData.facilities || {}) } as Record<string, any>;
+                        const fac = {
+                          ...(formData.facilities || {}),
+                        } as Record<string, any>;
                         // rename key
                         const val = fac[key];
                         delete fac[key];
@@ -713,10 +806,16 @@ export default function CinemasPage() {
                       }}
                     />
                     <Input
-                      value={value === undefined || value === null ? '' : String(value)}
+                      value={
+                        value === undefined || value === null
+                          ? ''
+                          : String(value)
+                      }
                       placeholder="Ví dụ: Có, Không, 10, Miễn phí..."
                       onChange={(e) => {
-                        const fac = { ...(formData.facilities || {}) } as Record<string, any>;
+                        const fac = {
+                          ...(formData.facilities || {}),
+                        } as Record<string, any>;
                         const parsed = (() => {
                           const v = e.target.value.trim();
                           if (v === 'true') return true;
@@ -732,7 +831,9 @@ export default function CinemasPage() {
                       variant="ghost"
                       size="sm"
                       onClick={() => {
-                        const fac = { ...(formData.facilities || {}) } as Record<string, any>;
+                        const fac = {
+                          ...(formData.facilities || {}),
+                        } as Record<string, any>;
                         delete fac[key];
                         setFormData({ ...formData, facilities: fac });
                       }}
@@ -744,7 +845,10 @@ export default function CinemasPage() {
               </div>
               <Button
                 onClick={() => {
-                  const fac = { ...(formData.facilities || {}) } as Record<string, any>;
+                  const fac = { ...(formData.facilities || {}) } as Record<
+                    string,
+                    any
+                  >;
                   // Start with empty key so user can type meaningful names like "WiFi", "Parking", etc.
                   fac[''] = '';
                   setFormData({ ...formData, facilities: fac });
@@ -769,7 +873,10 @@ export default function CinemasPage() {
                       onChange={(e) =>
                         setFormData({
                           ...formData,
-                          operatingHours: { ...(formData.operatingHours || {}), open: e.target.value },
+                          operatingHours: {
+                            ...(formData.operatingHours || {}),
+                            open: e.target.value,
+                          },
                         })
                       }
                     />
@@ -782,7 +889,10 @@ export default function CinemasPage() {
                       onChange={(e) =>
                         setFormData({
                           ...formData,
-                          operatingHours: { ...(formData.operatingHours || {}), close: e.target.value },
+                          operatingHours: {
+                            ...(formData.operatingHours || {}),
+                            close: e.target.value,
+                          },
                         })
                       }
                     />
@@ -798,21 +908,39 @@ export default function CinemasPage() {
                     placeholder="URL Facebook"
                     value={(formData.socialMedia?.facebook as string) || ''}
                     onChange={(e) =>
-                      setFormData({ ...formData, socialMedia: { ...(formData.socialMedia || {}), facebook: e.target.value } })
+                      setFormData({
+                        ...formData,
+                        socialMedia: {
+                          ...(formData.socialMedia || {}),
+                          facebook: e.target.value,
+                        },
+                      })
                     }
                   />
                   <Input
                     placeholder="URL Instagram"
                     value={(formData.socialMedia?.instagram as string) || ''}
                     onChange={(e) =>
-                      setFormData({ ...formData, socialMedia: { ...(formData.socialMedia || {}), instagram: e.target.value } })
+                      setFormData({
+                        ...formData,
+                        socialMedia: {
+                          ...(formData.socialMedia || {}),
+                          instagram: e.target.value,
+                        },
+                      })
                     }
                   />
                   <Input
                     placeholder="URL Twitter / X"
                     value={(formData.socialMedia?.twitter as string) || ''}
                     onChange={(e) =>
-                      setFormData({ ...formData, socialMedia: { ...(formData.socialMedia || {}), twitter: e.target.value } })
+                      setFormData({
+                        ...formData,
+                        socialMedia: {
+                          ...(formData.socialMedia || {}),
+                          twitter: e.target.value,
+                        },
+                      })
                     }
                   />
                 </div>
@@ -845,7 +973,8 @@ export default function CinemasPage() {
           <DialogHeader>
             <DialogTitle>Xóa Rạp</DialogTitle>
             <DialogDescription>
-              Bạn có chắc chắn muốn xóa {selectedCinema?.name}? Hành động này không thể hoàn tác.
+              Bạn có chắc chắn muốn xóa {selectedCinema?.name}? Hành động này
+              không thể hoàn tác.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -855,10 +984,7 @@ export default function CinemasPage() {
             >
               Hủy bỏ
             </Button>
-            <Button
-              variant="destructive"
-              onClick={handleDelete}
-            >
+            <Button variant="destructive" onClick={handleDelete}>
               Xóa
             </Button>
           </DialogFooter>

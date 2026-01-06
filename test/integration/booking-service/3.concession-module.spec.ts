@@ -125,13 +125,12 @@ describe('Concession Module Integration Tests', () => {
     });
 
     it('should return null for non-existent concession', async () => {
-      // Act
-      const result = await ctx.concessionController.findOne({
-        id: '00000000-0000-0000-0000-000000000000',
-      });
-
-      // Assert
-      expect(result.data).toBeNull();
+      // Act & Assert
+      await expect(
+        ctx.concessionController.findOne({
+          id: '123e4567-e89b-12d3-a456-426614174000',
+        })
+      ).rejects.toThrow('Concession not found');
     });
   });
 
@@ -265,9 +264,9 @@ describe('Concession Module Integration Tests', () => {
           name: 'Inventory Test',
           description: 'Test',
           price: 10000,
-          category: 'SNACK' as any,
+                category: "MERCHANDISE",
           available: true,
-          inventory_count: 50,
+          inventory: 50,
         } as any,
       });
       testConcessionId = concession.id;
@@ -281,14 +280,14 @@ describe('Concession Module Integration Tests', () => {
       });
 
       // Assert
-      expect((result.data as any).inventory).toBe(100);
+      expect((result.data as any).inventory).toBe(150);
     });
 
     it('should set to zero when negative value provided', async () => {
       // Act
       const result = await ctx.concessionController.updateInventory({
         id: testConcessionId,
-        quantity: 0,
+        quantity: -50,
       });
 
       // Assert

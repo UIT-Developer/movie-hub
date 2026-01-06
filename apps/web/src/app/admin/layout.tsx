@@ -24,6 +24,7 @@ import {
   Eye,
   DollarSign,
   ShoppingBag,
+  Percent,
 } from 'lucide-react';
 import { Button } from '@movie-hub/shacdn-ui/button';
 import { ScrollArea } from '@movie-hub/shacdn-ui/scroll-area';
@@ -71,12 +72,19 @@ const menuSections = [
     label: 'Quản lý nội dung',
     items: [
       { icon: Film, label: 'Phim', href: '/admin/movies', disabled: false },
-      { icon: Tag, label: 'Thể loại', href: '/admin/genres', disabled: false },
+      {
+        icon: Tag,
+        label: 'Thể loại',
+        href: '/admin/genres',
+        disabled: false,
+        adminOnly: true,
+      },
       {
         icon: Calendar,
         label: 'Phát hành phim',
         href: '/admin/movie-releases',
         disabled: false,
+        adminOnly: true,
       },
     ],
   },
@@ -111,6 +119,7 @@ const menuSections = [
         label: 'Định giá vé',
         href: '/admin/ticket-pricing',
         disabled: false,
+        adminOnly: true,
       },
       {
         icon: ShoppingBag,
@@ -123,6 +132,13 @@ const menuSections = [
         label: 'Đặt chỗ',
         href: '/admin/reservations',
         disabled: false,
+      },
+      {
+        icon: Percent,
+        label: 'Khuyến mãi',
+        href: '/admin/promotions',
+        disabled: false,
+        adminOnly: true,
       },
     ],
   },
@@ -199,6 +215,24 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
   const { user } = useUser();
   const router = useRouter();
 
+  // Check if user is a manager (has cinemaId assigned)
+  const userRole = user?.publicMetadata?.role as string | undefined;
+  const isManager = userRole === 'CINEMA_MANAGER';
+
+  // Filter menu sections based on role
+  const filteredMenuSections = menuSections
+    .map((section) => ({
+      ...section,
+      items: section.items.filter((item) => {
+        // Hide admin-only items from managers
+        if (isManager && (item as any).adminOnly) {
+          return false;
+        }
+        return true;
+      }),
+    }))
+    .filter((section) => section.items.length > 0);
+
   React.useEffect(() => {
     const html = document.documentElement;
     const body = document.body;
@@ -262,7 +296,7 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
 
         <ScrollArea className="h-[calc(100vh-4rem)]">
           <nav className="px-3 py-6 space-y-6">
-            {menuSections.map((section, idx) => (
+            {filteredMenuSections.map((section, idx) => (
               <div key={`section-${idx}`}>
                 {sidebarOpen && (
                   <h3 className="px-3 mb-3 text-xs font-bold text-gray-400 uppercase tracking-widest">

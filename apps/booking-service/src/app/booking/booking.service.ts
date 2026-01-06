@@ -847,7 +847,7 @@ export class BookingService {
    * Admin: Find all bookings with comprehensive filters
    */
   async adminFindAllBookings(
-    filters: AdminFindAllBookingsDto = {}
+    filters: AdminFindAllBookingsDto & { cinemaId?: string } = {}
   ): Promise<ServiceResult<BookingSummaryDto[]>> {
     const page = filters?.page || 1;
     const limit = filters?.limit || 10;
@@ -859,6 +859,43 @@ export class BookingService {
     if (filters?.showtimeId) where.showtime_id = filters.showtimeId;
     if (filters?.status) where.status = filters.status;
     if (filters?.paymentStatus) where.payment_status = filters.paymentStatus;
+
+    if (filters?.cinemaId) {
+      const showtimeIds = await this.getShowtimeIdsForCinema(filters.cinemaId);
+      if (showtimeIds.length === 0) {
+        // No showtimes for this cinema -> No bookings
+        return {
+          data: [],
+          meta: {
+            page,
+            limit,
+            totalRecords: 0,
+            totalPages: 0,
+            hasPrev: false,
+            hasNext: false,
+          },
+        };
+      }
+      // If filtering by showtimeId AND cinemaId, ensure intersection (or just prioritize cinemaId list check)
+      if (where.showtime_id) {
+        // Trying to specific showtime which must belong to cinema
+        if (!showtimeIds.includes(where.showtime_id as string)) {
+          return {
+            data: [],
+            meta: {
+              page,
+              limit,
+              totalRecords: 0,
+              totalPages: 0,
+              hasPrev: false,
+              hasNext: false,
+            },
+          };
+        }
+      } else {
+        where.showtime_id = { in: showtimeIds };
+      }
+    }
 
     if (filters?.startDate || filters?.endDate) {
       where.created_at = {};
@@ -961,6 +998,7 @@ export class BookingService {
       status?: BookingStatus;
       page?: number;
       limit?: number;
+      cinemaId?: string;
     } = {}
   ): Promise<ServiceResult<BookingSummaryDto[]>> {
     const page = filters?.page || 1;
@@ -973,6 +1011,24 @@ export class BookingService {
       where.created_at = {};
       if (filters.startDate) where.created_at.gte = filters.startDate;
       if (filters.endDate) where.created_at.lte = filters.endDate;
+    }
+
+    if (filters?.cinemaId) {
+      const showtimeIds = await this.getShowtimeIdsForCinema(filters.cinemaId);
+      if (showtimeIds.length === 0) {
+        return {
+          data: [],
+          meta: {
+            page,
+            limit,
+            totalRecords: 0,
+            totalPages: 0,
+            hasPrev: false,
+            hasNext: false,
+          },
+        };
+      }
+      where.showtime_id = { in: showtimeIds };
     }
 
     if (filters?.status) where.status = filters.status;
@@ -1391,6 +1447,7 @@ export class BookingService {
     filters: {
       startDate?: Date;
       endDate?: Date;
+      cinemaId?: string;
     } = {}
   ): Promise<Array<{ movieId: string; revenue: number; bookings: number }>> {
     const where: Prisma.BookingsWhereInput = {
@@ -1419,7 +1476,10 @@ export class BookingService {
     const showtimeIds = [...new Set(bookings.map((b) => b.showtime_id))];
 
     // 🚀 Batch fetch showtime details from Cinema service (single RPC call instead of N+1)
-    const showtimeMap = new Map<string, string>(); // showtimeId -> movieId
+    const showtimeMap = new Map<
+      string,
+      { movieId: string; cinemaId: string }
+    >();
 
     try {
       const showtimeResult = await firstValueFrom(
@@ -1430,7 +1490,10 @@ export class BookingService {
       const showtimes = showtimeResult?.data || [];
       for (const st of showtimes) {
         if (st.movieId) {
-          showtimeMap.set(st.showtimeId, st.movieId);
+          showtimeMap.set(st.showtimeId, {
+            movieId: st.movieId,
+            cinemaId: st.cinemaId,
+          });
         }
       }
     } catch (error) {
@@ -1444,8 +1507,15 @@ export class BookingService {
     const movieStats = new Map<string, { revenue: number; bookings: number }>();
 
     for (const booking of bookings) {
-      const movieId = showtimeMap.get(booking.showtime_id);
-      if (!movieId) continue;
+      const showtime = showtimeMap.get(booking.showtime_id);
+      if (!showtime) continue;
+
+      // Filter by cinemaId if provided
+      if (filters.cinemaId && showtime.cinemaId !== filters.cinemaId) {
+        continue;
+      }
+
+      const movieId = showtime.movieId;
 
       if (!movieStats.has(movieId)) {
         movieStats.set(movieId, { revenue: 0, bookings: 0 });
@@ -1476,6 +1546,7 @@ export class BookingService {
     filters: {
       startDate?: Date;
       endDate?: Date;
+      cinemaId?: string;
     } = {}
   ): Promise<
     Array<{
@@ -1565,6 +1636,11 @@ export class BookingService {
     for (const booking of bookings) {
       const cinemaId = showtimeMap.get(booking.showtime_id);
       if (!cinemaId) continue;
+
+      // Filter by cinemaId if provided
+      if (filters.cinemaId && cinemaId !== filters.cinemaId) {
+        continue;
+      }
 
       if (!cinemaStats.has(cinemaId)) {
         cinemaStats.set(cinemaId, { revenue: 0, bookings: 0, soldSeats: 0 });
@@ -2129,5 +2205,30 @@ export class BookingService {
 
     // Return full booking summary
     return this.getBookingSummary(booking.id, userId);
+  }
+
+  // ==================== Private Helpers ====================
+
+  private async getShowtimeIdsForCinema(cinemaId: string): Promise<string[]> {
+    try {
+      const result = await firstValueFrom(
+        this.cinemaClient.send(CinemaMessage.SHOWTIME.FILTER_SHOWTIME, {
+          cinemaId,
+        })
+      );
+      // Result is ServiceResult<ShowtimeSummaryResponse[]>
+      const showtimes = result?.data || [];
+      // Check if data is array
+      if (Array.isArray(showtimes)) {
+        return showtimes.map((s) => s.id);
+      }
+      return [];
+    } catch (error) {
+      this.logger.error(
+        `Failed to get showtime ids for cinema ${cinemaId}`,
+        error
+      );
+      return [];
+    }
   }
 }

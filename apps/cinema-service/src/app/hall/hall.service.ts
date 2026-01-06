@@ -103,6 +103,9 @@ export class HallService {
         message: 'Create hall successfully!',
       };
     } catch (e) {
+      if (e instanceof RpcException) {
+        throw e;
+      }
       throw new RpcException(e);
     }
   }

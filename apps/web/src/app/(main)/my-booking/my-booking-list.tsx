@@ -38,9 +38,11 @@ export const MyBookingList = ({ status }: { status?: BookingStatus }) => {
   return (
     <div className="flex flex-col gap-6 p-2">
       {/* List */}
-      {result?.data.map((b) => (
-        <BookingCard key={b.id} booking={b} />
-      ))}
+      {result?.data
+        .filter((b) => b.status !== BookingStatus.PENDING)
+        .map((b) => (
+          <BookingCard key={b.id} booking={b} />
+        ))}
 
       {/* Pagination */}
       <Pagination className="mt-4">

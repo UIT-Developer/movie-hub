@@ -15,16 +15,22 @@ import { dehydrate, HydrationBoundary } from '@tanstack/react-query';
 export default async function MainPage() {
   const queryClient = getQueryClient();
 
-  await Promise.all([
-    queryClient.prefetchQuery({
-      queryKey: ['movies', { status: 'now_showing', page: 1, limit: 10 }],
-      queryFn: () => getMovies({ status: 'now_showing', page: 1, limit: 10 }),
-    }),
-    queryClient.prefetchQuery({
-      queryKey: ['movies', { status: 'upcoming', page: 1, limit: 10 }],
-      queryFn: () => getMovies({ status: 'upcoming', page: 1, limit: 10 }),
-    }),
-  ]);
+  // Prefetch with error handling - on failure, client-side React Query will fetch
+  try {
+    await Promise.all([
+      queryClient.prefetchQuery({
+        queryKey: ['movies', { status: 'now_showing', page: 1, limit: 10 }],
+        queryFn: () => getMovies({ status: 'now_showing', page: 1, limit: 10 }),
+      }),
+      queryClient.prefetchQuery({
+        queryKey: ['movies', { status: 'upcoming', page: 1, limit: 10 }],
+        queryFn: () => getMovies({ status: 'upcoming', page: 1, limit: 10 }),
+      }),
+    ]);
+  } catch (error) {
+    // Log but don't crash SSR - client will fetch if prefetch fails
+    console.error('[MainPage] Failed to prefetch movies:', error);
+  }
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>

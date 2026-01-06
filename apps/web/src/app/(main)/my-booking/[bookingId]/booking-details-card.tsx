@@ -50,15 +50,67 @@ export function BookingCard({ bookingId }: { bookingId: string }) {
 
   const handleDownloadPDF = async () => {
     if (!cardRef.current) return;
-    const canvas = await html2canvas(cardRef.current);
-    const imgData = canvas.toDataURL('image/png');
-    const pdf = new jsPDF({
-      orientation: 'portrait',
-      unit: 'px',
-      format: [canvas.width, canvas.height],
-    });
-    pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
-    pdf.save(`booking-${booking?.bookingCode}.pdf`);
+
+    try {
+      const canvas = await html2canvas(cardRef.current, {
+        scale: 2, // Improve resolution
+        useCORS: true,
+        backgroundColor: '#ffffff', // White background for PDF
+        onclone: (clonedDoc) => {
+          const style = clonedDoc.createElement('style');
+          style.innerHTML = `
+            /* Container Overrides */
+            .bg-slate-200\\/5 { background-color: #ffffff !important; border: 1px solid #e2e8f0 !important; color: #0f172a !important; }
+            .border-slate-200\\/10 { border-color: #e2e8f0 !important; }
+            
+            /* Text Color Overrides */
+            .text-slate-100, .text-white, .text-slate-200, .text-neutral-200 { color: #0f172a !important; } /* slate-900 */
+            .text-neutral-300, .text-neutral-400, .text-slate-300 { color: #475569 !important; } /* slate-600 */
+            
+            /* Badge & Item Overrides */
+            .bg-slate-200\\/10 { background-color: #f1f5f9 !important; border-color: #cbd5e1 !important; color: #0f172a !important; }
+            
+            /* Orange Voucher Box */
+            .bg-orange-500\\/10 { background-color: #fff7ed !important; border: 1px solid #fdba74 !important; }
+            .bg-orange-500\\/20 { background-color: #fff7ed !important; border: 1px solid #fdba74 !important; }
+            .text-orange-300 { color: #ea580c !important; }
+            .border-orange-500\\/30, .border-orange-500\\/50 { border-color: #fdba74 !important; }
+            
+            /* Green Discount Box */
+            .bg-green-500\\/10 { background-color: #f0fdf4 !important; border: 1px solid #86efac !important; }
+            .text-green-300 { color: #166534 !important; }
+            
+            /* Icons */
+            .lucide { color: #0f172a !important; }
+          `;
+          clonedDoc.head.appendChild(style);
+        },
+      });
+
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4',
+      });
+
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+
+      const margin = 20; // 20mm margin
+      const availableWidth = pdfWidth - margin * 2;
+      const imgWidth = canvas.width;
+      const imgHeight = canvas.height;
+
+      const ratio = availableWidth / imgWidth;
+      const finalHeight = imgHeight * ratio;
+
+      pdf.addImage(imgData, 'PNG', margin, margin, availableWidth, finalHeight);
+      pdf.save(`booking-${booking?.bookingCode}.pdf`);
+    } catch (err) {
+      console.error('PDF Generation failed', err);
+      toast.error('Có lỗi xảy ra khi tải vé.');
+    }
   };
 
   const handleRefund = async () => {

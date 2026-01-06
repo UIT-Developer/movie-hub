@@ -245,7 +245,8 @@ export class BookingService {
   async cancelBooking(
     id: string,
     userId: string,
-    reason?: string
+    reason?: string,
+    refundAmount?: number
   ): Promise<ServiceResult<BookingDetailDto>> {
     const booking = await this.prisma.bookings.findFirst({
       where: { id, user_id: userId },
@@ -288,10 +289,47 @@ export class BookingService {
       showtimeData = null;
     }
 
+    // Send cancellation email
+    this.sendCancellationEmail(updated, showtimeData, refundAmount);
+
     return {
       data: this.mapToDetailDto(updated, showtimeData),
       message: 'Booking cancelled successfully',
     };
+  }
+
+  // Define private helper to send cancellation email
+  private async sendCancellationEmail(
+    booking: any, // or BookingWithRelations
+    showtimeData: ShowtimeSeatResponse | null,
+    refundAmount?: number
+  ) {
+    if (!showtimeData || !showtimeData.showtime) return;
+
+    try {
+      const emailBookingDto: any = {
+        bookingCode: booking.booking_code,
+        movieTitle: showtimeData.showtime.movieTitle,
+        cinemaName: showtimeData.cinemaName,
+        hallName: showtimeData.hallName,
+        startTime: new Date(showtimeData.showtime.start_time),
+        endTime: new Date(showtimeData.showtime.end_time),
+        customerEmail: booking.customer_email,
+        customerName: booking.customer_name,
+        cancelledAt: booking.cancelled_at,
+        cancellationReason: booking.cancellation_reason,
+      };
+
+      await this.notificationService.sendBookingCancellation(
+        emailBookingDto,
+        refundAmount
+      );
+    } catch (error) {
+      this.logger.error(
+        `Failed to send cancellation email for booking ${booking.id}`,
+        error
+      );
+    }
   }
 
   // Helper methods
@@ -1669,23 +1707,18 @@ export class BookingService {
     // Calculate refund eligibility
     const refundCalcResult = await this.calculateRefund(id, userId);
 
-    // Cancel the booking
-    const bookingResult = await this.cancelBooking(id, userId, dto.reason);
+    // Cancel the booking (email will be sent by cancelBooking)
+    const refundAmount =
+      dto.requestRefund && refundCalcResult.data.canRefund
+        ? refundCalcResult.data.refundAmount
+        : undefined;
 
-    // Send notification ASYNC (fire-and-forget, don't block cancellation)
-    this.notificationService
-      .sendBookingCancellation(
-        bookingResult.data,
-        dto.requestRefund && refundCalcResult.data.canRefund
-          ? refundCalcResult.data.refundAmount
-          : undefined
-      )
-      .catch((error) => {
-        console.error(
-          '[Booking] Failed to send cancellation email (async):',
-          error
-        );
-      });
+    const bookingResult = await this.cancelBooking(
+      id,
+      userId,
+      dto.reason,
+      refundAmount
+    );
 
     return {
       data: {

@@ -317,6 +317,43 @@ export class RefundService {
       return updatedRefund;
     });
 
+    // Send email notification
+    if (updated.payment?.booking?.showtime_id) {
+      try {
+        const booking = updated.payment.booking;
+        const showtimeData: ShowtimeSeatResponse = await firstValueFrom(
+          this.cinemaClient.send(CinemaMessage.SHOWTIME.GET_SHOWTIME_SEATS, {
+            showtimeId: booking.showtime_id,
+          })
+        );
+
+        if (showtimeData) {
+          const emailBookingDto: any = {
+            bookingCode: booking.booking_code,
+            movieTitle: showtimeData.showtime.movieTitle,
+            cinemaName: showtimeData.cinemaName,
+            hallName: showtimeData.hallName,
+            startTime: new Date(showtimeData.showtime.start_time),
+            endTime: new Date(showtimeData.showtime.end_time),
+            customerEmail: booking.customer_email,
+            customerName: booking.customer_name,
+            cancelledAt: new Date(),
+            cancellationReason: 'Refund processed',
+          };
+
+          await this.notificationService.sendBookingCancellation(
+            emailBookingDto,
+            Number(updated.amount)
+          );
+        }
+      } catch (error) {
+        this.logger.error(
+          `Failed to send refund email for refund ${refundId}`,
+          error
+        );
+      }
+    }
+
     return {
       data: this.mapToDetailDto(updated),
       message: 'Refund approved and completed successfully',

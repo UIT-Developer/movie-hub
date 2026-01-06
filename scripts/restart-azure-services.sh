@@ -24,6 +24,7 @@ SERVICES=(
   movie-service
   cinema-service
   booking-service
+  web
   api-gateway
 )
 

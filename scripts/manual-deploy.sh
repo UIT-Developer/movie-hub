@@ -159,7 +159,7 @@ build_push_images() {
     local services_to_build=()
     
     if [ "$SERVICES" == "all" ]; then
-        services_to_build=("api-gateway" "user-service" "movie-service" "cinema-service" "booking-service")
+        services_to_build=("api-gateway" "user-service" "movie-service" "cinema-service" "booking-service" "web")
     else
         IFS=',' read -ra services_to_build <<< "$SERVICES"
     fi
@@ -190,8 +190,8 @@ deploy_container_apps() {
     local services_to_deploy=()
     
     if [ "$SERVICES" == "all" ]; then
-        # Deploy in order: backend services first, then API gateway
-        services_to_deploy=("user-service" "movie-service" "cinema-service" "booking-service" "api-gateway")
+        # Deploy in order: backend services first, then API gateway, then web
+        services_to_deploy=("user-service" "movie-service" "cinema-service" "booking-service" "api-gateway" "web")
     else
         IFS=',' read -ra services_to_deploy <<< "$SERVICES"
     fi

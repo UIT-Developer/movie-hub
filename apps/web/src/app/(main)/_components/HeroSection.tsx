@@ -61,11 +61,11 @@ export default function HeroSection() {
           }}
           className="w-full h-full"
         >
-          <CarouselContent>
+          <CarouselContent className="-ml-0">
             {movies.map((movie, index) => (
               <CarouselItem
                 key={movie.id}
-                className="relative w-full h-[600px] lg:h-[700px]"
+                className="relative w-full h-[600px] lg:h-[700px] pl-0"
               >
                 {/* Background Image: Prefer backdropUrl, fallback to posterUrl */}
                 <div
@@ -87,11 +87,11 @@ export default function HeroSection() {
 
                 {/* Content */}
                 <div className="relative h-full flex items-start lg:items-center max-w-[1920px] mx-auto px-4 sm:px-8 md:px-12 lg:px-24 xl:px-32">
-                  <div className="max-w-2xl space-y-4 md:space-y-6 pt-28 sm:pt-32 lg:pt-20">
+                  <div className="max-w-3xl space-y-4 md:space-y-6 pt-28 sm:pt-32 lg:pt-20">
                     <span className="inline-block px-3 py-1 bg-yellow-400 text-black font-bold text-[10px] sm:text-xs rounded uppercase tracking-wider">
                       Đang Chiếu
                     </span>
-                    <h1 className="text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-black text-white leading-tight uppercase drop-shadow-lg line-clamp-2">
+                    <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-black text-white leading-tight uppercase drop-shadow-lg">
                       {movie.title}
                     </h1>
 

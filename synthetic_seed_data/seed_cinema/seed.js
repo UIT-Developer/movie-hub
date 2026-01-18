@@ -147,10 +147,11 @@ async function main() {
 
   for (const hall of allHalls) {
     const rows = hall.rows;
-    const seatsPerRow = Math.ceil(hall.capacity / rows); // This ceiling often causes total > capacity
-    // Example: Cap 150, Rows 10 -> 15/row -> 150. Correct.
-    // Example: Cap 64, Rows 8 -> 8/row -> 64. Correct.
-    // Example: Cap 100, Rows 12 -> 8.33 -> 9/row -> 108 seats! (>100)
+    // FIX: Use floor() instead of ceil() to NEVER exceed capacity
+    // This ensures total_seats = rows * seatsPerRow <= hall.capacity
+    // Example: Cap 100, Rows 12 -> floor(8.33) = 8/row -> 96 seats ✓
+    // Example: Cap 150, Rows 10 -> floor(15) = 15/row -> 150 seats ✓
+    const seatsPerRow = Math.floor(hall.capacity / rows);
 
     seatsByHall[hall.id] = [];
     const hallSeatData = [];
@@ -278,21 +279,37 @@ async function main() {
 
   if (moviesWithReleases.length > 0) {
     const showtimes = [];
+    // Use UTC time consistently - create dates in Vietnam timezone (UTC+7)
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const todayVN = new Date(
+      Date.UTC(
+        today.getUTCFullYear(),
+        today.getUTCMonth(),
+        today.getUTCDate(),
+        0,
+        0,
+        0,
+        0
+      )
+    );
+    // Subtract 7 hours to get the UTC time that represents midnight in Vietnam
+    todayVN.setUTCHours(todayVN.getUTCHours() - 7);
 
     // Range: Past 30 days -> Future 14 days
     for (let dayOffset = -30; dayOffset <= 14; dayOffset++) {
-      const scheduleDate = new Date(today);
-      scheduleDate.setDate(scheduleDate.getDate() + dayOffset);
-      scheduleDate.setHours(9, 0, 0, 0);
+      const scheduleDate = new Date(todayVN);
+      scheduleDate.setUTCDate(scheduleDate.getUTCDate() + dayOffset);
+      // Set to 9:00 AM Vietnam Time = 2:00 AM UTC (9 - 7 = 2)
+      scheduleDate.setUTCHours(2, 0, 0, 0);
 
+      const vnTime = new Date(scheduleDate.getTime() + 7 * 60 * 60 * 1000);
       const dayType =
-        scheduleDate.getDay() === 0 || scheduleDate.getDay() === 6
+        vnTime.getUTCDay() === 0 || vnTime.getUTCDay() === 6
           ? 'WEEKEND'
           : 'WEEKDAY';
       const endOfDay = new Date(scheduleDate);
-      endOfDay.setHours(23, 0, 0, 0);
+      // Set to 11:00 PM Vietnam Time = 4:00 PM UTC (23 - 7 = 16)
+      endOfDay.setUTCHours(16, 0, 0, 0);
 
       for (const hall of allHalls) {
         let nextAvailableTime = new Date(scheduleDate);

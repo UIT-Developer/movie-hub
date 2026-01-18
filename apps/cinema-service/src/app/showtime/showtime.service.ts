@@ -82,7 +82,12 @@ export class ShowtimeService {
       : [];
 
     // ===== 3. Map movieId -> movie =====
-    const movieMap = new Map(movies.map((movie) => [movie.id, movie]));
+    const movieList = (movies as any).data || movies;
+    const movieMap = new Map(
+      Array.isArray(movieList)
+        ? movieList.map((movie) => [movie.id, movie])
+        : []
+    );
 
     // ===== 4. Build response =====
     const data: ShowtimeSummaryResponse[] = showtimes.map((showtime) => {

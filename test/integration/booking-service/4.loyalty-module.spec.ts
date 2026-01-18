@@ -135,7 +135,7 @@ describe('Loyalty Module Integration Tests', () => {
         await ctx.loyaltyController.earnPoints({
           userId: testUserId,
           points: 75,
-          transactionId: 'booking-123',
+          transactionId: '30000000-0000-0000-0000-000000000123',
           description: 'Earned from booking',
         });
 
@@ -178,7 +178,7 @@ describe('Loyalty Module Integration Tests', () => {
         await ctx.loyaltyController.redeemPoints({
           userId: testUserId,
           points: 200,
-          transactionId: 'booking-456',
+          transactionId: '30000000-0000-0000-0000-000000000456',
         });
 
         // Assert

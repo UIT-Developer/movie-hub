@@ -3,6 +3,7 @@
 export const dynamic = 'force-dynamic';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useUser } from '@clerk/nextjs';
 import { format } from 'date-fns';
 import {
   XAxis,
@@ -96,22 +97,43 @@ export default function ReportsPage() {
     fetchStaticData();
   }, []);
 
-  // Fetch report data based on date range
+  // RBAC State - use Clerk metadata directly
+  const { user } = useUser();
+  const userRole = user?.publicMetadata?.role as string | undefined;
+  const userCinemaId = user?.publicMetadata?.cinemaId as string | undefined;
+  const isManager = userRole === 'CINEMA_MANAGER';
+
+  // Filter cinemas for managers - only show their assigned cinema
+  const filteredCinemas =
+    isManager && userCinemaId
+      ? cinemas.filter((c) => c.id === userCinemaId)
+      : cinemas;
+
+  // Auto-initialize selectedCinema for managers (lock to their cinema)
+  useEffect(() => {
+    if (isManager && userCinemaId && selectedCinema === 'all') {
+      setSelectedCinema(userCinemaId);
+    }
+  }, [isManager, userCinemaId, selectedCinema]);
+
+  // Fetch report data based on date range & cinema
   const fetchReportData = useCallback(async () => {
     setLoading(true);
     try {
       // Format dates for API (YYYY-MM-DD format)
       const startDate = format(dateRange.from, 'yyyy-MM-dd');
       const endDate = format(dateRange.to, 'yyyy-MM-dd');
+      const cinemaId = selectedCinema === 'all' ? undefined : selectedCinema;
 
       const [revenueRes, topMoviesRes, topCinemasRes] = await Promise.all([
         getRevenueReport({
           startDate,
           endDate,
           groupBy: 'day',
+          cinemaId, // Add cinema filter
         }),
-        getTopMovies(5),
-        getTopCinemas(5),
+        getTopMovies(5, cinemaId, startDate, endDate), // Add filters
+        getTopCinemas(5, cinemaId, startDate, endDate), // Add filters
       ]);
 
       setRevenueReport(revenueRes);
@@ -122,7 +144,7 @@ export default function ReportsPage() {
     } finally {
       setLoading(false);
     }
-  }, [dateRange.from, dateRange.to]);
+  }, [dateRange.from, dateRange.to, selectedCinema]);
 
   // Fetch report data when date range changes
   useEffect(() => {
@@ -217,13 +239,23 @@ export default function ReportsPage() {
           <div className="flex flex-wrap items-center gap-4">
             <div className="flex items-center gap-2">
               <Building2 className="h-4 w-4 text-gray-500" />
-              <Select value={selectedCinema} onValueChange={setSelectedCinema}>
-                <SelectTrigger className="w-48">
+              <Select
+                value={selectedCinema}
+                onValueChange={setSelectedCinema}
+                disabled={isManager}
+              >
+                <SelectTrigger
+                  className={`w-48 ${
+                    isManager ? 'opacity-60 cursor-not-allowed' : ''
+                  }`}
+                >
                   <SelectValue placeholder="Chọn rạp" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Tất Cả Rạp</SelectItem>
-                  {cinemas.map((cinema) => (
+                  {!isManager && (
+                    <SelectItem value="all">Tất Cả Rạp</SelectItem>
+                  )}
+                  {filteredCinemas.map((cinema) => (
                     <SelectItem key={cinema.id} value={cinema.id}>
                       {cinema.name}
                     </SelectItem>

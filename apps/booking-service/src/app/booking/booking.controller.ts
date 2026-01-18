@@ -123,14 +123,14 @@ export class BookingController {
 
   @MessagePattern('booking.getRevenueByMovieId')
   async getRevenueByMovieId(
-    @Payload() filters: { startDate?: Date; endDate?: Date }
+    @Payload() filters: { startDate?: Date; endDate?: Date; cinemaId?: string }
   ) {
     return this.bookingService.getRevenueGroupedByMovieId(filters);
   }
 
   @MessagePattern('booking.getRevenueByCinemaId')
   async getRevenueByCinemaId(
-    @Payload() filters: { startDate?: Date; endDate?: Date }
+    @Payload() filters: { startDate?: Date; endDate?: Date; cinemaId?: string }
   ) {
     return this.bookingService.getRevenueGroupedByCinemaId(filters);
   }

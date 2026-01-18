@@ -2,7 +2,8 @@
 
 export const dynamic = 'force-dynamic';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useUser } from '@clerk/nextjs';
 import { Plus, Pencil, Trash2, Users } from 'lucide-react';
 import { Button } from '@movie-hub/shacdn-ui/button';
 import {
@@ -84,7 +85,8 @@ const SHIFT_TYPES: { value: string; label: string }[] = [
 const formatDateForInput = (dateValue: string | Date | undefined): string => {
   if (!dateValue) return '';
   try {
-    const date = typeof dateValue === 'string' ? new Date(dateValue) : dateValue;
+    const date =
+      typeof dateValue === 'string' ? new Date(dateValue) : dateValue;
     if (isNaN(date.getTime())) return '';
     // Format as YYYY-MM-DD for input[type="date"]
     const year = date.getFullYear();
@@ -105,7 +107,8 @@ const ensureEnumString = (value: string | number | unknown): string => {
 
 // Helper function to validate UUID format (BE requires UUID for cinemaId)
 const isValidUUID = (value: string): boolean => {
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const uuidRegex =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   return uuidRegex.test(value);
 };
 
@@ -116,11 +119,13 @@ const ensureUUIDFormat = (cinemaId: string): string => {
   if (isValidUUID(cinemaId)) {
     return cinemaId; // Already valid UUID
   }
-  
+
   // Workaround: Convert non-UUID string to UUID format
   // Using a deterministic approach based on the input string
   // This is a temporary FE workaround until BE fixes UUID validation
-  const hash = cinemaId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  const hash = cinemaId
+    .split('')
+    .reduce((acc, char) => acc + char.charCodeAt(0), 0);
   const paddedHash = String(hash).padStart(32, '0').slice(-32);
   const uuid = [
     paddedHash.slice(0, 8),
@@ -129,8 +134,10 @@ const ensureUUIDFormat = (cinemaId: string): string => {
     paddedHash.slice(16, 20),
     paddedHash.slice(20, 32),
   ].join('-');
-  
-  console.warn(`[Staff Form] Cinema ID '${cinemaId}' is not valid UUID format. Generated UUID: ${uuid}`);
+
+  console.warn(
+    `[Staff Form] Cinema ID '${cinemaId}' is not valid UUID format. Generated UUID: ${uuid}`
+  );
   return uuid;
 };
 
@@ -161,15 +168,46 @@ export default function StaffPage() {
   const { data: cinemasData = [] } = useCinemas();
   const cinemas = Array.isArray(cinemasData) ? cinemasData : [];
 
-  const { data: staffData = [], isLoading: loading, error } = useStaff({
+  const {
+    data: staffData = [],
+    isLoading: loading,
+    error,
+  } = useStaff({
     cinemaId: filterCinemaId !== 'all' ? filterCinemaId : undefined,
-    status: filterStatus !== 'all' ? (filterStatus as unknown as StaffStatus) : undefined,
+    status:
+      filterStatus !== 'all'
+        ? (filterStatus as unknown as StaffStatus)
+        : undefined,
   });
   const staff = staffData || [];
 
   const createStaff = useCreateStaff();
   const updateStaff = useUpdateStaff();
   const deleteStaff = useDeleteStaff();
+
+  // RBAC State - use Clerk metadata directly
+  const { user } = useUser();
+  const userRole = user?.publicMetadata?.role as string | undefined;
+  const userCinemaId = user?.publicMetadata?.cinemaId as string | undefined;
+  const isManager = userRole === 'CINEMA_MANAGER';
+
+  // Filter cinemas for managers - only show their assigned cinema
+  const filteredCinemas =
+    isManager && userCinemaId
+      ? cinemas.filter((c) => c.id === userCinemaId)
+      : cinemas;
+
+  // Filter positions for managers - cannot appoint other managers
+  const filteredPositions = isManager
+    ? POSITIONS.filter((p) => p.value !== 'CINEMA_MANAGER')
+    : POSITIONS;
+
+  // Auto-initialize filterCinemaId for managers (lock to their cinema)
+  useEffect(() => {
+    if (isManager && userCinemaId && filterCinemaId === 'all') {
+      setFilterCinemaId(userCinemaId);
+    }
+  }, [isManager, userCinemaId, filterCinemaId]);
 
   // Show error toast if query fails
   if (error) {
@@ -248,8 +286,12 @@ export default function StaffPage() {
     try {
       // Convert dates to ISO DateTime format for API
       // For date inputs, they're in YYYY-MM-DD format, need to parse carefully
-      const dobDate = formData.dob ? new Date(formData.dob + 'T00:00:00Z') : null;
-      const hireDateDate = formData.hireDate ? new Date(formData.hireDate + 'T00:00:00Z') : null;
+      const dobDate = formData.dob
+        ? new Date(formData.dob + 'T00:00:00Z')
+        : null;
+      const hireDateDate = formData.hireDate
+        ? new Date(formData.hireDate + 'T00:00:00Z')
+        : null;
 
       if (!dobDate || isNaN(dobDate.getTime())) {
         toast({
@@ -282,7 +324,10 @@ export default function StaffPage() {
           salary: Math.floor(formData.salary),
           hireDate: hireDateDate.toISOString(),
         };
-        await updateStaff.mutateAsync({ id: editingStaff.id, data: updateData });
+        await updateStaff.mutateAsync({
+          id: editingStaff.id,
+          data: updateData,
+        });
       } else {
         const createData: CreateStaffRequest = {
           cinemaId: ensureUUIDFormat(formData.cinemaId),
@@ -320,7 +365,10 @@ export default function StaffPage() {
       status: ensureEnumString(staffMember.status),
       workType: ensureEnumString(staffMember.workType),
       shiftType: ensureEnumString(staffMember.shiftType),
-      salary: typeof staffMember.salary === 'string' ? parseFloat(staffMember.salary) : staffMember.salary,
+      salary:
+        typeof staffMember.salary === 'string'
+          ? parseFloat(staffMember.salary)
+          : staffMember.salary,
       hireDate: formatDateForInput(staffMember.hireDate),
     });
     setDialogOpen(true);
@@ -381,25 +429,37 @@ export default function StaffPage() {
     partTime: staff.filter((s) => s.workType === 'PART_TIME').length,
     positions: {
       manager: staff.filter((s) => s.position === 'CINEMA_MANAGER').length,
-      assistantManager: staff.filter((s) => s.position === 'ASSISTANT_MANAGER').length,
+      assistantManager: staff.filter((s) => s.position === 'ASSISTANT_MANAGER')
+        .length,
       ticketClerk: staff.filter((s) => s.position === 'TICKET_CLERK').length,
     },
     totalSalaryExpense: staff.reduce((sum, s) => {
-      const salary = typeof s.salary === 'string' ? parseFloat(s.salary) : (s.salary || 0);
+      const salary =
+        typeof s.salary === 'string' ? parseFloat(s.salary) : s.salary || 0;
       return sum + salary;
     }, 0),
-    avgSalary: staff.length > 0 ? staff.reduce((sum, s) => {
-      const salary = typeof s.salary === 'string' ? parseFloat(s.salary) : (s.salary || 0);
-      return sum + salary;
-    }, 0) / staff.length : 0,
+    avgSalary:
+      staff.length > 0
+        ? staff.reduce((sum, s) => {
+            const salary =
+              typeof s.salary === 'string'
+                ? parseFloat(s.salary)
+                : s.salary || 0;
+            return sum + salary;
+          }, 0) / staff.length
+        : 0,
   };
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Quản Lý Nhân Viên</h1>
-          <p className="text-gray-500 mt-1">Quản lý nhân viên và nhân viên rạp</p>
+          <h1 className="text-3xl font-bold tracking-tight">
+            Quản Lý Nhân Viên
+          </h1>
+          <p className="text-gray-500 mt-1">
+            Quản lý nhân viên và nhân viên rạp
+          </p>
         </div>
         <Button
           onClick={() => {
@@ -417,10 +477,14 @@ export default function StaffPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200/60 shadow-md hover:shadow-lg transition-shadow">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-semibold text-purple-700 uppercase tracking-wider">👥 Tổng Nhân Viên</CardTitle>
+            <CardTitle className="text-sm font-semibold text-purple-700 uppercase tracking-wider">
+              👥 Tổng Nhân Viên
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-purple-900">{stats.total}</div>
+            <div className="text-3xl font-bold text-purple-900">
+              {stats.total}
+            </div>
             <p className="text-xs text-purple-600 mt-2 font-medium">
               {stats.active} hoạt động · {stats.inactive} không hoạt động
             </p>
@@ -429,10 +493,14 @@ export default function StaffPage() {
 
         <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200/60 shadow-md hover:shadow-lg transition-shadow">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-semibold text-blue-700 uppercase tracking-wider">💼 Loại Lao Động</CardTitle>
+            <CardTitle className="text-sm font-semibold text-blue-700 uppercase tracking-wider">
+              💼 Loại Lao Động
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-blue-900">{stats.fullTime}</div>
+            <div className="text-3xl font-bold text-blue-900">
+              {stats.fullTime}
+            </div>
             <p className="text-xs text-blue-600 mt-2 font-medium">
               {stats.fullTime} toàn thời · {stats.partTime} bán thời
             </p>
@@ -441,22 +509,31 @@ export default function StaffPage() {
 
         <Card className="bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-200/60 shadow-md hover:shadow-lg transition-shadow">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-semibold text-yellow-700 uppercase tracking-wider">📍 Vị Trí Quan Trọng</CardTitle>
+            <CardTitle className="text-sm font-semibold text-yellow-700 uppercase tracking-wider">
+              📍 Vị Trí Quan Trọng
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-yellow-900">{stats.positions.manager}</div>
+            <div className="text-3xl font-bold text-yellow-900">
+              {stats.positions.manager}
+            </div>
             <p className="text-xs text-yellow-600 mt-2 font-medium">
-              {stats.positions.manager} quản lý · {stats.positions.ticketClerk} nhân viên bán vé
+              {stats.positions.manager} quản lý · {stats.positions.ticketClerk}{' '}
+              nhân viên bán vé
             </p>
           </CardContent>
         </Card>
 
         <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200/60 shadow-md hover:shadow-lg transition-shadow">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-semibold text-emerald-700 uppercase tracking-wider">💰 Chi Phí Lương</CardTitle>
+            <CardTitle className="text-sm font-semibold text-emerald-700 uppercase tracking-wider">
+              💰 Chi Phí Lương
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-emerald-900">₫{(stats.totalSalaryExpense / 1000000).toFixed(2)}M</div>
+            <div className="text-3xl font-bold text-emerald-900">
+              ₫{(stats.totalSalaryExpense / 1000000).toFixed(2)}M
+            </div>
             <p className="text-xs text-emerald-600 mt-2 font-medium">
               Bình quân: ₫{(stats.avgSalary / 1000000).toFixed(2)}M/người
             </p>
@@ -469,14 +546,16 @@ export default function StaffPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Cinema Filter */}
           <div className="space-y-2">
-            <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">🏢 Rạp Chiếu Phim</label>
+            <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">
+              🏢 Rạp Chiếu Phim
+            </label>
             <Select value={filterCinemaId} onValueChange={setFilterCinemaId}>
               <SelectTrigger className="h-11 border-purple-200 focus:ring-purple-500">
                 <SelectValue placeholder="Tất Cả Rạp" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Tất Cả Rạp</SelectItem>
-                {cinemas.map((cinema) => (
+                {filteredCinemas.map((cinema) => (
                   <SelectItem key={cinema.id} value={cinema.id}>
                     {cinema.name}
                   </SelectItem>
@@ -487,7 +566,9 @@ export default function StaffPage() {
 
           {/* Status Filter */}
           <div className="space-y-2">
-            <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">✅ Trạng Thái</label>
+            <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">
+              ✅ Trạng Thái
+            </label>
             <Select value={filterStatus} onValueChange={setFilterStatus}>
               <SelectTrigger className="h-11 border-purple-200 focus:ring-purple-500">
                 <SelectValue placeholder="Tất Cả Trạng Thái" />
@@ -507,7 +588,7 @@ export default function StaffPage() {
             {filterCinemaId !== 'all' && (
               <div className="inline-flex items-center gap-2 px-3 py-1 bg-white rounded-full border border-purple-200 shadow-sm">
                 <span className="text-xs font-medium text-gray-700">
-                  🏢 {cinemas.find(c => c.id === filterCinemaId)?.name}
+                  🏢 {cinemas.find((c) => c.id === filterCinemaId)?.name}
                 </span>
                 <button
                   onClick={() => setFilterCinemaId('all')}
@@ -520,7 +601,8 @@ export default function StaffPage() {
             {filterStatus !== 'all' && (
               <div className="inline-flex items-center gap-2 px-3 py-1 bg-white rounded-full border border-purple-200 shadow-sm">
                 <span className="text-xs font-medium text-gray-700">
-                  ✅ {filterStatus === 'ACTIVE' ? 'Hoạt Động' : 'Không Hoạt Động'}
+                  ✅{' '}
+                  {filterStatus === 'ACTIVE' ? 'Hoạt Động' : 'Không Hoạt Động'}
                 </span>
                 <button
                   onClick={() => setFilterStatus('all')}
@@ -547,9 +629,7 @@ export default function StaffPage() {
       <Card>
         <CardHeader>
           <CardTitle>Danh Sách Nhân Viên</CardTitle>
-          <CardDescription>
-            {staff.length} nhân viên tổng cộng
-          </CardDescription>
+          <CardDescription>{staff.length} nhân viên tổng cộng</CardDescription>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -590,21 +670,32 @@ export default function StaffPage() {
                 <TableBody>
                   {staff.map((staffMember) => (
                     <TableRow key={staffMember.id}>
-                      <TableCell className="font-medium">{staffMember.fullName}</TableCell>
+                      <TableCell className="font-medium">
+                        {staffMember.fullName}
+                      </TableCell>
                       <TableCell>{staffMember.email}</TableCell>
                       <TableCell>{staffMember.phone}</TableCell>
                       <TableCell>
-                        {POSITIONS.find((p) => p.value === staffMember.position)?.label || staffMember.position}
+                        {POSITIONS.find((p) => p.value === staffMember.position)
+                          ?.label || staffMember.position}
                       </TableCell>
                       <TableCell>
-                        <Badge className={getStatusBadgeColor(staffMember.status)}>
-                          {staffMember.status === 'ACTIVE' ? 'Hoạt Động' : 'Không Hoạt Động'}
+                        <Badge
+                          className={getStatusBadgeColor(staffMember.status)}
+                        >
+                          {staffMember.status === 'ACTIVE'
+                            ? 'Hoạt Động'
+                            : 'Không Hoạt Động'}
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        {WORK_TYPES.find((w) => w.value === staffMember.workType)?.label || staffMember.workType}
+                        {WORK_TYPES.find(
+                          (w) => w.value === staffMember.workType
+                        )?.label || staffMember.workType}
                       </TableCell>
-                      <TableCell>${Number(staffMember.salary ?? 0).toLocaleString()}</TableCell>
+                      <TableCell>
+                        ${Number(staffMember.salary ?? 0).toLocaleString()}
+                      </TableCell>
                       <TableCell>
                         <div className="flex gap-2">
                           <Button
@@ -639,7 +730,8 @@ export default function StaffPage() {
           <DialogHeader>
             <DialogTitle>Xác Nhận Xóa</DialogTitle>
             <DialogDescription>
-              Bạn có chắc muốn xóa nhân viên này không? Hành động này không thể hoàn tác.
+              Bạn có chắc muốn xóa nhân viên này không? Hành động này không thể
+              hoàn tác.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -671,7 +763,9 @@ export default function StaffPage() {
               {editingStaff ? 'Chỉnh Sửa Nhân Viên' : 'Thêm Nhân Viên'}
             </DialogTitle>
             <DialogDescription>
-              {editingStaff ? 'Cập nhật thông tin nhân viên' : 'Thêm nhân viên mới vào rạp'}
+              {editingStaff
+                ? 'Cập nhật thông tin nhân viên'
+                : 'Thêm nhân viên mới vào rạp'}
             </DialogDescription>
           </DialogHeader>
 
@@ -684,14 +778,16 @@ export default function StaffPage() {
               <div className="col-span-3">
                 <Select
                   value={formData.cinemaId}
-                  onValueChange={(value) => setFormData({ ...formData, cinemaId: value })}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, cinemaId: value })
+                  }
                   disabled={!!editingStaff}
                 >
                   <SelectTrigger id="cinema">
                     <SelectValue placeholder="Chọn rạp" />
                   </SelectTrigger>
                   <SelectContent>
-                    {cinemas.map((cinema) => (
+                    {filteredCinemas.map((cinema) => (
                       <SelectItem key={cinema.id} value={cinema.id}>
                         {cinema.name}
                       </SelectItem>
@@ -709,7 +805,9 @@ export default function StaffPage() {
               <Input
                 id="fullName"
                 value={formData.fullName}
-                onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, fullName: e.target.value })
+                }
                 className="col-span-3"
               />
             </div>
@@ -723,7 +821,9 @@ export default function StaffPage() {
                 id="email"
                 type="email"
                 value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, email: e.target.value })
+                }
                 className="col-span-3"
                 disabled={!!editingStaff}
               />
@@ -738,11 +838,15 @@ export default function StaffPage() {
                 <Input
                   id="phone"
                   value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, phone: e.target.value })
+                  }
                   placeholder="Tối thiểu 9 ký tự"
                 />
                 {formData.phone && formData.phone.length < 9 && (
-                  <p className="text-xs text-red-500 mt-1">Số điện thoại phải có ít nhất 9 ký tự</p>
+                  <p className="text-xs text-red-500 mt-1">
+                    Số điện thoại phải có ít nhất 9 ký tự
+                  </p>
                 )}
               </div>
             </div>
@@ -755,7 +859,9 @@ export default function StaffPage() {
               <div className="col-span-3 grid grid-cols-2 gap-4">
                 <Select
                   value={formData.gender}
-                  onValueChange={(value) => setFormData({ ...formData, gender: value })}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, gender: value })
+                  }
                 >
                   <SelectTrigger id="gender">
                     <SelectValue placeholder="Chọn giới tính" />
@@ -769,7 +875,9 @@ export default function StaffPage() {
                   id="dob"
                   type="date"
                   value={formData.dob}
-                  onChange={(e) => setFormData({ ...formData, dob: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, dob: e.target.value })
+                  }
                   placeholder="Ngày sinh"
                 />
               </div>
@@ -783,13 +891,15 @@ export default function StaffPage() {
               <div className="col-span-3">
                 <Select
                   value={formData.position}
-                  onValueChange={(value) => setFormData({ ...formData, position: value })}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, position: value })
+                  }
                 >
                   <SelectTrigger id="position">
                     <SelectValue placeholder="Chọn vị trí" />
                   </SelectTrigger>
                   <SelectContent>
-                    {POSITIONS.map((pos) => (
+                    {filteredPositions.map((pos) => (
                       <SelectItem key={pos.value} value={pos.value}>
                         {pos.label}
                       </SelectItem>
@@ -807,7 +917,9 @@ export default function StaffPage() {
               <div className="col-span-3">
                 <Select
                   value={formData.status}
-                  onValueChange={(value) => setFormData({ ...formData, status: value })}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, status: value })
+                  }
                 >
                   <SelectTrigger id="status">
                     <SelectValue placeholder="Chọn trạng thái" />
@@ -828,7 +940,9 @@ export default function StaffPage() {
               <div className="col-span-3">
                 <Select
                   value={formData.workType}
-                  onValueChange={(value) => setFormData({ ...formData, workType: value })}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, workType: value })
+                  }
                 >
                   <SelectTrigger id="workType">
                     <SelectValue placeholder="Chọn loại công việc" />
@@ -852,7 +966,9 @@ export default function StaffPage() {
               <div className="col-span-3">
                 <Select
                   value={formData.shiftType}
-                  onValueChange={(value) => setFormData({ ...formData, shiftType: value })}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, shiftType: value })
+                  }
                 >
                   <SelectTrigger id="shiftType">
                     <SelectValue placeholder="Chọn ca làm việc" />
@@ -877,7 +993,12 @@ export default function StaffPage() {
                 id="salary"
                 type="number"
                 value={formData.salary || ''}
-                onChange={(e) => setFormData({ ...formData, salary: parseFloat(e.target.value) || 0 })}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    salary: parseFloat(e.target.value) || 0,
+                  })
+                }
                 placeholder="Ví dụ: 10000000"
                 className="col-span-3"
                 min="0"
@@ -893,7 +1014,9 @@ export default function StaffPage() {
                 id="hireDate"
                 type="date"
                 value={formData.hireDate}
-                onChange={(e) => setFormData({ ...formData, hireDate: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, hireDate: e.target.value })
+                }
                 className="col-span-3"
               />
             </div>
@@ -912,9 +1035,21 @@ export default function StaffPage() {
             <Button
               onClick={handleSubmit}
               className="bg-gradient-to-r from-purple-600 to-pink-600"
-              disabled={createStaff.isPending || updateStaff.isPending || !formData.fullName.trim() || !formData.email.trim() || !formData.phone.trim() || formData.phone.length < 9 || !formData.dob || !formData.hireDate || formData.salary < 0}
+              disabled={
+                createStaff.isPending ||
+                updateStaff.isPending ||
+                !formData.fullName.trim() ||
+                !formData.email.trim() ||
+                !formData.phone.trim() ||
+                formData.phone.length < 9 ||
+                !formData.dob ||
+                !formData.hireDate ||
+                formData.salary < 0
+              }
             >
-              {createStaff.isPending || updateStaff.isPending ? 'Đang lưu...' : 'Lưu'}
+              {createStaff.isPending || updateStaff.isPending
+                ? 'Đang lưu...'
+                : 'Lưu'}
             </Button>
           </DialogFooter>
         </DialogContent>

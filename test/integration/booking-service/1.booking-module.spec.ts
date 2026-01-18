@@ -53,7 +53,7 @@ describe('Booking Module Integration Tests', () => {
     // Clear mocks
     ctx.mockCinemaClient.send.mockClear();
     ctx.mockUserClient.send.mockClear();
-    ctx.mockNotificationService.sendBookingConfirmationEmail.mockClear();
+    ctx.mockNotificationService.sendBookingConfirmation.mockClear();
   });
 
   // ============================================================================
@@ -64,7 +64,7 @@ describe('Booking Module Integration Tests', () => {
     describe('Success Scenarios', () => {
       it('should create a pending booking with 15-minute TTL', async () => {
         // Arrange
-        const showtimeId = 'test-showtime-123';
+        const showtimeId = '123e4567-e89b-12d3-a456-426614174000';
         const dto = createTestBookingRequest(showtimeId);
 
         // Act
@@ -98,7 +98,7 @@ describe('Booking Module Integration Tests', () => {
 
       it('should return existing pending booking if user already has one for same showtime', async () => {
         // Arrange - Create initial booking
-        const showtimeId = 'existing-showtime';
+        const showtimeId = '10000000-0000-0000-0000-000000000000';
         const dto = createTestBookingRequest(showtimeId);
 
         const firstResult = await ctx.bookingController.create({
@@ -118,8 +118,8 @@ describe('Booking Module Integration Tests', () => {
 
       it('should generate unique booking codes', async () => {
         // Arrange
-        const dto1 = createTestBookingRequest('showtime-1');
-        const dto2 = createTestBookingRequest('showtime-2');
+        const dto1 = createTestBookingRequest('10000000-0000-0000-0000-000000000001');
+        const dto2 = createTestBookingRequest('10000000-0000-0000-0000-000000000002');
 
         // Act
         const result1 = await ctx.bookingController.create({
@@ -163,9 +163,9 @@ describe('Booking Module Integration Tests', () => {
   describe('1.2 findAll (User Bookings)', () => {
     beforeEach(async () => {
       // Create multiple bookings for the user
-      await seedPendingBooking(ctx.prisma, testUserId, 'showtime-1');
-      await seedConfirmedBooking(ctx.prisma, testUserId, 'showtime-2');
-      await seedPendingBooking(ctx.prisma, 'other-user', 'showtime-3');
+      await seedPendingBooking(ctx.prisma, testUserId, '10000000-0000-0000-0000-000000000001');
+      await seedConfirmedBooking(ctx.prisma, testUserId, '10000000-0000-0000-0000-000000000002');
+      await seedPendingBooking(ctx.prisma, 'other-user', '10000000-0000-0000-0000-000000000003');
     });
 
     describe('Success Scenarios', () => {
@@ -473,9 +473,9 @@ describe('Booking Module Integration Tests', () => {
   describe('1.6 adminFindAll', () => {
     beforeEach(async () => {
       // Create various bookings
-      await seedPendingBooking(ctx.prisma, 'user-1', 'showtime-1');
-      await seedConfirmedBooking(ctx.prisma, 'user-2', 'showtime-2');
-      await seedPendingBooking(ctx.prisma, 'user-3', 'showtime-3');
+      await seedPendingBooking(ctx.prisma, 'user-1', '10000000-0000-0000-0000-000000000001');
+      await seedConfirmedBooking(ctx.prisma, 'user-2', '10000000-0000-0000-0000-000000000002');
+      await seedPendingBooking(ctx.prisma, 'user-3', '10000000-0000-0000-0000-000000000003');
     });
 
     describe('Success Scenarios', () => {

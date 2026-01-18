@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useUser } from '@clerk/nextjs';
 import {
   Building2,
   Film,
@@ -23,7 +24,15 @@ import {
 } from '@movie-hub/shacdn-ui/card';
 import { Button } from '@movie-hub/shacdn-ui/button';
 import { Badge } from '@movie-hub/shacdn-ui/badge';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@movie-hub/shacdn-ui/select';
 import Link from 'next/link';
+import { cinemasApi } from '@/libs/api/services';
 import {
   BarChart,
   Bar,
@@ -62,13 +71,51 @@ export default function DashboardPage() {
   const [topMovies, setTopMovies] = useState<TopMovieDto[]>([]);
   const [topCinemas, setTopCinemas] = useState<TopCinemaDto[]>([]);
 
+  // RBAC State - use Clerk metadata directly
+  const { user } = useUser();
+  const userRole = user?.publicMetadata?.role as string | undefined;
+  const userCinemaId = user?.publicMetadata?.cinemaId as string | undefined;
+  const isAdmin = userRole === 'SUPER_ADMIN' || !userCinemaId;
+  const [cinemas, setCinemas] = useState<{ id: string; name: string }[]>([]);
+  const [selectedCinemaId, setSelectedCinemaId] = useState<string | undefined>(
+    undefined
+  );
+
+  // Initialize selectedCinemaId for managers and fetch cinemas for admins
+  useEffect(() => {
+    const initRBAC = async () => {
+      if (!user) return;
+
+      if (isAdmin) {
+        // Admin can see all cinemas - fetch list for dropdown
+        try {
+          const c = await cinemasApi.getAll();
+          setCinemas(c || []);
+        } catch (e) {
+          console.error('Failed to fetch cinemas', e);
+        }
+      } else if (userCinemaId) {
+        // Manager - lock to their assigned cinema
+        setSelectedCinemaId(userCinemaId);
+      }
+    };
+    initRBAC();
+  }, [user, isAdmin, userCinemaId]);
+
   useEffect(() => {
     const fetchDashboardData = async () => {
+      // For managers, wait until selectedCinemaId is set to ensure scoped data
+      if (!isAdmin && !selectedCinemaId) {
+        return; // Wait for cinemaId to be set by initRBAC
+      }
+
       try {
         setLoading(true);
         setError(null);
 
         // Fetch all dashboard data in parallel
+        // For managers, selectedCinemaId is their assigned cinema
+        // For admins, selectedCinemaId can be undefined (all) or a specific cinema
         const [
           statsData,
           revenueRes,
@@ -77,12 +124,12 @@ export default function DashboardPage() {
           bookingsData,
           reviewsData,
         ] = await Promise.all([
-          getDashboardStats(),
-          getRevenueReport({ groupBy: 'day' }),
-          getTopMovies(5),
-          getTopCinemas(5),
-          getRecentBookings(5),
-          getRecentReviews(5),
+          getDashboardStats(selectedCinemaId),
+          getRevenueReport({ groupBy: 'day', cinemaId: selectedCinemaId }),
+          getTopMovies(5, selectedCinemaId),
+          getTopCinemas(5, selectedCinemaId),
+          getRecentBookings(10, selectedCinemaId),
+          getRecentReviews(10, selectedCinemaId),
         ]);
 
         setStats(statsData);
@@ -100,7 +147,7 @@ export default function DashboardPage() {
     };
 
     fetchDashboardData();
-  }, []);
+  }, [selectedCinemaId, isAdmin]);
 
   // Prepare chart data
   const revenueChartData = (revenueData?.revenueByPeriod || []).map(
@@ -225,6 +272,30 @@ export default function DashboardPage() {
               day: 'numeric',
             })}
           </p>
+
+          {/* Cinema Selector for Admins */}
+          {isAdmin && (
+            <div className="mt-4 w-72">
+              <Select
+                value={selectedCinemaId || 'all'}
+                onValueChange={(value) =>
+                  setSelectedCinemaId(value === 'all' ? undefined : value)
+                }
+              >
+                <SelectTrigger className="w-full bg-white/10 text-white border-white/20 backdrop-blur-sm">
+                  <SelectValue placeholder="All Cinemas" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Check All Cinemas</SelectItem>
+                  {cinemas.map((cinema) => (
+                    <SelectItem key={cinema.id} value={cinema.id}>
+                      {cinema.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
         </div>
       </div>
 
@@ -574,15 +645,17 @@ export default function DashboardPage() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <Link href="/admin/movies">
-              <Button
-                variant="outline"
-                className="w-full h-24 flex flex-col gap-2 hover:bg-purple-50 hover:border-purple-300 transition-all"
-              >
-                <Plus className="h-6 w-6" />
-                <span>Thêm phim</span>
-              </Button>
-            </Link>
+            {isAdmin && (
+              <Link href="/admin/movies">
+                <Button
+                  variant="outline"
+                  className="w-full h-24 flex flex-col gap-2 hover:bg-purple-50 hover:border-purple-300 transition-all"
+                >
+                  <Plus className="h-6 w-6" />
+                  <span>Thêm phim</span>
+                </Button>
+              </Link>
+            )}
             <Link href="/admin/showtimes">
               <Button
                 variant="outline"
@@ -592,15 +665,17 @@ export default function DashboardPage() {
                 <span>Thêm suất chiếu</span>
               </Button>
             </Link>
-            <Link href="/admin/cinemas">
-              <Button
-                variant="outline"
-                className="w-full h-24 flex flex-col gap-2 hover:bg-emerald-50 hover:border-emerald-300 transition-all"
-              >
-                <Plus className="h-6 w-6" />
-                <span>Thêm rạp</span>
-              </Button>
-            </Link>
+            {isAdmin && (
+              <Link href="/admin/cinemas">
+                <Button
+                  variant="outline"
+                  className="w-full h-24 flex flex-col gap-2 hover:bg-emerald-50 hover:border-emerald-300 transition-all"
+                >
+                  <Plus className="h-6 w-6" />
+                  <span>Thêm rạp</span>
+                </Button>
+              </Link>
+            )}
             <Link href="/admin/reports">
               <Button
                 variant="outline"

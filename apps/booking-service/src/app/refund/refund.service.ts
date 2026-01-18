@@ -19,6 +19,8 @@ import {
   SERVICE_NAME,
   PromotionDto,
   ShowtimeSeatResponse,
+  UserMessage,
+  UserDetailDto,
 } from '@movie-hub/shared-types';
 import {
   Prisma,
@@ -44,6 +46,7 @@ export class RefundService {
     private prisma: PrismaService,
     private promotionService: PromotionService,
     @Inject(SERVICE_NAME.CINEMA) private cinemaClient: ClientProxy,
+    @Inject(SERVICE_NAME.USER) private userClient: ClientProxy,
     private notificationService: NotificationService
   ) {}
 
@@ -290,7 +293,11 @@ export class RefundService {
         include: {
           payment: {
             include: {
-              booking: true,
+              booking: {
+                include: {
+                  tickets: true, // Include tickets to get seat IDs for release
+                },
+              },
             },
           },
         },
@@ -317,6 +324,31 @@ export class RefundService {
       return updatedRefund;
     });
 
+    // Release seats via Cinema service (fire-and-forget)
+    if (updated.payment?.booking) {
+      const booking = updated.payment.booking;
+      const tickets = booking.tickets || [];
+
+      if (tickets.length > 0 && booking.showtime_id) {
+        try {
+          const seatIds = tickets.map((t) => t.seat_id);
+          this.cinemaClient.emit(CinemaMessage.SHOWTIME.RELEASE_SEATS, {
+            showtimeId: booking.showtime_id,
+            seatIds,
+          });
+          this.logger.log(
+            `Emitted seat release event for booking ${booking.id}: ${seatIds.length} seats`
+          );
+        } catch (error) {
+          this.logger.warn(
+            `Failed to emit seat release event for booking ${booking.id}`,
+            error
+          );
+          // Don't fail the refund if seat release fails - can be handled manually
+        }
+      }
+    }
+
     // Send email notification
     if (updated.payment?.booking?.showtime_id) {
       try {
@@ -328,6 +360,25 @@ export class RefundService {
         );
 
         if (showtimeData) {
+          // Fetch user details to get authoritative email
+          let userEmail = booking.customer_email;
+          let userName = booking.customer_name;
+
+          try {
+            const userDetails = await firstValueFrom(
+              this.userClient.send<UserDetailDto>(
+                UserMessage.GET_USER_DETAIL,
+                booking.user_id
+              )
+            );
+            if (userDetails?.email) userEmail = userDetails.email;
+            if (userDetails?.fullName) userName = userDetails.fullName;
+          } catch (err) {
+            this.logger.warn(
+              `Failed to fetch user details for refund notification: ${booking.user_id}`
+            );
+          }
+
           const emailBookingDto: any = {
             bookingCode: booking.booking_code,
             movieTitle: showtimeData.showtime.movieTitle,
@@ -335,8 +386,8 @@ export class RefundService {
             hallName: showtimeData.hallName,
             startTime: new Date(showtimeData.showtime.start_time),
             endTime: new Date(showtimeData.showtime.end_time),
-            customerEmail: booking.customer_email,
-            customerName: booking.customer_name,
+            customerEmail: userEmail,
+            customerName: userName,
             cancelledAt: new Date(),
             cancellationReason: 'Refund processed',
           };
@@ -544,7 +595,7 @@ export class RefundService {
     // 6. Release seats via Cinema service (fire-and-forget)
     try {
       const seatIds = booking.tickets.map((t) => t.seat_id);
-      this.cinemaClient.emit('showtime.release_seats', {
+      this.cinemaClient.emit(CinemaMessage.SHOWTIME.RELEASE_SEATS, {
         showtimeId: booking.showtime_id,
         seatIds,
       });
@@ -591,6 +642,25 @@ export class RefundService {
       });
 
       if (updatedBooking) {
+        // Fetch user details to get authoritative email
+        let userEmail = updatedBooking.customer_email;
+        let userName = updatedBooking.customer_name;
+
+        try {
+          const userDetails = await firstValueFrom(
+            this.userClient.send<UserDetailDto>(
+              UserMessage.GET_USER_DETAIL,
+              updatedBooking.user_id
+            )
+          );
+          if (userDetails?.email) userEmail = userDetails.email;
+          if (userDetails?.fullName) userName = userDetails.fullName;
+        } catch (err) {
+          this.logger.warn(
+            `Failed to fetch user details for voucher refund notification: ${updatedBooking.user_id}`
+          );
+        }
+
         const emailBookingDto: any = {
           bookingCode: updatedBooking.booking_code,
           movieTitle: showtimeData.showtime.movieTitle,
@@ -598,8 +668,8 @@ export class RefundService {
           hallName: showtimeData.hallName,
           startTime: new Date(showtimeData.showtime.start_time),
           endTime: new Date(showtimeData.showtime.end_time),
-          customerEmail: updatedBooking.customer_email,
-          customerName: updatedBooking.customer_name,
+          customerEmail: userEmail,
+          customerName: userName,
           cancelledAt: updatedBooking.cancelled_at,
           cancellationReason: updatedBooking.cancellation_reason,
         };

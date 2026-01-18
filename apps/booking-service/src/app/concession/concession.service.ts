@@ -262,7 +262,7 @@ export class ConcessionService {
   ): string | undefined {
     if (!value) return undefined;
     const trimmed = value.trim();
-    if (!trimmed) return undefined;
+    if (!trimmed || trimmed === 'all') return undefined;
     if (!this.isValidUuid(trimmed)) {
       throw new BadRequestException(`Invalid ${fieldName} format`);
     }

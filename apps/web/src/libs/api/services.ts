@@ -47,6 +47,10 @@ import type {
   UpdateSystemConfigRequest,
   CreateReviewRequest,
   UpdateReviewRequest,
+  Promotion,
+  CreatePromotionRequest,
+  UpdatePromotionRequest,
+  PromotionFiltersParams,
 } from './types';
 
 // ============================================================================
@@ -468,4 +472,26 @@ export const configApi = {
 
   update: (key: string, data: UpdateSystemConfigRequest) =>
     api.put<SystemConfig>(`/api/v1/config/${key}`, data),
+};
+
+// ============================================================================
+// PROMOTIONS API
+// ============================================================================
+
+export const promotionsApi = {
+  getAll: (params?: PromotionFiltersParams) =>
+    api.get<Promotion[]>('/api/v1/promotions', { params }),
+
+  getById: (id: string) => api.get<Promotion>(`/api/v1/promotions/${id}`),
+
+  create: (data: CreatePromotionRequest) =>
+    api.post<Promotion>('/api/v1/promotions', data),
+
+  update: (id: string, data: UpdatePromotionRequest) =>
+    api.put<Promotion>(`/api/v1/promotions/${id}`, data),
+
+  delete: (id: string) => api.delete(`/api/v1/promotions/${id}`),
+
+  toggleActive: (id: string) =>
+    api.patch<Promotion>(`/api/v1/promotions/${id}/toggle-active`),
 };

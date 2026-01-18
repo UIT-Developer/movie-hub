@@ -44,7 +44,7 @@ describe('Promotion Module Integration Tests', () => {
   }, 30000);
 
   beforeEach(async () => {
-    await ctx.prisma.promotions.deleteMany({});
+    await cleanupBookingTestData(ctx.prisma);
   });
 
   // ============================================================================

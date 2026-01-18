@@ -1,5 +1,5 @@
 // cinema.service.ts
-import { Injectable, NotFoundException, Inject } from '@nestjs/common';
+import { Injectable, NotFoundException, Inject, Logger } from '@nestjs/common';
 import { firstValueFrom } from 'rxjs';
 import { PrismaService } from '../prisma.service';
 import {
@@ -15,12 +15,21 @@ import { ClientProxy, RpcException } from '@nestjs/microservices';
 import { ServiceResult } from '@movie-hub/shared-types/common';
 import { ShowtimeMapper } from './showtime.mapper';
 import { RealtimeService } from '../realtime/realtime.service';
+import {
+  ReleaseSeatEvent,
+  ResolveBookingService,
+} from '../realtime/resolve-booking.service';
+import { RedisPubSubService } from '@movie-hub/shared-redis';
 
 @Injectable()
 export class ShowtimeCommandService {
+  private readonly logger = new Logger(ShowtimeCommandService.name);
+
   constructor(
     private prisma: PrismaService,
     private readonly realtimeService: RealtimeService,
+    private readonly resolveBookingService: ResolveBookingService,
+    @Inject('REDIS_CINEMA') private readonly redis: RedisPubSubService,
     @Inject('MOVIE_SERVICE') private readonly movieClient: ClientProxy
   ) {}
 
@@ -59,10 +68,13 @@ export class ShowtimeCommandService {
         });
       }
 
-      // startTime: "2025-12-15 18:30:00"
-      const start = new Date(startTime.replace(' ', 'T') + 'Z');
+      // startTime: "2025-12-15 18:30:00" or "2025-12-15T18:30:00.000Z"
+      const start = new Date(
+        startTime.includes('T') ? startTime : startTime.replace(' ', 'T') + 'Z'
+      );
+      const runtime = movie?.runtime || 120;
       const end = new Date(
-        start.getTime() + movie.runtime * 60000 + 15 * 60000
+        start.getTime() + runtime * 60000 + 15 * 60000
       );
 
       // ===========================
@@ -111,6 +123,9 @@ export class ShowtimeCommandService {
         message: 'Showtime created successfully',
       };
     } catch (exception) {
+      if (exception instanceof RpcException) {
+        throw exception;
+      }
       throw new RpcException(exception);
     }
   }
@@ -282,7 +297,9 @@ export class ShowtimeCommandService {
             total_seats: totalSeats,
             available_seats: totalSeats,
             day_type: dayType,
-            status: status ? (status as ShowtimeStatus) : ShowtimeStatus.SELLING,
+            status: status
+              ? (status as ShowtimeStatus)
+              : ShowtimeStatus.SELLING,
           },
         });
 
@@ -302,6 +319,9 @@ export class ShowtimeCommandService {
         message: 'Batch create showtimes completed',
       };
     } catch (e) {
+      if (e instanceof RpcException) {
+        throw e;
+      }
       throw new RpcException(e);
     }
   }
@@ -439,6 +459,54 @@ export class ShowtimeCommandService {
       data: undefined,
       message: 'Showtime deleted successfully',
     };
+  }
+
+  // ===========================
+  // RELEASE SEATS (FOR REFUNDS)
+  // ===========================
+  /**
+   * Handle seat release event from booking service when a refund is processed.
+   * This releases confirmed seat reservations and broadcasts the update via Redis pub/sub.
+   */
+  async releaseSeats(event: ReleaseSeatEvent): Promise<{ success: boolean }> {
+    const { showtimeId, seatIds } = event;
+
+    this.logger.log(
+      `Processing seat release for showtime ${showtimeId}, seats: ${seatIds.join(
+        ', '
+      )}`
+    );
+
+    try {
+      // Delete seat reservations via ResolveBookingService
+      const released = await this.resolveBookingService.deleteSeatReservations(
+        event
+      );
+
+      if (released) {
+        // Broadcast seat release event via Redis to notify real-time clients
+        await this.redis.publish(
+          'cinema.seat_released',
+          JSON.stringify({
+            showtimeId,
+            seatIds,
+            reason: 'REFUND',
+          })
+        );
+
+        this.logger.log(
+          `Successfully released ${seatIds.length} seats for showtime ${showtimeId}`
+        );
+      }
+
+      return { success: released };
+    } catch (error) {
+      this.logger.error(
+        `Failed to release seats for showtime ${showtimeId}: ${error.message}`,
+        error.stack
+      );
+      return { success: false };
+    }
   }
 
   // ===========================

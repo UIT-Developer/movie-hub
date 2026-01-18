@@ -7,11 +7,20 @@ export default async function MainLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const cinemas = await getAllCinemas();
-  const cinemaOptions = cinemas.data.map((c) => ({
-    id: c.id,
-    name: c.name,
-  }));
+  let cinemaOptions: { id: string; name: string }[] = [];
+
+  try {
+    const cinemas = await getAllCinemas();
+    if (cinemas?.data) {
+      cinemaOptions = cinemas.data.map((c) => ({
+        id: c.id,
+        name: c.name,
+      }));
+    }
+  } catch (error) {
+    // Log error but don't crash SSR - render with empty cinemas
+    console.error('[MainLayout] Failed to fetch cinemas:', error);
+  }
   return (
     <div className="min-h-screen bg-background flex flex-col overflow-x-hidden selection:bg-primary selection:text-white">
       <Navbar cinemas={cinemaOptions} />

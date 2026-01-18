@@ -2,7 +2,8 @@
 
 export const dynamic = 'force-dynamic';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { useUser } from '@clerk/nextjs';
 import { Eye, CheckCircle, Clock, Calendar, ArrowUpDown } from 'lucide-react';
 import { Button } from '@movie-hub/shacdn-ui/button';
 import {
@@ -45,11 +46,11 @@ import {
   useConfirmBooking,
   useCinemas,
 } from '@/libs/api';
-import type {
-  BookingStatus,
-  PaymentStatus,
-} from '@/libs/api/types';
-import { BookingStatus as BookingStatusEnum, PaymentStatus as PaymentStatusEnum } from '@movie-hub/shared-types/booking/enum';
+import type { BookingStatus, PaymentStatus } from '@/libs/api/types';
+import {
+  BookingStatus as BookingStatusEnum,
+  PaymentStatus as PaymentStatusEnum,
+} from '@movie-hub/shared-types/booking/enum';
 
 export default function ReservationsPage() {
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
@@ -60,7 +61,7 @@ export default function ReservationsPage() {
     status: BookingStatusEnum.CONFIRMED as BookingStatus,
     reason: '',
   });
-  
+
   // Filters
   const [filterCinemaId, setFilterCinemaId] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
@@ -68,7 +69,9 @@ export default function ReservationsPage() {
   const [filterShowtimeId, setFilterShowtimeId] = useState<string>('');
   const [filterStartDate, setFilterStartDate] = useState<string>('');
   const [filterEndDate, setFilterEndDate] = useState<string>('');
-  const [sortBy, setSortBy] = useState<'created_at' | 'final_amount' | 'expires_at'>('created_at');
+  const [sortBy, setSortBy] = useState<
+    'created_at' | 'final_amount' | 'expires_at'
+  >('created_at');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [page, setPage] = useState(1);
 
@@ -76,13 +79,36 @@ export default function ReservationsPage() {
 
   // API hooks
   const { data: cinemasData = [] } = useCinemas();
-  const cinemas = Array.isArray(cinemasData) ? cinemasData : [];
+  const allCinemas = Array.isArray(cinemasData) ? cinemasData : [];
+
+  // RBAC State - use Clerk metadata directly
+  const { user } = useUser();
+  const userRole = user?.publicMetadata?.role as string | undefined;
+  const userCinemaId = user?.publicMetadata?.cinemaId as string | undefined;
+  const isManager = userRole === 'CINEMA_MANAGER';
+
+  // Filter cinemas for managers - only show their assigned cinema
+  const cinemas =
+    isManager && userCinemaId
+      ? allCinemas.filter((c) => c.id === userCinemaId)
+      : allCinemas;
+
+  // Auto-initialize filterCinemaId for managers (lock to their cinema)
+  useEffect(() => {
+    if (isManager && userCinemaId && filterCinemaId === 'all') {
+      setFilterCinemaId(userCinemaId);
+    }
+  }, [isManager, userCinemaId, filterCinemaId]);
 
   const { data: bookingsData = [], isLoading: loading } = useBookings({
     cinemaId: filterCinemaId === 'all' ? undefined : filterCinemaId,
     showtimeId: filterShowtimeId || undefined,
-    status: filterStatus === 'all' ? undefined : (filterStatus as BookingStatus),
-    paymentStatus: filterPaymentStatus === 'all' ? undefined : (filterPaymentStatus as PaymentStatus),
+    status:
+      filterStatus === 'all' ? undefined : (filterStatus as BookingStatus),
+    paymentStatus:
+      filterPaymentStatus === 'all'
+        ? undefined
+        : (filterPaymentStatus as PaymentStatus),
     startDate: filterStartDate || undefined,
     endDate: filterEndDate || undefined,
     sortBy,
@@ -91,7 +117,8 @@ export default function ReservationsPage() {
   });
   const bookings = useMemo(() => bookingsData || [], [bookingsData]);
 
-  const { data: bookingDetail, isLoading: detailLoading } = useBookingById(selectedBookingId);
+  const { data: bookingDetail, isLoading: detailLoading } =
+    useBookingById(selectedBookingId);
   const updateStatus = useUpdateBookingStatus();
   const confirmBooking = useConfirmBooking();
 
@@ -99,12 +126,23 @@ export default function ReservationsPage() {
   const stats = useMemo(() => {
     return {
       total: bookings.length,
-      confirmed: bookings.filter((b) => b.status === BookingStatusEnum.CONFIRMED).length,
-      pending: bookings.filter((b) => b.status === BookingStatusEnum.PENDING).length,
-      cancelled: bookings.filter((b) => b.status === BookingStatusEnum.CANCELLED).length,
-      completed: bookings.filter((b) => b.status === BookingStatusEnum.COMPLETED).length,
+      confirmed: bookings.filter(
+        (b) => b.status === BookingStatusEnum.CONFIRMED
+      ).length,
+      pending: bookings.filter((b) => b.status === BookingStatusEnum.PENDING)
+        .length,
+      cancelled: bookings.filter(
+        (b) => b.status === BookingStatusEnum.CANCELLED
+      ).length,
+      completed: bookings.filter(
+        (b) => b.status === BookingStatusEnum.COMPLETED
+      ).length,
       totalRevenue: bookings.reduce((sum, b) => sum + (b.totalAmount || 0), 0),
-      avgBookingValue: bookings.length > 0 ? bookings.reduce((sum, b) => sum + (b.totalAmount || 0), 0) / bookings.length : 0,
+      avgBookingValue:
+        bookings.length > 0
+          ? bookings.reduce((sum, b) => sum + (b.totalAmount || 0), 0) /
+            bookings.length
+          : 0,
       totalSeats: bookings.reduce((sum, b) => sum + (b.seatCount || 0), 0),
     };
   }, [bookings]);
@@ -127,7 +165,11 @@ export default function ReservationsPage() {
       });
       setStatusDialogOpen(false);
       setDetailDialogOpen(false);
-      setStatusUpdate({ bookingId: '', status: BookingStatusEnum.CONFIRMED, reason: '' });
+      setStatusUpdate({
+        bookingId: '',
+        status: BookingStatusEnum.CONFIRMED,
+        reason: '',
+      });
     } catch {
       // Error toast already shown by mutation hook
     }
@@ -142,7 +184,10 @@ export default function ReservationsPage() {
     }
   };
 
-  const openStatusDialog = (bookingId: string, currentStatus: BookingStatus) => {
+  const openStatusDialog = (
+    bookingId: string,
+    currentStatus: BookingStatus
+  ) => {
     setStatusUpdate({
       bookingId,
       status: currentStatus,
@@ -228,10 +273,14 @@ export default function ReservationsPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200/60 shadow-md hover:shadow-lg transition-shadow">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-semibold text-purple-700 uppercase tracking-wider">� Tổng Đặt Chỗ</CardTitle>
+            <CardTitle className="text-sm font-semibold text-purple-700 uppercase tracking-wider">
+              � Tổng Đặt Chỗ
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-purple-900">{stats.total}</div>
+            <div className="text-3xl font-bold text-purple-900">
+              {stats.total}
+            </div>
             <p className="text-xs text-purple-600 mt-2 font-medium">
               {stats.confirmed} đã xác nhận · {stats.pending} chờ xử lý
             </p>
@@ -240,10 +289,14 @@ export default function ReservationsPage() {
 
         <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200/60 shadow-md hover:shadow-lg transition-shadow">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-semibold text-blue-700 uppercase tracking-wider">💰 Tổng Doanh Thu</CardTitle>
+            <CardTitle className="text-sm font-semibold text-blue-700 uppercase tracking-wider">
+              💰 Tổng Doanh Thu
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-blue-900">{formatPrice(stats.totalRevenue)}</div>
+            <div className="text-3xl font-bold text-blue-900">
+              {formatPrice(stats.totalRevenue)}
+            </div>
             <p className="text-xs text-blue-600 mt-2 font-medium">
               Trung bình: {formatPrice(stats.avgBookingValue)} mỗi đơn
             </p>
@@ -252,10 +305,14 @@ export default function ReservationsPage() {
 
         <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200/60 shadow-md hover:shadow-lg transition-shadow">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-semibold text-emerald-700 uppercase tracking-wider">✅ Hoàn Thành</CardTitle>
+            <CardTitle className="text-sm font-semibold text-emerald-700 uppercase tracking-wider">
+              ✅ Hoàn Thành
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-emerald-900">{stats.completed}</div>
+            <div className="text-3xl font-bold text-emerald-900">
+              {stats.completed}
+            </div>
             <p className="text-xs text-emerald-600 mt-2 font-medium">
               Hoàn thành thành công
             </p>
@@ -264,12 +321,17 @@ export default function ReservationsPage() {
 
         <Card className="bg-gradient-to-br from-pink-50 to-pink-100 border-pink-200/60 shadow-md hover:shadow-lg transition-shadow">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-semibold text-pink-700 uppercase tracking-wider">🪑 Ghế đã đặt</CardTitle>
+            <CardTitle className="text-sm font-semibold text-pink-700 uppercase tracking-wider">
+              🪑 Ghế đã đặt
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-pink-900">{stats.totalSeats}</div>
+            <div className="text-3xl font-bold text-pink-900">
+              {stats.totalSeats}
+            </div>
             <p className="text-xs text-pink-600 mt-2 font-medium">
-              Avg: {(stats.totalSeats / stats.total || 0).toFixed(1)} seats per booking
+              Avg: {(stats.totalSeats / stats.total || 0).toFixed(1)} seats per
+              booking
             </p>
           </CardContent>
         </Card>
@@ -280,11 +342,16 @@ export default function ReservationsPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
           {/* Cinema Filter */}
           <div className="space-y-2">
-            <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">� Rạp</label>
-            <Select value={filterCinemaId} onValueChange={(value) => {
-              setFilterCinemaId(value);
-              setPage(1);
-            }}>
+            <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">
+              � Rạp
+            </label>
+            <Select
+              value={filterCinemaId}
+              onValueChange={(value) => {
+                setFilterCinemaId(value);
+                setPage(1);
+              }}
+            >
               <SelectTrigger className="h-11 border-purple-200 focus:ring-purple-500">
                 <SelectValue placeholder="Tất Cả Rạp" />
               </SelectTrigger>
@@ -301,49 +368,81 @@ export default function ReservationsPage() {
 
           {/* Booking Status Filter */}
           <div className="space-y-2">
-            <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">📋 Trạng Thái Đặt Vé</label>
-            <Select value={filterStatus} onValueChange={(value) => {
-              setFilterStatus(value);
-              setPage(1);
-            }}>
+            <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">
+              📋 Trạng Thái Đặt Vé
+            </label>
+            <Select
+              value={filterStatus}
+              onValueChange={(value) => {
+                setFilterStatus(value);
+                setPage(1);
+              }}
+            >
               <SelectTrigger className="h-11 border-purple-200 focus:ring-purple-500">
                 <SelectValue placeholder="Tất Cả Trạng Thái" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Tất Cả Trạng Thái</SelectItem>
-                <SelectItem value={BookingStatusEnum.PENDING}>⏳ Chờ Xử Lý</SelectItem>
-                <SelectItem value={BookingStatusEnum.CONFIRMED}>✅ Đã Xác Nhận</SelectItem>
-                <SelectItem value={BookingStatusEnum.CANCELLED}>❌ Đã Hủy</SelectItem>
-                <SelectItem value={BookingStatusEnum.EXPIRED}>⏱️ Đã Hết Hạn</SelectItem>
-                <SelectItem value={BookingStatusEnum.COMPLETED}>🎬 Hoàn Thành</SelectItem>
+                <SelectItem value={BookingStatusEnum.PENDING}>
+                  ⏳ Chờ Xử Lý
+                </SelectItem>
+                <SelectItem value={BookingStatusEnum.CONFIRMED}>
+                  ✅ Đã Xác Nhận
+                </SelectItem>
+                <SelectItem value={BookingStatusEnum.CANCELLED}>
+                  ❌ Đã Hủy
+                </SelectItem>
+                <SelectItem value={BookingStatusEnum.EXPIRED}>
+                  ⏱️ Đã Hết Hạn
+                </SelectItem>
+                <SelectItem value={BookingStatusEnum.COMPLETED}>
+                  🎬 Hoàn Thành
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           {/* Payment Status Filter */}
           <div className="space-y-2">
-            <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">💳 Trạng Thái Thanh Toán</label>
-            <Select value={filterPaymentStatus} onValueChange={(value) => {
-              setFilterPaymentStatus(value);
-              setPage(1);
-            }}>
+            <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">
+              💳 Trạng Thái Thanh Toán
+            </label>
+            <Select
+              value={filterPaymentStatus}
+              onValueChange={(value) => {
+                setFilterPaymentStatus(value);
+                setPage(1);
+              }}
+            >
               <SelectTrigger className="h-11 border-purple-200 focus:ring-purple-500">
                 <SelectValue placeholder="Tất Cả Thanh Toán" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Tất Cả Thanh Toán</SelectItem>
-                <SelectItem value={PaymentStatusEnum.PENDING}>⏳ Chờ Xử Lý</SelectItem>
-                <SelectItem value={PaymentStatusEnum.PROCESSING}>⚙️ Đang Xử Lý</SelectItem>
-                <SelectItem value={PaymentStatusEnum.COMPLETED}>✅ Hoàn Thành</SelectItem>
-                <SelectItem value={PaymentStatusEnum.FAILED}>❌ Thất Bại</SelectItem>
-                <SelectItem value={PaymentStatusEnum.REFUNDED}>🔄 Đã Hoàn Tiền</SelectItem>
+                <SelectItem value={PaymentStatusEnum.PENDING}>
+                  ⏳ Chờ Xử Lý
+                </SelectItem>
+                <SelectItem value={PaymentStatusEnum.PROCESSING}>
+                  ⚙️ Đang Xử Lý
+                </SelectItem>
+                <SelectItem value={PaymentStatusEnum.COMPLETED}>
+                  ✅ Hoàn Thành
+                </SelectItem>
+                <SelectItem value={PaymentStatusEnum.FAILED}>
+                  ❌ Thất Bại
+                </SelectItem>
+                <SelectItem value={PaymentStatusEnum.REFUNDED}>
+                  🔄 Đã Hoàn Tiền
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           {/* Start Date Filter */}
           <div className="space-y-2">
-            <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">📅 Ngày Bắt Đầu</label>
+            <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">
+              📅 Ngày Bắt Đầu
+            </label>
             <Input
               type="date"
               value={filterStartDate}
@@ -357,7 +456,9 @@ export default function ReservationsPage() {
 
           {/* End Date Filter */}
           <div className="space-y-2">
-            <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">📅 Ngày Kết Thúc</label>
+            <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">
+              📅 Ngày Kết Thúc
+            </label>
             <Input
               type="date"
               value={filterEndDate}
@@ -371,12 +472,16 @@ export default function ReservationsPage() {
         </div>
 
         {/* Active Filter Chips */}
-        {(filterCinemaId !== 'all' || filterStatus !== 'all' || filterPaymentStatus !== 'all' || filterStartDate || filterEndDate) && (
+        {(filterCinemaId !== 'all' ||
+          filterStatus !== 'all' ||
+          filterPaymentStatus !== 'all' ||
+          filterStartDate ||
+          filterEndDate) && (
           <div className="flex flex-wrap gap-2 pt-3 border-t border-purple-200/50">
             {filterCinemaId !== 'all' && (
               <div className="inline-flex items-center gap-2 px-3 py-1 bg-white rounded-full border border-purple-200 shadow-sm">
                 <span className="text-xs font-medium text-gray-700">
-                  🏢 {cinemas.find(c => c.id === filterCinemaId)?.name}
+                  🏢 {cinemas.find((c) => c.id === filterCinemaId)?.name}
                 </span>
                 <button
                   onClick={() => {
@@ -392,7 +497,8 @@ export default function ReservationsPage() {
             {filterStatus !== 'all' && (
               <div className="inline-flex items-center gap-2 px-3 py-1 bg-white rounded-full border border-purple-200 shadow-sm">
                 <span className="text-xs font-medium text-gray-700">
-                  📋 {filterStatus.charAt(0) + filterStatus.slice(1).toLowerCase()}
+                  📋{' '}
+                  {filterStatus.charAt(0) + filterStatus.slice(1).toLowerCase()}
                 </span>
                 <button
                   onClick={() => {
@@ -408,7 +514,9 @@ export default function ReservationsPage() {
             {filterPaymentStatus !== 'all' && (
               <div className="inline-flex items-center gap-2 px-3 py-1 bg-white rounded-full border border-purple-200 shadow-sm">
                 <span className="text-xs font-medium text-gray-700">
-                  💳 {filterPaymentStatus.charAt(0) + filterPaymentStatus.slice(1).toLowerCase()}
+                  💳{' '}
+                  {filterPaymentStatus.charAt(0) +
+                    filterPaymentStatus.slice(1).toLowerCase()}
                 </span>
                 <button
                   onClick={() => {
@@ -423,7 +531,9 @@ export default function ReservationsPage() {
             )}
             {filterStartDate && (
               <div className="inline-flex items-center gap-2 px-3 py-1 bg-white rounded-full border border-purple-200 shadow-sm">
-                <span className="text-xs font-medium text-gray-700">📅 From {filterStartDate}</span>
+                <span className="text-xs font-medium text-gray-700">
+                  📅 From {filterStartDate}
+                </span>
                 <button
                   onClick={() => {
                     setFilterStartDate('');
@@ -437,7 +547,9 @@ export default function ReservationsPage() {
             )}
             {filterEndDate && (
               <div className="inline-flex items-center gap-2 px-3 py-1 bg-white rounded-full border border-purple-200 shadow-sm">
-                <span className="text-xs font-medium text-gray-700">📅 To {filterEndDate}</span>
+                <span className="text-xs font-medium text-gray-700">
+                  📅 To {filterEndDate}
+                </span>
                 <button
                   onClick={() => {
                     setFilterEndDate('');
@@ -465,7 +577,12 @@ export default function ReservationsPage() {
           <div className="flex items-end gap-4">
             <div>
               <Label htmlFor="filter-sort">Sắp Xếp Theo</Label>
-              <Select value={sortBy} onValueChange={(value: 'created_at' | 'final_amount' | 'expires_at') => setSortBy(value)}>
+              <Select
+                value={sortBy}
+                onValueChange={(
+                  value: 'created_at' | 'final_amount' | 'expires_at'
+                ) => setSortBy(value)}
+              >
                 <SelectTrigger id="filter-sort">
                   <SelectValue />
                 </SelectTrigger>
@@ -479,7 +596,9 @@ export default function ReservationsPage() {
             <Button
               variant={sortOrder === 'desc' ? 'default' : 'outline'}
               size="sm"
-              onClick={() => setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc')}
+              onClick={() =>
+                setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc')
+              }
               className="gap-2"
             >
               <ArrowUpDown className="h-4 w-4" />
@@ -506,7 +625,9 @@ export default function ReservationsPage() {
           ) : bookings.length === 0 ? (
             <div className="text-center py-16">
               <Calendar className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-500">Không tìm thấy đặt chỗ với bộ lọc hiện tại.</p>
+              <p className="text-gray-500">
+                Không tìm thấy đặt chỗ với bộ lọc hiện tại.
+              </p>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -527,18 +648,28 @@ export default function ReservationsPage() {
                 <TableBody>
                   {bookings.map((booking) => (
                     <TableRow key={booking.id}>
-                      <TableCell className="font-medium">{booking.bookingCode}</TableCell>
+                      <TableCell className="font-medium">
+                        {booking.bookingCode}
+                      </TableCell>
                       <TableCell>{booking.movieTitle}</TableCell>
                       <TableCell>{booking.cinemaName}</TableCell>
-                      <TableCell className="text-sm">{formatDate(booking.startTime)}</TableCell>
-                      <TableCell className="text-center">{booking.seatCount}</TableCell>
-                      <TableCell className="text-right font-medium">{formatPrice(booking.totalAmount)}</TableCell>
+                      <TableCell className="text-sm">
+                        {formatDate(booking.startTime)}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {booking.seatCount}
+                      </TableCell>
+                      <TableCell className="text-right font-medium">
+                        {formatPrice(booking.totalAmount)}
+                      </TableCell>
                       <TableCell>
                         <Badge className={getStatusBadgeColor(booking.status)}>
                           {booking.status}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-sm text-gray-600">{formatDate(booking.createdAt)}</TableCell>
+                      <TableCell className="text-sm text-gray-600">
+                        {formatDate(booking.createdAt)}
+                      </TableCell>
                       <TableCell>
                         <div className="flex gap-2">
                           <Button
@@ -564,7 +695,9 @@ export default function ReservationsPage() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => openStatusDialog(booking.id, booking.status)}
+                            onClick={() =>
+                              openStatusDialog(booking.id, booking.status)
+                            }
                             className="h-8 w-8 p-0"
                             title="Đổi trạng thái"
                           >
@@ -605,10 +738,16 @@ export default function ReservationsPage() {
                 <div>
                   <Label className="text-sm text-gray-500">Trạng Thái</Label>
                   <div>
-                    <Badge className={getStatusBadgeColor(bookingDetail.status)}>
+                    <Badge
+                      className={getStatusBadgeColor(bookingDetail.status)}
+                    >
                       {bookingDetail.status}
                     </Badge>
-                    <Badge className={`ml-2 ${getPaymentStatusBadge(bookingDetail.paymentStatus)}`}>
+                    <Badge
+                      className={`ml-2 ${getPaymentStatusBadge(
+                        bookingDetail.paymentStatus
+                      )}`}
+                    >
                       {bookingDetail.paymentStatus}
                     </Badge>
                   </div>
@@ -631,7 +770,9 @@ export default function ReservationsPage() {
                 </div>
                 <div>
                   <Label className="text-sm text-gray-500">Suất Chiếu</Label>
-                  <p className="font-medium">{formatDate(bookingDetail.startTime)}</p>
+                  <p className="font-medium">
+                    {formatDate(bookingDetail.startTime)}
+                  </p>
                 </div>
               </div>
 
@@ -649,7 +790,9 @@ export default function ReservationsPage() {
                   </div>
                   {bookingDetail.customerPhone && (
                     <div>
-                      <Label className="text-sm text-gray-500">Số Điện Thoại</Label>
+                      <Label className="text-sm text-gray-500">
+                        Số Điện Thoại
+                      </Label>
                       <p>{bookingDetail.customerPhone}</p>
                     </div>
                   )}
@@ -660,28 +803,42 @@ export default function ReservationsPage() {
               <div className="border-t pt-4">
                 <h3 className="font-semibold mb-2">Ghế</h3>
                 <div className="grid grid-cols-3 gap-2">
-                  {bookingDetail.seats && bookingDetail.seats.map((seat, idx: number) => (
-                    <div key={idx} className="border p-2 rounded text-sm">
-                      <p className="font-medium">{String(seat.row)}{seat.number}</p>
-                      <p className="text-xs text-gray-500">{seat.seatType}</p>
-                      <p className="text-xs font-semibold">{formatPrice(seat.price)}</p>
-                    </div>
-                  ))}
+                  {bookingDetail.seats &&
+                    bookingDetail.seats.map((seat, idx: number) => (
+                      <div key={idx} className="border p-2 rounded text-sm">
+                        <p className="font-medium">
+                          {String(seat.row)}
+                          {seat.number}
+                        </p>
+                        <p className="text-xs text-gray-500">{seat.seatType}</p>
+                        <p className="text-xs font-semibold">
+                          {formatPrice(seat.price)}
+                        </p>
+                      </div>
+                    ))}
                 </div>
               </div>
 
               {/* Concessions */}
-              {bookingDetail.concessions && bookingDetail.concessions.length > 0 && (
-                <div className="border-t pt-4">
-                  <h3 className="font-semibold mb-2">Mặt Hàng Bổ Sung</h3>
-                  {bookingDetail.concessions.map((item, idx: number) => (
-                    <div key={idx} className="flex justify-between py-1 text-sm">
-                      <span>{item.name} x {item.quantity}</span>
-                      <span className="font-medium">{formatPrice(item.totalPrice)}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
+              {bookingDetail.concessions &&
+                bookingDetail.concessions.length > 0 && (
+                  <div className="border-t pt-4">
+                    <h3 className="font-semibold mb-2">Mặt Hàng Bổ Sung</h3>
+                    {bookingDetail.concessions.map((item, idx: number) => (
+                      <div
+                        key={idx}
+                        className="flex justify-between py-1 text-sm"
+                      >
+                        <span>
+                          {item.name} x {item.quantity}
+                        </span>
+                        <span className="font-medium">
+                          {formatPrice(item.totalPrice)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
 
               {/* Pricing */}
               <div className="border-t pt-4">
@@ -689,7 +846,9 @@ export default function ReservationsPage() {
                 <div className="space-y-1 text-sm">
                   <div className="flex justify-between">
                     <span>Cộng Tiền</span>
-                    <span className="font-medium">{formatPrice(bookingDetail.subtotal || 0)}</span>
+                    <span className="font-medium">
+                      {formatPrice(bookingDetail.subtotal || 0)}
+                    </span>
                   </div>
                   {bookingDetail.discount && bookingDetail.discount > 0 && (
                     <div className="flex justify-between text-green-600">
@@ -699,8 +858,12 @@ export default function ReservationsPage() {
                   )}
                   {bookingDetail.pointsUsed && bookingDetail.pointsUsed > 0 && (
                     <div className="flex justify-between text-blue-600">
-                      <span>Giảm Giá Điểm ({bookingDetail.pointsUsed} điểm)</span>
-                      <span>-{formatPrice(bookingDetail.pointsDiscount || 0)}</span>
+                      <span>
+                        Giảm Giá Điểm ({bookingDetail.pointsUsed} điểm)
+                      </span>
+                      <span>
+                        -{formatPrice(bookingDetail.pointsDiscount || 0)}
+                      </span>
                     </div>
                   )}
                   {bookingDetail.promotionCode && (
@@ -710,7 +873,13 @@ export default function ReservationsPage() {
                   )}
                   <div className="flex justify-between font-bold text-base border-t pt-2 mt-2">
                     <span>Tổng Tiền</span>
-                    <span className="text-green-600">{formatPrice(bookingDetail.finalAmount || bookingDetail.totalAmount || 0)}</span>
+                    <span className="text-green-600">
+                      {formatPrice(
+                        bookingDetail.finalAmount ||
+                          bookingDetail.totalAmount ||
+                          0
+                      )}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -740,7 +909,9 @@ export default function ReservationsPage() {
                 {bookingDetail.cancellationReason && (
                   <div className="mt-2">
                     <Label className="text-sm">Lý Do Hủy:</Label>
-                    <p className="text-red-600">{bookingDetail.cancellationReason}</p>
+                    <p className="text-red-600">
+                      {bookingDetail.cancellationReason}
+                    </p>
                   </div>
                 )}
               </div>
@@ -758,11 +929,17 @@ export default function ReservationsPage() {
             )}
             <Button
               variant="outline"
-              onClick={() => bookingDetail && openStatusDialog(bookingDetail.id, bookingDetail.status)}
+              onClick={() =>
+                bookingDetail &&
+                openStatusDialog(bookingDetail.id, bookingDetail.status)
+              }
             >
               Thay Đổi Trạng Thái
             </Button>
-            <Button variant="outline" onClick={() => setDetailDialogOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setDetailDialogOpen(false)}
+            >
               Đóng
             </Button>
           </DialogFooter>
@@ -774,7 +951,9 @@ export default function ReservationsPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Thay Đổi Trạng Thái Đặt Vé</DialogTitle>
-            <DialogDescription>Đổi trạng thái đặt vé và cung cấp lý do</DialogDescription>
+            <DialogDescription>
+              Đổi trạng thái đặt vé và cung cấp lý do
+            </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
@@ -804,14 +983,19 @@ export default function ReservationsPage() {
               <Input
                 id="reason"
                 value={statusUpdate.reason}
-                onChange={(e) => setStatusUpdate({ ...statusUpdate, reason: e.target.value })}
+                onChange={(e) =>
+                  setStatusUpdate({ ...statusUpdate, reason: e.target.value })
+                }
                 placeholder="Nhập lý do thay đổi trạng thái"
               />
             </div>
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setStatusDialogOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setStatusDialogOpen(false)}
+            >
               Hủy Bỏ
             </Button>
             <Button
@@ -819,7 +1003,9 @@ export default function ReservationsPage() {
               className="bg-gradient-to-r from-purple-600 to-pink-600"
               disabled={updateStatus.isPending}
             >
-              {updateStatus.isPending ? 'Đang Cập Nhật...' : 'Cập Nhật Trạng Thái'}
+              {updateStatus.isPending
+                ? 'Đang Cập Nhật...'
+                : 'Cập Nhật Trạng Thái'}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -9,15 +9,12 @@ import {
 } from '@movie-hub/shacdn-ui/carousel';
 import { useUser } from '@clerk/nextjs';
 import { useFindPromotionByTypes } from '@/hooks/promotion-hook';
-import { PromotionType } from '@/libs/types/promotion.type';
 import { ArrowRight, TicketPercent } from 'lucide-react';
 import Link from 'next/link';
 import { PromotionCard } from '../promotions/_components/promotion-card';
 
 export default function PromotionsSection() {
-  const { data: promotionsData, isLoading } = useFindPromotionByTypes(
-    PromotionType.FIXED_AMOUNT
-  );
+  const { data: promotionsData, isLoading } = useFindPromotionByTypes();
 
   const { user } = useUser();
 

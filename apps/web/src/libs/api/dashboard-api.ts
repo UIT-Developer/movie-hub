@@ -89,7 +89,7 @@ export interface OccupancyDto {
 
 // ==================== API Functions ====================
 
-const DASHBOARD_BASE = '/api/v1/dashboard';
+const DASHBOARD_BASE = '/dashboard';
 
 /**
  * Get dashboard KPI statistics

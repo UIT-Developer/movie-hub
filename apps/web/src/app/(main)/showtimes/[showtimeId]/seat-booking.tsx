@@ -54,7 +54,7 @@ export const SeatBooking = ({ showtimeId }: { showtimeId: string }) => {
     create();
   }, [isLoading, checking, showtimeId, createBookingMutate]);
 
-  const { userId } = useAuth();
+  const { userId, getToken } = useAuth();
 
   const [currentStep, setCurrentStep] = useState(0);
   const nextStep = () => {
@@ -77,7 +77,12 @@ export const SeatBooking = ({ showtimeId }: { showtimeId: string }) => {
   useEffect(() => {
     if (!userId) return;
 
-    connectSocket(showtimeId, userId);
+    const connectWithAuth = async () => {
+      const token = await getToken();
+      connectSocket(showtimeId, userId, token || undefined);
+    };
+
+    connectWithAuth();
 
     if (ttlResponse?.ttl && ttlResponse?.ttl > 0) {
       updateHoldTimeSeconds(ttlResponse.ttl);
@@ -93,6 +98,7 @@ export const SeatBooking = ({ showtimeId }: { showtimeId: string }) => {
     ttlResponse,
     updateHoldTimeSeconds,
     userId,
+    getToken,
   ]);
 
   return (

@@ -8,7 +8,7 @@ name: Build and Push to Azure
 on:
   push:
     branches:
-      - develop
+      - develop-test
     paths-ignore:
       - 'docs/**'
       - '*.md'

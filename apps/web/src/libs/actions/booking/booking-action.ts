@@ -6,7 +6,7 @@ import {
   ServiceResult,
   UpdateBookingDto,
 } from '@movie-hub/shared-types';
-import api from '../../api-client';
+import api from '../../api/api-client';
 import { BookingDetailDto, BookingStatus } from '../../types/booking.type';
 
 export const createBooking = async (

@@ -714,6 +714,11 @@ resource "azurerm_container_app" "web" {
       }
 
       env {
+        name  = "NEXT_PUBLIC_WEBSOCKET_URL"
+        value = "wss://${azurerm_container_app.api_gateway.ingress[0].fqdn}"
+      }
+
+      env {
         name  = "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY"
         value = var.clerk_publishable_key
       }

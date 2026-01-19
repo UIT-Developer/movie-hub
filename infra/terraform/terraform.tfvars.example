@@ -22,7 +22,9 @@ acr_sku  = "Basic"         # Basic, Standard, Premium
 web_image_tag = "latest"               # Tag pushed to ACR for the web app
 web_host      = ""                     # Optional custom domain (leave empty to use ACA FQDN)
 web_env = {                             # Extra env vars for the web app (optional)
-  # NEXTAUTH_URL = "https://your-web-domain"
+  # NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = "your-clerk-publishable-key"
+  # NEXT_PUBLIC_SOCKET_URL = ""  # Auto-set to API Gateway URL for WebSocket
+  # NEXT_PUBLIC_CLERK_SIGN_IN_URL = "/login"
 }
 
 # ===== CONTAINER APPS ENVIRONMENT =====

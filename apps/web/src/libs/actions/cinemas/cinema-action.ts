@@ -7,7 +7,7 @@ import {
 } from '@movie-hub/shared-types';
 import { PaginationQuery, ServiceResult } from '@movie-hub/shared-types/common';
 import z from 'zod';
-import api from '../../api-client';
+import api from '../../api/api-client';
 import {
   CinemaListResponse,
   CinemaLocationResponse,

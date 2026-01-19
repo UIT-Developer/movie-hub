@@ -16,15 +16,64 @@ export interface ApiError {
   statusCode?: number;
 }
 
-// Normalize backend base URL so services can consistently use `/api/v1/...` paths
-const rawBase = process.env.NEXT_PUBLIC_BACKEND_API_URL || 'http://localhost:4000';
-// Remove trailing slashes and whitespace
-let normalizedBase = rawBase.replace(/\/+$|\s+$/g, '');
-// If environment accidentally includes the `/api/v1` prefix, strip it so
-// service paths (which already include `/api/v1`) won't be duplicated.
-normalizedBase = normalizedBase.replace(/\/api\/v1$/i, '');
+// Runtime configuration cache
+let runtimeConfig: { NEXT_PUBLIC_BACKEND_API_URL?: string } | null = null;
+let configPromise: Promise<any> | null = null;
 
-console.log('[API] Initialized with base URL:', normalizedBase);
+/**
+ * Fetch runtime configuration from server
+ * This ensures we use runtime env vars instead of build-time
+ */
+async function getRuntimeConfig() {
+  if (runtimeConfig) return runtimeConfig;
+  
+  // Prevent multiple simultaneous fetches
+  if (configPromise) return configPromise;
+  
+  configPromise = fetch('/api/config')
+    .then(res => res.json())
+    .then(config => {
+      runtimeConfig = config;
+      configPromise = null;
+      return config;
+    })
+    .catch(error => {
+      console.error('[API] Failed to fetch runtime config:', error);
+      configPromise = null;
+      // Fallback to build-time env
+      return {
+        NEXT_PUBLIC_BACKEND_API_URL: process.env.NEXT_PUBLIC_BACKEND_API_URL
+      };
+    });
+  
+  return configPromise;
+}
+
+// Initialize with build-time or runtime env variable
+const getInitialBaseUrl = () => {
+  const envUrl = process.env.NEXT_PUBLIC_BACKEND_API_URL;
+  if (envUrl) {
+    return envUrl.replace(/\/+$|\s+$/g, '');
+  }
+  return 'http://localhost:4000';
+};
+
+let normalizedBase = getInitialBaseUrl();
+
+// Fetch runtime config and update base URL (if different from build-time)
+if (typeof window !== 'undefined') {
+  getRuntimeConfig().then(config => {
+    const rawBase = config?.NEXT_PUBLIC_BACKEND_API_URL;
+    if (rawBase) {
+      const newBase = rawBase.replace(/\/+$|\s+$/g, '');
+      if (newBase !== normalizedBase) {
+        normalizedBase = newBase;
+        apiClient.defaults.baseURL = normalizedBase;
+        console.log('[API] Base URL updated from runtime config:', normalizedBase);
+      }
+    }
+  });
+}
 
 // Base API client
 const apiClient = axios.create({

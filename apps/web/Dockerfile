@@ -18,19 +18,6 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Build arguments for NEXT_PUBLIC environment variables
-# These are baked into the Next.js build at compile time
-ARG NEXT_PUBLIC_API_URL=http://localhost:4000/api/v1
-ARG NEXT_PUBLIC_BACKEND_API_URL=http://localhost:4000/api/v1
-ARG NEXT_PUBLIC_WEBSOCKET_URL=ws://localhost:4000
-ARG NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
-
-# Set them as environment variables for the build
-ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL \
-    NEXT_PUBLIC_BACKEND_API_URL=$NEXT_PUBLIC_BACKEND_API_URL \
-    NEXT_PUBLIC_WEBSOCKET_URL=$NEXT_PUBLIC_WEBSOCKET_URL \
-    NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=$NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
-
 # Copy dependencies from deps stage
 COPY --from=deps /app/node_modules ./node_modules
 
@@ -43,6 +30,7 @@ COPY libs ./libs
 COPY apps/web ./apps/web
 
 # Build the web app using Nx (creates standalone output)
+# No build-time env vars needed - everything is runtime now
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1
 RUN NODE_ENV=production npx nx run web:build
@@ -57,9 +45,13 @@ RUN apk add --no-cache wget
 
 WORKDIR /app
 
+# Runtime environment variables - can be changed without rebuild
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
-    PORT=4200
+    PORT=4200 \
+    NEXT_PUBLIC_WEBSOCKET_URL=ws://localhost:3000 \
+    NEXT_PUBLIC_API_URL=http://localhost:3000/api/v1 \
+    NEXT_PUBLIC_BACKEND_API_URL=http://localhost:3000/api/v1
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && \

@@ -38,7 +38,7 @@ export const useGetMovies = (initialQuery?: Omit<MovieQuery, 'page'>) => {
     },
     select: (data) => {
       return {
-        pages: data.pages.flatMap((page) => page.data),
+        pages: data.pages.flatMap((page) => page.data || []),
         pageParams: data.pageParams,
       };
     },

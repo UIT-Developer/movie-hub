@@ -36,7 +36,7 @@ type BookingState = {
   seatLabelToId: Record<string, string>;
   seatIdToLabel: Record<string, string>;
 
-  connectSocket: (showtimeId: string, userId: string) => void;
+  connectSocket: (showtimeId: string, userId: string, token?: string) => void;
   disconnectSocket: () => void;
 
   initBookingData: (data: ShowtimeSeatResponse) => void;
@@ -374,17 +374,43 @@ export const useBookingStore = create<BookingState>((set, get) => ({
   },
 
   // ---------------- Socket ----------------
-  connectSocket: (showtimeId: string, userId: string) => {
+  connectSocket: async (showtimeId: string, userId: string, token?: string) => {
     if (socket && socket.connected) return;
 
-    socket = io('http://localhost:3000', {
+    // Fetch runtime config from server
+    const configResponse = await fetch('/api/config');
+    const config = await configResponse.json();
+    const SOCKET_URL = config?.NEXT_PUBLIC_WEBSOCKET_URL || window.location.origin;
+
+    console.log('[BookingStore] Connecting to WebSocket:', SOCKET_URL);
+
+    const socketConfig: any = {
       transports: ['websocket'],
       withCredentials: true,
       query: { showtimeId },
+    };
+
+    // Add auth token if provided
+    if (token) {
+      socketConfig.auth = { token };
+      console.log('[BookingStore] Connecting with auth token');
+    }
+
+    socket = io(SOCKET_URL, socketConfig);
+
+    socket.on('connect', () => {
+      console.log('[BookingStore] ✅ WebSocket connected');
+      set({ socketConnected: true });
+    });
+    
+    socket.on('disconnect', () => {
+      console.log('[BookingStore] ❌ WebSocket disconnected');
+      set({ socketConnected: false });
     });
 
-    socket.on('connect', () => set({ socketConnected: true }));
-    socket.on('disconnect', () => set({ socketConnected: false }));
+    socket.on('connect_error', (error) => {
+      console.error('[BookingStore] ❌ WebSocket connection error:', error.message);
+    });
 
     socket.on('seat_held', (data: SeatEvent) => {
       const label = get().seatIdToLabel[data.seatId];

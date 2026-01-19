@@ -1,5 +1,5 @@
 import { CreatePaymentDto, ServiceResult } from "@movie-hub/shared-types";
-import api from "../../api-client";
+import api from "../../api/api-client";
 import { PaymentDetailDto } from "../../types/payment.type";
 
 export const createPayment = async (

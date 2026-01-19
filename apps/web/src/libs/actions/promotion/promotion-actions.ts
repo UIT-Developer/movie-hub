@@ -5,7 +5,7 @@ import {
   ValidatePromotionDto,
   ValidatePromotionResponseDto,
 } from '../../types/promotion.type';
-import api from '../../api-client';
+import api from '../../api/api-client';
 
 export const findAllPromotions = async (
   active?: string,

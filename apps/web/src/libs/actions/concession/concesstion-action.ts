@@ -1,5 +1,5 @@
 import { ConcessionCategory, ServiceResult } from "@movie-hub/shared-types";
-import api from "../../api-client";
+import api from "../../api/api-client";
 import { ConcessionDto } from "../../types/concession.type";
 
 export const findAllConcessions = async ( query : {

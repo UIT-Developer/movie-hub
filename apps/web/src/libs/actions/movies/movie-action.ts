@@ -7,7 +7,7 @@ import {
 } from '@movie-hub/shared-types';
 
 import z from 'zod';
-import api from '../../api-client';
+import api from '../../api/api-client';
 import { ServiceResult } from '@movie-hub/shared-types/common';
 
 export type CreateMovieRequest = z.infer<typeof CreateMovieSchema>;

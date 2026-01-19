@@ -168,12 +168,45 @@ build_push_images() {
         service=$(echo "$service" | xargs)  # Trim whitespace
         print_msg "$YELLOW" "Building $service..."
         
-        docker build \
-            -t "$ACR_LOGIN_SERVER/$service:latest" \
-            -t "$ACR_LOGIN_SERVER/$service:$(git rev-parse --short HEAD)" \
-            -f "apps/$service/Dockerfile" \
-            --target production \
-            .
+        # Special handling for web service - pass build args
+        if [ "$service" == "web" ]; then
+            # Get API Gateway FQDN from Azure (if exists) or use from tfvars
+            API_GATEWAY_FQDN=$(az containerapp show \
+                --name api-gateway \
+                --resource-group "$RESOURCE_GROUP" \
+                --query "properties.configuration.ingress.fqdn" -o tsv 2>/dev/null || echo "")
+            
+            if [ -z "$API_GATEWAY_FQDN" ]; then
+                # Fallback to reading from terraform.tfvars web_env
+                API_GATEWAY_URL=$(grep -A 10 "web_env" "$TFVARS_PATH" | grep "NEXT_PUBLIC_API_BASE_URL" | cut -d'"' -f2 | head -1)
+                API_GATEWAY_FQDN=$(echo "$API_GATEWAY_URL" | sed 's|https://||' | sed 's|http://||')
+            fi
+            
+            CLERK_PUB_KEY=$(grep -E "^clerk_publishable_key" "$TFVARS_PATH" | cut -d'"' -f2)
+            
+            docker build \
+                --build-arg NEXT_PUBLIC_API_URL="https://${API_GATEWAY_FQDN}/api/v1" \
+                --build-arg NEXT_PUBLIC_BACKEND_API_URL="https://${API_GATEWAY_FQDN}/api/v1" \
+                --build-arg NEXT_PUBLIC_WEBSOCKET_URL="wss://${API_GATEWAY_FQDN}" \
+                --build-arg NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="$CLERK_PUB_KEY" \
+                --build-arg NEXT_PUBLIC_CLERK_SIGN_IN_URL="/login" \
+                --build-arg NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL="/" \
+                --build-arg NEXT_PUBLIC_CLERK_SIGN_UP_URL="/sign-up" \
+                --build-arg NEXT_PUBLIC_CLERK_AFTER_SIGN_OUT_URL="/login" \
+                --build-arg NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL="/" \
+                -t "$ACR_LOGIN_SERVER/$service:latest" \
+                -t "$ACR_LOGIN_SERVER/$service:$(git rev-parse --short HEAD)" \
+                -f "apps/$service/Dockerfile" \
+                --target production \
+                .
+        else
+            docker build \
+                -t "$ACR_LOGIN_SERVER/$service:latest" \
+                -t "$ACR_LOGIN_SERVER/$service:$(git rev-parse --short HEAD)" \
+                -f "apps/$service/Dockerfile" \
+                --target production \
+                .
+        fi
         
         print_msg "$YELLOW" "Pushing $service..."
         docker push "$ACR_LOGIN_SERVER/$service:latest"

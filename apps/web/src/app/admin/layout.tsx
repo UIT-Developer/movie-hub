@@ -263,22 +263,24 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-screen bg-gray-50 admin-light-mode">
-      {/* Sidebar */}
+      {/* Sidebar - Premium Deep Theme */}
       <aside
         className={cn(
-          'fixed left-0 top-0 z-40 h-screen transition-all duration-300 bg-white border-r border-gray-200',
+          'fixed left-0 top-0 z-40 h-screen transition-all duration-300',
+          'bg-gradient-to-b from-slate-900 via-slate-900 to-indigo-950',
+          'border-r border-slate-700/50 shadow-2xl shadow-slate-900/50',
           sidebarOpen ? 'w-64' : 'w-20'
         )}
       >
-        {/* Header */}
-        <div className="flex h-16 items-center justify-between px-4 border-b border-gray-200">
+        {/* Header with Premium Styling */}
+        <div className="flex h-16 items-center justify-between px-4 border-b border-slate-700/50 bg-slate-900/50 backdrop-blur-sm">
           {sidebarOpen && (
             <Link href="/admin">
               <div className="flex items-center gap-2">
-                <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center text-white font-bold text-sm">
+                <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center text-white font-bold text-sm shadow-lg shadow-violet-500/30">
                   🎬
                 </div>
-                <h1 className="text-lg font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                <h1 className="text-lg font-bold bg-gradient-to-r from-violet-400 via-fuchsia-400 to-pink-400 bg-clip-text text-transparent">
                   Cinema
                 </h1>
               </div>
@@ -287,7 +289,7 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
           <Button
             variant="ghost"
             size="icon"
-            className="text-gray-500 hover:text-gray-900 hover:bg-gray-100"
+            className="text-slate-400 hover:text-white hover:bg-slate-700/50"
             onClick={() => setSidebarOpen(!sidebarOpen)}
           >
             <Menu className="h-5 w-5" />
@@ -299,7 +301,7 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
             {filteredMenuSections.map((section, idx) => (
               <div key={`section-${idx}`}>
                 {sidebarOpen && (
-                  <h3 className="px-3 mb-3 text-xs font-bold text-gray-400 uppercase tracking-widest">
+                  <h3 className="px-3 mb-3 text-xs font-bold uppercase tracking-widest bg-gradient-to-r from-slate-400 to-slate-500 bg-clip-text text-transparent">
                     {section.label}
                   </h3>
                 )}
@@ -320,20 +322,27 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
                       >
                         <div
                           className={cn(
-                            'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200',
+                            'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-300',
                             item.disabled
-                              ? 'bg-amber-50 text-amber-600 border border-amber-200 cursor-not-allowed'
+                              ? 'bg-amber-900/20 text-amber-400 border border-amber-500/30 cursor-not-allowed'
                               : isActive
-                              ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg shadow-purple-500/30'
-                              : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100 cursor-pointer'
+                              ? 'bg-gradient-to-r from-violet-600 via-fuchsia-600 to-pink-600 text-white shadow-lg shadow-fuchsia-500/40 ring-1 ring-fuchsia-400/30'
+                              : 'text-slate-300 hover:text-white hover:bg-slate-700/50 hover:shadow-md hover:shadow-slate-800/50 cursor-pointer'
                           )}
                         >
-                          <Icon className="h-5 w-5 flex-shrink-0" />
+                          <Icon
+                            className={cn(
+                              'h-5 w-5 flex-shrink-0 transition-colors duration-300',
+                              isActive
+                                ? 'text-white'
+                                : 'text-slate-400 group-hover:text-white'
+                            )}
+                          />
                           {sidebarOpen && (
                             <div className="flex items-center gap-2 flex-1 min-w-0">
                               <span className="truncate">{item.label}</span>
                               {item.disabled && (
-                                <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-bold flex-shrink-0">
+                                <span className="text-[10px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded font-bold flex-shrink-0 border border-amber-500/30">
                                   NO API
                                 </span>
                               )}
@@ -348,11 +357,11 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
             ))}
           </nav>
 
-          {/* Logout Button */}
-          <div className="px-3 py-6 border-t border-gray-200">
+          {/* Logout Button with Premium Dark Theme */}
+          <div className="px-3 py-6 border-t border-slate-700/50">
             <Button
               variant="ghost"
-              className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
+              className="w-full justify-start text-red-400 hover:text-red-300 hover:bg-red-950/30"
               onClick={handleLogout}
             >
               <LogOut className="h-5 w-5 flex-shrink-0" />

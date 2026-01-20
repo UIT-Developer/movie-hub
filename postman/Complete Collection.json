@@ -1,0 +1,4023 @@
+{
+	"info": {
+		"_postman_id": "4b083b77-5905-49fa-9fb9-1ac4d7daa14b",
+		"name": "MovieHub API Gateway - Complete Collection Copy",
+		"description": "Complete API collection for MovieHub cinema booking system\n\n**Base URL:** `http://localhost:3000`\n\n**Authentication:** Most endpoints require Clerk JWT token in Authorization header\n\n**Collections:**\n- Booking Service (Bookings, Payments, Tickets, Loyalty, Concessions, Promotions)\n- Cinema Service (Cinemas, Halls, Showtimes)\n- Movie Service (Movies, Genres, Releases)\n\n**Environment Variables:**\n- `baseUrl`: API Gateway URL (default: http://localhost:3000)\n- `authToken`: Clerk JWT token for authenticated requests\n- `userId`: Clerk user ID\n- `bookingId`: Created booking ID\n- `paymentId`: Created payment ID\n- `showtimeId`: Showtime ID for testing\n- `cinemaId`: Cinema ID for testing\n- `movieId`: Movie ID for testing",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "38695326"
+	},
+	"item": [
+		{
+			"name": "Booking Service - Bookings",
+			"item": [
+				{
+					"name": "User Bookings",
+					"item": [
+						{
+							"name": "Create Booking",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"if (pm.response.code === 200 || pm.response.code === 201) {",
+											"    const response = pm.response.json();",
+											"    if (response.bookingId) {",
+											"        pm.collectionVariables.set('bookingId', response.bookingId);",
+											"    }",
+											"}"
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "__session={{authToken}}",
+										"type": "text"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"showtimeId\": \"{{showtimeId}}\"\n \n//   \"concessions\": [\n//     {\n//       \"concessionId\": \"94eb022d-16fc-4dc1-9c07-06c59b56765b\",\n//       \"quantity\": 2\n//     }\n//   ]\n  //,\n//   \"promotionCode\": \"DISCOUNT10\",\n//   \"usePoints\": 100,\n//   \"customerInfo\": {\n//     \"name\": \"John Doe\",\n//     \"email\": \"john@example.com\",\n//     \"phone\": \"0901234567\"\n//   }\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/v1/bookings",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"bookings"
+									]
+								},
+								"description": "Create a new booking with seats, concessions, and optional promotion.\n\n**Customer Information:**\n- Automatically fetched from User Service using authenticated userId\n- customerInfo is optional fallback (only needed if User Service is unavailable)\n- Response wrapped in ServiceResult<BookingCalculationDto>"
+							},
+							"response": []
+						},
+						{
+							"name": "Get All User Bookings",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "__session={{authToken}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/v1/bookings?status=PENDING&page=1",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"bookings"
+									],
+									"query": [
+										{
+											"key": "status",
+											"value": "PENDING"
+										},
+										{
+											"key": "limit",
+											"value": "10",
+											"disabled": true
+										},
+										{
+											"key": "page",
+											"value": "1"
+										}
+									]
+								},
+								"description": "Get all bookings for the authenticated user with optional filters"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Booking Details",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "__session={{authToken}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/v1/bookings/{{bookingId}}",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"bookings",
+										"{{bookingId}}"
+									]
+								},
+								"description": "Get detailed information for a specific booking"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Booking Summary",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "__session={{authToken}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/v1/bookings/{{bookingId}}/summary",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"bookings",
+										"{{bookingId}}",
+										"summary"
+									]
+								},
+								"description": "Get booking calculation summary with pricing breakdown"
+							},
+							"response": []
+						},
+						{
+							"name": "Check Existing Booking at Showtime",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "__session={{authToken}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/v1/bookings/showtime/{{showtimeId}}/check?includeStatuses=PENDING,CONFIRMED",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"bookings",
+										"showtime",
+										"{{showtimeId}}",
+										"check"
+									],
+									"query": [
+										{
+											"key": "includeStatuses",
+											"value": "PENDING,CONFIRMED",
+											"description": "Comma-separated status list (optional)"
+										}
+									]
+								},
+								"description": "Check if user already has a booking for this showtime"
+							},
+							"response": []
+						},
+						{
+							"name": "Cancel Booking",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "__session={{authToken}}",
+										"type": "text"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"reason\": \"Changed plans\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/v1/bookings/{{bookingId}}/cancel",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"bookings",
+										"{{bookingId}}",
+										"cancel"
+									]
+								},
+								"description": "Cancel a booking with optional reason"
+							},
+							"response": []
+						},
+						{
+							"name": "Update Booking",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "__session={{authToken}}",
+										"type": "text"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"concessions\": [\n    {\n      \"concessionId\": \"concession-id\",\n      \"quantity\": 3\n    }\n  ]\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/v1/bookings/{{bookingId}}",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"bookings",
+										"{{bookingId}}"
+									]
+								},
+								"description": "Update booking concessions. Returns ServiceResult<BookingDetailDto>."
+							},
+							"response": []
+						},
+						{
+							"name": "Reschedule Booking",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "__session={{authToken}}",
+										"type": "text"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"newShowtimeId\": \"new-showtime-id\",\n  \"newSeatIds\": [\"seat-1\", \"seat-2\"]\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/v1/bookings/{{bookingId}}/reschedule",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"bookings",
+										"{{bookingId}}",
+										"reschedule"
+									]
+								},
+								"description": "Reschedule a booking to a different showtime. Returns ServiceResult<BookingDetailDto>."
+							},
+							"response": []
+						},
+						{
+							"name": "Get Refund Calculation",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "__session={{authToken}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/v1/bookings/{{bookingId}}/refund-calculation",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"bookings",
+										"{{bookingId}}",
+										"refund-calculation"
+									]
+								},
+								"description": "Calculate refund amount for a booking. Returns ServiceResult<RefundCalculationDto>."
+							},
+							"response": []
+						},
+						{
+							"name": "Cancel Booking with Refund",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "__session={{authToken}}",
+										"type": "text"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"reason\": \"Emergency - cannot attend\",\n  \"refundMethod\": \"ORIGINAL_PAYMENT\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/v1/bookings/{{bookingId}}/cancel-with-refund",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"bookings",
+										"{{bookingId}}",
+										"cancel-with-refund"
+									]
+								},
+								"description": "Cancel booking and request refund. Returns ServiceResult with booking and refund details."
+							},
+							"response": []
+						},
+						{
+							"name": "Get Cancellation Policy",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/v1/bookings/cancellation-policy",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"bookings",
+										"cancellation-policy"
+									]
+								},
+								"description": "Get the cancellation policy details. Returns ServiceResult with policy information."
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Admin Bookings",
+					"item": [
+						{
+							"name": "Get All Bookings (Admin)",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "__session={{authToken}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/v1/bookings/admin/all?page=1&sortBy=created_at&sortOrder=desc",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"bookings",
+										"admin",
+										"all"
+									],
+									"query": [
+										{
+											"key": "status",
+											"value": "CONFIRMED",
+											"disabled": true
+										},
+										{
+											"key": "page",
+											"value": "1"
+										},
+										{
+											"key": "limit",
+											"value": "20",
+											"disabled": true
+										},
+										{
+											"key": "sortBy",
+											"value": "created_at"
+										},
+										{
+											"key": "sortOrder",
+											"value": "desc"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Get Bookings by Showtime (Admin)",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "__session={{authToken}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/v1/bookings/admin/showtime/{{showtimeId}}?status=CONFIRMED",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"bookings",
+										"admin",
+										"showtime",
+										"{{showtimeId}}"
+									],
+									"query": [
+										{
+											"key": "status",
+											"value": "CONFIRMED"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Get Bookings by Date Range (Admin)",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "__session={{authToken}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/v1/bookings/admin/date-range?startDate=2025-01-01&endDate=2025-12-31&cinemaId={{cinemaId}}",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"bookings",
+										"admin",
+										"date-range"
+									],
+									"query": [
+										{
+											"key": "startDate",
+											"value": "2025-01-01"
+										},
+										{
+											"key": "endDate",
+											"value": "2025-12-31"
+										},
+										{
+											"key": "cinemaId",
+											"value": "{{cinemaId}}"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Update Booking Status (Admin)",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "__session={{authToken}}",
+										"type": "text"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"status\": \"CONFIRMED\",\n  \"reason\": \"Manual confirmation\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/v1/bookings/admin/{{bookingId}}/status",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"bookings",
+										"admin",
+										"{{bookingId}}",
+										"status"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Confirm Booking (Admin)",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "__session={{authToken}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/v1/bookings/admin/{{bookingId}}/confirm",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"bookings",
+										"admin",
+										"{{bookingId}}",
+										"confirm"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Complete Booking (Admin)",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "__session={{authToken}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/v1/bookings/admin/{{bookingId}}/complete",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"bookings",
+										"admin",
+										"{{bookingId}}",
+										"complete"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Expire Booking (Admin)",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "__session={{authToken}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/v1/bookings/admin/{{bookingId}}/expire",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"bookings",
+										"admin",
+										"{{bookingId}}",
+										"expire"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Get Booking Statistics (Admin)",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "__session={{authToken}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/v1/bookings/admin/statistics?startDate=2025-01-01&endDate=2025-12-31&cinemaId={{cinemaId}}",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"bookings",
+										"admin",
+										"statistics"
+									],
+									"query": [
+										{
+											"key": "startDate",
+											"value": "2025-01-01"
+										},
+										{
+											"key": "endDate",
+											"value": "2025-12-31"
+										},
+										{
+											"key": "cinemaId",
+											"value": "{{cinemaId}}"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Get Revenue Report (Admin)",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "__session={{authToken}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/v1/bookings/admin/revenue-report?startDate=2025-01-01&endDate=2025-12-31&period=monthly&cinemaId={{cinemaId}}",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"bookings",
+										"admin",
+										"revenue-report"
+									],
+									"query": [
+										{
+											"key": "startDate",
+											"value": "2025-01-01"
+										},
+										{
+											"key": "endDate",
+											"value": "2025-12-31"
+										},
+										{
+											"key": "period",
+											"value": "monthly"
+										},
+										{
+											"key": "cinemaId",
+											"value": "{{cinemaId}}"
+										}
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": " Payments",
+			"item": [
+				{
+					"name": "User Payments",
+					"item": [
+						{
+							"name": "Create Payment",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"if (pm.response.code === 200 || pm.response.code === 201) {",
+											"    const response = pm.response.json();",
+											"    if (response.paymentId) {",
+											"        pm.collectionVariables.set('paymentId', response.paymentId);",
+											"    }",
+											"}"
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "__session={{authToken}}",
+										"type": "text"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"paymentMethod\": \"VNPAY\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/v1/payments/bookings/{{bookingId}}",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"payments",
+										"bookings",
+										"{{bookingId}}"
+									]
+								},
+								"description": "Create VNPay payment for a booking. Returns payment URL to redirect user."
+							},
+							"response": []
+						},
+						{
+							"name": "Get Payment Details",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "__session={{authToken}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/v1/payments/{{paymentId}}",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"payments",
+										"{{paymentId}}"
+									]
+								},
+								"description": "Get payment details by ID"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Payments by Booking",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "__session={{authToken}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/v1/payments/booking/{{bookingId}}",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"payments",
+										"booking",
+										"{{bookingId}}"
+									]
+								},
+								"description": "Get all payment attempts for a booking"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "VNPay Webhooks (Public)",
+					"item": [
+						{
+							"name": "VNPay IPN",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/v1/payments/vnpay/ipn?vnp_TmnCode=DEMO&vnp_Amount=10000000&vnp_BankCode=NCB&vnp_TransactionNo=123456",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"payments",
+										"vnpay",
+										"ipn"
+									],
+									"query": [
+										{
+											"key": "vnp_TmnCode",
+											"value": "DEMO",
+											"description": "VNPay parameters (example)"
+										},
+										{
+											"key": "vnp_Amount",
+											"value": "10000000"
+										},
+										{
+											"key": "vnp_BankCode",
+											"value": "NCB"
+										},
+										{
+											"key": "vnp_TransactionNo",
+											"value": "123456"
+										}
+									]
+								},
+								"description": "VNPay IPN webhook (called by VNPay server). NO auth required."
+							},
+							"response": []
+						},
+						{
+							"name": "VNPay Return URL",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/v1/payments/vnpay/return?vnp_TmnCode=DEMO&vnp_Amount=10000000&vnp_ResponseCode=00",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"payments",
+										"vnpay",
+										"return"
+									],
+									"query": [
+										{
+											"key": "vnp_TmnCode",
+											"value": "DEMO"
+										},
+										{
+											"key": "vnp_Amount",
+											"value": "10000000"
+										},
+										{
+											"key": "vnp_ResponseCode",
+											"value": "00",
+											"description": "00 = success"
+										}
+									]
+								},
+								"description": "VNPay return URL (user redirected here after payment). NO auth required."
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Admin Payments",
+					"item": [
+						{
+							"name": "Get All Payments (Admin)",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "__session={{authToken}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/v1/payments/admin/all",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"payments",
+										"admin",
+										"all"
+									],
+									"query": [
+										{
+											"key": "status",
+											"value": "SUCCESS",
+											"disabled": true
+										},
+										{
+											"key": "page",
+											"value": "1",
+											"disabled": true
+										},
+										{
+											"key": "limit",
+											"value": "20",
+											"disabled": true
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Get Payments by Status (Admin)",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "__session={{authToken}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/v1/payments/admin/status/PENDING?page=1",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"payments",
+										"admin",
+										"status",
+										"PENDING"
+									],
+									"query": [
+										{
+											"key": "page",
+											"value": "1"
+										},
+										{
+											"key": "limit",
+											"value": "20",
+											"disabled": true
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Cancel Payment (Admin)",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "__session={{authToken}}",
+										"type": "text"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"reason\": \"Fraudulent transaction\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/v1/payments/admin/{{paymentId}}/cancel",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"payments",
+										"admin",
+										"{{paymentId}}",
+										"cancel"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Get Payment Statistics (Admin)",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "__session={{authToken}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/v1/payments/admin/statistics?startDate=2025-01-01&endDate=2025-12-31",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"payments",
+										"admin",
+										"statistics"
+									],
+									"query": [
+										{
+											"key": "startDate",
+											"value": "2025-01-01"
+										},
+										{
+											"key": "endDate",
+											"value": "2025-12-31"
+										}
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": " Tickets",
+			"item": [
+				{
+					"name": "User Tickets",
+					"item": [
+						{
+							"name": "Get Ticket Details",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "__session={{authToken}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/v1/tickets/{{ticketId}}",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"tickets",
+										"{{ticketId}}"
+									]
+								},
+								"description": "Get ticket details by ID"
+							},
+							"response": []
+						},
+						{
+							"name": "Find Ticket by Code",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "__session={{authToken}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/v1/tickets/code/TKT-12345678",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"tickets",
+										"code",
+										"TKT-12345678"
+									]
+								},
+								"description": "Find ticket by ticket code"
+							},
+							"response": []
+						},
+						{
+							"name": "Generate QR Code",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "__session={{authToken}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/v1/tickets/{{ticketId}}/qr",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"tickets",
+										"{{ticketId}}",
+										"qr"
+									]
+								},
+								"description": "Generate QR code for ticket (returns base64 image)"
+							},
+							"response": []
+						},
+						{
+							"name": "Validate Ticket",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "__session={{authToken}}",
+										"type": "text"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"validationCode\": \"VALIDATION-CODE\",\n  \"cinemaId\": \"{{cinemaId}}\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/v1/tickets/{{ticketId}}/validate",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"tickets",
+										"{{ticketId}}",
+										"validate"
+									]
+								},
+								"description": "Validate a ticket for cinema entry (for staff)"
+							},
+							"response": []
+						},
+						{
+							"name": "Use Ticket",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "__session={{authToken}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/v1/tickets/{{ticketId}}/use",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"tickets",
+										"{{ticketId}}",
+										"use"
+									]
+								},
+								"description": "Mark ticket as used after successful entry scan"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Admin Tickets",
+					"item": [
+						{
+							"name": "Get All Tickets (Admin)",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "__session={{authToken}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/v1/tickets/admin/all?status=VALID&page=1&limit=20",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"tickets",
+										"admin",
+										"all"
+									],
+									"query": [
+										{
+											"key": "status",
+											"value": "VALID"
+										},
+										{
+											"key": "page",
+											"value": "1"
+										},
+										{
+											"key": "limit",
+											"value": "20"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Get Tickets by Showtime (Admin)",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "__session={{authToken}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/v1/tickets/admin/showtime/{{showtimeId}}",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"tickets",
+										"admin",
+										"showtime",
+										"{{showtimeId}}"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Get Tickets by Booking (Admin)",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "__session={{authToken}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/v1/tickets/admin/booking/{{bookingId}}",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"tickets",
+										"admin",
+										"booking",
+										"{{bookingId}}"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Bulk Validate Tickets (Admin)",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "__session={{authToken}}",
+										"type": "text"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"ticketIds\": [\"ticket-id-1\", \"ticket-id-2\"],\n  \"cinemaId\": \"{{cinemaId}}\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/v1/tickets/admin/bulk-validate",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"tickets",
+										"admin",
+										"bulk-validate"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Cancel Ticket (Admin)",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "__session={{authToken}}",
+										"type": "text"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"reason\": \"Duplicate ticket\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/v1/tickets/admin/{{ticketId}}/cancel",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"tickets",
+										"admin",
+										"{{ticketId}}",
+										"cancel"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": " Refunds",
+			"item": [
+				{
+					"name": "User Refunds",
+					"item": [
+						{
+							"name": "Create Refund",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"if (pm.response.code === 200 || pm.response.code === 201) {",
+											"    const response = pm.response.json();",
+											"    if (response.data && response.data.id) {",
+											"        pm.collectionVariables.set('refundId', response.data.id);",
+											"    }",
+											"}"
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "__session={{authToken}}",
+										"type": "text"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"paymentId\": \"{{paymentId}}\",\n  \"amount\": 100000,\n  \"reason\": \"Changed plans, cannot attend\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/v1/refunds",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"refunds"
+									]
+								},
+								"description": "Create a refund request for a payment. Returns ServiceResult<RefundDetailDto>."
+							},
+							"response": []
+						},
+						{
+							"name": "Get All Refunds",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "__session={{authToken}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/v1/refunds?status=PENDING&page=1&limit=20",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"refunds"
+									],
+									"query": [
+										{
+											"key": "status",
+											"value": "PENDING",
+											"description": "PENDING, APPROVED, REJECTED, COMPLETED"
+										},
+										{
+											"key": "page",
+											"value": "1"
+										},
+										{
+											"key": "limit",
+											"value": "20"
+										},
+										{
+											"key": "paymentId",
+											"value": "",
+											"disabled": true
+										},
+										{
+											"key": "startDate",
+											"value": "",
+											"disabled": true
+										},
+										{
+											"key": "endDate",
+											"value": "",
+											"disabled": true
+										}
+									]
+								},
+								"description": "Get all refunds with pagination. Returns ServiceResult<RefundDetailDto[]> with PaginationMeta."
+							},
+							"response": []
+						},
+						{
+							"name": "Get Refund Details",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "__session={{authToken}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/v1/refunds/{{refundId}}",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"refunds",
+										"{{refundId}}"
+									]
+								},
+								"description": "Get refund details by ID. Returns ServiceResult<RefundDetailDto>."
+							},
+							"response": []
+						},
+						{
+							"name": "Get Refunds by Payment",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "__session={{authToken}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/v1/refunds/payment/{{paymentId}}",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"refunds",
+										"payment",
+										"{{paymentId}}"
+									]
+								},
+								"description": "Get all refunds for a specific payment. Returns ServiceResult<RefundDetailDto[]>."
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Admin Refunds",
+					"item": [
+						{
+							"name": "Process Refund (Admin)",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "__session={{authToken}}",
+										"type": "text"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"refundId\": \"{{refundId}}\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/v1/refunds/{{refundId}}/process",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"refunds",
+										"{{refundId}}",
+										"process"
+									]
+								},
+								"description": "Process a refund request (admin). Returns ServiceResult<RefundDetailDto>."
+							},
+							"response": []
+						},
+						{
+							"name": "Approve Refund (Admin)",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "__session={{authToken}}",
+										"type": "text"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"refundId\": \"{{refundId}}\",\n  \"note\": \"Approved - valid reason\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/v1/refunds/{{refundId}}/approve",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"refunds",
+										"{{refundId}}",
+										"approve"
+									]
+								},
+								"description": "Approve a refund request (admin). Returns ServiceResult<RefundDetailDto>."
+							},
+							"response": []
+						},
+						{
+							"name": "Reject Refund (Admin)",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "__session={{authToken}}",
+										"type": "text"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"refundId\": \"{{refundId}}\",\n  \"reason\": \"Outside refund window\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/v1/refunds/{{refundId}}/reject",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"refunds",
+										"{{refundId}}",
+										"reject"
+									]
+								},
+								"description": "Reject a refund request (admin). Returns ServiceResult<RefundDetailDto>."
+							},
+							"response": []
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Loyalty- Concession - Promotions",
+			"item": [
+				{
+					"name": "Loyalty",
+					"item": [
+						{
+							"name": "Get Loyalty Balance",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "__session={{authToken}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/v1/loyalty/balance",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"loyalty",
+										"balance"
+									]
+								},
+								"description": "Get user's loyalty balance and tier"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Loyalty Transactions",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "__session={{authToken}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/v1/loyalty/transactions?type=EARN&page=1&limit=20",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"loyalty",
+										"transactions"
+									],
+									"query": [
+										{
+											"key": "type",
+											"value": "EARN",
+											"description": "EARN or REDEEM"
+										},
+										{
+											"key": "page",
+											"value": "1"
+										},
+										{
+											"key": "limit",
+											"value": "20"
+										}
+									]
+								},
+								"description": "Get user's loyalty transaction history"
+							},
+							"response": []
+						},
+						{
+							"name": "Earn Loyalty Points",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "__session={{authToken}}",
+										"type": "text"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"points\": 100,\n  \"transactionId\": \"booking-123\",\n  \"description\": \"Earned from booking\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/v1/loyalty/earn",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"loyalty",
+										"earn"
+									]
+								},
+								"description": "Earn loyalty points (manual or after booking)"
+							},
+							"response": []
+						},
+						{
+							"name": "Redeem Loyalty Points",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "__session={{authToken}}",
+										"type": "text"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"points\": 50,\n  \"transactionId\": \"booking-456\",\n  \"description\": \"Discount for booking\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/v1/loyalty/redeem",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"loyalty",
+										"redeem"
+									]
+								},
+								"description": "Redeem loyalty points for discounts"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Concessions",
+					"item": [
+						{
+							"name": "Get All Concessions",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/v1/concessions?cinemaId={{cinemaId}}",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"concessions"
+									],
+									"query": [
+										{
+											"key": "cinemaId",
+											"value": "{{cinemaId}}",
+											"description": "Filter by cinema (optional)"
+										},
+										{
+											"key": "category",
+											"value": "FOOD",
+											"description": "FOOD, BEVERAGE, COMBO (optional)",
+											"disabled": true
+										},
+										{
+											"key": "available",
+											"value": "true",
+											"description": "Filter by availability (optional)",
+											"disabled": true
+										}
+									]
+								},
+								"description": "Get all concessions with optional filters (public endpoint)"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Concession Details",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/v1/concessions/4ff447e0-7d7d-4d30-888e-3af0ca2447fb",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"concessions",
+										"4ff447e0-7d7d-4d30-888e-3af0ca2447fb"
+									]
+								},
+								"description": "Get concession details by ID (public endpoint)"
+							},
+							"response": []
+						},
+						{
+							"name": "Create Concession (Admin)",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "__session={{authToken}}",
+										"type": "text"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"cinemaId\": \"{{cinemaId}}\",\n  \"name\": \"Popcorn Large\",\n  \"description\": \"Large caramel popcorn\",\n  \"category\": \"FOOD\",\n  \"price\": 50000,\n  \"imageUrl\": \"https://example.com/popcorn.jpg\",\n  \"available\": true,\n  \"stockQuantity\": 100\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/v1/concessions",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"concessions"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Update Concession (Admin)",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "__session={{authToken}}",
+										"type": "text"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"Popcorn Large (Updated)\",\n  \"price\": 55000,\n  \"available\": true\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/v1/concessions/4ff447e0-7d7d-4d30-888e-3af0ca2447fb",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"concessions",
+										"4ff447e0-7d7d-4d30-888e-3af0ca2447fb"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Delete Concession (Admin)",
+							"request": {
+								"method": "DELETE",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "__session={{authToken}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/v1/concessions/concession-id",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"concessions",
+										"concession-id"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Update Inventory (Admin)",
+							"request": {
+								"method": "PATCH",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "__session={{authToken}}",
+										"type": "text"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"quantity\": 50\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/v1/concessions/{{consession_id}}/inventory",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"concessions",
+										"{{consession_id}}",
+										"inventory"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Promotions",
+					"item": [
+						{
+							"name": "Get All Promotions",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/v1/promotions?active=true&type=PERCENTAGE",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"promotions"
+									],
+									"query": [
+										{
+											"key": "active",
+											"value": "true",
+											"description": "Filter by active status"
+										},
+										{
+											"key": "type",
+											"value": "PERCENTAGE",
+											"description": "PERCENTAGE, FIXED_AMOUNT, FREE_ITEM"
+										}
+									]
+								},
+								"description": "Get all promotions (public endpoint)"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Promotion Details",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/v1/promotions/promotion-id",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"promotions",
+										"promotion-id"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Find Promotion by Code",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/v1/promotions/code/{{promotionCode}}",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"promotions",
+										"code",
+										"{{promotionCode}}"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Validate Promotion",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"totalAmount\": 200000,\n  \"userId\": \"{{userId}}\",\n  \"cinemaId\": \"{{cinemaId}}\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/v1/promotions/validate/{{promotionCode}}",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"promotions",
+										"validate",
+										"{{promotionCode}}"
+									]
+								},
+								"description": "Validate if promotion code is applicable"
+							},
+							"response": []
+						},
+						{
+							"name": "Create Promotion (Admin)",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "__session={{authToken}}",
+										"type": "text"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"code\": \"SUMMER2025\",\n  \"name\": \"Summer Sale\",\n  \"description\": \"20% off all bookings\",\n  \"type\": \"PERCENTAGE\",\n  \"discountValue\": 20,\n  \"minPurchaseAmount\": 100000,\n  \"maxDiscountAmount\": 50000,\n  \"usageLimit\": 1000,\n  \"startDate\": \"2025-06-01T00:00:00Z\",\n  \"endDate\": \"2025-08-31T23:59:59Z\",\n  \"isActive\": true\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/v1/promotions",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"promotions"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Update Promotion (Admin)",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "__session={{authToken}}",
+										"type": "text"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"discountValue\": 25,\n  \"usageLimit\": 2000\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/v1/promotions/promotion-id",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"promotions",
+										"promotion-id"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Delete Promotion (Admin)",
+							"request": {
+								"method": "DELETE",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "__session={{authToken}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/v1/promotions/promotion-id",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"promotions",
+										"promotion-id"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Toggle Promotion Active (Admin)",
+							"request": {
+								"method": "PATCH",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "__session={{authToken}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/v1/promotions/promotion-id/toggle-active",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"promotions",
+										"promotion-id",
+										"toggle-active"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Cinemas",
+			"item": [
+				{
+					"name": "Public Cinema Endpoints",
+					"item": [
+						{
+							"name": "Get Cinemas Nearby",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/v1/cinemas/nearby?lat=10.7769&lon=106.7009&radius=10&limit=20",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"cinemas",
+										"nearby"
+									],
+									"query": [
+										{
+											"key": "lat",
+											"value": "10.7769",
+											"description": "Latitude (required)"
+										},
+										{
+											"key": "lon",
+											"value": "106.7009",
+											"description": "Longitude (required)"
+										},
+										{
+											"key": "radius",
+											"value": "10",
+											"description": "Radius in km (default: 10)"
+										},
+										{
+											"key": "limit",
+											"value": "20",
+											"description": "Max results (default: 20)"
+										}
+									]
+								},
+								"description": "Get cinemas near user location (e.g., Ho Chi Minh City coordinates)"
+							},
+							"response": []
+						},
+						{
+							"name": "Search Cinemas",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/v1/cinemas/search?query=Galaxy&lat=10.7769&lon=106.7009",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"cinemas",
+										"search"
+									],
+									"query": [
+										{
+											"key": "query",
+											"value": "Galaxy",
+											"description": "Search term (required)"
+										},
+										{
+											"key": "lat",
+											"value": "10.7769",
+											"description": "User latitude (optional, for distance)"
+										},
+										{
+											"key": "lon",
+											"value": "106.7009",
+											"description": "User longitude (optional, for distance)"
+										}
+									]
+								},
+								"description": "Search cinemas by name or address"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Cinemas with Filters",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/v1/cinemas/filters?city=Ho Chi Minh&district=District 1&minRating=4.0&page=1&limit=10&sortBy=rating&sortOrder=desc",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"cinemas",
+										"filters"
+									],
+									"query": [
+										{
+											"key": "city",
+											"value": "Ho Chi Minh",
+											"description": "Filter by city"
+										},
+										{
+											"key": "district",
+											"value": "District 1",
+											"description": "Filter by district"
+										},
+										{
+											"key": "minRating",
+											"value": "4.0",
+											"description": "Minimum rating"
+										},
+										{
+											"key": "page",
+											"value": "1"
+										},
+										{
+											"key": "limit",
+											"value": "10"
+										},
+										{
+											"key": "sortBy",
+											"value": "rating",
+											"description": "distance, rating, name"
+										},
+										{
+											"key": "sortOrder",
+											"value": "desc",
+											"description": "asc or desc"
+										},
+										{
+											"key": "lat",
+											"value": "10.7769",
+											"description": "For distance sorting",
+											"disabled": true
+										},
+										{
+											"key": "lon",
+											"value": "106.7009",
+											"disabled": true
+										},
+										{
+											"key": "radius",
+											"value": "20",
+											"disabled": true
+										},
+										{
+											"key": "amenities",
+											"value": "PARKING,FOOD_COURT",
+											"description": "Comma-separated",
+											"disabled": true
+										},
+										{
+											"key": "hallTypes",
+											"value": "IMAX,4DX",
+											"description": "Comma-separated",
+											"disabled": true
+										}
+									]
+								},
+								"description": "Get cinemas with advanced filters"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Available Cities",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/v1/cinemas/locations/cities",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"cinemas",
+										"locations",
+										"cities"
+									]
+								},
+								"description": "Get list of all available cities with cinemas"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Available Districts",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/v1/cinemas/locations/districts?city=Ho Chi Minh",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"cinemas",
+										"locations",
+										"districts"
+									],
+									"query": [
+										{
+											"key": "city",
+											"value": "Ho Chi Minh",
+											"description": "City name (required)"
+										}
+									]
+								},
+								"description": "Get list of districts in a city"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Cinema Details",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/v1/cinemas/{{cinemaId}}?lat=10.7769&lon=106.7009",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"cinemas",
+										"{{cinemaId}}"
+									],
+									"query": [
+										{
+											"key": "lat",
+											"value": "10.7769",
+											"description": "For distance calculation (optional)"
+										},
+										{
+											"key": "lon",
+											"value": "106.7009"
+										}
+									]
+								},
+								"description": "Get detailed cinema information"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Movie Showtimes at Cinema",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/v1/cinemas/{{cinemaId}}/movies/{{movieId}}/showtimes?date=2025-11-25",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"cinemas",
+										"{{cinemaId}}",
+										"movies",
+										"{{movieId}}",
+										"showtimes"
+									],
+									"query": [
+										{
+											"key": "date",
+											"value": "2025-11-25",
+											"description": "Date (YYYY-MM-DD)"
+										}
+									]
+								},
+								"description": "Get showtimes for a specific movie at a cinema"
+							},
+							"response": []
+						},
+						{
+							"name": "Get All Movies at Cinema",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/v1/cinemas/cinema/{{cinemaId}}/movies?page=1&limit=10",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"cinemas",
+										"cinema",
+										"{{cinemaId}}",
+										"movies"
+									],
+									"query": [
+										{
+											"key": "page",
+											"value": "1"
+										},
+										{
+											"key": "limit",
+											"value": "10"
+										}
+									]
+								},
+								"description": "Get all movies showing at a cinema"
+							},
+							"response": []
+						},
+						{
+							"name": "Get All Movies with Showtimes",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/v1/cinemas/movies/showtimes",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"cinemas",
+										"movies",
+										"showtimes"
+									]
+								},
+								"description": "Get all movies with their showtimes across all cinemas"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Admin Cinema Endpoints",
+					"item": [
+						{
+							"name": "Create Cinema",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"if (pm.response.code === 200 || pm.response.code === 201) {",
+											"    const response = pm.response.json();",
+											"    if (response.id) {",
+											"        pm.collectionVariables.set('cinemaId', response.id);",
+											"    }",
+											"}"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "__session={{authToken}}",
+										"type": "text"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"Galaxy Cinema Nguyen Du\",\n  \"address\": \"116 Nguyen Du, District 1, Ho Chi Minh\",\n  \"city\": \"Ho Chi Minh\",\n  \"district\": \"District 1\",\n  \"latitude\": 10.7769,\n  \"longitude\": 106.7009,\n  \"phone\": \"1900-2224\",\n  \"email\": \"contact@galaxycine.vn\",\n  \"description\": \"Modern cinema with latest technology\",\n  \"amenities\": [\"PARKING\", \"FOOD_COURT\", \"WHEELCHAIR_ACCESS\"],\n  \"imageUrls\": [\"https://example.com/cinema1.jpg\"],\n  \"openingHours\": \"8:00 AM - 11:00 PM\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/v1/cinemas/cinema",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"cinemas",
+										"cinema"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Update Cinema",
+							"request": {
+								"method": "PATCH",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "__session={{authToken}}",
+										"type": "text"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"Galaxy Cinema Nguyen Du (Updated)\",\n  \"phone\": \"1900-2225\",\n  \"description\": \"Premium cinema experience\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/v1/cinemas/cinema/{{cinemaId}}",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"cinemas",
+										"cinema",
+										"{{cinemaId}}"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Delete Cinema",
+							"request": {
+								"method": "DELETE",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "__session={{authToken}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/v1/cinemas/cinema/{{cinemaId}}",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"cinemas",
+										"cinema",
+										"{{cinemaId}}"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Get Movie Showtimes (Admin)",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "__session={{authToken}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/v1/cinemas/{{cinemaId}}/movies/{{movieId}}/showtimes/admin?status=ACTIVE&includeSeats=true",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"cinemas",
+										"{{cinemaId}}",
+										"movies",
+										"{{movieId}}",
+										"showtimes",
+										"admin"
+									],
+									"query": [
+										{
+											"key": "status",
+											"value": "ACTIVE"
+										},
+										{
+											"key": "includeSeats",
+											"value": "true"
+										}
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": " Halls- showtimes",
+			"item": [
+				{
+					"name": "Public Hall Endpoints",
+					"item": [
+						{
+							"name": "Get Halls by Cinema",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/v1/cinemas/cinema/{{cinemaId}}/halls?includeSeats=false",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"cinemas",
+										"cinema",
+										"{{cinemaId}}",
+										"halls"
+									],
+									"query": [
+										{
+											"key": "includeSeats",
+											"value": "false",
+											"description": "Include seat layout (default: false)"
+										}
+									]
+								},
+								"description": "Get all halls for a cinema"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Hall Details",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/v1/cinemas/hall/{{hallId}}?includeSeats=true",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"cinemas",
+										"hall",
+										"{{hallId}}"
+									],
+									"query": [
+										{
+											"key": "includeSeats",
+											"value": "true"
+										}
+									]
+								},
+								"description": "Get hall details with optional seat layout"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Public Showtime Endpoints",
+					"item": [
+						{
+							"name": "Get Showtime Details",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/v1/showtimes/showtime/{{showtimeId}}?Cookie=__session={{authToken}}",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"showtimes",
+										"showtime",
+										"{{showtimeId}}"
+									],
+									"query": [
+										{
+											"key": "Cookie",
+											"value": "__session={{authToken}}"
+										}
+									]
+								},
+								"description": "Get showtime information with movie, hall, and cinema details"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Available Seats for Showtime",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "__session={{authToken}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/v1/showtimes/{{showtimeId}}/seats",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"showtimes",
+										"{{showtimeId}}",
+										"seats"
+									]
+								},
+								"description": "Get real-time seat availability for a showtime"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Admin Hall Endpoints",
+					"item": [
+						{
+							"name": "Create Hall",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"if (pm.response.code === 200 || pm.response.code === 201) {",
+											"    const response = pm.response.json();",
+											"    if (response.id) {",
+											"        pm.collectionVariables.set('hallId', response.id);",
+											"    }",
+											"}"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "__session={{authToken}}",
+										"type": "text"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"cinemaId\": \"{{cinemaId}}\",\n  \"name\": \"Hall 1\",\n  \"hallType\": \"STANDARD\",\n  \"totalSeats\": 120,\n  \"rows\": 10,\n  \"columns\": 12,\n  \"amenities\": [\"DOLBY_ATMOS\", \"RECLINER_SEATS\"],\n  \"seats\": [\n    {\n      \"row\": \"A\",\n      \"number\": \"1\",\n      \"type\": \"STANDARD\",\n      \"status\": \"AVAILABLE\"\n    }\n  ]\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/v1/cinemas/hall",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"cinemas",
+										"hall"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Update Hall",
+							"request": {
+								"method": "PATCH",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "__session={{authToken}}",
+										"type": "text"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"Hall 1 - Premium\",\n  \"amenities\": [\"DOLBY_ATMOS\", \"RECLINER_SEATS\", \"LASER_PROJECTION\"]\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/v1/cinemas/hall/{{hallId}}",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"cinemas",
+										"hall",
+										"{{hallId}}"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Update Hall Seat Status",
+							"request": {
+								"method": "PATCH",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "__session={{authToken}}",
+										"type": "text"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"seatId\": \"seat-uuid-here\",\n  \"status\": \"UNAVAILABLE\",\n  \"reason\": \"Maintenance\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/v1/cinemas/hall/{{hallId}}/seat/status",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"cinemas",
+										"hall",
+										"{{hallId}}",
+										"seat",
+										"status"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Delete Hall",
+							"request": {
+								"method": "DELETE",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "__session={{authToken}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/v1/cinemas/hall/{{hallId}}",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"cinemas",
+										"hall",
+										"{{hallId}}"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Admin Showtime Endpoints",
+					"item": [
+						{
+							"name": "Create Showtime",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"if (pm.response.code === 200 || pm.response.code === 201) {",
+											"    const response = pm.response.json();",
+											"    if (response.id) {",
+											"        pm.collectionVariables.set('showtimeId', response.id);",
+											"    }",
+											"}"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "__session={{authToken}}",
+										"type": "text"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"hallId\": \"{{hallId}}\",\n  \"movieReleaseId\": \"{{movieReleaseId}}\",\n  \"startTime\": \"2025-11-25T14:00:00Z\",\n  \"endTime\": \"2025-11-25T16:30:00Z\",\n  \"pricing\": {\n    \"STANDARD\": 80000,\n    \"VIP\": 120000,\n    \"COUPLE\": 200000\n  },\n  \"status\": \"ACTIVE\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/v1/cinemas/showtime",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"cinemas",
+										"showtime"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Batch Create Showtimes",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "__session={{authToken}}",
+										"type": "text"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"showtimes\": [\n    {\n      \"hallId\": \"{{hallId}}\",\n      \"movieReleaseId\": \"{{movieReleaseId}}\",\n      \"startTime\": \"2025-11-25T10:00:00Z\",\n      \"endTime\": \"2025-11-25T12:30:00Z\",\n      \"pricing\": {\n        \"STANDARD\": 70000,\n        \"VIP\": 100000\n      }\n    },\n    {\n      \"hallId\": \"{{hallId}}\",\n      \"movieReleaseId\": \"{{movieReleaseId}}\",\n      \"startTime\": \"2025-11-25T14:00:00Z\",\n      \"endTime\": \"2025-11-25T16:30:00Z\",\n      \"pricing\": {\n        \"STANDARD\": 80000,\n        \"VIP\": 120000\n      }\n    }\n  ]\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/v1/cinemas/showtime/batch",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"cinemas",
+										"showtime",
+										"batch"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Update Showtime",
+							"request": {
+								"method": "PATCH",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "__session={{authToken}}",
+										"type": "text"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"startTime\": \"2025-11-25T15:00:00Z\",\n  \"endTime\": \"2025-11-25T17:30:00Z\",\n  \"pricing\": {\n    \"STANDARD\": 90000,\n    \"VIP\": 130000\n  },\n  \"status\": \"ACTIVE\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/v1/cinemas/showtime/{{showtimeId}}",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"cinemas",
+										"showtime",
+										"{{showtimeId}}"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Delete Showtime",
+							"request": {
+								"method": "DELETE",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "__session={{authToken}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/v1/cinemas/showtime/{{showtimeId}}",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"cinemas",
+										"showtime",
+										"{{showtimeId}}"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Get Seat Lock TTL",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "__session={{authToken}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/v1/cinemas/realtime/ttl",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"cinemas",
+										"realtime",
+										"ttl"
+									]
+								},
+								"description": "Get current seat lock TTL in seconds"
+							},
+							"response": []
+						},
+						{
+							"name": "Update Seat Lock TTL",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "__session={{authToken}}",
+										"type": "text"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"ttl\": 600\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/v1/cinemas/realtime/ttl",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"cinemas",
+										"realtime",
+										"ttl"
+									]
+								},
+								"description": "Update seat lock TTL (in seconds, default: 600)"
+							},
+							"response": []
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Movie-Genres",
+			"item": [
+				{
+					"name": "Public Movie Endpoints",
+					"item": [
+						{
+							"name": "Get All Movies",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/v1/movies?page=1&limit=20&sortBy=releaseDate&sortOrder=desc&status=NOW_SHOWING",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"movies"
+									],
+									"query": [
+										{
+											"key": "page",
+											"value": "1"
+										},
+										{
+											"key": "limit",
+											"value": "20"
+										},
+										{
+											"key": "sortBy",
+											"value": "releaseDate",
+											"description": "title, releaseDate, rating, duration"
+										},
+										{
+											"key": "sortOrder",
+											"value": "desc"
+										},
+										{
+											"key": "status",
+											"value": "NOW_SHOWING",
+											"description": "NOW_SHOWING, COMING_SOON, ENDED"
+										},
+										{
+											"key": "genreId",
+											"value": "",
+											"disabled": true
+										},
+										{
+											"key": "minRating",
+											"value": "",
+											"disabled": true
+										},
+										{
+											"key": "search",
+											"value": "",
+											"disabled": true
+										}
+									]
+								},
+								"description": "Get paginated list of movies with optional filters"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Movie Details",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/v1/movies/{{movieId}}",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"movies",
+										"{{movieId}}"
+									]
+								},
+								"description": "Get detailed movie information including genres, cast, and releases"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Movie Releases",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/v1/movies/{{movieId}}/releases",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"movies",
+										"{{movieId}}",
+										"releases"
+									]
+								},
+								"description": "Get all cinema releases for a movie"
+							},
+							"response": []
+						},
+						{
+							"name": "Search Movies",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/v1/movies/search?q=Avengers&page=1&limit=10",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"movies",
+										"search"
+									],
+									"query": [
+										{
+											"key": "q",
+											"value": "Avengers",
+											"description": "Search query"
+										},
+										{
+											"key": "page",
+											"value": "1"
+										},
+										{
+											"key": "limit",
+											"value": "10"
+										}
+									]
+								},
+								"description": "Search movies by title"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Trending Movies",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/v1/movies/trending?limit=10",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"movies",
+										"trending"
+									],
+									"query": [
+										{
+											"key": "limit",
+											"value": "10"
+										}
+									]
+								},
+								"description": "Get trending/popular movies"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Movies by Genre",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/v1/movies/genre/{{genreId}}?page=1&limit=20",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"movies",
+										"genre",
+										"{{genreId}}"
+									],
+									"query": [
+										{
+											"key": "page",
+											"value": "1"
+										},
+										{
+											"key": "limit",
+											"value": "20"
+										}
+									]
+								},
+								"description": "Get movies filtered by genre"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Public Genre Endpoints",
+					"item": [
+						{
+							"name": "Get All Genres",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/v1/movies/genres",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"movies",
+										"genres"
+									]
+								},
+								"description": "Get list of all movie genres"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Genre Details",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/v1/movies/genres/{{genreId}}",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"movies",
+										"genres",
+										"{{genreId}}"
+									]
+								},
+								"description": "Get genre information with movie count"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Admin Movie Endpoints",
+					"item": [
+						{
+							"name": "Create Movie",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"if (pm.response.code === 200 || pm.response.code === 201) {",
+											"    const response = pm.response.json();",
+											"    if (response.id) {",
+											"        pm.collectionVariables.set('movieId', response.id);",
+											"    }",
+											"}"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "__session={{authToken}}",
+										"type": "text"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"title\": \"Avengers: Endgame\",\n  \"description\": \"After the devastating events of Avengers: Infinity War, the universe is in ruins.\",\n  \"duration\": 181,\n  \"releaseDate\": \"2019-04-26\",\n  \"director\": \"Anthony Russo, Joe Russo\",\n  \"cast\": [\"Robert Downey Jr.\", \"Chris Evans\", \"Mark Ruffalo\"],\n  \"rating\": 8.4,\n  \"language\": \"English\",\n  \"country\": \"USA\",\n  \"trailerUrl\": \"https://youtube.com/watch?v=TcMBFSGVi1c\",\n  \"posterUrl\": \"https://image.tmdb.org/t/p/w500/or06FN3Dka5tukK1e9sl16pB3iy.jpg\",\n  \"backdropUrl\": \"https://image.tmdb.org/t/p/w1280/7RyHsO4yDXtBv1zUU3mTpHeQ0d5.jpg\",\n  \"genreIds\": [\"action-genre-id\", \"adventure-genre-id\"],\n  \"ageRating\": \"PG-13\",\n  \"status\": \"NOW_SHOWING\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/v1/movies",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"movies"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Update Movie",
+							"request": {
+								"method": "PATCH",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "__session={{authToken}}",
+										"type": "text"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"title\": \"Avengers: Endgame (Remastered)\",\n  \"rating\": 8.5,\n  \"status\": \"NOW_SHOWING\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/v1/movies/{{movieId}}",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"movies",
+										"{{movieId}}"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Delete Movie",
+							"request": {
+								"method": "DELETE",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "__session={{authToken}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/v1/movies/{{movieId}}",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"movies",
+										"{{movieId}}"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Admin Genre Endpoints",
+					"item": [
+						{
+							"name": "Create Genre",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"if (pm.response.code === 200 || pm.response.code === 201) {",
+											"    const response = pm.response.json();",
+											"    if (response.id) {",
+											"        pm.collectionVariables.set('genreId', response.id);",
+											"    }",
+											"}"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "__session={{authToken}}",
+										"type": "text"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"Action\",\n  \"description\": \"Action-packed movies with intense sequences\",\n  \"slug\": \"action\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/v1/movies/genres",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"movies",
+										"genres"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Update Genre",
+							"request": {
+								"method": "PATCH",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "__session={{authToken}}",
+										"type": "text"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"Action & Adventure\",\n  \"description\": \"High-octane action and thrilling adventures\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/v1/movies/genres/{{genreId}}",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"movies",
+										"genres",
+										"{{genreId}}"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Delete Genre",
+							"request": {
+								"method": "DELETE",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "__session={{authToken}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/v1/movies/genres/{{genreId}}",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"movies",
+										"genres",
+										"{{genreId}}"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Admin Movie Release Endpoints",
+					"item": [
+						{
+							"name": "Create Movie Release",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"if (pm.response.code === 200 || pm.response.code === 201) {",
+											"    const response = pm.response.json();",
+											"    if (response.id) {",
+											"        pm.collectionVariables.set('movieReleaseId', response.id);",
+											"    }",
+											"}"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "__session={{authToken}}",
+										"type": "text"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"movieId\": \"{{movieId}}\",\n  \"cinemaId\": \"{{cinemaId}}\",\n  \"releaseDate\": \"2025-11-25\",\n  \"endDate\": \"2025-12-25\",\n  \"format\": \"2D\",\n  \"subtitles\": [\"English\", \"Vietnamese\"],\n  \"dubbed\": false\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/v1/movies/releases",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"movies",
+										"releases"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Update Movie Release",
+							"request": {
+								"method": "PATCH",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "__session={{authToken}}",
+										"type": "text"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"endDate\": \"2025-12-31\",\n  \"format\": \"3D\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/v1/movies/releases/{{movieReleaseId}}",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"movies",
+										"releases",
+										"{{movieReleaseId}}"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Delete Movie Release",
+							"request": {
+								"method": "DELETE",
+								"header": [
+									{
+										"key": "Cookie",
+										"value": "__session={{authToken}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/v1/movies/releases/{{movieReleaseId}}",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"v1",
+										"movies",
+										"releases",
+										"{{movieReleaseId}}"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "1. Authentication (Clerk) Copy 2",
+			"item": [
+				{
+					"name": "Register User (via Clerk)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const response = pm.response.json();",
+									"const sessionId = response.id;",
+									"pm.collectionVariables.set(\"SESSION_ID\", sessionId);",
+									"console.log(\"SESSION_ID saved:\", sessionId);"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{clerk_secret}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n   \"user_id\": \"user_359tRJvoNapyehLgqyyLWQVezxG\"\n}"
+						},
+						"url": {
+							"raw": "https://api.clerk.com/v1/sessions",
+							"protocol": "https",
+							"host": [
+								"api",
+								"clerk",
+								"com"
+							],
+							"path": [
+								"v1",
+								"sessions"
+							]
+						},
+						"description": "Register via Clerk - Set your access_token in collection variables after authentication"
+					},
+					"response": []
+				},
+				{
+					"name": "Set Auth Token Manually",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const response = pm.response.json();",
+									"const jwt = response.jwt;",
+									"pm.collectionVariables.set(\"access_token\", jwt);",
+									"pm.environment.set(\"authToken\",jwt,String);"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{clerk_secret}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "https://api.clerk.com/v1/sessions/{{SESSION_ID}}/tokens",
+							"protocol": "https",
+							"host": [
+								"api",
+								"clerk",
+								"com"
+							],
+							"path": [
+								"v1",
+								"sessions",
+								"{{SESSION_ID}}",
+								"tokens"
+							]
+						},
+						"description": "Test endpoint to verify authentication is working"
+					},
+					"response": []
+				}
+			],
+			"description": "Authentication flow using Clerk"
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:3000",
+			"type": "string"
+		},
+		{
+			"key": "authToken",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "userId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "bookingId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "paymentId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "showtimeId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "cinemaId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "movieId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "ticketId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "refundId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "promotionCode",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "SESSION_ID",
+			"value": ""
+		},
+		{
+			"key": "access_token",
+			"value": ""
+		}
+	]
+}

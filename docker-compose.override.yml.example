@@ -1,0 +1,43 @@
+# ===========================================
+# DOCKER COMPOSE OVERRIDE FILE
+# For Development Environment
+# ===========================================
+# This file overrides the base docker-compose.yml for development purposes.
+# Main purpose: Run database seeders on startup for movie-service.
+
+
+services:
+  # Override movie-service to run seeder on startup
+  movie-service:
+    command: sh -c "npx prisma migrate deploy && cd prisma && npx tsx seed.ts && cd .. && node main.js"
+    environment:
+      - NODE_ENV=development
+   
+
+  
+  user-service:
+    environment:
+      - NODE_ENV=development
+    command: sh -c "npx prisma migrate deploy && cd prisma && npx tsx seed.ts && cd .. && node main.js"
+
+  cinema-service:
+    environment:
+      - NODE_ENV=development
+    command: sh -c "npx prisma migrate deploy && cd prisma && npx tsx seed.ts && cd .. && node main.js"
+  
+  
+  booking-service:
+    environment:
+      - NODE_ENV=development
+    command: sh -c "npx prisma migrate deploy && cd prisma && npx tsx seed.ts && cd .. && node main.js"
+  
+  api-gateway:
+    environment:
+      - NODE_ENV=development
+   
+
+  # web:
+  #   environment:
+  #     - NODE_ENV=development
+  #   volumes:
+  #     - ./apps/web/src:/app/apps/web/src

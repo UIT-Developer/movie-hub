@@ -42,3 +42,47 @@ Thumbs.db
 .nx/workspace-data
 .cursor/rules/nx-rules.mdc
 .github/instructions/nx.instructions.md
+
+# Next.js
+.next
+out
+
+# Environment files (keep examples)
+# Repository-level env files
+.env
+.env.dev
+.env.test
+.env.prod
+.env.local
+.env.*.local
+.env/*
+!.env.example
+
+# Service-level env files
+apps/**/.env
+apps/**/.env.db
+apps/**/.env.local
+apps/**/.env.*.local
+!apps/**/.env.example
+
+# Docker Compose override files (per-developer customization)
+docker-compose.override.yml
+!docker-compose.override.yml.example
+
+# Test results
+test-results/
+coverage/
+junit.xml
+*.log
+
+# Keep folder structure
+!test-results/.gitkeep
+
+infra/terraform/.terraform.lock.hcl
+infra/terraform/.terraform/providers/registry.terraform.io/hashicorp/azurerm/3.117.1/linux_amd64/LICENSE.txt
+infra/terraform/.terraform/providers/registry.terraform.io/hashicorp/azurerm/3.117.1/linux_amd64/terraform-provider-azurerm_v3.117.1_x5
+infra/terraform/terraform.tfstate
+infra/terraform/terraform.tfstate.backup
+infra/terraform/terraform.tfvars
+infra/terraform/tfplan
+scripts/prepare-env.sh

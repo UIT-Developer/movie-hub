@@ -1,0 +1,98 @@
+{
+  "name": "movie-service",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "apps/movie-service/src",
+  "projectType": "application",
+  "tags": [],
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "webpack-cli build",
+        "args": ["--node-env=production"],
+        "cwd": "apps/movie-service"
+      },
+      "configurations": {
+        "development": {
+          "args": ["--node-env=development"]
+        }
+      }
+    },
+    "prune-lockfile": {
+      "dependsOn": ["build"],
+      "cache": true,
+      "executor": "@nx/js:prune-lockfile",
+      "outputs": [
+        "{workspaceRoot}/dist/apps/movie-service/package.json",
+        "{workspaceRoot}/dist/apps/movie-service/package-lock.json"
+      ],
+      "options": {
+        "buildTarget": "build"
+      }
+    },
+    "copy-workspace-modules": {
+      "dependsOn": ["build"],
+      "cache": true,
+      "outputs": ["{workspaceRoot}/dist/apps/movie-service/workspace_modules"],
+      "executor": "@nx/js:copy-workspace-modules",
+      "options": {
+        "buildTarget": "build"
+      }
+    },
+    "prune": {
+      "dependsOn": ["prune-lockfile", "copy-workspace-modules"],
+      "executor": "nx:noop"
+    },
+    "serve": {
+      "continuous": true,
+      "executor": "@nx/js:node",
+      "defaultConfiguration": "development",
+      "dependsOn": ["build"],
+      "options": {
+        "buildTarget": "movie-service:build",
+        "runBuildTargetDependencies": false
+      },
+      "configurations": {
+        "development": {
+          "buildTarget": "movie-service:build:development"
+        },
+        "production": {
+          "buildTarget": "movie-service:build:production"
+        }
+      }
+    },
+
+    "prisma:generate": {
+      "cache": false,
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "prisma generate",
+        "cwd": "apps/movie-service"
+      }
+    },
+
+    "prisma:push": {
+      "cache": false,
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "prisma db push --accept-data-loss",
+        "cwd": "apps/movie-service"
+      }
+    },
+
+    "prisma:seed": {
+      "cache": false,
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsx prisma/seed.ts",
+        "cwd": "apps/movie-service"
+      }
+    },
+
+    "test": {
+      "options": {
+        "passWithNoTests": true
+      }
+    }
+  }
+}

@@ -49,9 +49,9 @@ WORKDIR /app
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
     PORT=4200 \
-    NEXT_PUBLIC_WEBSOCKET_URL=ws://localhost:3000 \
-    NEXT_PUBLIC_API_URL=http://localhost:3000/api/v1 \
-    NEXT_PUBLIC_BACKEND_API_URL=http://localhost:3000/api/v1
+    NEXT_PUBLIC_WEBSOCKET_URL=wss://api-gateway.gentlemoss-ee6e319d.southeastasia.azurecontainerapps.io \
+    NEXT_PUBLIC_API_URL=https://api-gateway.gentlemoss-ee6e319d.southeastasia.azurecontainerapps.io/api/v1 \
+    NEXT_PUBLIC_BACKEND_API_URL=https://api-gateway.gentlemoss-ee6e319d.southeastasia.azurecontainerapps.io/api/v1
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && \

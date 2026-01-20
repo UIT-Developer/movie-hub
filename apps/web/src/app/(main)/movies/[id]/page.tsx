@@ -23,20 +23,44 @@ export default async function MovieDetailsPage({
   const resolvedSearchParams = await searchParams;
   const cinemaId = resolvedSearchParams?.cinemaId;
   const queryClient = getQueryClient();
-  await queryClient.prefetchQuery({
-    queryKey: ['movie-detail', id],
-    queryFn: () => getMovieDetail(id),
-  });
-  const availableCities = await queryClient.fetchQuery({
-    queryKey: ['movie-available-cities'],
-    queryFn: () => getAvailableCities(),
-  });
-  if (cinemaId) {
-    await queryClient.prefetchQuery({
-      queryKey: ['cinema-detail', cinemaId],
-      queryFn: () => getCinemaDetail(cinemaId),
-    });
-  }
+  let availableCities: string[] = [];
+
+  await Promise.all([
+    (async () => {
+      try {
+        await queryClient.prefetchQuery({
+          queryKey: ['movies', id],
+          queryFn: () => getMovieDetail(id),
+        });
+      } catch (error) {
+        console.error('[MovieDetailsPage] Failed to prefetch movie detail', error);
+      }
+    })(),
+    (async () => {
+      try {
+        const cities = await queryClient.fetchQuery({
+          queryKey: ['movie-available-cities'],
+          queryFn: () => getAvailableCities(),
+        });
+        availableCities = cities.data ?? [];
+      } catch (error) {
+        console.error('[MovieDetailsPage] Failed to fetch available cities', error);
+        availableCities = [];
+      }
+    })(),
+    cinemaId
+      ? (async () => {
+          try {
+            await queryClient.prefetchQuery({
+              queryKey: ['cinema-detail', cinemaId],
+              queryFn: () => getCinemaDetail(cinemaId),
+            });
+          } catch (error) {
+            console.error('[MovieDetailsPage] Failed to prefetch cinema detail', error);
+          }
+        })()
+      : Promise.resolve(),
+  ]);
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
@@ -54,7 +78,7 @@ export default async function MovieDetailsPage({
           <DateSelect
             movieId={id}
             cinemaId={cinemaId}
-            availableCities={availableCities.data}
+            availableCities={availableCities}
           />
 
           <MovieReviews movieId={id} />

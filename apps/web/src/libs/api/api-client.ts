@@ -51,11 +51,12 @@ async function getRuntimeConfig() {
 
 // Initialize with build-time or runtime env variable
 const getInitialBaseUrl = () => {
-  const envUrl = process.env.NEXT_PUBLIC_BACKEND_API_URL;
+  const envUrl = process.env.NEXT_PUBLIC_BACKEND_API_URL || process.env.NEXT_PUBLIC_API_URL;
   if (envUrl) {
-    return envUrl.replace(/\/+$|\s+$/g, '');
+    return envUrl.replace(/\/+$|\s+$/g, '').replace(/\/api\/v1$/i, '');
   }
-  return 'http://localhost:4000';
+  // Fallback should never be used in production if env vars are set correctly
+  return 'https://api-gateway.gentlemoss-ee6e319d.southeastasia.azurecontainerapps.io';
 };
 
 let normalizedBase = getInitialBaseUrl();

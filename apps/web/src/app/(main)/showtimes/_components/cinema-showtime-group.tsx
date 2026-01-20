@@ -3,6 +3,7 @@
 import { CinemaShowtimeGroup as CinemaShowtimeGroupType } from '@/libs/types/movie.type';
 import { useRouter } from 'next/navigation';
 import { useMemo } from 'react';
+import { formatShowtimeTime, isShowtimePassed } from '@/libs/utils/timezone';
 
 interface Props {
   cinemaGroup: CinemaShowtimeGroupType;
@@ -49,8 +50,7 @@ export const CinemaShowtimeGroup = ({ cinemaGroup }: Props) => {
                     new Date(b.startTime).getTime()
                 )
                 .map((showtime) => {
-                  const startTime = new Date(showtime.startTime);
-                  const isPast = startTime < new Date();
+                  const isPast = isShowtimePassed(showtime.startTime);
 
                   return (
                     <button
@@ -68,11 +68,7 @@ export const CinemaShowtimeGroup = ({ cinemaGroup }: Props) => {
                         }
                       `}
                     >
-                      {startTime.toLocaleTimeString('vi-VN', {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        timeZone: 'UTC',
-                      })}
+                      {formatShowtimeTime(showtime.startTime)}
                     </button>
                   );
                 })}

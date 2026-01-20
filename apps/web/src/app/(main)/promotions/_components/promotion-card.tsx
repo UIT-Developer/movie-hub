@@ -46,7 +46,8 @@ export const PromotionCard = ({ data }: { data: PromotionDto }) => {
             <Badge variant="secondary">{data.type}</Badge>
           )}
           <Badge variant="destructive">
-            Giá trị: {new Intl.NumberFormat('vi-VN').format(data.value)} đ
+            Giá trị: {new Intl.NumberFormat('vi-VN').format(data.value)}{' '}
+            {data.type === 'PERCENTAGE' ? '%' : 'đ'}
           </Badge>
           {data.maxDiscount && (
             <Badge variant="secondary">

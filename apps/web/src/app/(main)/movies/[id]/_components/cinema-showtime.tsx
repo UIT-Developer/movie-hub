@@ -4,6 +4,7 @@ import { ChevronDownIcon, ChevronUpIcon } from 'lucide-react';
 import { CinemaLocationResponse } from '@/libs/types/cinema.type';
 import { useGetMovieShowtimesAtCinema } from '@/hooks/cinema-hooks';
 import { Skeleton } from '@movie-hub/shacdn-ui/skeleton';
+import { formatShowtimeTime, isShowtimePassed } from '@/libs/utils/timezone';
 
 interface CinemaShowtimeProps {
   movieId: string;
@@ -82,9 +83,7 @@ export const CinemaShowtime = ({
                 <p className="font-semibold text-slate-300 mb-3">{format}</p>
                 <div className="flex flex-wrap gap-3">
                   {times.map((s) => {
-                    const start = new Date(s.startTime);
-                    const now = new Date();
-                    const disabled = start < now; // disable nếu giờ chiếu đã qua
+                    const disabled = isShowtimePassed(s.startTime);
 
                     return (
                       <button
@@ -99,11 +98,7 @@ export const CinemaShowtime = ({
                             : 'text-slate-200 border-slate-200/20 hover:bg-primary/20 hover:text-white hover:border-primary'
                         }`}
                       >
-                        {start.toLocaleTimeString('vi-VN', {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                          timeZone: 'UTC',
-                        })}
+                        {formatShowtimeTime(s.startTime)}
                       </button>
                     );
                   })}

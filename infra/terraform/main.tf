@@ -714,6 +714,16 @@ resource "azurerm_container_app" "web" {
       }
 
       env {
+        name  = "NEXT_PUBLIC_API_URL"
+        value = "https://${azurerm_container_app.api_gateway.ingress[0].fqdn}/api/v1"
+      }
+
+      env {
+        name  = "NEXT_PUBLIC_BACKEND_API_URL"
+        value = "https://${azurerm_container_app.api_gateway.ingress[0].fqdn}/api/v1"
+      }
+
+      env {
         name  = "NEXT_PUBLIC_WEBSOCKET_URL"
         value = "wss://${azurerm_container_app.api_gateway.ingress[0].fqdn}"
       }

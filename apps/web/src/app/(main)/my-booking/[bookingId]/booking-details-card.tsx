@@ -26,6 +26,7 @@ import { formatPrice } from '../../../utils/format-price';
 import { bookingsApi } from '@/libs/api/services';
 import { useGetBookingById } from '@/hooks/booking-hooks';
 import { BookingStatus } from '@/libs/types/booking.type';
+import { formatShowtimeDateTimeVN } from '@/libs/utils/timezone';
 import { toast } from 'sonner';
 import { useState, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
@@ -226,15 +227,9 @@ export function BookingCard({ bookingId }: { bookingId: string }) {
           {/* Showtime */}
           <div className="flex items-center gap-2 text-slate-300">
             <CalendarDays className="w-4 h-4 text-slate-100" />
-            <span>
+            <span suppressHydrationWarning>
               {booking?.startTime
-                ? new Date(booking?.startTime).toLocaleString('vi-VN', {
-                    day: '2-digit',
-                    month: '2-digit',
-                    year: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })
+                ? formatShowtimeDateTimeVN(booking?.startTime)
                 : '—'}{' '}
             </span>
           </div>

@@ -1,32 +1,86 @@
-# Movie Hub 🎬
+# Movie Hub
 
-Movie Hub là một nền tảng đặt vé xem phim hiện đại, dựa trên kiến trúc microservices được xây dựng với **NestJS** (Backend), **Next.js** (Frontend), và được quản lý bằng **Nx Monorepo**.
+Movie Hub is a modern movie ticketing platform based on a microservices architecture built with **NestJS** (Backend), **Next.js** (Frontend), and managed using an **Nx Monorepo**.
 
-## 🚀 Tổng quan kiến trúc
+## Core Features
 
-Hệ thống tuân theo kiến trúc microservices:
+- **User Management**: Authentication, profiles, and role-based access control.
+- **Movie Catalog**: Movie exploration, viewing details, and scheduling.
+- **Cinema Operations**: Management of theaters, showtimes, and seat layouts.
+- **Booking System**: Real-time ticket booking and reservation handling.
 
-- **Frontend**: Ứng dụng Next.js.
-- **API Gateway**: Điểm truy cập duy nhất cho tất cả các yêu cầu từ client.
-- **Microservices**: User, Movie, Cinema, Booking (xử lý các nghiệp vụ cụ thể).
-- **Giao tiếp**: Phương pháp lai sử dụng TCP (Giữa các service) và Redis Pub/Sub (Sự kiện).
-- **Cơ sở hạ tầng**: Các service được Docker hóa sử dụng PostgreSQL (Cơ sở dữ liệu riêng cho từng service) và Redis.
+## System Architecture Diagram
 
----
+```mermaid
+flowchart TB
+    Client([Client Application / Next.js Web])
 
-## 🛠️ Yêu cầu tiên quyết
+    subgraph Gateway [API Gateway Layer]
+        API["API Gateway (NestJS)"]
+    end
 
-Trước khi bắt đầu, hãy đảm bảo bạn đã cài đặt các công cụ sau:
+    subgraph Microservices [Microservices Layer - NestJS]
+        User["User Service"]
+        Movie["Movie Service"]
+        Cinema["Cinema Service"]
+        Booking["Booking Service"]
+    end
+
+    subgraph Databases [Data Layer - PostgreSQL & Redis]
+        UserDB[("User DB")]
+        MovieDB[("Movie DB")]
+        CinemaDB[("Cinema DB")]
+        BookingDB[("Booking DB")]
+        Redis[("Redis (Pub/Sub)")]
+    end
+
+    Client -->|HTTP/REST| API
+
+    API -->|TCP| User
+    API -->|TCP| Movie
+    API -->|TCP| Cinema
+    API -->|TCP| Booking
+
+    %% Internal service-to-service communication discovered from codebase
+    Booking -.->|TCP| Cinema
+    Booking -.->|TCP| User
+    Cinema -.->|TCP| Movie
+
+    User --- UserDB
+    Movie --- MovieDB
+    Cinema --- CinemaDB
+    Booking --- BookingDB
+
+    User -.- Redis
+    Movie -.- Redis
+    Cinema -.- Redis
+    Booking -.- Redis
+```
+
+The system utilizes a hybrid communication approach between microservices:
+- **TCP**: Used for direct, synchronous service-to-service communication to ensure fast and reliable data exchange.
+- **Redis Pub/Sub**: Utilized for asynchronous event-driven communication, allowing services to broadcast and react to system-wide events decoupled from immediate execution.
+
+## Architecture Overview
+
+The system strictly follows a microservices architecture:
+
+- **Frontend**: Next.js application.
+- **API Gateway**: Single entry point for all client requests.
+- **Microservices**: User, Movie, Cinema, and Booking services handling specific business domains.
+- **Infrastructure**: Dockerized services using PostgreSQL (database per service) and Redis.
+
+## Prerequisites
+
+Before getting started, ensure you have the following tools installed:
 
 - [Docker Desktop](https://www.docker.com/products/docker-desktop)
-- [Node.js](https://nodejs.org/) (Phiên bản 20+ được khuyến nghị)
+- [Node.js](https://nodejs.org/) (Version 20+ recommended)
 - [Git](https://git-scm.com/)
 
----
+## Getting Started
 
-## 🏃‍♂️ Bắt đầu
-
-Làm theo các bước sau để chạy hệ thống trên máy cục bộ.
+Follow these steps to run the system locally.
 
 ### 1. Clone Repository
 
@@ -35,90 +89,84 @@ git clone https://github.com/Tanh1603/movie-hub.git
 cd movie-hub
 ```
 
-### 2. Cấu hình biến môi trường
-
-Bạn cần thiết lập các file `.env` cho các dịch vụ Docker.
-
-**Môi trường Database:**
-Tạo các file sau với nội dung bên dưới (hoặc copy từ file ví dụ nếu có):
-
-- `apps/user-service/.env.db`
-- `apps/movie-service/.env.db`
-- `apps/cinema-service/.env.db`
-- `apps/booking-service/.env.db`
-
-_Mẫu nội dung cho `.env.db` (Thay đổi `POSTGRES_DB` tương ứng: `movie_hub_user`, `movie_hub_movie`, v.v.):_
+### 2. Environment Variables
 
 ```env
+# Database Configuration (.env.db)
 POSTGRES_USER=postgres
 POSTGRES_PASSWORD=postgres
-POSTGRES_DB=movie_hub_<service_name>
+POSTGRES_DB=movie_hub_<service_name>  # e.g., movie_hub_user, movie_hub_movie
+
+# Service Configuration (.env)
+TCP_HOST=0.0.0.0
+DB_HOST=postgres-<service_name>       # e.g., postgres-user, postgres-movie
 ```
 
-**Môi trường Service:**
-Tạo file `.env` trong thư mục của từng service (ví dụ: `apps/user-service/.env`). Đảm bảo bạn đặt `TCP_HOST=0.0.0.0` và sử dụng tên service docker (ví dụ: `postgres-user`) cho các host database.
+### 3. Run with Docker Compose
 
-> **Lưu ý:** Hướng dẫn chi tiết về thiết lập file `.env` có sẵn trong tài liệu dự án.
-
-### 3. Chạy hệ thống với Docker Compose
-
-Lệnh này sẽ build các image, khởi động database, redis và các backend microservice, và chạy các script seeding dữ liệu.
+This command will build the images, start the databases, Redis, the backend microservices, and run data seeding scripts.
 
 ```bash
 docker compose up -d --build
 ```
 
-Đợi vài phút để các service được build và `healthcheck` thông qua. Bạn có thể kiểm tra log bằng lệnh:
+Wait a few minutes for the services to build and pass health checks. You can check the logs with:
 
 ```bash
 docker compose logs -f
 ```
 
-### 4. Khởi động Frontend
+### 4. Start Frontend
 
-Vì frontend được tối ưu hóa cho phát triển cục bộ, hãy chạy nó bên ngoài Docker:
+Since the frontend is optimized for local development, run it outside of Docker:
 
 ```bash
-# Cài đặt dependencies
+# Install dependencies
 npm install
 
-# Khởi động ứng dụng web
+# Start the web application
 npx nx serve web
 ```
 
----
+## Testing
 
-## 🌐 Triển khai & URL truy cập
+To run the test suites across the project, use the standard Nx command:
 
-Khi mọi thứ đã hoạt động, bạn có thể truy cập các dịch vụ tại:
+```bash
+npx nx test
+```
 
-| Service             | Access URL                                               | Mô tả                      |
-| ------------------- | -------------------------------------------------------- | -------------------------- |
-| **Frontend**        | [http://localhost:4200](http://localhost:4200)           | Giao diện người dùng chính |
-| **API Gateway**     | [http://localhost:4000/api](http://localhost:4000/api)   | Main API Endpoint          |
-| **Swagger Docs**    | [http://localhost:4000/docs](http://localhost:4000/docs) | Tài liệu API               |
-| **User Service**    | `localhost:4001`                                         | TCP/Debugging Port         |
-| **Movie Service**   | `localhost:4002`                                         | TCP/Debugging Port         |
-| **Cinema Service**  | `localhost:4003`                                         | TCP/Debugging Port         |
-| **Booking Service** | `localhost:4004`                                         | TCP/Debugging Port         |
+## Deployment & Access URLs
 
-## 🗄️ Truy cập Cơ sở dữ liệu (Tùy chọn)
+Once everything is up and running, you can access the services at:
 
-Nếu bạn có DB Client (DBeaver, PGAdmin), bạn có thể kết nối đến cơ sở dữ liệu qua các port sau:
+| Service | Access URL | Description |
+| --- | --- | --- |
+| **Frontend** | [http://localhost:4200](http://localhost:4200) | Main User Interface |
+| **API Gateway** | [http://localhost:4000/api](http://localhost:4000/api) | Main API Endpoint |
+| **Swagger Docs** | [http://localhost:4000/docs](http://localhost:4000/docs) | API Documentation |
+| **User Service** | `localhost:4001` | TCP/Debugging Port |
+| **Movie Service** | `localhost:4002` | TCP/Debugging Port |
+| **Cinema Service** | `localhost:4003` | TCP/Debugging Port |
+| **Booking Service** | `localhost:4004` | TCP/Debugging Port |
+
+## Database Access (Optional)
+
+If you have a database client (e.g., DBeaver, PGAdmin), you can connect to the databases via the following ports:
 
 - **User DB**: `localhost:5435`
 - **Movie DB**: `localhost:5436`
 - **Cinema DB**: `localhost:5437`
 - **Booking DB**: `localhost:5438`
 
-## 📞 Thông tin liên hệ
+## Contact Information
 
-| Họ và tên          | Vai trò     | MSSV     | Email                  |
-| :----------------- | :---------- | :------- | :--------------------- |
-| Nguyễn Thiên An    | Nhóm trưởng | 23520020 | 23520020@gm.uit.edu.vn |
-| Nguyễn Lê Tuấn Anh | Thành viên  | 23520064 | 23520064@gm.uit.edu.vn |
-| Lê Văn Huy         | Thành viên  | 23520616 | 23520616@gm.uit.edu.vn |
-| Quách Vĩnh Cơ      | Thành viên  | 23520189 | 23520189@gm.uit.edu.vn |
-| Điều Xuân Hiển     | Thành viên  | 23520456 | 23520456@gm.uit.edu.vn |
-| Phạm Hùng          | Thành viên  | 23520573 | 23520573@gm.uit.edu.vn |
-| Lưu Bình           | Thành viên  | 23520156 | 23520156@gm.uit.edu.vn |
+| Full Name | Role | Student ID | Email |
+| :--- | :--- | :--- | :--- |
+| Nguyễn Thiên An | Team Leader | 23520020 | 23520020@gm.uit.edu.vn |
+| Nguyễn Lê Tuấn Anh | Member | 23520064 | 23520064@gm.uit.edu.vn |
+| Lê Văn Huy | Member | 23520616 | 23520616@gm.uit.edu.vn |
+| Quách Vĩnh Cơ | Member | 23520189 | 23520189@gm.uit.edu.vn |
+| Điều Xuân Hiển | Member | 23520456 | 23520456@gm.uit.edu.vn |
+| Phạm Hùng | Member | 23520573 | 23520573@gm.uit.edu.vn |
+| Lưu Bình | Member | 23520156 | 23520156@gm.uit.edu.vn |

@@ -61,6 +61,18 @@ The system utilizes a hybrid communication approach between microservices:
 - **TCP**: Used for direct, synchronous service-to-service communication to ensure fast and reliable data exchange.
 - **Redis Pub/Sub**: Utilized for asynchronous event-driven communication, allowing services to broadcast and react to system-wide events decoupled from immediate execution.
 
+## Documentation
+
+Comprehensive project documentation is available in the [`docs`](./docs) directory:
+
+- **[Core Documentation](./docs/project_documentation_v1_1st_Dec)**:
+  - [Software Requirements Specification (SRS)](./docs/project_documentation_v1_1st_Dec/SRS_MOVIE_PLATFORM.md)
+  - [System Architecture](./docs/project_documentation_v1_1st_Dec/ARCHITECTURE.md)
+  - [API Contract](./docs/project_documentation_v1_1st_Dec/API_CONTRACT.md)
+  - [Feature List](./docs/project_documentation_v1_1st_Dec/FEATURES.md)
+- **[Functional Specifications](./docs/functional_specs)**: Detailed module-by-module breakdown.
+- **[Project Management](./docs/Project%20management%20artifacts)**: Timelines and management artifacts.
+
 ## Architecture Overview
 
 The system strictly follows a microservices architecture:
